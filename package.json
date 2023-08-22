@@ -1,0 +1,32 @@
+{
+  "name": "ctowasm",
+  "version": "1.0.0",
+  "description": "Browser-based Typescript compiler from C to Webassembly",
+  "repository": "git@github.com:benmurphyy/ctowasm.git",
+  "author": "benmurphyy <47269122+benmurphyy@users.noreply.github.com>",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/yargs": "^17.0.24",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "esbuild": "^0.19.2",
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "nodemon": "^3.0.1",
+    "peggy": "^3.0.2",
+    "prettier": "^3.0.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  },
+  "scripts": {
+    "build": "node bundle.js",
+    "start:dev": "WATCH=1 node bundle.js",
+    "lint": "eslint . --fix",
+    "prettify": "prettier . --write",
+    "compile": "yarn build && node cmd.js"
+  },
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
+}
