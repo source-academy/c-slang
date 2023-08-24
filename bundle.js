@@ -4,10 +4,7 @@ const config = {
   entryPoints: ["src/index.ts"],
   bundle: true,
   format: "esm",
-  outfile: "build/index.js",
-  loader: {
-    ".pegjs": "text",
-  },
+  outfile: "build/index.js"
 };
 
 if (process.env.WATCH) {

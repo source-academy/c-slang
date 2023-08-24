@@ -1,25 +1,56 @@
-Expression
-  = head:Term tail:(_ ("+" / "-") _ Term)* {
-      return tail.reduce(function(result, element) {
-        if (element[1] === "+") { return result + element[3]; }
-        if (element[1] === "-") { return result - element[3]; }
-      }, head);
-    }
+{{
+  import {Root} from "../ast/nodes";
+}}
+// a translation unit represents a complete c program
+translation_unit 
+	= statement whitespace* translation_unit
+    / function 	whitespace* translation_unit {return new Root()}
+    / statement
+    / function {return new Root()} 
+    
+statement
+	= declaration ";"
+    
+block
+	= "{" whitespace* compound_statement whitespace* "}"
+    
+compound_statement
+	= statement|.., whitespace*|
 
-Term
-  = head:Factor tail:(_ ("*" / "/") _ Factor)* {
-      return tail.reduce(function(result, element) {
-        if (element[1] === "*") { return result * element[3]; }
-        if (element[1] === "/") { return result / element[3]; }
-      }, head);
-    }
+function
+	= type _ identifier whitespace*  "(" declaration_list ")" _ block
 
-Factor
-  = "(" _ expr:Expression _ ")" { return expr; }
-  / Integer
+declaration 
+	= type _ identifier whitespace* "=" whitespace* expression
+    / type _ identifier
 
-Integer "integer"
-  = _ [0-9]+ { return parseInt(text(), 10); }
+declaration_list
+	= declaration|.., whitespace* "," whitespace*|
+    
+expression
+	= constant
 
+type 
+	= $"int"
+
+// identifiers must not start with a digit
+// can only contain letters, digits or underscore
+identifier
+	= $([a-z_]i[a-z0-9_]i*)
+    
+constant
+	= integer
+    
+integer
+	= $[0-9]+
+ 
+// match at least 1 whitespace
 _ "whitespace"
-  = [ \t\n\r]*
+	= whitespace+
+
+// any ignorable whitespace character
+whitespace
+	= [ \t\n]
+    
+
+

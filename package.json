@@ -17,13 +17,14 @@
     "peggy": "^3.0.2",
     "prettier": "^3.0.2",
     "ts-node": "^10.9.1",
+    "ts-pegjs": "^4.2.1",
     "typescript": "^5.1.6"
   },
   "scripts": {
-    "build": "node bundle.js",
-    "start:dev": "WATCH=1 node bundle.js",
+    "build": "yarn generate-parser && node bundle.js",
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
+    "generate-parser": "peggy src/grammar/main.pegjs --format es -o src/grammar/parser.js",
     "compile": "yarn build && node cmd.js"
   },
   "dependencies": {
