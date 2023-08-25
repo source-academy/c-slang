@@ -8,28 +8,40 @@ import * as path from "node:path";
 import { hideBin } from "yargs/helpers";
 
 const argv = yargs(hideBin(process.argv))
-  .usage("Usage: $0 C_input_filepath [args]")
+  .usage("Usage: $0 command C_input_filepath [args]")
   .options({
-    o: { type: "string", alias: "out", default: "output/wasm.out", describe: "The file to output wasm to."},
+    o: { type: "string", alias: "out", default: "output/wasm.out", describe: "The file to output generated output to. Defaults to \"output/wasm.out for compile, and output/ast.json for generate-ast\""}
   })
-  .demandCommand(1)
+  .command("compile", "Compile the given input file to wasm")
+  .command("generate-ast", "Generate the AST as a JSON file for visualisation")
+  .demandCommand(2)
   .argv;
 
-if (!fs.existsSync(argv._[0])) {
+if (!fs.existsSync(argv._[1])) {
   // file does not exist
-  throw new Error(`File "${argv._[0]}" does not exist`)
+  throw new Error(`File "${argv._[1]}" does not exist`)
 }
 
-const input = fs.readFileSync(argv._[0], 'utf-8')
-const output = compiler.compile(input)
+const input = fs.readFileSync(argv._[1], 'utf-8')
 
 // create the output directory if output file path provided
 if (argv.o) {
   fs.mkdirSync(path.dirname(argv.o), { recursive: true })
 }
 
-const outputFile = argv.o ? path.resolve(argv.o) : path.resolve("/output/wasm.out")
+let outputFile;
+let output;
+switch (argv._[0]) {
+  case "compile":
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("/output/wasm.out") 
+    output = compiler.compile(input)
+    break
+  case "generate-ast":
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("/output/ast.json") 
+    output = compiler.generateAST(input)
+    break
+}
 
 fs.writeFileSync(outputFile, output)
 
-console.log(`Compilation succeeded. Output saved to ${outputFile}`)
+console.log(`Output saved to ${outputFile}`)

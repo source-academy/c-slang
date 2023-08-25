@@ -24,8 +24,9 @@
     "build": "yarn generate-parser && node bundle.js",
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
-    "generate-parser": "peggy src/grammar/main.pegjs --format es -o src/grammar/parser.js",
-    "compile": "yarn build && node cmd.js"
+    "generate-parser": "tsc && peggy src/grammar/main.pegjs --format es -o src/grammar/parser.js",
+    "compile": "yarn build && node cmd.js compile",
+    "generate-ast": "yarn build && node cmd.js generate-ast"
   },
   "dependencies": {
     "yargs": "^17.7.2"

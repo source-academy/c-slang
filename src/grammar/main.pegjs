@@ -1,29 +1,38 @@
 {{
-  import {Root} from "../ast/nodes";
+  import { Root, Block, Function, Initialization, Declaration } from "../ast/nodes";
 }}
+
+program = arr:translation_unit { return new Root(arr); }
+
 // a translation unit represents a complete c program
+// should return an array of Statements or Functions
 translation_unit 
 	= statement whitespace* translation_unit
-    / function 	whitespace* translation_unit {return new Root()}
-    / statement
-    / function {return new Root()} 
+    / function 	whitespace* translation_unit
+    / s:statement { return [s];}
+    / f:function { return [f]; } 
     
 statement
-	= declaration ";"
+	= @declaration ";"
+  / @initialization ";"
     
 block
-	= "{" whitespace* compound_statement whitespace* "}"
+	= "{" whitespace* s:compound_statement whitespace* "}" { return new Block(s); }
     
+// returns an array of Statements
 compound_statement
 	= statement|.., whitespace*|
 
 function
-	= type _ identifier whitespace*  "(" declaration_list ")" _ block
+	= type:type _ name:identifier whitespace*  "(" parameters:declaration_list ")" _ body:block { return new Function(type, name, parameters, body); }
 
 declaration 
-	= type _ identifier whitespace* "=" whitespace* expression
-    / type _ identifier
+  = type:type _ variable:identifier { return new Declaration(type, variable); }
 
+initialization
+	= type:type _ variable:identifier whitespace* "=" whitespace* value:expression { return new Initialization(type, variable, value); }
+
+// returns an array of Declaration
 declaration_list
 	= declaration|.., whitespace* "," whitespace*|
     
