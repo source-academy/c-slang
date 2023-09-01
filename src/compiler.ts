@@ -2,9 +2,15 @@
  * Compiler for C to webassembly
  */
 import parser from 'parser';
+import process from 'processor';
 
-// TODO: change this temporary setup
-export default {
-  compile: (x: string) => JSON.stringify(parser.parse(x)),
-  generateAST: (x: string) => JSON.stringify(parser.parse(x))
+export function compile(cSourceCode: string) {
+  const ast = process(parser.parse(cSourceCode), cSourceCode);
+  return ast;
 }
+
+export  function generateAST(cSourceCode: string) {
+  const ast = process(parser.parse(cSourceCode), cSourceCode);
+  return JSON.stringify(ast) 
+}
+

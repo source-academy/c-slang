@@ -9,7 +9,8 @@
       data: data,
       position: {
         start: loc.start,
-        end: loc.end
+        end: loc.end,
+        offset: loc.offset
       }
     };
   }
@@ -25,7 +26,8 @@
       data: data,
       position: {
         start: loc.start,
-        end: loc.end
+        end: loc.end,
+        offset: loc.offset
       }
     }; 
   }
@@ -41,7 +43,8 @@
       data: data,
       position: {
         start: loc.start,
-        end: loc.end
+        end: loc.end,
+        offset: loc.offset
       }
     }; 
   }

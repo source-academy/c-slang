@@ -1,3 +1,1 @@
-import compiler from "./compiler";
-
-export default compiler
+export { compile, generateAST } from "./compiler";
