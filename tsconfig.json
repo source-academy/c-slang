@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
     "module": "es6",
+    "moduleResolution": "bundler",
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
+    "rootDir": "src",
+    "baseUrl": "src"
   },
-  "files": [
-    "src/ast/nodes.ts"
-  ]
 }

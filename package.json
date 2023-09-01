@@ -21,14 +21,14 @@
     "typescript": "^5.1.6"
   },
   "scripts": {
-    "build": "yarn generate-parser && node bundle.js",
+    "build": "node bundle.js",
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
-    "generate-parser": "tsc && peggy src/grammar/main.pegjs --format es -o src/grammar/parser.js",
     "compile": "yarn build && node cmd.js compile",
     "generate-ast": "yarn build && node cmd.js generate-ast"
   },
   "dependencies": {
+    "@types/unist": "^3.0.0",
     "yargs": "^17.7.2"
   }
 }

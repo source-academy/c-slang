@@ -1,43 +1,105 @@
 {{
-  import { Root, Block, Function, Initialization, Declaration } from "../ast/nodes";
+  /**
+   * Helper function to create and return a unist Node with position information.
+   */
+  function generateNode(type, data) {
+    const loc = location();
+    return {
+      type: type,
+      data: data,
+      position: {
+        start: loc.start,
+        end: loc.end
+      }
+    };
+  }
+
+  /**
+   * Similar to generateNode, but generates a unist Parent node instead (a node that has children).
+   */
+  function generateParent(type, children, data) {
+    const loc = location();
+    return {
+      type: type,
+      children: children,
+      data: data,
+      position: {
+        start: loc.start,
+        end: loc.end
+      }
+    }; 
+  }
+
+  /**
+   * Generates a unist Literal.
+   */
+  function generateLiteral(type, value, data) {
+    const loc = location();
+    return {
+      type: type,
+      value: value,
+      data: data,
+      position: {
+        start: loc.start,
+        end: loc.end
+      }
+    }; 
+  }
 }}
 
-program = arr:translation_unit { return new Root(arr); }
+program = arr:translation_unit { return generateParent("Root", arr); }
 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-	= statement whitespace* translation_unit
-    / function 	whitespace* translation_unit
-    / s:statement { return [s];}
-    / f:function { return [f]; } 
+	= s:statement whitespace* t:translation_unit { return [s, ...t] }
+    / f:function_definition whitespace* t:translation_unit { return [f, ...t] }
+    / whitespace* { return [] }
     
 statement
-	= @declaration ";"
-  / @initialization ";"
+	= whitespace* @declaration whitespace* ";"
+  / whitespace* @initialization whitespace* ";"
+  / whitespace* @expression whitespace* ";"
     
 block
-	= "{" whitespace* s:compound_statement whitespace* "}" { return new Block(s); }
+	= "{" whitespace* s:block_item_list whitespace* "}" { return generateParent("Block", s); }
     
-// returns an array of Statements
-compound_statement
-	= statement|.., whitespace*|
+block_item_list
+  = block_item |.., whitespace*|
 
-function
-	= type:type _ name:identifier whitespace*  "(" parameters:declaration_list ")" _ body:block { return new Function(type, name, parameters, body); }
+block_item
+	= statement
+  / block
 
-declaration 
-  = type:type _ variable:identifier { return new Declaration(type, variable); }
+function_definition
+	= whitespace* type:type _ name:identifier whitespace*  "(" parameters:declaration_list ")" whitespace* "{" whitespace* body:block whitespace* "}" { return generateNode("FunctionDefinition", data: { returnType: type, name: name, parameters: parameters, body: body }); }
+
+declaration
+  = variable_declaration
+  / function_declaration
+
+variable_declaration 
+  = type:type _ name:identifier { return generateNode("VariableDeclaration", data: { variableType: type, name: name }); }
+
+function_declaration
+  = type:type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
+
+function_call
+  = name:identifier whitespace* "(" whitespace* args:function_argument_list whitespace* ")" { return generateNode("FunctionCall", { name: name, args: args}); }
+
+function_argument_list
+  = expression|.., whitespace* "," whitespace*|
 
 initialization
-	= type:type _ variable:identifier whitespace* "=" whitespace* value:expression { return new Initialization(type, variable, value); }
+	= type:type _ name:identifier whitespace* "=" whitespace* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 // returns an array of Declaration
 declaration_list
 	= declaration|.., whitespace* "," whitespace*|
     
 expression
-	= constant
+	= literal 
+  / function_call
 
 type 
 	= $"int"
@@ -47,8 +109,8 @@ type
 identifier
 	= $([a-z_]i[a-z0-9_]i*)
     
-constant
-	= integer
+literal
+	= i:integer { return generateLiteral("Integer", i) }
     
 integer
 	= $[0-9]+
