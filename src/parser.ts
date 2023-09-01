@@ -1,4 +1,4 @@
-import * as grammar from 'grammar/main.pegjs';
+import grammar from 'grammar/main.pegjs';
 import * as peggy from "peggy";
 
 const parser = peggy.generate(grammar as string);
