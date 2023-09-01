@@ -1,4 +1,4 @@
-{{
+{
   /**
    * Helper function to create and return a unist Node with position information.
    */
@@ -45,16 +45,16 @@
       }
     }; 
   }
-}}
+}
 
 program = arr:translation_unit { return generateParent("Root", arr); }
 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-	= s:statement whitespace* t:translation_unit { return [s, ...t] }
-    / f:function_definition whitespace* t:translation_unit { return [f, ...t] }
-    / whitespace* { return [] }
+  = s:statement whitespace* t:translation_unit { return [s, ...t]; }
+  / f:function_definition whitespace* t:translation_unit { return [f, ...t]; }
+  / whitespace* { return []; }
     
 statement
 	= whitespace* @declaration whitespace* ";"
@@ -69,17 +69,21 @@ block_item_list
 
 block_item
 	= statement
-  / block
+  	/ block
 
 function_definition
-	= whitespace* type:type _ name:identifier whitespace*  "(" parameters:declaration_list ")" whitespace* "{" whitespace* body:block whitespace* "}" { return generateNode("FunctionDefinition", data: { returnType: type, name: name, parameters: parameters, body: body }); }
+	= whitespace* type:type _ name:identifier whitespace*  "(" parameters:declaration_list ")" whitespace* body:block whitespace* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
+
+// returns an array of Declaration
+declaration_list
+	= declaration|.., whitespace* "," whitespace*|
 
 declaration
   = variable_declaration
   / function_declaration
 
 variable_declaration 
-  = type:type _ name:identifier { return generateNode("VariableDeclaration", data: { variableType: type, name: name }); }
+  = type:type _ name:identifier { return generateNode("VariableDeclaration", { variableType: type, name: name }); }
 
 function_declaration
   = type:type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
@@ -93,10 +97,6 @@ function_argument_list
 initialization
 	= type:type _ name:identifier whitespace* "=" whitespace* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
-// returns an array of Declaration
-declaration_list
-	= declaration|.., whitespace* "," whitespace*|
-    
 expression
 	= literal 
   / function_call

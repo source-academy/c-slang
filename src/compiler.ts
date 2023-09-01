@@ -1,10 +1,7 @@
 /**
  * Compiler for C to webassembly
  */
-import * as grammar from 'grammar/main.pegjs';
-import * as peggy from "peggy";
-
-const parser = peggy.generate(grammar as string);
+import parser from 'parser';
 
 // TODO: change this temporary setup
 export default {
