@@ -60,9 +60,9 @@ translation_unit
   / whitespace* { return []; }
     
 statement
-	= whitespace* @declaration whitespace* ";"
-  / whitespace* @initialization whitespace* ";"
-  / whitespace* @expression whitespace* ";"
+	= whitespace* @declaration whitespace* statement_end
+  / whitespace* @initialization whitespace* statement_end
+  / whitespace* @expression whitespace* statement_end
     
 block
 	= "{" whitespace* s:block_item_list whitespace* "}" { return generateParent("Block", s); }
@@ -72,18 +72,18 @@ block_item_list
 
 block_item
 	= statement
-  	/ block
+  / block
 
 function_definition
-	= whitespace* type:type _ name:identifier whitespace*  "(" parameters:declaration_list ")" whitespace* body:block whitespace* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
+	= whitespace* type:type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace* ")" whitespace* body:block whitespace* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
 
 // returns an array of Declaration
 declaration_list
 	= declaration|.., whitespace* "," whitespace*|
 
 declaration
-  = variable_declaration
-  / function_declaration
+  = function_declaration //function declaration must come first, as the first few symbols of func and var declarations are exactly the same, meaning var will always be
+  / variable_declaration 
 
 variable_declaration 
   = type:type _ name:identifier { return generateNode("VariableDeclaration", { variableType: type, name: name }); }
@@ -126,5 +126,6 @@ _ "whitespace"
 whitespace
 	= [ \t\n]
     
-
+statement_end
+  = ";"+
 
