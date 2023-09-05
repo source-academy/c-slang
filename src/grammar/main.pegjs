@@ -63,6 +63,10 @@ statement
 	= whitespace* @declaration whitespace* statement_end
   / whitespace* @initialization whitespace* statement_end
   / whitespace* @expression whitespace* statement_end
+  / whitespace* @assignment whitespace* statement_end
+
+assignment
+  = name:identifier whitespace* "=" whitespace* expr:expression { return generateNode("Assignment", { name: name, value: expr }) }
     
 block
 	= "{" whitespace* s:block_item_list whitespace* "}" { return generateParent("Block", s); }

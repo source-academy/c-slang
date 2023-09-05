@@ -70,6 +70,15 @@ export interface VariableDeclaration extends ScopedNode {
   }
 }
 
+// A variable assignment
+export interface Assignment extends ScopedNode {
+  type: "Assignment",
+  data: {
+    name: string;
+    value: Expression;
+  }
+}
+
 // Information on a function - return type, name and parameters
 interface FunctionInformation {
   returnType: VariableType;
