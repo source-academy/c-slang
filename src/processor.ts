@@ -45,7 +45,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     if (node.data.name in node.scope.variables || node.data.name in node.scope.functions) {
       // check for redeclaration
       throw new ProcessingError(
-        `'${node.data.name}' redeclared`,
+        `Redeclaration error: '${node.data.name}' redeclared`,
         sourceCode,
         node.position
       );

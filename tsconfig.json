@@ -6,7 +6,7 @@
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "rootDir": "src",
+    "rootDirs": ["src", "test"],
     "baseUrl": "src"
   },
 }
