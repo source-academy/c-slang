@@ -6,13 +6,12 @@ import { Node, Parent, Literal } from "unist";
 
 // Modified versions of Node and Parent respectively to contain scope infr
 export interface ScopedNode extends Node { scope: Scope };
-export interface ScopedParent extends ScopedNode , Parent { 
-  parentScope: Scope;
-  scope: Scope;
-}; 
+export interface ScopedParent extends ScopedNode , Parent {};
+
 
 // Contains all variables and functions declared in a lexical scope
 export type Scope = {
+  parentScope: Scope | undefined | null; // the parent scope that this scope is in
   functions: Record<string, Function>; // mapping from name of function to object that contains information on the function
   variables: Record<string, Variable>; // mapping from name of variable to object that contains information on the variable
 }
@@ -98,7 +97,7 @@ export interface FunctionDefinition extends ScopedParent {
 }
 
 //TODO: check if Literal better here than node
-export interface FunctionCall extends Literal {
+export interface FunctionCall extends ScopedNode {
   type: "FunctionCall";
   data: {
     name: string;

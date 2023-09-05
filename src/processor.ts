@@ -5,8 +5,10 @@
  */
 
 import {
+  Assignment,
   Block,
   Declaration,
+  FunctionCall,
   FunctionDeclaration,
   FunctionDefinition,
   Initialization,
@@ -17,9 +19,11 @@ import {
   VariableDeclaration,
 } from "cnodes";
 import { ProcessingError } from "errors";
+import { Position } from "unist";
 
-function createNewScope() {
+function createNewScope(parentScope: Scope | null) {
   return {
+    parentScope,
     functions: {},
     variables: {},
   };
@@ -30,6 +34,16 @@ export default function process(ast: Root, sourceCode: string) {
   return ast;
 }
 
+/**
+ * Creates the lexical scopes that each node is present in, and links nodes to thee scopes they are in.
+ * Creates variables that are present in scopes.
+ * Performs basic checks:
+ *  1. Check for redeclaration of variables and functions
+ *  2. Check for existence of a variable during assignment and function call
+ *
+ * @param ast
+ * @param sourceCode
+ */
 function createScopesAndVariables(ast: Root, sourceCode: string) {
   const scopeStack: Scope[] = []; // stores a stack of scopes
 
@@ -42,7 +56,10 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function checkForRedeclaration(
     node: Declaration | Initialization | FunctionDefinition
   ) {
-    if (node.data.name in node.scope.variables || node.data.name in node.scope.functions) {
+    if (
+      node.data.name in node.scope.variables ||
+      node.data.name in node.scope.functions
+    ) {
       // check for redeclaration
       throw new ProcessingError(
         `Redeclaration error: '${node.data.name}' redeclared`,
@@ -77,6 +94,46 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     });
   }
 
+  /**
+   * Checks if a given variable is declared in the given scope.
+   */
+  function checkForVariableDeclaration(
+    name: string,
+    scope: Scope,
+    position: Position
+  ) {
+    let curr = scope;
+    while (curr != null) {
+      if (name in curr.variables) {
+        return;
+      }
+      curr = curr.parentScope;
+    }
+    throw new ProcessingError(
+      `Undeclared variable: '${name}' undeclared before use`,
+      sourceCode,
+      position
+    );
+  }
+
+  /**
+   * Checks if a given function is declared.
+   */
+  function checkForFunctionDeclaration(node: FunctionCall) {
+    let curr = node.scope;
+    while (curr != null) {
+      if (node.data.name in curr.functions) {
+        return;
+      }
+      curr = curr.parentScope;
+    }
+    throw new ProcessingError(
+      `Undeclared function: '${node.data.name}' undeclared before use`,
+      sourceCode,
+      node.position
+    );
+  }
+
   if (!ast) {
     throw new ProcessingError("No Root AST node found", sourceCode, {
       start: { line: 0, column: 0, offset: 0 },
@@ -88,15 +145,14 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function visit(node: ScopedNode) {
     if (node.type === "Root") {
       const n = node as Root;
-      node.scope = createNewScope();
+      node.scope = createNewScope(null);
       scopeStack.push(node.scope);
       for (const child of n.children) {
         visit(child);
       }
     } else if (node.type === "Block") {
       const n = node as Block;
-      n.scope = createNewScope();
-      n.parentScope = scopeStack[scopeStack.length - 1];
+      n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
       for (const child of n.children) {
         visit(child);
@@ -134,8 +190,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         parameters: params,
       };
       // add a new scope just for function variables TODO: see if this is a good idea later
-      n.parentScope = n.scope;
-      n.scope = createNewScope();
+      n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
       for (const param of params) {
         n.scope.variables[param.name] = { ...param };
@@ -143,6 +198,14 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       // traverse function body nodes
       visit(n.data.body);
       scopeStack.pop();
+    } else if (node.type === "Assignment") {
+      const n = node as Assignment;
+      n.scope = scopeStack[scopeStack.length - 1];
+      checkForVariableDeclaration(n.data.name, n.scope, n.position);
+    } else if (node.type === "FunctionCall") {
+      const n = node as FunctionCall;
+      n.scope = scopeStack[scopeStack.length - 1];
+      checkForFunctionDeclaration(n);
     }
   }
 
