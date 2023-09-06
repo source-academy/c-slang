@@ -1,8 +1,8 @@
 /**
  * Compiler for C to webassembly
  */
-import parser from 'parser';
-import process from 'processor';
+import parser from 'parser/parser';
+import process from 'c-ast/processor';
 
 export function compile(cSourceCode: string) {
   const ast = process(parser.parse(cSourceCode), cSourceCode);

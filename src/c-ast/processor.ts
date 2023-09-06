@@ -17,7 +17,7 @@ import {
   ScopedNode,
   Variable,
   VariableDeclaration,
-} from "cnodes";
+} from "c-ast/c-nodes";
 import { ProcessingError } from "errors";
 import { Position } from "unist";
 
