@@ -1,56 +1,22 @@
 {
   /**
-   * Helper function to create and return a unist Node with position information.
+   * Helper function to create and return a Node with position and type information
    */
   function generateNode(type, data) {
     const loc = location();
     return {
       type: type,
-      data: data,
       position: {
         start: loc.start,
         end: loc.end,
         offset: loc.offset
-      }
+      },
+      ...data
     };
-  }
-
-  /**
-   * Similar to generateNode, but generates a unist Parent node instead (a node that has children).
-   */
-  function generateParent(type, children, data) {
-    const loc = location();
-    return {
-      type: type,
-      children: children,
-      data: data,
-      position: {
-        start: loc.start,
-        end: loc.end,
-        offset: loc.offset
-      }
-    }; 
-  }
-
-  /**
-   * Generates a unist Literal.
-   */
-  function generateLiteral(type, value, data) {
-    const loc = location();
-    return {
-      type: type,
-      value: value,
-      data: data,
-      position: {
-        start: loc.start,
-        end: loc.end,
-        offset: loc.offset
-      }
-    }; 
   }
 }
 
-program = arr:translation_unit { return generateParent("Root", arr); }
+program = arr:translation_unit { return generateNode("Root", {children: arr}); }
 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
@@ -64,12 +30,16 @@ statement
   / whitespace* @initialization whitespace* statement_end
   / whitespace* @expression whitespace* statement_end
   / whitespace* @assignment whitespace* statement_end
+  / whitespace* @return_statement whitespace* statement_end
+
+return_statement 
+  = "return" whitespace* expr:expression { return generateNode("ReturnStatement", { value: expr}) } 
 
 assignment
   = name:identifier whitespace* "=" whitespace* expr:expression { return generateNode("Assignment", { name: name, value: expr }) }
     
 block
-	= "{" whitespace* s:block_item_list whitespace* "}" { return generateParent("Block", s); }
+	= "{" whitespace* s:block_item_list whitespace* "}" { return generateNode("Block", {children: s}); }
     
 block_item_list
   = block_item |.., whitespace*|
@@ -107,6 +77,7 @@ initialization
 expression
 	= literal 
   / function_call
+  / identifier // for variables
 
 type 
 	= $"int"
@@ -117,7 +88,7 @@ identifier
 	= $([a-z_]i[a-z0-9_]i*)
     
 literal
-	= i:integer { return generateLiteral("Integer", i) }
+	= i:integer { return generateNode("Integer", {value: Number(i)}) }
     
 integer
 	= $[0-9]+
