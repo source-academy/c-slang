@@ -4,9 +4,10 @@
 import parser from 'parser/parser';
 import process from 'c-ast/processor';
 import { translate } from 'translator';
+import { generateWAT } from 'wat-generator';
 
 export function compile(cSourceCode: string) {
-  const ast = process(parser.parse(cSourceCode), cSourceCode);
+  const ast = generateWAT(translate(process(parser.parse(cSourceCode), cSourceCode)));
   return ast;
 }
 

@@ -9,6 +9,7 @@ export interface WasmAstNode {
 
 export interface WasmVariable extends WasmAstNode {
   name: string; // not technically needed for wasm, but useful
+  isConst?: boolean // TODO: to support later on
   variableType: WasmType;
 }
 
@@ -29,7 +30,7 @@ export interface WasmConst extends WasmAstNode  {
 
 export interface WasmModule extends WasmAstNode {
   type: "Module";
-  globals: WasmVariable[];
+  globals: WasmGlobalVariable[];
   functions: WasmFunction[];
 }
 
@@ -38,10 +39,10 @@ export type WasmFunctionBodyLine = (WasmStatement | WasmExpression);
 export interface WasmFunction extends WasmAstNode  {
   type: "Function";
   name: string;
-  params: WasmVariable[];
-  locals: WasmVariable[];
+  params: Record<string, WasmVariable>;
+  locals: Record<string, WasmVariable>;
   body: WasmFunctionBodyLine[];
-  return: WasmType;
+  return: WasmType | null;
 }
 
 type WasmStatement = WasmGlobalSet | WasmLocalSet;

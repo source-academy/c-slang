@@ -13,11 +13,13 @@ import {
   FunctionDefinition,
   Initialization,
   Position,
+  ReturnStatement,
   Root,
   Scope,
   ScopedNode,
   Variable,
   VariableDeclaration,
+  VariableExpr,
 } from "c-ast/c-nodes";
 import { ProcessingError } from "errors";
 
@@ -105,7 +107,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     let curr = scope;
     while (curr != null) {
       if (name in curr.variables) {
-        return;
+        return curr.variables[name];
       }
       curr = curr.parentScope;
     }
@@ -142,7 +144,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   }
 
   // the visitor function for visiting nodes
-  function visit(node: ScopedNode) {
+  function visit(node: ScopedNode, pre: ScopedNode = null) {
     if (node.type === "Root") {
       const n = node as Root;
       node.scope = createNewScope(null);
@@ -152,12 +154,21 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       }
     } else if (node.type === "Block") {
       const n = node as Block;
-      n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
-      scopeStack.push(n.scope);
+      if (pre?.type !== "FunctionDefinition") {
+        // only create new scope if not a block following a function since function will have created already
+        n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
+        scopeStack.push(n.scope);
+      } else {
+        n.scope = scopeStack[scopeStack.length - 1]
+      }
+      
       for (const child of n.children) {
         visit(child);
       }
-      scopeStack.pop();
+
+      if (pre?.type !== "FunctionDefinition") {
+        scopeStack.pop();
+      }
     } else if (
       node.type === "VariableDeclaration" ||
       node.type === "Initialization"
@@ -193,10 +204,10 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
       for (const param of params) {
-        n.scope.variables[param.name] = { ...param };
+        n.scope.variables[param.name] = { ...param, isParam: true };
       }
       // traverse function body nodes
-      visit(n.body);
+      visit(n.body, n);
       scopeStack.pop();
     } else if (node.type === "Assignment") {
       const n = node as Assignment;
@@ -206,6 +217,18 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as FunctionCall;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForFunctionDeclaration(n);
+      for (const arg of n.args) {
+        visit(arg) // visit each arg
+      }
+    } else if (node.type === "VariableExpr") {
+      const n = node as VariableExpr
+      n.scope = scopeStack[scopeStack.length - 1];
+      const v = checkForVariableDeclaration(n.name, n.scope, n.position);
+      n.isParam = v.isParam; // to know if this was a parameter being used in expression
+    } else if (node.type === "ReturnStatement") {
+      const n = node as ReturnStatement
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.value);
     }
   }
 

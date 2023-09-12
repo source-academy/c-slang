@@ -3,7 +3,7 @@
  */
 
 import { Root, Node, FunctionDefinition, VariableType, VariableDeclaration, Initialization, Literal, Block, ReturnStatement, VariableExpr, Expression, FunctionCall, Assignment } from "c-ast/c-nodes";
-import { WasmConst, WasmExpression, WasmFunction, WasmGlobalVariable, WasmLocalVariable, WasmModule, WasmType } from "wasm-ast/wasm-nodes";
+import { WasmConst, WasmExpression, WasmFunction, WasmGlobalVariable, WasmLocalVariable, WasmModule, WasmType, WasmVariable } from "wasm-ast/wasm-nodes";
 
 export function translate(CAstRoot: Root) {
   const wasmRoot: WasmModule = {
@@ -19,6 +19,13 @@ export function translate(CAstRoot: Root) {
    */
   function convertVarNameToScopedVarName(name: string, block: number) {
     return `${name}_${block.toString()}`;
+  }
+
+  /**
+   * Returns the given function parameter name prefixed with "param_".
+   */
+  function generateParamName(name: string) {
+    return "param_" + name;
   }
 
   // convert variable type from C variable to 
@@ -59,18 +66,25 @@ export function translate(CAstRoot: Root) {
       }
     } else if (CAstNode.type === "ReturnStatement") {
       const n = CAstNode as ReturnStatement;
-      enclosingFunc.body.push(evaluateExpression(n.value, enclosingBlockNum));
+      if (enclosingFunc.name !== "main") {
+        // main shouldnt have any return for wasm
+        enclosingFunc.body.push(evaluateExpression(n.value, enclosingBlockNum));
+      }
     }  else if (CAstNode.type === "Initialization") {
       const n = CAstNode as Initialization;
       const v: WasmLocalVariable = {type: "LocalVariable", name: convertVarNameToScopedVarName(n.name, enclosingBlockNum), variableType: convertVariableType(n.variableType)}
-      enclosingFunc.locals.push(v);
-      enclosingFunc.body.push({type: "LocalSet", name: n.name, value: evaluateExpression(n.value, enclosingBlockNum)})
+      enclosingFunc.locals[v.name] = v;
+      enclosingFunc.body.push({type: "LocalSet", name: convertVarNameToScopedVarName(n.name, enclosingBlockNum), value: evaluateExpression(n.value, enclosingBlockNum)})
     } else if (CAstNode.type === "VariableDeclaration") {
       const n = CAstNode as VariableDeclaration;
-      enclosingFunc.locals.push({type: "LocalVariable", name: convertVarNameToScopedVarName(n.name, enclosingBlockNum), variableType: convertVariableType(n.variableType)});
+      const localVar = {type: "LocalVariable", name: convertVarNameToScopedVarName(n.name, enclosingBlockNum), variableType: convertVariableType(n.variableType)};
+      enclosingFunc.locals[localVar.name] = localVar;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
-      if (convertVarNameToScopedVarName(n.name, enclosingBlockNum) in enclosingFunc.locals) {
+      if (generateParamName(n.name) in enclosingFunc.params) {
+        // parameter assignment
+        enclosingFunc.body.push({type: "LocalSet", name: generateParamName(n.name), value: evaluateExpression(n.value, enclosingBlockNum)})
+      } else if (convertVarNameToScopedVarName(n.name, enclosingBlockNum) in enclosingFunc.locals) {
         // this assignment is to a variable in local scope
         enclosingFunc.body.push({type: "LocalSet", name: convertVarNameToScopedVarName(n.name, enclosingBlockNum), value: evaluateExpression(n.value, enclosingBlockNum)})
       } else {
@@ -103,7 +117,9 @@ export function translate(CAstRoot: Root) {
       return {type: "FunctionCall", name: n.name, args};
     } else if (expr.type === "VariableExpr") {
       const n: VariableExpr = expr;
-      return {type: "LocalGet", name: convertVarNameToScopedVarName(n.name, enclosingBlockNum)};
+      return {type: "LocalGet", name: expr.isParam ? generateParamName(n.name) : convertVarNameToScopedVarName(n.name, enclosingBlockNum)};
+    } else {
+      const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }
   }
 
@@ -111,16 +127,22 @@ export function translate(CAstRoot: Root) {
 
   for (const child of CAstRoot.children) {
     if (child.type ===  "FunctionDefinition") {
-      const node = child as FunctionDefinition;
+      const n = child as FunctionDefinition;
+      const params: Record<string, WasmVariable> = {}
+      for (const param of n.parameters) {
+        params[generateParamName(param.name)] = {type: "FunctionParameter", name: generateParamName(param.name), variableType: convertVariableType(param.variableType)}
+      }
       const f: WasmFunction = {
         type: "Function",
-        name: node.name,
-        params: node.parameters.map(param => ({type: "FunctionParameter", name: param.name, variableType: convertVariableType(param.variableType)})),
-        locals: [],
+        name: n.name,
+        params,
+        locals: {},
         body: [],
-        return: convertVariableType(node.returnType)
+        return: n.returnType === "void" || n.name === "main" ? null : convertVariableType(n.returnType)
       }
-      visit(node.body, f, 0);
+      for (const child of n.body.children) {
+        visit(child, f, 0);
+      }
       wasmRoot.functions.push(f);
     } else if (child.type === "VariableDeclaration") {
       const n = child as VariableDeclaration;

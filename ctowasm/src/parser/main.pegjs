@@ -49,7 +49,7 @@ block_item
   / block
 
 function_definition
-	= whitespace* type:type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace* ")" whitespace* body:block whitespace* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
+	= whitespace* type:function_return_type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace* ")" whitespace* body:block whitespace* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
 
 // returns an array of Declaration
 declaration_list
@@ -63,7 +63,7 @@ variable_declaration
   = type:type _ name:identifier { return generateNode("VariableDeclaration", { variableType: type, name: name }); }
 
 function_declaration
-  = type:type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
+  = type:function_return_type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
 
 function_call
   = name:identifier whitespace* "(" whitespace* args:function_argument_list whitespace* ")" { return generateNode("FunctionCall", { name: name, args: args}); }
@@ -77,10 +77,14 @@ initialization
 expression
 	= literal 
   / function_call
-  / identifier // for variables
+  / name:identifier { return generateNode("VariableExpr", { name: name }); } // for variables
 
 type 
 	= $"int"
+
+function_return_type
+  = type 
+  / $"void"
 
 // identifiers must not start with a digit
 // can only contain letters, digits or underscore

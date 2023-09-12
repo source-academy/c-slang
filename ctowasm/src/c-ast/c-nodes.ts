@@ -31,7 +31,7 @@ export type Scope = {
 
 // Contains the information of a declared function. To be stored in the scope of a ScopedParent.
 export interface Function {
-  returnType: VariableType;
+  returnType: VariableType | "void";
   name: string;
   parameters: Variable[];
 }
@@ -40,6 +40,7 @@ export interface Function {
 export interface Variable {
   type: VariableType;
   name: string;
+  isParam?: boolean; // to distinguish function parameters from regular vars
 }
 
 // Root represents the starting node of the AST
@@ -72,12 +73,13 @@ export interface ReturnStatement extends ScopedNode {
 export interface VariableExpr extends ScopedNode {
   type: "VariableExpr";
   name: string; //name of the variable
+  isParam?: boolean;
 }
 
 // For now literals are only ints TODO: need to handle other type + do overflow underflow checks of nubmers later
 export type Literal = Integer;
 
-export interface Integer extends Node {
+export interface Integer extends ScopedNode {
   type: "Integer";
   value: number;
 }
@@ -106,7 +108,7 @@ export interface Assignment extends ScopedNode {
 
 // Information on a function - return type, name and parameters
 interface FunctionInformation {
-  returnType: VariableType;
+  returnType: VariableType | "void";
   name: string;
   parameters: VariableDeclaration[];
 }

@@ -11,15 +11,14 @@ import { Position } from "c-ast/c-nodes";
 export class SourceCodeError extends Error {
   constructor(message: string, sourceCode: string, position: Position) {
     super();
-    this.message = `\n${message}\n${position.start.line} | `
+    this.message = `\n${message}\n${position.start.line} | `;
     let currLine = position.start.line;
     for (let i = position.start.offset; i < position.end.offset; ++i) {
-      if (sourceCode[i] === '\n') {
+      if (sourceCode[i] === "\n") {
         this.message += `\n${++currLine} | `;
       } else {
         this.message += sourceCode[i];
       }
-      
     }
     this.message += "\n";
   }
@@ -28,5 +27,11 @@ export class SourceCodeError extends Error {
 export class ProcessingError extends SourceCodeError {
   constructor(message: string, sourceCode: string, position: Position) {
     super(message, sourceCode, position);
+  }
+}
+
+export class TranslationError extends Error {
+  constructor(message: string) {
+    super(message);
   }
 }

@@ -18,14 +18,19 @@ describe("Subset 1 Tests", () => {
         testFileCompilationError(1, "fn_param_redeclaration")
       ).toThrow("Redeclaration of function parameter");
     });
-    test("Use of undeclared variable throws error", () => {
-      expect(() => testFileCompilationError(1, "undeclared_var")).toThrow(
+    test("Assignment to undeclared variable throws error", () => {
+      expect(() => testFileCompilationError(1, "undeclared_var_assignment")).toThrow(
         "Undeclared variable"
       );
     });
-    test("Call of undeclared function throws error", () => {
+    test("Calling undeclared function throws error", () => {
       expect(() => testFileCompilationError(1, "undeclared_fn")).toThrow(
         "Undeclared function"
+      );
+    });
+    test("Usage of undeclared variable throws error", () => {
+      expect(() => testFileCompilationError(1, "undeclared_var_usage")).toThrow(
+        "Undeclared variable"
       );
     });
   });
