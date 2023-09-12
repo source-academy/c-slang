@@ -1,1 +1,1 @@
-export { compile, generateAST } from "./compiler";
+export { compile, generate_C_AST, generate_WAT_AST } from "./compiler";

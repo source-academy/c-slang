@@ -1,81 +1,89 @@
 /**
  * This file contains all the typescript definitions for the nodes of the wasm AST.
  */
-type WasmType = "i32" | "i64" | "f32" | "f64";
+export type WasmType = "i32" | "i64" | "f32" | "f64";
 
-export interface WasmVariable {
+export interface WasmAstNode {
+  type: string;
+}
+
+export interface WasmVariable extends WasmAstNode {
   name: string; // not technically needed for wasm, but useful
   variableType: WasmType;
 }
 
-export interface WasmLocalVariable extends WasmVariable {
+export interface WasmLocalVariable extends WasmVariable, WasmAstNode {
   type: "LocalVariable";
 }
 
-export interface WasmGlobalVariable extends WasmVariable {
+export interface WasmGlobalVariable extends WasmVariable, WasmAstNode {
   type: "GlobalVariable";
+  initializerValue?: WasmConst // initial value to set this global value to
 }
 
-export interface WasmConst {
+export interface WasmConst extends WasmAstNode  {
   type: "Const";
   variableType: WasmType;
   value: number;
 }
 
-export interface WasmModule {
+export interface WasmModule extends WasmAstNode {
   type: "Module";
   globals: WasmVariable[];
   functions: WasmFunction[];
 }
 
-export interface WasmFunction {
+export type WasmFunctionBodyLine = (WasmStatement | WasmExpression);
+
+export interface WasmFunction extends WasmAstNode  {
   type: "Function";
+  name: string;
   params: WasmVariable[];
   locals: WasmVariable[];
-  body: (WasmStatement | WasmExpression)[];
+  body: WasmFunctionBodyLine[];
   return: WasmType;
 }
 
 type WasmStatement = WasmGlobalSet | WasmLocalSet;
 
 // TODO: figure out if this necessary
-type WasmExpression =
+export type WasmExpression =
   | WasmFunctionCall
   | WasmConst
   | WasmLocalGet
   | WasmGlobalGet;
 
-export interface WasmFunctionCall {
+export interface WasmFunctionCall extends WasmAstNode  {
   type: "FunctionCall";
   name: string;
   args: WasmExpression[];
 }
 
 // A procedure is a function with no return value
-export interface WasmProcedureCall {
+export interface WasmProcedureCall extends WasmAstNode  {
   type: "ProcedureCall";
   name: string;
   args: WasmExpression[];
 }
 
-export interface WasmGlobalSet {
+export interface WasmGlobalSet extends WasmAstNode  {
   type: "GlobalSet";
   name: string;
   value: WasmExpression;
 }
 
-export interface WasmLocalSet {
+export interface WasmLocalSet extends WasmAstNode  {
   type: "LocalSet";
   name: string;
   value: WasmExpression;
 }
 
-export interface WasmLocalGet {
+export interface WasmLocalGet extends WasmAstNode  {
   type: "LocalGet";
   name: string;
 }
 
-export interface WasmGlobalGet {
+export interface WasmGlobalGet extends WasmAstNode  {
   type: "GlobalGet";
   name: string;
 }

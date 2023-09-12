@@ -1,7 +1,7 @@
 /**
  * Command line script for running the parser on a provided c input file.
  */
-import { compile, generateAST } from "./build/index.js";
+import { compile, generate_C_AST, generate_WAT_AST } from "./build/index.js";
 import yargs from "yargs";
 import * as fs from "fs";
 import * as path from "node:path";
@@ -35,9 +35,13 @@ switch (argv._[0]) {
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/wasm.out") 
     output = compile(input)
     break
-  case "generate-ast":
-    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/ast.json") 
-    output = generateAST(input)
+  case "generate-c-ast":
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/c-ast.json") 
+    output = generate_C_AST(input)
+    break
+  case "generate-wat-ast":
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/wat-ast.json") 
+    output = generate_WAT_AST(input)
     break
 }
 
