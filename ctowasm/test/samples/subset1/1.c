@@ -15,6 +15,6 @@ int f() {
 int main() {
   int x = 0;
   int y = 10;
-
+  x + 5;
   f();
 }

@@ -1,3 +1,5 @@
+import { Scopes } from "wasm-ast/types";
+
 /**
  * This file contains all the typescript definitions for the nodes of the wasm AST.
  */
@@ -41,6 +43,7 @@ export interface WasmFunction extends WasmAstNode  {
   name: string;
   params: Record<string, WasmVariable>;
   locals: Record<string, WasmVariable>;
+  scopes: Scopes;
   body: WasmFunctionBodyLine[];
   return: WasmType | null;
 }
