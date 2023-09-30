@@ -16,14 +16,20 @@ import {
   Expression,
   FunctionCall,
   Assignment,
+  ArithmeticExpression,
 } from "c-ast/c-nodes";
 import {
+  WasmAddExpression,
+  WasmArithmeticExpression,
   WasmConst,
+  WasmDivideExpression,
   WasmExpression,
   WasmFunction,
   WasmGlobalVariable,
   WasmLocalVariable,
   WasmModule,
+  WasmMultiplyExpression,
+  WasmSubtractExpression,
   WasmType,
   WasmVariable,
 } from "wasm-ast/wasm-nodes";
@@ -105,10 +111,7 @@ export function translate(CAstRoot: Root) {
    * @param enclosingFunc The enclosing function within which we are visiting lines.
    * @param enclosingBlockNum The block that this node is in. Everytime we enter a new block we increment by 1
    */
-  function visit(
-    CAstNode: Node,
-    enclosingFunc: WasmFunction
-  ) {
+  function visit(CAstNode: Node, enclosingFunc: WasmFunction) {
     if (CAstNode.type === "Block") {
       const n = CAstNode as Block;
       enclosingFunc.scopes.push(new Set()); // push on new scope for this block
@@ -127,13 +130,19 @@ export function translate(CAstRoot: Root) {
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
       const v: WasmLocalVariable = {
         type: "LocalVariable",
-        name: convertVarNameToScopedVarName(n.name, enclosingFunc.scopes.length - 1),
+        name: convertVarNameToScopedVarName(
+          n.name,
+          enclosingFunc.scopes.length - 1
+        ),
         variableType: convertVariableType(n.variableType),
       };
       enclosingFunc.locals[v.name] = v;
       enclosingFunc.body.push({
         type: "LocalSet",
-        name: convertVarNameToScopedVarName(n.name, enclosingFunc.scopes.length - 1),
+        name: convertVarNameToScopedVarName(
+          n.name,
+          enclosingFunc.scopes.length - 1
+        ),
         value: evaluateExpression(n.value, enclosingFunc),
       });
     } else if (CAstNode.type === "VariableDeclaration") {
@@ -141,7 +150,10 @@ export function translate(CAstRoot: Root) {
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
       const localVar = {
         type: "LocalVariable",
-        name: convertVarNameToScopedVarName(n.name, enclosingFunc.scopes.length - 1),
+        name: convertVarNameToScopedVarName(
+          n.name,
+          enclosingFunc.scopes.length - 1
+        ),
         variableType: convertVariableType(n.variableType),
       };
       enclosingFunc.locals[localVar.name] = localVar;
@@ -182,6 +194,45 @@ export function translate(CAstRoot: Root) {
   }
 
   /**
+   * Function to evaluate a ArithmeticExpression node, evaluating and building wasm nodes
+   * of all the subexpressions of the ArithmeticExpression.
+   * TODO: support different type of ops other than i32 ops.
+   */
+  function evaluateArithmeticExpression(node: ArithmeticExpression, enclosingFunc: WasmFunction) {
+    let wasmNode: any = {type: ""};
+    switch (node.operator) {
+      case "+":
+        wasmNode.type = "AddExpression";
+        break;
+      case "-":
+        wasmNode.type = "SubtractExpression";
+        break;
+      case "*":
+        wasmNode.type = "MultiplyExpression";
+        break;
+      case "/":
+        wasmNode.type = "DivideExpression";
+        break;
+      case "%":
+        wasmNode.type = "RemainderExpression";
+        break;
+      default:
+        //TODO: remove when no needed
+        console.assert(false, "Translaton Error: unmatched binary operator.")
+    }
+
+    // the first expression in expression series will be considered left expression
+    wasmNode.leftExpr = evaluateExpression(node.exprs[0], enclosingFunc);
+    let currNode = wasmNode
+    for (let i = 1; i < node.exprs.length - 1; ++i) {
+      currNode.rightExpr = { type: currNode.type, leftExpr: evaluateExpression(node.exprs[i], enclosingFunc) } 
+      currNode = currNode.rightExpr
+    }
+    currNode.rightExpr = evaluateExpression(node.exprs[node.exprs.length - 1], enclosingFunc);
+    return currNode;
+  }
+
+  /**
    * Function that evaluates a given C expression and returns the corresponding WASM expression.
    */
   function evaluateExpression(
@@ -200,7 +251,10 @@ export function translate(CAstRoot: Root) {
     } else if (expr.type === "VariableExpr") {
       const n: VariableExpr = expr;
       const wasmVariableName = getWasmVariableName(n.name, enclosingFunc);
-      if (wasmVariableName in enclosingFunc.params || wasmVariableName in enclosingFunc.locals) {
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
         // the expression is a function parameter OR a local variable
         return {
           type: "LocalGet",
@@ -212,6 +266,8 @@ export function translate(CAstRoot: Root) {
           name: wasmVariableName,
         };
       }
+    } else if (expr.type === "ArithmeticExpression") {
+      return evaluateArithmeticExpression(expr, enclosingFunc);
     } else {
       const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }

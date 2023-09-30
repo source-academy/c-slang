@@ -11,7 +11,7 @@ export interface WasmAstNode {
 
 export interface WasmVariable extends WasmAstNode {
   name: string; // not technically needed for wasm, but useful
-  isConst?: boolean // TODO: to support later on
+  isConst?: boolean; // TODO: to support later on
   variableType: WasmType;
 }
 
@@ -21,10 +21,10 @@ export interface WasmLocalVariable extends WasmVariable, WasmAstNode {
 
 export interface WasmGlobalVariable extends WasmVariable, WasmAstNode {
   type: "GlobalVariable";
-  initializerValue?: WasmConst // initial value to set this global value to
+  initializerValue?: WasmConst; // initial value to set this global value to
 }
 
-export interface WasmConst extends WasmAstNode  {
+export interface WasmConst extends WasmAstNode {
   type: "Const";
   variableType: WasmType;
   value: number;
@@ -36,9 +36,9 @@ export interface WasmModule extends WasmAstNode {
   functions: WasmFunction[];
 }
 
-export type WasmFunctionBodyLine = (WasmStatement | WasmExpression);
+export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
 
-export interface WasmFunction extends WasmAstNode  {
+export interface WasmFunction extends WasmAstNode {
   type: "Function";
   name: string;
   params: Record<string, WasmVariable>;
@@ -55,39 +55,70 @@ export type WasmExpression =
   | WasmFunctionCall
   | WasmConst
   | WasmLocalGet
-  | WasmGlobalGet;
+  | WasmGlobalGet
+  | WasmAddExpression
+  | WasmSubtractExpression
+  | WasmMultiplyExpression
+  | WasmDivideExpression
+  | WasmRemainderExpression;
 
-export interface WasmFunctionCall extends WasmAstNode  {
+export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
   name: string;
   args: WasmExpression[];
 }
 
 // A procedure is a function with no return value
-export interface WasmProcedureCall extends WasmAstNode  {
+export interface WasmProcedureCall extends WasmAstNode {
   type: "ProcedureCall";
   name: string;
   args: WasmExpression[];
 }
 
-export interface WasmGlobalSet extends WasmAstNode  {
+export interface WasmGlobalSet extends WasmAstNode {
   type: "GlobalSet";
   name: string;
   value: WasmExpression;
 }
 
-export interface WasmLocalSet extends WasmAstNode  {
+export interface WasmLocalSet extends WasmAstNode {
   type: "LocalSet";
   name: string;
   value: WasmExpression;
 }
 
-export interface WasmLocalGet extends WasmAstNode  {
+export interface WasmLocalGet extends WasmAstNode {
   type: "LocalGet";
   name: string;
 }
 
-export interface WasmGlobalGet extends WasmAstNode  {
+export interface WasmGlobalGet extends WasmAstNode {
   type: "GlobalGet";
   name: string;
+}
+
+export interface WasmArithmeticExpression extends WasmAstNode {
+  leftExpr: WasmExpression;
+  rightExpr: WasmExpression;
+  varType: WasmType; // the type of the variables that the arithmetic expression is running
+}
+
+export interface WasmAddExpression extends WasmArithmeticExpression {
+  type: "AddExpression";
+}
+
+export interface WasmSubtractExpression extends WasmArithmeticExpression {
+  type: "SubtractExpression";
+}
+
+export interface WasmMultiplyExpression extends WasmArithmeticExpression {
+  type: "MultiplyExpression";
+}
+
+export interface WasmDivideExpression extends WasmArithmeticExpression {
+  type: "DivideExpression";
+}
+
+export interface WasmRemainderExpression extends WasmArithmeticExpression {
+  type: "RemainderExpression";
 }

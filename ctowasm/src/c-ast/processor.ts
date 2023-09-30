@@ -5,6 +5,7 @@
  */
 
 import {
+  ArithmeticExpression,
   Assignment,
   Block,
   Declaration,
@@ -225,6 +226,12 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       const v = checkForVariableDeclaration(n.name, n.scope, n.position);
       n.isParam = v.isParam; // to know if this was a parameter being used in expression
+    } else if (node.type === "ArithmeticExpression") {
+      const n = node as ArithmeticExpression
+      n.scope = scopeStack[scopeStack.length - 1];
+      for (const expr of n.exprs) {
+        visit(expr);
+      }
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement
       n.scope = scopeStack[scopeStack.length - 1];

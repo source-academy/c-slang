@@ -75,7 +75,25 @@ initialization
 	= type:type _ name:identifier whitespace* "=" whitespace* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 expression
-	= literal 
+  = arithmetic_expression
+
+arithmetic_expression
+  = add_subtract_expression // match on add and subtract first, to ensure multiply/divide precedence 
+  / multiply_divide_expression
+
+add_subtract_expression
+  = left:multiply_divide_expression tail:(_ "+" _ @expression)+ { return generateNode("ArithmeticExpression", { operator: "+", exprs: [left, ...tail] } ) }
+  / left:multiply_divide_expression tail:(_ "-" _ @expression)+ { return generateNode("ArithmeticExpression", { operator: "-", exprs: [left, ...tail] } ) } 
+  
+multiply_divide_expression
+  = left:term tail:(_ "*" _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { operator: "*", exprs: [left, ...tail] }); }
+  / left:term tail:(_ "/" _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { operator: "/", exprs: [left, ...tail] }); }
+  / left:term tail:(_ "%" _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { operator: "%", exprs: [left, ...tail] }); } // remainder has same precedence as multiply and divide
+  / term
+
+term
+  = "(" @expression ")"
+	/ literal
   / function_call
   / name:identifier { return generateNode("VariableExpr", { name: name }); } // for variables
 
@@ -107,4 +125,3 @@ whitespace
     
 statement_end
   = ";"+
-

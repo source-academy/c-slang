@@ -59,7 +59,7 @@ export interface Block extends ScopedNode {
 export type VariableType = "int";
 
 // to be expanded later to include proper expressions
-export type Expression = Literal | FunctionCall | VariableExpr;
+export type Expression = Literal | FunctionCall | VariableExpr | ArithmeticExpression;
 
 export type Statement = Declaration | Initialization | ReturnStatement;
 
@@ -74,6 +74,14 @@ export interface VariableExpr extends ScopedNode {
   type: "VariableExpr";
   name: string; //name of the variable
   isParam?: boolean;
+}
+
+export type BinaryOperator = "+" | "-" | "*" | "/" | "%";
+
+export interface ArithmeticExpression extends ScopedNode {
+  type: "ArithmeticExpression";
+  operator: BinaryOperator;
+  exprs: Expression[] // the array of experessions that are joined by the operator
 }
 
 // For now literals are only ints TODO: need to handle other type + do overflow underflow checks of nubmers later
