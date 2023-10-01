@@ -48,7 +48,8 @@ function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "Const") {
     return `(${expr.variableType}.const ${expr.value.toString()})`;
   } else if (expr.type === "LocalGet") {
-    return `(local.get $${expr.name})`;
+    const preStatements = expr.preStatements ? expr.preStatements.map(s => generateStatementStr(s)?? generateExprStr(s)) : [];
+    return `(local.get $${expr.name} ${preStatements.join(" ")})`;
   } else if (expr.type === "GlobalGet") {
     return `(global.get $${expr.name})`;
   } else if (expr.type === "AddExpression") {
@@ -76,6 +77,8 @@ function generateExprStr(expr: WasmExpression): string {
     return `(i32.rem_u ${generateExprStr(expr.leftExpr)} ${generateExprStr(
       expr.rightExpr
     )})`;
+  } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
+    return generateStatementStr(expr);
   } else {
     const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
   }

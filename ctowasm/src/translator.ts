@@ -17,6 +17,8 @@ import {
   FunctionCall,
   Assignment,
   ArithmeticExpression,
+  PrefixExpression,
+  PostfixExpression,
 } from "c-ast/c-nodes";
 import {
   WasmAddExpression,
@@ -65,6 +67,7 @@ export function translate(CAstRoot: Root) {
     if (type === "int") {
       return "i32";
     }
+    console.assert(false, `convertVariableType error: type not found: ${type}`)
   }
 
   /**
@@ -102,6 +105,14 @@ export function translate(CAstRoot: Root) {
 
     // if reach this point, variable must be a global variable
     return originalVariableName;
+  }
+
+  /**
+   * Converts a given unary opeartor into the corresponding asm instruction node name.
+   */
+  const unaryOperatorToInstructionName: Record<string, "AddExpression"|"SubtractExpression"> = {
+    "++": "AddExpression",
+    "--": "SubtractExpression"
   }
 
   /**
@@ -160,15 +171,11 @@ export function translate(CAstRoot: Root) {
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
       const wasmVariableName = getWasmVariableName(n.name, enclosingFunc);
-      if (wasmVariableName in enclosingFunc.params) {
-        // parameter assignment
-        enclosingFunc.body.push({
-          type: "LocalSet",
-          name: wasmVariableName,
-          value: evaluateExpression(n.value, enclosingFunc),
-        });
-      } else if (wasmVariableName in enclosingFunc.locals) {
-        // this assignment is to a variable in local scope
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        // parameter assignment or assignment to local scope variable
         enclosingFunc.body.push({
           type: "LocalSet",
           name: wasmVariableName,
@@ -198,8 +205,11 @@ export function translate(CAstRoot: Root) {
    * of all the subexpressions of the ArithmeticExpression.
    * TODO: support different type of ops other than i32 ops.
    */
-  function evaluateArithmeticExpression(node: ArithmeticExpression, enclosingFunc: WasmFunction) {
-    let wasmNode: any = {type: ""};
+  function evaluateArithmeticExpression(
+    node: ArithmeticExpression,
+    enclosingFunc: WasmFunction
+  ) {
+    let wasmNode: any = { type: "" };
     switch (node.operator) {
       case "+":
         wasmNode.type = "AddExpression";
@@ -218,17 +228,23 @@ export function translate(CAstRoot: Root) {
         break;
       default:
         //TODO: remove when no needed
-        console.assert(false, "Translaton Error: unmatched binary operator.")
+        console.assert(false, "Translaton Error: unmatched binary operator.");
     }
 
     // the first expression in expression series will be considered left expression
     wasmNode.leftExpr = evaluateExpression(node.exprs[0], enclosingFunc);
-    let currNode = wasmNode
+    let currNode = wasmNode;
     for (let i = 1; i < node.exprs.length - 1; ++i) {
-      currNode.rightExpr = { type: currNode.type, leftExpr: evaluateExpression(node.exprs[i], enclosingFunc) } 
-      currNode = currNode.rightExpr
+      currNode.rightExpr = {
+        type: currNode.type,
+        leftExpr: evaluateExpression(node.exprs[i], enclosingFunc),
+      };
+      currNode = currNode.rightExpr;
     }
-    currNode.rightExpr = evaluateExpression(node.exprs[node.exprs.length - 1], enclosingFunc);
+    currNode.rightExpr = evaluateExpression(
+      node.exprs[node.exprs.length - 1],
+      enclosingFunc
+    );
     return currNode;
   }
 
@@ -268,6 +284,81 @@ export function translate(CAstRoot: Root) {
       }
     } else if (expr.type === "ArithmeticExpression") {
       return evaluateArithmeticExpression(expr, enclosingFunc);
+    } else if (expr.type === "PrefixExpression") {
+      const n: PrefixExpression = expr;
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
+      let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
+      let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        nodeGetTypeStr = "LocalGet";
+        nodeSetTypeStr = "LocalSet";
+      }
+      return {
+        type: nodeGetTypeStr,
+        name: wasmVariableName,
+        preStatements: [
+          {
+            type: nodeSetTypeStr,
+            name: wasmVariableName,
+            value: {
+              type: unaryOperatorToInstructionName[n.operator],
+              leftExpr: {
+                type: "Const",
+                variableType: convertVariableType(n.variable.variableType),
+                value: 1,
+              },
+              rightExpr: {
+                type: nodeGetTypeStr,
+                name: wasmVariableName,
+              },
+              varType: convertVariableType(expr.variable.variableType),
+            },
+          },
+        ],
+      };
+    } else if (expr.type === "PostfixExpression") {
+      const n: PostfixExpression = expr;
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
+      let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
+      let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        nodeGetTypeStr = "LocalGet";
+        nodeSetTypeStr = "LocalSet";
+      }
+
+      return {
+        type: nodeSetTypeStr,
+        name: wasmVariableName,
+        value: {
+          type: unaryOperatorToInstructionName[n.operator],
+          leftExpr: {
+            type: "Const",
+            variableType: convertVariableType(expr.variable.variableType),
+            value: 1,
+          },
+          rightExpr: {
+            type: nodeGetTypeStr,
+            name: wasmVariableName,
+            preStatements: [{
+              type: nodeGetTypeStr,
+              name: wasmVariableName
+            }]
+          },
+          varType: convertVariableType(expr.variable.variableType),
+        },
+      };
     } else {
       const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }

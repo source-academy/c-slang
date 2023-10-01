@@ -14,6 +14,8 @@ import {
   FunctionDefinition,
   Initialization,
   Position,
+  PostfixExpression,
+  PrefixExpression,
   ReturnStatement,
   Root,
   Scope,
@@ -171,8 +173,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         scopeStack.pop();
       }
     } else if (
-      node.type === "VariableDeclaration" ||
-      node.type === "Initialization"
+      node.type === "VariableDeclaration"
     ) {
       const n = node as VariableDeclaration;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -182,7 +183,18 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         type: n.variableType,
         name: n.name,
       };
-    } else if (node.type === "FunctionDeclaration") {
+    } else if (node.type === "Initialization") {
+      const n = node as Initialization;
+      n.scope = scopeStack[scopeStack.length - 1];
+      checkForRedeclaration(n);
+      // add this new variable to the scope
+      n.scope.variables[n.name] = {
+        type: n.variableType,
+        name: n.name,
+      };
+      visit(n.value);
+    }
+    else if (node.type === "FunctionDeclaration") {
       const n = node as FunctionDeclaration;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForRedeclaration(n);
@@ -225,6 +237,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as VariableExpr
       n.scope = scopeStack[scopeStack.length - 1];
       const v = checkForVariableDeclaration(n.name, n.scope, n.position);
+      n.variableType = v.type;
       n.isParam = v.isParam; // to know if this was a parameter being used in expression
     } else if (node.type === "ArithmeticExpression") {
       const n = node as ArithmeticExpression
@@ -232,6 +245,10 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       for (const expr of n.exprs) {
         visit(expr);
       }
+    } else if (node.type === "PrefixExpression" || node.type === "PostfixExpression") {
+      const n = node as PrefixExpression | PostfixExpression;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.variable);
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement
       n.scope = scopeStack[scopeStack.length - 1];

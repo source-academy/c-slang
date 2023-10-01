@@ -60,7 +60,8 @@ export type WasmExpression =
   | WasmSubtractExpression
   | WasmMultiplyExpression
   | WasmDivideExpression
-  | WasmRemainderExpression;
+  | WasmRemainderExpression
+  | WasmExprStatement;
 
 export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
@@ -90,11 +91,13 @@ export interface WasmLocalSet extends WasmAstNode {
 export interface WasmLocalGet extends WasmAstNode {
   type: "LocalGet";
   name: string;
+  preStatements?: (WasmStatement | WasmExpression)[]; // any statements to run before a local get
 }
 
 export interface WasmGlobalGet extends WasmAstNode {
   type: "GlobalGet";
   name: string;
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmArithmeticExpression extends WasmAstNode {
@@ -122,3 +125,11 @@ export interface WasmDivideExpression extends WasmArithmeticExpression {
 export interface WasmRemainderExpression extends WasmArithmeticExpression {
   type: "RemainderExpression";
 }
+
+/**
+ * A special type of statement that results in 1 value being put on the stack,
+ * in effect behaving like a WasmExpression.
+ * 
+ * Currently this is only enabled for setting statements, to allowing postfix/prefix operators to work.
+ */
+export type WasmExprStatement = WasmLocalSet | WasmGlobalSet;

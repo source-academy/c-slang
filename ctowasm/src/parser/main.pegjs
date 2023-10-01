@@ -92,10 +92,23 @@ multiply_divide_expression
   / term
 
 term
-  = "(" @expression ")"
+  = prefix_expression
+  / postfix_expression
+  / "(" @expression ")"
 	/ literal
   / function_call
-  / name:identifier { return generateNode("VariableExpr", { name: name }); } // for variables
+  / variable_term
+
+variable_term
+  = name:identifier { return generateNode("VariableExpr", { name: name }); } // for variables
+
+prefix_expression
+  = "--" variable:variable_term { return generateNode("PrefixExpression", { operator: "--", variable: variable }); }
+  / "++" variable:variable_term { return generateNode("PrefixExpression", { operator: "++", variable: variable }); }
+
+postfix_expression
+  = variable:variable_term "--" { return generateNode("PostfixExpression", { operator: "--", variable: variable }); } 
+  / variable:variable_term "++" { return generateNode("PostfixExpression", { operator: "++", variable: variable }); }
 
 type 
 	= $"int"

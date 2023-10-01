@@ -59,11 +59,11 @@ export interface Block extends ScopedNode {
 export type VariableType = "int";
 
 // to be expanded later to include proper expressions
-export type Expression = Literal | FunctionCall | VariableExpr | ArithmeticExpression;
+export type Expression = Literal | FunctionCall | VariableExpr | ArithmeticExpression | PostfixExpression | PrefixExpression;
 
 export type Statement = Declaration | Initialization | ReturnStatement;
 
-//TODO: See if litearl is right
+//TODO: See if literal is right
 export interface ReturnStatement extends ScopedNode {
   type: "ReturnStatement";
   value: Expression;
@@ -73,6 +73,7 @@ export interface ReturnStatement extends ScopedNode {
 export interface VariableExpr extends ScopedNode {
   type: "VariableExpr";
   name: string; //name of the variable
+  variableType: VariableType;
   isParam?: boolean;
 }
 
@@ -82,6 +83,20 @@ export interface ArithmeticExpression extends ScopedNode {
   type: "ArithmeticExpression";
   operator: BinaryOperator;
   exprs: Expression[] // the array of experessions that are joined by the operator
+}
+
+export type UnaryOperator = "++" | "--";
+
+export interface PrefixExpression extends ScopedNode {
+  type: "PrefixExpression";
+  operator: UnaryOperator;
+  variable: VariableExpr; // the variable being prefix operated on
+}
+
+export interface PostfixExpression extends ScopedNode {
+  type: "PostfixExpression";
+  operator: UnaryOperator;
+  variable: VariableExpr;
 }
 
 // For now literals are only ints TODO: need to handle other type + do overflow underflow checks of nubmers later
