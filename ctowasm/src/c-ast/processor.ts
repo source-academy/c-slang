@@ -10,6 +10,7 @@ import {
   Block,
   Declaration,
   FunctionCall,
+  FunctionCallStatement,
   FunctionDeclaration,
   FunctionDefinition,
   Initialization,
@@ -124,11 +125,11 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   /**
    * Checks if a given function is declared.
    */
-  function checkForFunctionDeclaration(node: FunctionCall) {
+  function checkForFunctionDeclaration(node: FunctionCall | FunctionCallStatement) {
     let curr = node.scope;
     while (curr != null) {
       if (node.name in curr.functions) {
-        return;
+        return curr.functions[node.name].returnType;
       }
       curr = curr.parentScope;
     }
@@ -233,6 +234,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       for (const arg of n.args) {
         visit(arg) // visit each arg
       }
+    } else if (node.type === "FunctionCallStatement") {
+      const n = node as FunctionCallStatement;
+      n.scope = scopeStack[scopeStack.length - 1];
+      n.hasReturn = checkForFunctionDeclaration(n) === "void"? false : true;
+      for (const arg of n.args) {
+        visit(arg) // visit each arg
+      } 
     } else if (node.type === "VariableExpr") {
       const n = node as VariableExpr
       n.scope = scopeStack[scopeStack.length - 1];

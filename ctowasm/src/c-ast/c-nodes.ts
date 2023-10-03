@@ -145,9 +145,18 @@ export interface FunctionDefinition extends FunctionInformation, ScopedNode {
   body: Block;
 }
 
-//TODO: check if Literal better here than node
 export interface FunctionCall extends ScopedNode {
   type: "FunctionCall";
   name: string;
   args: Expression[];
+}
+
+/**
+ * This node is to differentiate from a function call used as an expression.
+ */
+export interface FunctionCallStatement extends ScopedNode {
+  type: "FunctionCallStatement";
+  name: string;
+  args: Expression[]; 
+  hasReturn: boolean;
 }

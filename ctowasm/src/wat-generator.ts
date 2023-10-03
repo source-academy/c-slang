@@ -2,6 +2,7 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 
+import { FunctionCallStatement } from "c-ast/c-nodes";
 import {
   WasmExpression,
   WasmFunctionBodyLine,
@@ -94,8 +95,14 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     )})`;
   } else if (statement.type === "LocalSet") {
     return `(local.set $${statement.name} ${generateExprStr(statement.value)})`;
+  } else if (statement.type === "FunctionCallStatement") {
+    const n = statement as FunctionCallStatement;
+    if (n.hasReturn) {
+      // need to drop the return of the statement from the stack
+      return `(drop (call $${statement.name} ${generateArgString(statement.args)}))` 
+    }
+    return `(call $${statement.name} ${generateArgString(statement.args)})` 
   } else if (
-    statement.type === "FunctionCall" ||
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||
     statement.type === "LocalGet"

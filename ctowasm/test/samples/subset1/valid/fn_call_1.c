@@ -3,5 +3,6 @@ int f() {
 }
 
 int main() {
+  int x = f();
   f();
 }

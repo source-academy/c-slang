@@ -48,7 +48,7 @@ export interface WasmFunction extends WasmAstNode {
   return: WasmType | null;
 }
 
-type WasmStatement = WasmGlobalSet | WasmLocalSet;
+type WasmStatement = WasmGlobalSet | WasmLocalSet | WasmFunctionCallStatement;
 
 // TODO: figure out if this necessary
 export type WasmExpression =
@@ -67,6 +67,13 @@ export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
   name: string;
   args: WasmExpression[];
+}
+
+export interface WasmFunctionCallStatement extends WasmAstNode {
+  type: "FunctionCallStatement";
+  name: string;
+  args: WasmExpression[]; 
+  hasReturn: boolean;
 }
 
 // A procedure is a function with no return value

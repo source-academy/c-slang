@@ -28,6 +28,7 @@ translation_unit
 statement
 	= whitespace* @declaration whitespace* statement_end
   / whitespace* @initialization whitespace* statement_end
+  / whitespace* fn:function_call statement_end { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
   / whitespace* @expression whitespace* statement_end
   / whitespace* @assignment whitespace* statement_end
   / whitespace* @return_statement whitespace* statement_end

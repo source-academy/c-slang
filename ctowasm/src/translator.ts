@@ -19,6 +19,7 @@ import {
   ArithmeticExpression,
   PrefixExpression,
   PostfixExpression,
+  FunctionCallStatement,
 } from "c-ast/c-nodes";
 import {
   WasmAddExpression,
@@ -190,13 +191,14 @@ export function translate(CAstRoot: Root) {
           value: evaluateExpression(n.value, enclosingFunc),
         });
       }
-    } else if (CAstNode.type === "FunctionCall") {
-      const n = CAstNode as FunctionCall;
+    } else if (CAstNode.type === "FunctionCallStatement") {
+      // function calls are the only expression that are recognised as a statement
+      const n = CAstNode as FunctionCallStatement;
       const args: WasmExpression[] = [];
       for (const arg of n.args) {
         args.push(evaluateExpression(arg, enclosingFunc));
       }
-      enclosingFunc.body.push({ type: "FunctionCall", name: n.name, args });
+      enclosingFunc.body.push({ type: "FunctionCallStatement", name: n.name, args, hasReturn: n.hasReturn }); 
     }
   }
 
