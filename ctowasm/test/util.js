@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 const util = require("util");
 const exec = util.promisify(require("child_process").exec);
+import testLog from "./testLog.js"
 
 const WAT2WASM_PATH = path.resolve(
   __dirname + "/../external/wabt/build/wat2wasm"
@@ -15,6 +16,9 @@ const WASMINTERP_PATH = path.resolve(
   __dirname + "/../external/wabt/build/wasm-interp"
 );
 const TEMP_DIRECTORY = path.resolve(__dirname, "temp");
+const getExpectedFilePath = (subset, fileName) => {
+  return path.resolve(__dirname, `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`);
+}
 export const COMPILATION_SUCCESS = "success";
 
 /**
@@ -56,6 +60,16 @@ export async function testFileCompilationSuccess(subset, testFileName) {
     fs.mkdirSync(path.dirname(watFilePath), { recursive: true });
     fs.writeFileSync(watFilePath, output);
 
+    // if there already exists a verified expected output for this file, simply check that the output WAT is the same as expected
+    if (testLog[`subset${subset.toString()}`][testFileName].expected === true) {
+      const expected = fs.readFileSync(getExpectedFilePath(subset, testFileName), 'utf-8');
+      if (expected === output) {
+        return COMPILATION_SUCCESS
+      } else {
+        return "WAT DOES NOT MATCH EXPECTED: " + testFileName;
+      }
+    }
+
     // Test 2: checks that the file is compilable from WAT to WASM - valid WAT
     try {
       fs.mkdirSync(path.dirname(wasmFilePath), { recursive: true });
@@ -80,3 +94,5 @@ export async function testFileCompilationSuccess(subset, testFileName) {
 
   return COMPILATION_SUCCESS;
 }
+
+

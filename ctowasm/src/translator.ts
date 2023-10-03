@@ -68,7 +68,7 @@ export function translate(CAstRoot: Root) {
     if (type === "int") {
       return "i32";
     }
-    console.assert(false, `convertVariableType error: type not found: ${type}`)
+    console.assert(false, `convertVariableType error: type not found: ${type}`);
   }
 
   /**
@@ -111,10 +111,13 @@ export function translate(CAstRoot: Root) {
   /**
    * Converts a given unary opeartor into the corresponding asm instruction node name.
    */
-  const unaryOperatorToInstructionName: Record<string, "AddExpression"|"SubtractExpression"> = {
+  const unaryOperatorToInstructionName: Record<
+    string,
+    "AddExpression" | "SubtractExpression"
+  > = {
     "++": "AddExpression",
-    "--": "SubtractExpression"
-  }
+    "--": "SubtractExpression",
+  };
 
   /**
    * Function for visting the statements within a function body.
@@ -198,7 +201,46 @@ export function translate(CAstRoot: Root) {
       for (const arg of n.args) {
         args.push(evaluateExpression(arg, enclosingFunc));
       }
-      enclosingFunc.body.push({ type: "FunctionCallStatement", name: n.name, args, hasReturn: n.hasReturn }); 
+      enclosingFunc.body.push({
+        type: "FunctionCallStatement",
+        name: n.name,
+        args,
+        hasReturn: n.hasReturn,
+      });
+    } else if (CAstNode.type === "PrefixExpression" || CAstNode.type === "PostfixExpression") {
+      // handle the case where a prefix or postfix expression is used as a statement, not an expression.
+      const n = CAstNode as PrefixExpression | PostfixExpression;
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
+      let variableSetType: "GlobalSet" | "LocalSet" = "GlobalSet";
+      let variableGetType: "GlobalGet" | "LocalGet" = "GlobalGet";
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        variableSetType = "LocalSet"
+        variableGetType = "LocalGet"
+      }
+      const varType = convertVariableType(n.variable.variableType);
+      enclosingFunc.body.push({
+        type: variableSetType,
+        name: wasmVariableName,
+        value: {
+          type: n.operator === "++" ? "AddExpression" : "SubtractExpression",
+          leftExpr: {
+            type: variableGetType,
+            name: wasmVariableName,
+          },
+          rightExpr: {
+            type: "Const",
+            variableType: varType,
+            value: 1,
+          },
+          varType: varType
+        }
+      });
     }
   }
 
@@ -353,10 +395,12 @@ export function translate(CAstRoot: Root) {
           rightExpr: {
             type: nodeGetTypeStr,
             name: wasmVariableName,
-            preStatements: [{
-              type: nodeGetTypeStr,
-              name: wasmVariableName
-            }]
+            preStatements: [
+              {
+                type: nodeGetTypeStr,
+                name: wasmVariableName,
+              },
+            ],
           },
           varType: convertVariableType(expr.variable.variableType),
         },

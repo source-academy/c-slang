@@ -1,11 +1,11 @@
 /**
  * Exports a generate function for generating a WAT string from WAT AST.
  */
-
-import { FunctionCallStatement } from "c-ast/c-nodes";
 import {
   WasmExpression,
   WasmFunctionBodyLine,
+  WasmFunctionCall,
+  WasmFunctionCallStatement,
   WasmModule,
 } from "wasm-ast/wasm-nodes";
 
@@ -45,12 +45,14 @@ function generateArgString(exprs: WasmExpression[]) {
  */
 function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
-    return `(call $${expr.name} ${generateArgString(expr.args)})`;
+    const n = expr as WasmFunctionCall;
+    const argString = generateArgString(n.args) 
+    return `(call $${expr.name}${argString ? " " + argString : ""})`;
   } else if (expr.type === "Const") {
     return `(${expr.variableType}.const ${expr.value.toString()})`;
   } else if (expr.type === "LocalGet") {
-    const preStatements = expr.preStatements ? expr.preStatements.map(s => generateStatementStr(s)?? generateExprStr(s)) : [];
-    return `(local.get $${expr.name} ${preStatements.join(" ")})`;
+    const preStatements = expr.preStatements ? expr.preStatements.map(s => generateStatementStr(s)?? generateExprStr(s as WasmExpression)) : [];
+    return "(" + `local.get $${expr.name} ${preStatements.join(" ")}`.trim() + ")";
   } else if (expr.type === "GlobalGet") {
     return `(global.get $${expr.name})`;
   } else if (expr.type === "AddExpression") {
@@ -96,12 +98,13 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
   } else if (statement.type === "LocalSet") {
     return `(local.set $${statement.name} ${generateExprStr(statement.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
-    const n = statement as FunctionCallStatement;
+    const n = statement as WasmFunctionCallStatement;
+    const argString = generateArgString(statement.args) 
     if (n.hasReturn) {
       // need to drop the return of the statement from the stack
-      return `(drop (call $${statement.name} ${generateArgString(statement.args)}))` 
+      return `(drop (call $${statement.name}${argString ? " " + argString : ""}))` 
     }
-    return `(call $${statement.name} ${generateArgString(statement.args)})` 
+    return `(call $${statement.name}${argString ? " " + argString : ""})` 
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||
