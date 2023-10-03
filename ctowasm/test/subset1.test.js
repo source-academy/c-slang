@@ -4,6 +4,38 @@ import { COMPILATION_SUCCESS, testFileCompilationError, testFileCompilationSucce
 
 
 describe("Subset 1 Tests", () => {
+  describe("Compilation Success Tests", () => {
+    test("Function Definition 1", async () => {
+      const result = await testFileCompilationSuccess(1, "fn_def_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Function Call 1", async () => {
+      const result = await testFileCompilationSuccess(1, "fn_call_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Function Return 1", async () => {
+      const result = await testFileCompilationSuccess(1, "fn_return_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Variable Declaration 1", async () => {
+      const result = await testFileCompilationSuccess(1, "var_dec_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Variable Initialization 1", async () => {
+      const result = await testFileCompilationSuccess(1, "var_init_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    })
+
+    test("Variable Assignment 1", async () => {
+      const result = await testFileCompilationSuccess(1, "var_assign_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+  })
+
   describe("Processor Semantic Error Tests", () => {
     test("Function redeclaration throws error", () => {
       expect(() => testFileCompilationError(1, "fn_redeclaration")).toThrow(
@@ -63,6 +95,36 @@ describe("Subset 2 Tests", () => {
     test("Remainder expression 1", async () => {
       const result = await testFileCompilationSuccess(2, "remainder_1");
       expect(result).toBe(COMPILATION_SUCCESS);
+    })
+
+    test("Bracketed arithmetic expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "brackets_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    })
+
+    test("Prefix addition expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "prefix_add_1");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Prefix subtraction expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "prefix_subtract_1");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Postfix addition expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "postfix_add_1");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Postfix subtraction expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "postfix_subtract_1");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Complex arithmetic expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "arithmetic_1");
+      expect(result).toBe(COMPILATION_SUCCESS); 
     })
   })
 })
