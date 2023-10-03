@@ -69,12 +69,12 @@ function generateExprStr(expr: WasmExpression): string {
     )})`;
   } else if (expr.type === "DivideExpression") {
     //TODO: support different op types other than i32 unsigned
-    return `(i32.div_u ${generateExprStr(expr.leftExpr)} ${generateExprStr(
+    return `(i32.div_s ${generateExprStr(expr.leftExpr)} ${generateExprStr(
       expr.rightExpr
     )})`;
   } else if (expr.type === "RemainderExpression") {
     //TODO: support different op types other than i32 unsigned
-    return `(i32.rem_u ${generateExprStr(expr.leftExpr)} ${generateExprStr(
+    return `(i32.rem_s ${generateExprStr(expr.leftExpr)} ${generateExprStr(
       expr.rightExpr
     )})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
