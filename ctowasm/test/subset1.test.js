@@ -1,5 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
-import { testFileCompilationError } from "./util";
+import { COMPILATION_SUCCESS, testFileCompilationError, testFileCompilationSuccess } from "./util";
+
+
 
 describe("Subset 1 Tests", () => {
   describe("Processor Semantic Error Tests", () => {
@@ -35,3 +37,32 @@ describe("Subset 1 Tests", () => {
     });
   });
 });
+
+describe("Subset 2 Tests", () => {
+  describe("Compilation Success Tests", () => {
+    test("Addition expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "add_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Subtract expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "subtract_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Multiply expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "multiply_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    });
+
+    test("Divide expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "divide_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    })
+
+    test("Remainder expression 1", async () => {
+      const result = await testFileCompilationSuccess(2, "remainder_1");
+      expect(result).toBe(COMPILATION_SUCCESS);
+    })
+  })
+})

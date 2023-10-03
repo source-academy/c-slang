@@ -68,12 +68,12 @@ function generateExprStr(expr: WasmExpression): string {
       expr.rightExpr
     )})`;
   } else if (expr.type === "DivideExpression") {
-    //TODO: support different op types other than i32
-    return `(i32.div ${generateExprStr(expr.leftExpr)} ${generateExprStr(
+    //TODO: support different op types other than i32 unsigned
+    return `(i32.div_u ${generateExprStr(expr.leftExpr)} ${generateExprStr(
       expr.rightExpr
     )})`;
   } else if (expr.type === "RemainderExpression") {
-    //TODO: support different op types other than i32
+    //TODO: support different op types other than i32 unsigned
     return `(i32.rem_u ${generateExprStr(expr.leftExpr)} ${generateExprStr(
       expr.rightExpr
     )})`;

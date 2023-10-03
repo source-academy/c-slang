@@ -1,3 +1,6 @@
 [submodule "c-viz"]
 	path = c-viz
 	url = https://github.com/caipng/c-viz
+[submodule "ctowasm/external/wabt"]
+	path = ctowasm/external/wabt
+	url = git@github.com:WebAssembly/wabt.git

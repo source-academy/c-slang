@@ -7,8 +7,8 @@ import { translate } from 'translator';
 import { generateWAT } from 'wat-generator';
 
 export function compile(cSourceCode: string) {
-  const ast = generateWAT(translate(process(parser.parse(cSourceCode), cSourceCode)));
-  return ast;
+  const output = generateWAT(translate(process(parser.parse(cSourceCode), cSourceCode)));
+  return output;
 }
 
 export function generate_C_AST(cSourceCode: string) {
