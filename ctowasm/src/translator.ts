@@ -22,17 +22,12 @@ import {
   FunctionCallStatement,
 } from "c-ast/c-nodes";
 import {
-  WasmAddExpression,
-  WasmArithmeticExpression,
   WasmConst,
-  WasmDivideExpression,
   WasmExpression,
   WasmFunction,
   WasmGlobalVariable,
   WasmLocalVariable,
   WasmModule,
-  WasmMultiplyExpression,
-  WasmSubtractExpression,
   WasmType,
   WasmVariable,
 } from "wasm-ast/wasm-nodes";
@@ -207,7 +202,10 @@ export function translate(CAstRoot: Root) {
         args,
         hasReturn: n.hasReturn,
       });
-    } else if (CAstNode.type === "PrefixExpression" || CAstNode.type === "PostfixExpression") {
+    } else if (
+      CAstNode.type === "PrefixExpression" ||
+      CAstNode.type === "PostfixExpression"
+    ) {
       // handle the case where a prefix or postfix expression is used as a statement, not an expression.
       const n = CAstNode as PrefixExpression | PostfixExpression;
       const wasmVariableName = getWasmVariableName(
@@ -220,15 +218,15 @@ export function translate(CAstRoot: Root) {
         wasmVariableName in enclosingFunc.params ||
         wasmVariableName in enclosingFunc.locals
       ) {
-        variableSetType = "LocalSet"
-        variableGetType = "LocalGet"
+        variableSetType = "LocalSet";
+        variableGetType = "LocalGet";
       }
       const varType = convertVariableType(n.variable.variableType);
       enclosingFunc.body.push({
         type: variableSetType,
         name: wasmVariableName,
         value: {
-          type: n.operator === "++" ? "AddExpression" : "SubtractExpression",
+          type: unaryOperatorToInstructionName[n.operator],
           leftExpr: {
             type: variableGetType,
             name: wasmVariableName,
@@ -238,10 +236,19 @@ export function translate(CAstRoot: Root) {
             variableType: varType,
             value: 1,
           },
-          varType: varType
-        }
+          varType: varType,
+        },
       });
     }
+  }
+
+
+  const arithmeticExpressionType = {
+    "+": "AddExpression",
+    "-": "SubtractExpression",
+    "*": "MultiplyExpression",
+    "/": "DivideExpression",
+    "%": "RemainderExpression" 
   }
 
   /**
@@ -253,43 +260,25 @@ export function translate(CAstRoot: Root) {
     node: ArithmeticExpression,
     enclosingFunc: WasmFunction
   ) {
-    let wasmNode: any = { type: "" };
-    switch (node.operator) {
-      case "+":
-        wasmNode.type = "AddExpression";
-        break;
-      case "-":
-        wasmNode.type = "SubtractExpression";
-        break;
-      case "*":
-        wasmNode.type = "MultiplyExpression";
-        break;
-      case "/":
-        wasmNode.type = "DivideExpression";
-        break;
-      case "%":
-        wasmNode.type = "RemainderExpression";
-        break;
-      default:
-        //TODO: remove when no needed
-        console.assert(false, "Translaton Error: unmatched binary operator.");
+    let rootNode: any = {};
+    // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
+    let currNode = rootNode;
+    for (let i = node.exprs.length - 1; i > 0; --i) {
+      currNode.type = arithmeticExpressionType[node.exprs[i].operator];
+      currNode.rightExpr = evaluateExpression(node.exprs[i].expr, enclosingFunc) 
+      currNode.leftExpr = {}
+      currNode = currNode.leftExpr;
     }
-
-    // the first expression in expression series will be considered left expression
-    wasmNode.leftExpr = evaluateExpression(node.exprs[0], enclosingFunc);
-    let currNode = wasmNode;
-    for (let i = 1; i < node.exprs.length - 1; ++i) {
-      currNode.rightExpr = {
-        type: currNode.type,
-        leftExpr: evaluateExpression(node.exprs[i], enclosingFunc),
-      };
-      currNode = currNode.rightExpr;
-    }
+    currNode.type = arithmeticExpressionType[node.exprs[0].operator]
     currNode.rightExpr = evaluateExpression(
-      node.exprs[node.exprs.length - 1],
+      node.exprs[0].expr,
       enclosingFunc
     );
-    return currNode;
+    currNode.leftExpr = evaluateExpression(
+      node.firstExpr,
+      enclosingFunc
+    )
+    return rootNode;
   }
 
   /**
@@ -353,13 +342,13 @@ export function translate(CAstRoot: Root) {
             value: {
               type: unaryOperatorToInstructionName[n.operator],
               leftExpr: {
+                type: nodeGetTypeStr,
+                name: wasmVariableName,
+              },
+              rightExpr: {
                 type: "Const",
                 variableType: convertVariableType(n.variable.variableType),
                 value: 1,
-              },
-              rightExpr: {
-                type: nodeGetTypeStr,
-                name: wasmVariableName,
               },
               varType: convertVariableType(expr.variable.variableType),
             },
@@ -381,18 +370,12 @@ export function translate(CAstRoot: Root) {
         nodeGetTypeStr = "LocalGet";
         nodeSetTypeStr = "LocalSet";
       }
-
       return {
         type: nodeSetTypeStr,
         name: wasmVariableName,
         value: {
           type: unaryOperatorToInstructionName[n.operator],
           leftExpr: {
-            type: "Const",
-            variableType: convertVariableType(expr.variable.variableType),
-            value: 1,
-          },
-          rightExpr: {
             type: nodeGetTypeStr,
             name: wasmVariableName,
             preStatements: [
@@ -402,7 +385,12 @@ export function translate(CAstRoot: Root) {
               },
             ],
           },
-          varType: convertVariableType(expr.variable.variableType),
+          rightExpr: {
+            type: "Const",
+            variableType: convertVariableType(n.variable.variableType),
+            value: 1,
+          },
+          varType: convertVariableType(n.variable.variableType),
         },
       };
     } else {

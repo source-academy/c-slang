@@ -6,6 +6,7 @@
 
 import {
   ArithmeticExpression,
+  ArithmeticSubExpression,
   Assignment,
   Block,
   Declaration,
@@ -227,6 +228,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as Assignment;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForVariableDeclaration(n.name, n.scope, n.position);
+      visit(n.value);
     } else if (node.type === "FunctionCall") {
       const n = node as FunctionCall;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -250,9 +252,14 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     } else if (node.type === "ArithmeticExpression") {
       const n = node as ArithmeticExpression
       n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.firstExpr);
       for (const expr of n.exprs) {
         visit(expr);
       }
+    } else if (node.type === "ArithmeticSubExpression") {
+      const n = node as ArithmeticSubExpression;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.expr); 
     } else if (node.type === "PrefixExpression" || node.type === "PostfixExpression") {
       const n = node as PrefixExpression | PostfixExpression;
       n.scope = scopeStack[scopeStack.length - 1];

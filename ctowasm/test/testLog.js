@@ -27,7 +27,7 @@ const testLog = {
       expected: true,
     },
     arithmetic_1: {
-      expected: false,
+      expected: true,
     },
     brackets_1: {
       expected: true,
@@ -56,6 +56,18 @@ const testLog = {
     subtract_1: {
       expected: true,
     },
+    prefix_subtract_2: {
+      expected: true,
+    },
+    prefix_add_2: {
+      expected: true,
+    },
+    postfix_add_2: {
+      expected: true,
+    },
+    postfix_subtract_2: {
+      expected: true,
+    }
   },
 };
 

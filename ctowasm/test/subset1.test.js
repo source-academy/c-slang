@@ -102,23 +102,43 @@ describe("Subset 2 Tests", () => {
       expect(result).toBe(COMPILATION_SUCCESS);
     })
 
-    test("Prefix addition expression 1", async () => {
+    test("Prefix addition expression 1 - prefix as statement", async () => {
       const result = await testFileCompilationSuccess(2, "prefix_add_1");
       expect(result).toBe(COMPILATION_SUCCESS); 
     })
 
-    test("Prefix subtraction expression 1", async () => {
+    test("Prefix addition expression 2 - prefix as expression", async () => {
+      const result = await testFileCompilationSuccess(2, "prefix_add_2");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Prefix subtraction expression 1 - prefix as statement", async () => {
       const result = await testFileCompilationSuccess(2, "prefix_subtract_1");
       expect(result).toBe(COMPILATION_SUCCESS); 
     })
 
-    test("Postfix addition expression 1", async () => {
+    test("Prefix subtraction expression 2 - prefix as expression", async () => {
+      const result = await testFileCompilationSuccess(2, "prefix_subtract_2");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Postfix addition expression 1 - postfix as statement", async () => {
       const result = await testFileCompilationSuccess(2, "postfix_add_1");
       expect(result).toBe(COMPILATION_SUCCESS); 
     })
 
-    test("Postfix subtraction expression 1", async () => {
+    test("Postfix addition expression 2 - postfix as expression", async () => {
+      const result = await testFileCompilationSuccess(2, "postfix_add_2");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Postfix subtraction expression 1 - postfix as statement", async () => {
       const result = await testFileCompilationSuccess(2, "postfix_subtract_1");
+      expect(result).toBe(COMPILATION_SUCCESS); 
+    })
+
+    test("Postfix subtraction expression 2 - postfix as expression", async () => {
+      const result = await testFileCompilationSuccess(2, "postfix_subtract_2");
       expect(result).toBe(COMPILATION_SUCCESS); 
     })
 

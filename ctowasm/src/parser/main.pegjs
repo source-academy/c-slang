@@ -83,18 +83,15 @@ arithmetic_expression
   / multiply_divide_expression
 
 add_subtract_expression
-  = left:multiply_divide_expression tail:(_ "+" _ @expression)+ { return generateNode("ArithmeticExpression", { operator: "+", exprs: [left, ...tail] } ) }
-  / left:multiply_divide_expression tail:(_ "-" _ @expression)+ { return generateNode("ArithmeticExpression", { operator: "-", exprs: [left, ...tail] } ) } 
+  = left:multiply_divide_expression tail:(_ @[+\-] _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) } )}
   
 multiply_divide_expression
-  = left:term tail:(_ "*" _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { operator: "*", exprs: [left, ...tail] }); }
-  / left:term tail:(_ "/" _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { operator: "/", exprs: [left, ...tail] }); }
-  / left:term tail:(_ "%" _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { operator: "%", exprs: [left, ...tail] }); } // remainder has same precedence as multiply and divide
+  = left:term tail:(_ @[%/*] _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) }); }
   / term
 
 term
   = prefix_expression
-  / postfix_expression
+  / postfix_expression // must come before variable term as this is more specific
   / "(" @expression ")"
 	/ literal
   / function_call

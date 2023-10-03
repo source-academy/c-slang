@@ -59,7 +59,13 @@ export interface Block extends ScopedNode {
 export type VariableType = "int";
 
 // to be expanded later to include proper expressions
-export type Expression = Literal | FunctionCall | VariableExpr | ArithmeticExpression | PostfixExpression | PrefixExpression;
+export type Expression =
+  | Literal
+  | FunctionCall
+  | VariableExpr
+  | ArithmeticExpression
+  | PostfixExpression
+  | PrefixExpression
 
 export type Statement = Declaration | Initialization | ReturnStatement;
 
@@ -81,8 +87,15 @@ export type BinaryOperator = "+" | "-" | "*" | "/" | "%";
 
 export interface ArithmeticExpression extends ScopedNode {
   type: "ArithmeticExpression";
+  firstExpr: Expression;
+  exprs: ArithmeticSubExpression[]; // the array of experessions that are joined by the operator
+}
+
+// A constituent of a arithmetic expression. contains the operator that attaches this subexpession to the left subexpression.
+export interface ArithmeticSubExpression extends ScopedNode {
+  type: "ArithmeticSubExpression";
   operator: BinaryOperator;
-  exprs: Expression[] // the array of experessions that are joined by the operator
+  expr: Expression;
 }
 
 export type UnaryOperator = "++" | "--";
@@ -157,6 +170,6 @@ export interface FunctionCall extends ScopedNode {
 export interface FunctionCallStatement extends ScopedNode {
   type: "FunctionCallStatement";
   name: string;
-  args: Expression[]; 
+  args: Expression[];
   hasReturn: boolean;
 }
