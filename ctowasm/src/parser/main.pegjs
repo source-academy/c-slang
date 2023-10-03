@@ -76,7 +76,18 @@ initialization
 	= type:type _ name:identifier whitespace* "=" whitespace* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 expression
-  = arithmetic_expression
+  = conditional_expression // try to match on conditonal first to ensure that a conditional is recognised when it exists
+  / arithmetic_expression
+
+conditional_expression 
+  = or_conditional_expression
+  / and_conditional_expression
+
+or_conditional_expression
+  = left:and_conditional_expression tail:(_ "||" _ @and_conditional_expression)+ { return generateNode({ type: "OrConditionalExpression", exprs: [left, ...tail] }); }
+
+and_conditional_expression
+  = left:arithmetic_expression tail:(_ "&&" _ @arithmetic_expression)+ { return generateNode({ type: "AndConditionalExpression", exprs: [left, ...tail] }); }
 
 arithmetic_expression
   = add_subtract_expression // match on add and subtract first, to ensure multiply/divide precedence 

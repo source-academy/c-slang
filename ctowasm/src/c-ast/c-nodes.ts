@@ -98,6 +98,16 @@ export interface ArithmeticSubExpression extends ScopedNode {
   expr: Expression;
 }
 
+export interface OrConditionalExpression extends ScopedNode {
+  type: "OrConditionalExpression";
+  exprs: Expression[];
+}
+
+export interface AndConditionalExpression extends ScopedNode {
+  type: "AndConditionalExpression";
+  exprs: Expression[];
+}
+
 export type UnaryOperator = "++" | "--";
 
 export interface PrefixExpression extends ScopedNode {
