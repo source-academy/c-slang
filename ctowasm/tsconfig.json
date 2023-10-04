@@ -8,5 +8,5 @@
     "preserveConstEnums": true,
     "rootDirs": ["src", "test"],
     "baseUrl": "src"
-  },
+  }
 }

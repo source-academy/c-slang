@@ -6,8 +6,8 @@ const config = {
   format: "esm",
   outfile: "build/index.js",
   loader: {
-    '.pegjs': 'text' // import pegjs files as text
-  }
+    ".pegjs": "text", // import pegjs files as text
+  },
 };
 
 if (process.env.WATCH) {
