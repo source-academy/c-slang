@@ -66,6 +66,8 @@ export type Expression =
   | ArithmeticExpression
   | PostfixExpression
   | PrefixExpression
+  | AndConditionalExpression
+  | OrConditionalExpression;
 
 export type Statement = Declaration | Initialization | ReturnStatement;
 
@@ -98,14 +100,16 @@ export interface ArithmeticSubExpression extends ScopedNode {
   expr: Expression;
 }
 
-export interface OrConditionalExpression extends ScopedNode {
-  type: "OrConditionalExpression";
+export interface ConditionalExpression extends ScopedNode {
   exprs: Expression[];
 }
 
-export interface AndConditionalExpression extends ScopedNode {
+export interface OrConditionalExpression extends ConditionalExpression {
+  type: "OrConditionalExpression";
+}
+
+export interface AndConditionalExpression extends ConditionalExpression {
   type: "AndConditionalExpression";
-  exprs: Expression[];
 }
 
 export type UnaryOperator = "++" | "--";

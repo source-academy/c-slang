@@ -1,4 +1,3 @@
 /**
- * Contains code to analyse 
+ * Contains code to analyse
  */
-

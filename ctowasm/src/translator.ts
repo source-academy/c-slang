@@ -20,6 +20,7 @@ import {
   PrefixExpression,
   PostfixExpression,
   FunctionCallStatement,
+  ConditionalExpression,
 } from "c-ast/c-nodes";
 import {
   WasmConst,
@@ -87,7 +88,7 @@ export function translate(CAstRoot: Root) {
    */
   function getWasmVariableName(
     originalVariableName: string,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ) {
     for (let i = enclosingFunc.scopes.length - 1; i >= 0; --i) {
       if (enclosingFunc.scopes[i].has(originalVariableName)) {
@@ -142,7 +143,7 @@ export function translate(CAstRoot: Root) {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         variableType: convertVariableType(n.variableType),
       };
@@ -151,7 +152,7 @@ export function translate(CAstRoot: Root) {
         type: "LocalSet",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         value: evaluateExpression(n.value, enclosingFunc),
       });
@@ -162,7 +163,7 @@ export function translate(CAstRoot: Root) {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         variableType: convertVariableType(n.variableType),
       };
@@ -210,7 +211,7 @@ export function translate(CAstRoot: Root) {
       const n = CAstNode as PrefixExpression | PostfixExpression;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
-        enclosingFunc
+        enclosingFunc,
       );
       let variableSetType: "GlobalSet" | "LocalSet" = "GlobalSet";
       let variableGetType: "GlobalGet" | "LocalGet" = "GlobalGet";
@@ -242,14 +243,13 @@ export function translate(CAstRoot: Root) {
     }
   }
 
-
   const arithmeticExpressionType = {
     "+": "AddExpression",
     "-": "SubtractExpression",
     "*": "MultiplyExpression",
     "/": "DivideExpression",
-    "%": "RemainderExpression" 
-  }
+    "%": "RemainderExpression",
+  };
 
   /**
    * Function to evaluate a ArithmeticExpression node, evaluating and building wasm nodes
@@ -258,26 +258,80 @@ export function translate(CAstRoot: Root) {
    */
   function evaluateArithmeticExpression(
     node: ArithmeticExpression,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ) {
-    let rootNode: any = {};
+    const rootNode: any = {};
     // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
     let currNode = rootNode;
     for (let i = node.exprs.length - 1; i > 0; --i) {
       currNode.type = arithmeticExpressionType[node.exprs[i].operator];
-      currNode.rightExpr = evaluateExpression(node.exprs[i].expr, enclosingFunc) 
-      currNode.leftExpr = {}
+      currNode.rightExpr = evaluateExpression(
+        node.exprs[i].expr,
+        enclosingFunc,
+      );
+      currNode.leftExpr = {};
       currNode = currNode.leftExpr;
     }
-    currNode.type = arithmeticExpressionType[node.exprs[0].operator]
-    currNode.rightExpr = evaluateExpression(
-      node.exprs[0].expr,
-      enclosingFunc
+    currNode.type = arithmeticExpressionType[node.exprs[0].operator];
+    currNode.rightExpr = evaluateExpression(node.exprs[0].expr, enclosingFunc);
+    currNode.leftExpr = evaluateExpression(node.firstExpr, enclosingFunc);
+    return rootNode;
+  }
+
+  function isConditionalExpression(node: Expression) {
+    return (
+      node.type === "AndConditionalExpression" ||
+      node.type === "OrConditionalExpression"
     );
-    currNode.leftExpr = evaluateExpression(
-      node.firstExpr,
-      enclosingFunc
-    )
+  }
+
+  /**
+   * Produces the correct left to right evaluation of a conditional expression,
+   * in terms of WasmOrExpression or WasmAndExpression.
+   */
+  function evaluateConditionalExpression(
+    node: ConditionalExpression,
+    enclosingFunc: WasmFunction,
+  ) {
+    const wasmNodeType =
+      node.type === "OrConditionalExpression"
+        ? "OrExpression"
+        : "AndExpression";
+    const rootNode: any = { type: wasmNodeType };
+    // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
+    // each expression must be converted into a boolean expression
+    let currNode = rootNode;
+    for (let i = node.exprs.length - 1; i > 1; --i) {
+      if (isConditionalExpression(node.exprs[i])) {
+        // no need to wrap inside a BooleanExpression if it was already a conditional expression
+        currNode.rightExpr = evaluateExpression(node.exprs[i], enclosingFunc);
+      } else {
+        currNode.rightExpr = {
+          type: "BooleanExpression",
+          expr: evaluateExpression(node.exprs[i], enclosingFunc),
+        };
+      }
+      currNode.leftExpr = { type: wasmNodeType };
+      currNode = currNode.leftExpr;
+    }
+    if (isConditionalExpression(node.exprs[1])) {
+      // no need to wrap inside a BooleanExpression if it was already a conditional expression
+      currNode.rightExpr = evaluateExpression(node.exprs[1], enclosingFunc);
+    } else {
+      currNode.rightExpr = {
+        type: "BooleanExpression",
+        expr: evaluateExpression(node.exprs[1], enclosingFunc),
+      };
+    }
+
+    if (isConditionalExpression(node.exprs[0])) {
+      currNode.leftExpr = evaluateExpression(node.exprs[0], enclosingFunc);
+    } else {
+      currNode.leftExpr = {
+        type: "BooleanExpression",
+        expr: evaluateExpression(node.exprs[0], enclosingFunc),
+      };
+    }
     return rootNode;
   }
 
@@ -286,7 +340,7 @@ export function translate(CAstRoot: Root) {
    */
   function evaluateExpression(
     expr: Expression,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ): WasmExpression {
     if (expr.type === "Integer") {
       return convertLiteralToConst(expr);
@@ -321,7 +375,7 @@ export function translate(CAstRoot: Root) {
       const n: PrefixExpression = expr;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
-        enclosingFunc
+        enclosingFunc,
       );
       let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
       let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
@@ -359,7 +413,7 @@ export function translate(CAstRoot: Root) {
       const n: PostfixExpression = expr;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
-        enclosingFunc
+        enclosingFunc,
       );
       let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
       let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
@@ -393,6 +447,11 @@ export function translate(CAstRoot: Root) {
           varType: convertVariableType(n.variable.variableType),
         },
       };
+    } else if (
+      expr.type === "AndConditionalExpression" ||
+      expr.type === "OrConditionalExpression"
+    ) {
+      return evaluateConditionalExpression(expr, enclosingFunc);
     } else {
       const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }

@@ -7,18 +7,21 @@ import * as fs from "fs";
 import * as path from "path";
 const util = require("util");
 const exec = util.promisify(require("child_process").exec);
-import testLog from "./testLog.js"
+import testLog from "./testLog.js";
 
 const WAT2WASM_PATH = path.resolve(
-  __dirname + "/../external/wabt/build/wat2wasm"
+  __dirname + "/../external/wabt/build/wat2wasm",
 );
 const WASMINTERP_PATH = path.resolve(
-  __dirname + "/../external/wabt/build/wasm-interp"
+  __dirname + "/../external/wabt/build/wasm-interp",
 );
 const TEMP_DIRECTORY = path.resolve(__dirname, "temp");
 const getExpectedFilePath = (subset, fileName) => {
-  return path.resolve(__dirname, `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`);
-}
+  return path.resolve(
+    __dirname,
+    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`,
+  );
+};
 export const COMPILATION_SUCCESS = "success";
 
 /**
@@ -30,9 +33,9 @@ export function testFileCompilation(info) {
       __dirname,
       `samples/subset${info.subset.toString()}/${
         info.testType === "assertCorrectness" ? "valid" : "error"
-      }/${info.testFileName}.c`
+      }/${info.testFileName}.c`,
     ),
-    "utf-8"
+    "utf-8",
   );
 
   // geneerate the WAT, and place into temp file
@@ -48,8 +51,14 @@ export function testFileCompilationError(subset, testFileName) {
 }
 
 export async function testFileCompilationSuccess(subset, testFileName) {
-  const watFilePath = path.resolve(TEMP_DIRECTORY, `subset${subset.toString()}/wat/${testFileName}.wat`)
-  const wasmFilePath = path.resolve(TEMP_DIRECTORY, `subset${subset.toString()}/wasm/${testFileName}.wat`)
+  const watFilePath = path.resolve(
+    TEMP_DIRECTORY,
+    `subset${subset.toString()}/wat/${testFileName}.wat`,
+  );
+  const wasmFilePath = path.resolve(
+    TEMP_DIRECTORY,
+    `subset${subset.toString()}/wasm/${testFileName}.wat`,
+  );
   // Test 1: chceks that C program is compilable
   try {
     const output = testFileCompilation({
@@ -62,9 +71,12 @@ export async function testFileCompilationSuccess(subset, testFileName) {
 
     // if there already exists a verified expected output for this file, simply check that the output WAT is the same as expected
     if (testLog[`subset${subset.toString()}`][testFileName].expected === true) {
-      const expected = fs.readFileSync(getExpectedFilePath(subset, testFileName), 'utf-8');
+      const expected = fs.readFileSync(
+        getExpectedFilePath(subset, testFileName),
+        "utf-8",
+      );
       if (expected === output) {
-        return COMPILATION_SUCCESS
+        return COMPILATION_SUCCESS;
       } else {
         return "WAT DOES NOT MATCH EXPECTED: " + testFileName;
       }
@@ -74,13 +86,13 @@ export async function testFileCompilationSuccess(subset, testFileName) {
     try {
       fs.mkdirSync(path.dirname(wasmFilePath), { recursive: true });
       const { stdout, stderr } = await exec(
-        `${WAT2WASM_PATH} ${watFilePath} -o ${wasmFilePath}`
+        `${WAT2WASM_PATH} ${watFilePath} -o ${wasmFilePath}`,
       );
-      
+
       // Test 3: checks that the translated WASM code is runnable without errors
       try {
         const { stdout, stderr } = await exec(
-          `${WASMINTERP_PATH} ${wasmFilePath}`
+          `${WASMINTERP_PATH} ${wasmFilePath}`,
         );
       } catch (e) {
         return "WASM EXECUTION ERROR:\n" + e;
@@ -94,5 +106,3 @@ export async function testFileCompilationSuccess(subset, testFileName) {
 
   return COMPILATION_SUCCESS;
 }
-
-

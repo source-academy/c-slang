@@ -61,7 +61,10 @@ export type WasmExpression =
   | WasmMultiplyExpression
   | WasmDivideExpression
   | WasmRemainderExpression
-  | WasmExprStatement;
+  | WasmExprStatement
+  | WasmBooleanExpression
+  | WasmAndExpression
+  | WasmOrExpression;
 
 export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
@@ -72,7 +75,7 @@ export interface WasmFunctionCall extends WasmAstNode {
 export interface WasmFunctionCallStatement extends WasmAstNode {
   type: "FunctionCallStatement";
   name: string;
-  args: WasmExpression[]; 
+  args: WasmExpression[];
   hasReturn: boolean;
 }
 
@@ -136,7 +139,32 @@ export interface WasmRemainderExpression extends WasmArithmeticExpression {
 /**
  * A special type of statement that results in 1 value being put on the stack,
  * in effect behaving like a WasmExpression.
- * 
+ *
  * Currently this is only enabled for setting statements, to allowing postfix/prefix operators to work.
  */
 export type WasmExprStatement = WasmLocalSet | WasmGlobalSet;
+
+/**
+ * Forms a wrapper around a regular wasm expression, to indicate that it is to be
+ * used as a boolean expression.
+ */
+export interface WasmBooleanExpression extends WasmAstNode {
+  type: "BooleanExpression";
+  expr: WasmExpression;
+  isNegated?: boolean; // set to true to negate the boolean value
+}
+
+export interface WasmAndExpression extends WasmAstNode {
+  type: "AndExpression";
+  leftExpr: WasmAndExpression | WasmBooleanExpression;
+  rightExpr: WasmBooleanExpression;
+}
+
+/**
+ * Bitwise OR.
+ */
+export interface WasmOrExpression extends WasmAstNode {
+  type: "OrExpression";
+  leftExpr: WasmOrExpression | WasmAndExpression | WasmBooleanExpression;
+  rightExpr: WasmAndExpression | WasmBooleanExpression;
+}

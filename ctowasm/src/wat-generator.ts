@@ -46,42 +46,64 @@ function generateArgString(exprs: WasmExpression[]) {
 function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const n = expr as WasmFunctionCall;
-    const argString = generateArgString(n.args) 
+    const argString = generateArgString(n.args);
     return `(call $${expr.name}${argString ? " " + argString : ""})`;
   } else if (expr.type === "Const") {
     return `(${expr.variableType}.const ${expr.value.toString()})`;
   } else if (expr.type === "LocalGet") {
-    const preStatements = expr.preStatements ? expr.preStatements.map(s => generateStatementStr(s)?? generateExprStr(s as WasmExpression)) : [];
-    return "(" + `local.get $${expr.name} ${preStatements.join(" ")}`.trim() + ")";
+    const preStatements = expr.preStatements
+      ? expr.preStatements.map(
+          (s) =>
+            generateStatementStr(s) ?? generateExprStr(s as WasmExpression),
+        )
+      : [];
+    return (
+      "(" + `local.get $${expr.name} ${preStatements.join(" ")}`.trim() + ")"
+    );
   } else if (expr.type === "GlobalGet") {
     return `(global.get $${expr.name})`;
   } else if (expr.type === "AddExpression") {
     //TODO: support different op types other than i32
     return `(i32.add ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr
+      expr.rightExpr,
     )})`;
   } else if (expr.type === "SubtractExpression") {
     //TODO: support different op types other than i32
     return `(i32.sub ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr
+      expr.rightExpr,
     )})`;
   } else if (expr.type === "MultiplyExpression") {
     //TODO: support different op types other than i32
     return `(i32.mul ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr
+      expr.rightExpr,
     )})`;
   } else if (expr.type === "DivideExpression") {
     //TODO: support different op types other than i32 unsigned
     return `(i32.div_s ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr
+      expr.rightExpr,
     )})`;
   } else if (expr.type === "RemainderExpression") {
     //TODO: support different op types other than i32 unsigned
     return `(i32.rem_s ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr
+      expr.rightExpr,
     )})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
+  } else if (expr.type === "BooleanExpression") {
+    // TODO: need to know type of the variable to set the correct instruction
+    if (expr.isNegated) {
+      return `(i32.eqz ${generateExprStr(expr.expr)})`;
+    } else {
+      return `(i32.ne (i32.const 0) ${generateExprStr(expr.expr)})`;
+    }
+  } else if (expr.type === "AndExpression") {
+    return `(i32.and ${generateExprStr(expr.leftExpr)} ${generateExprStr(
+      expr.rightExpr,
+    )})`;
+  } else if (expr.type === "OrExpression") {
+    return `(i32.or ${generateExprStr(expr.leftExpr)} ${generateExprStr(
+      expr.rightExpr,
+    )})`;
   } else {
     const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
   }
@@ -93,18 +115,20 @@ function generateExprStr(expr: WasmExpression): string {
 function generateStatementStr(statement: WasmFunctionBodyLine): string {
   if (statement.type === "GlobalSet") {
     return `(global.set $${statement.name} ${generateExprStr(
-      statement.value
+      statement.value,
     )})`;
   } else if (statement.type === "LocalSet") {
     return `(local.set $${statement.name} ${generateExprStr(statement.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
-    const argString = generateArgString(statement.args) 
+    const argString = generateArgString(statement.args);
     if (n.hasReturn) {
       // need to drop the return of the statement from the stack
-      return `(drop (call $${statement.name}${argString ? " " + argString : ""}))` 
+      return `(drop (call $${statement.name}${
+        argString ? " " + argString : ""
+      }))`;
     }
-    return `(call $${statement.name}${argString ? " " + argString : ""})` 
+    return `(call $${statement.name}${argString ? " " + argString : ""})`;
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||
@@ -125,7 +149,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
       }) ${
         global.initializerValue ? generateExprStr(global.initializerValue) : ""
       })`,
-      1
+      1,
     );
   }
   for (const func of module.functions) {
@@ -134,7 +158,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
     for (const param of Object.keys(func.params)) {
       watStr += generateLine(
         `(param $${param} ${func.params[param].variableType})`,
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     // write the result type
@@ -145,13 +169,13 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
     for (const local of Object.keys(func.locals)) {
       watStr += generateLine(
         `(local $${local} ${func.locals[local].variableType})`,
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     for (const statement of func.body) {
       watStr += generateLine(
         generateStatementStr(statement),
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

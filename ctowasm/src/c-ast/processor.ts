@@ -9,6 +9,7 @@ import {
   ArithmeticSubExpression,
   Assignment,
   Block,
+  ConditionalExpression,
   Declaration,
   FunctionCall,
   FunctionCallStatement,
@@ -61,7 +62,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node AST node that the variable is at
    */
   function checkForRedeclaration(
-    node: Declaration | Initialization | FunctionDefinition
+    node: Declaration | Initialization | FunctionDefinition,
   ) {
     if (
       node.name in node.scope.variables ||
@@ -71,7 +72,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       throw new ProcessingError(
         `Redeclaration error: '${node.name}' redeclared`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
   }
@@ -82,7 +83,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node
    */
   function getFunctionParams(
-    node: FunctionDeclaration | FunctionDefinition
+    node: FunctionDeclaration | FunctionDefinition,
   ): Variable[] {
     const s: Record<string, boolean> = {};
     return node.parameters.map((param) => {
@@ -90,7 +91,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         throw new ProcessingError(
           `Redeclaration of function parameter ${param.name}`,
           sourceCode,
-          node.position
+          node.position,
         );
       }
       s[param.name] = true;
@@ -107,7 +108,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function checkForVariableDeclaration(
     name: string,
     scope: Scope,
-    position: Position
+    position: Position,
   ) {
     let curr = scope;
     while (curr != null) {
@@ -119,14 +120,16 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared variable: '${name}' undeclared before use`,
       sourceCode,
-      position
+      position,
     );
   }
 
   /**
    * Checks if a given function is declared.
    */
-  function checkForFunctionDeclaration(node: FunctionCall | FunctionCallStatement) {
+  function checkForFunctionDeclaration(
+    node: FunctionCall | FunctionCallStatement,
+  ) {
     let curr = node.scope;
     while (curr != null) {
       if (node.name in curr.functions) {
@@ -137,7 +140,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared function: '${node.name}' undeclared before use`,
       sourceCode,
-      node.position
+      node.position,
     );
   }
 
@@ -164,9 +167,9 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
         scopeStack.push(n.scope);
       } else {
-        n.scope = scopeStack[scopeStack.length - 1]
+        n.scope = scopeStack[scopeStack.length - 1];
       }
-      
+
       for (const child of n.children) {
         visit(child);
       }
@@ -174,9 +177,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       if (pre?.type !== "FunctionDefinition") {
         scopeStack.pop();
       }
-    } else if (
-      node.type === "VariableDeclaration"
-    ) {
+    } else if (node.type === "VariableDeclaration") {
       const n = node as VariableDeclaration;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForRedeclaration(n);
@@ -195,8 +196,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         name: n.name,
       };
       visit(n.value);
-    }
-    else if (node.type === "FunctionDeclaration") {
+    } else if (node.type === "FunctionDeclaration") {
       const n = node as FunctionDeclaration;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForRedeclaration(n);
@@ -234,23 +234,23 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       checkForFunctionDeclaration(n);
       for (const arg of n.args) {
-        visit(arg) // visit each arg
+        visit(arg); // visit each arg
       }
     } else if (node.type === "FunctionCallStatement") {
       const n = node as FunctionCallStatement;
       n.scope = scopeStack[scopeStack.length - 1];
-      n.hasReturn = checkForFunctionDeclaration(n) === "void"? false : true;
+      n.hasReturn = checkForFunctionDeclaration(n) === "void" ? false : true;
       for (const arg of n.args) {
-        visit(arg) // visit each arg
-      } 
+        visit(arg); // visit each arg
+      }
     } else if (node.type === "VariableExpr") {
-      const n = node as VariableExpr
+      const n = node as VariableExpr;
       n.scope = scopeStack[scopeStack.length - 1];
       const v = checkForVariableDeclaration(n.name, n.scope, n.position);
       n.variableType = v.type;
       n.isParam = v.isParam; // to know if this was a parameter being used in expression
     } else if (node.type === "ArithmeticExpression") {
-      const n = node as ArithmeticExpression
+      const n = node as ArithmeticExpression;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.firstExpr);
       for (const expr of n.exprs) {
@@ -259,15 +259,27 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     } else if (node.type === "ArithmeticSubExpression") {
       const n = node as ArithmeticSubExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.expr); 
-    } else if (node.type === "PrefixExpression" || node.type === "PostfixExpression") {
+      visit(n.expr);
+    } else if (
+      node.type === "PrefixExpression" ||
+      node.type === "PostfixExpression"
+    ) {
       const n = node as PrefixExpression | PostfixExpression;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.variable);
     } else if (node.type === "ReturnStatement") {
-      const n = node as ReturnStatement
+      const n = node as ReturnStatement;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.value);
+    } else if (
+      node.type === "OrConditionalExpression" ||
+      node.type === "AndConditionalExpression"
+    ) {
+      const n = node as ConditionalExpression;
+      n.scope = scopeStack[scopeStack.length - 1];
+      for (const expr of n.exprs) {
+        visit(expr);
+      }
     }
   }
 
