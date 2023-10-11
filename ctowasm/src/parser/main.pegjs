@@ -34,6 +34,19 @@ statement
   / whitespace* @expression whitespace* statement_end
   / whitespace* @assignment whitespace* statement_end
   / whitespace* @return_statement whitespace* statement_end
+  / whitespace* @select_statement whitespace*
+
+select_statement
+  = ifBlock:if_block whitespace* elseIfBlocks:(@else_if_block whitespace*)* whitespace* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
+
+if_block 
+  = "if" whitespace* "(" whitespace* condition:conditional_expression whitespace* ")" whitespace* block:block { return generateNode("ConditionalBlock", { condition, block }); }
+
+else_if_block 
+  = "else" _ @if_block
+
+else_block
+  = "else" whitespace* @block
 
 return_statement 
   = "return" whitespace* expr:expression { return generateNode("ReturnStatement", { value: expr}) } 

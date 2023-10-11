@@ -56,6 +56,19 @@ export interface Block extends ScopedNode {
   children: BlockItem[];
 }
 
+export interface SelectStatement extends ScopedNode {
+  type: "SelectStatement";
+  ifBlock: ConditionalBlock;
+  elseIfBlocks: ConditionalBlock[];
+  elseBlock?: Block | null;
+}
+
+export interface ConditionalBlock extends ScopedNode {
+  type: "ConditionalBlock";
+  condition: ConditionalExpression;
+  block: Block;
+}
+
 export type VariableType = "int";
 
 // to be expanded later to include proper expressions
