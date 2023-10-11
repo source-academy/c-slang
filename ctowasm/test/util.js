@@ -57,7 +57,7 @@ export async function testFileCompilationSuccess(subset, testFileName) {
   );
   const wasmFilePath = path.resolve(
     TEMP_DIRECTORY,
-    `subset${subset.toString()}/wasm/${testFileName}.wat`,
+    `subset${subset.toString()}/wasm/${testFileName}.wasm`,
   );
   // Test 1: chceks that C program is compilable
   try {
