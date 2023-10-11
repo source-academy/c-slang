@@ -121,6 +121,32 @@ const testLog = {
       expected: true
     }
   },
+  subset3: {
+    eq_comparison_statement_1: {
+      title: "Equals comparison expression 1",
+      expected: true
+    },
+    ne_comparison_statement_1: {
+      title: "Not equals expression 1",
+      expected: true
+    },
+    lt_comparison_statement_1: {
+      title: "Less than expression 1",
+      expected: true
+    },
+    le_comparison_statement_1: {
+      title: "Less than or equals expression 1",
+      expected: true
+    },
+    gt_comparison_statement_1: {
+      title: "Greater than expression 1",
+      expected: true
+    },
+    ge_comparison_statement_1: {
+      title: "Greater than or equals expression 1",
+      expected: true
+    }
+  }
 };
 
 export default testLog;

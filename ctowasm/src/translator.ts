@@ -23,6 +23,7 @@ import {
   ConditionalExpression,
   CompoundAssignment,
   BinaryOperator,
+  ComparisonExpression,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -287,15 +288,15 @@ export function translate(CAstRoot: Root) {
   }
 
   /**
-   * Function to evaluate a ArithmeticExpression node, evaluating and building wasm nodes
+   * Function to evaluate a binary expressionnode, evaluating and building wasm nodes
    * of all the subexpressions of the ArithmeticExpression.
    * TODO: support different type of ops other than i32 ops.
    */
-  function evaluateArithmeticExpression(
-    node: ArithmeticExpression,
+  function evaluateLeftToRightBinaryExpression(
+    node: ArithmeticExpression | ComparisonExpression,
     enclosingFunc: WasmFunction
   ) {
-    const rootNode: any = { type: "ArithmeticExpression" };
+    const rootNode: any = { type: node.type };
     // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
     let currNode = rootNode;
     for (let i = node.exprs.length - 1; i > 0; --i) {
@@ -304,7 +305,7 @@ export function translate(CAstRoot: Root) {
         node.exprs[i].expr,
         enclosingFunc
       );
-      currNode.leftExpr = { type: "ArithmeticExpression" };
+      currNode.leftExpr = { type: node.type };
       currNode = currNode.leftExpr;
     }
     currNode.operator = node.exprs[0].operator;
@@ -405,8 +406,8 @@ export function translate(CAstRoot: Root) {
           name: wasmVariableName,
         };
       }
-    } else if (expr.type === "ArithmeticExpression") {
-      return evaluateArithmeticExpression(expr, enclosingFunc);
+    } else if (expr.type === "ArithmeticExpression" || expr.type === "ComparisonExpression") {
+      return evaluateLeftToRightBinaryExpression(expr, enclosingFunc);
     } else if (expr.type === "PrefixExpression") {
       const n: PrefixExpression = expr;
       const wasmVariableName = getWasmVariableName(

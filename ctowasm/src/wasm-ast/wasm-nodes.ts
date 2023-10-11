@@ -61,7 +61,8 @@ export type WasmExpression =
   | WasmExprStatement
   | WasmBooleanExpression
   | WasmAndExpression
-  | WasmOrExpression;
+  | WasmOrExpression
+  | WasmComparisonExpression;
 
 export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";

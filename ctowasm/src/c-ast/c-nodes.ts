@@ -80,7 +80,8 @@ export type Expression =
   | PostfixExpression
   | PrefixExpression
   | AndConditionalExpression
-  | OrConditionalExpression;
+  | OrConditionalExpression
+  | ComparisonExpression;
 
 export type Statement = Declaration | Initialization | ReturnStatement;
 

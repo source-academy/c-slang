@@ -112,7 +112,7 @@ comparison_expression
   / equality_comparison_expression
 
 relative_comparison_expression
-  = firstExpr:equality_comparison_expression whitespace* tail:(whitespace* @("<"/"<="/">="/">") whitespace* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
+  = firstExpr:equality_comparison_expression whitespace* tail:(whitespace* @("<="/">="/"<"/">") whitespace* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
 
 equality_comparison_expression
   = firstExpr:arithmetic_expression whitespace* tail:(whitespace* @("!="/"==") whitespace* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }

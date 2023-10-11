@@ -1,11 +1,12 @@
 /**
  * Exports a generate function for generating a WAT string from WAT AST.
  */
-import { BinaryOperator } from "c-ast/c-nodes";
+import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
   WasmBooleanExpression,
+  WasmComparisonExpression,
   WasmConst,
   WasmExpression,
   WasmFunctionBodyLine,
@@ -54,7 +55,7 @@ function generateArgString(exprs: WasmExpression[]) {
  * Returns the correct WAT binary instruction, given a binary operator.
  * TODO: add support for other types and unsigned/signed ints.
  */
-function getBinaryInstruction(operator: BinaryOperator) {
+function getBinaryInstruction(operator: BinaryOperator | ComparisonOperator) {
   switch (operator) {
     case ("+"):
       return "i32.add";
@@ -66,6 +67,18 @@ function getBinaryInstruction(operator: BinaryOperator) {
       return "i32.div_s";
     case ("%"):
       return "i32.rem_s";
+    case ("<"):
+      return "i32.lt_s";
+    case ("<="):
+      return "i32.le_s";
+    case ("!="):
+      return "i32.ne";
+    case ("=="):
+      return "i32.eq";
+    case (">="):
+      return "i32.ge_s";
+    case (">"):
+      return "i32.gt_s";
   }
 }
 
@@ -94,8 +107,8 @@ function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet
     return `(global.get $${e.name})`;
-  } else if (expr.type === "ArithmeticExpression") {
-    const e = expr as WasmArithmeticExpression;
+  } else if (expr.type === "ArithmeticExpression" || expr.type === "ComparisonExpression") {
+    const e = expr as WasmArithmeticExpression | WasmComparisonExpression;
     //TODO: support different op types other than i32
     return `(${getBinaryInstruction(e.operator)} ${generateExprStr(e.leftExpr)} ${generateExprStr(
       e.rightExpr,
