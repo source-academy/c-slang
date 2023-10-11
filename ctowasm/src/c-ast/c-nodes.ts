@@ -152,7 +152,7 @@ export interface VariableDeclaration extends ScopedNode {
 // A variable assignment
 export interface Assignment extends ScopedNode {
   type: "Assignment";
-  name: string;
+  variable: VariableExpr;
   value: Expression;
 }
 
@@ -186,4 +186,12 @@ export interface FunctionCallStatement extends ScopedNode {
   name: string;
   args: Expression[];
   hasReturn: boolean;
+}
+
+type Operator = "+" | "-" | "/" | "*" | "%"
+
+export interface CompoundAssignment extends ScopedNode {
+  operator: Operator;
+  variable: VariableExpr;
+  value: Expression;
 }

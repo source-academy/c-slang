@@ -9,6 +9,7 @@ import {
   ArithmeticSubExpression,
   Assignment,
   Block,
+  CompoundAssignment,
   ConditionalExpression,
   Declaration,
   FunctionCall,
@@ -224,10 +225,10 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       // traverse function body nodes
       visit(n.body, n);
       scopeStack.pop();
-    } else if (node.type === "Assignment") {
-      const n = node as Assignment;
+    } else if (node.type === "Assignment" || node.type === "CompoundAssignment") {
+      const n = node as Assignment | CompoundAssignment;
       n.scope = scopeStack[scopeStack.length - 1];
-      checkForVariableDeclaration(n.name, n.scope, n.position);
+      visit(n.variable); // vist the variable being assigned
       visit(n.value);
     } else if (node.type === "FunctionCall") {
       const n = node as FunctionCall;
@@ -281,7 +282,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         visit(expr);
       }
     }
-  }
+  } 
 
   visit(ast);
 }

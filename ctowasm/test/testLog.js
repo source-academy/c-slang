@@ -97,9 +97,29 @@ const testLog = {
       expected: true,
     },
     conditional_1: {
-      tile: "Conditional expression 1",
+      title: "Conditional expression 1",
       expected: true,
     },
+    compound_add_1: {
+      title: "Compound add expression 1",
+      expected: true,
+    },
+    compound_subtract_1: {
+      title: "Compound subtract expression 1",
+      expected: true,
+    },
+    compound_multiply_1: {
+      title: "Compound multiply expression 1",
+      expected: true,
+    },
+    compound_divide_1: {
+      title: "Compound divide expression 1",
+      expected: true,
+    },
+    compound_remainder_1: {
+      title: "Compound remainder expression 1",
+      expected: true
+    }
   },
 };
 

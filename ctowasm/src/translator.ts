@@ -21,12 +21,18 @@ import {
   PostfixExpression,
   FunctionCallStatement,
   ConditionalExpression,
+  CompoundAssignment,
 } from "c-ast/c-nodes";
 import {
+  WasmArithmeticExpression,
   WasmConst,
   WasmExpression,
   WasmFunction,
+  WasmGlobalGet,
+  WasmGlobalSet,
   WasmGlobalVariable,
+  WasmLocalGet,
+  WasmLocalSet,
   WasmLocalVariable,
   WasmModule,
   WasmType,
@@ -58,13 +64,9 @@ export function translate(CAstRoot: Root) {
     return PARAM_PREFIX + name;
   }
 
-  // convert variable type from C variable to
-  function convertVariableType(type: VariableType): WasmType {
-    //TODO: add more type support
-    if (type === "int") {
-      return "i32";
-    }
-    console.assert(false, `convertVariableType error: type not found: ${type}`);
+
+  const variableTypeToWasmType: Record<VariableType, WasmType> = {
+    "int": "i32"
   }
 
   /**
@@ -88,7 +90,7 @@ export function translate(CAstRoot: Root) {
    */
   function getWasmVariableName(
     originalVariableName: string,
-    enclosingFunc: WasmFunction,
+    enclosingFunc: WasmFunction
   ) {
     for (let i = enclosingFunc.scopes.length - 1; i >= 0; --i) {
       if (enclosingFunc.scopes[i].has(originalVariableName)) {
@@ -143,16 +145,16 @@ export function translate(CAstRoot: Root) {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1,
+          enclosingFunc.scopes.length - 1
         ),
-        variableType: convertVariableType(n.variableType),
+        variableType: variableTypeToWasmType[n.variableType],
       };
       enclosingFunc.locals[v.name] = v;
       enclosingFunc.body.push({
         type: "LocalSet",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1,
+          enclosingFunc.scopes.length - 1
         ),
         value: evaluateExpression(n.value, enclosingFunc),
       });
@@ -163,14 +165,14 @@ export function translate(CAstRoot: Root) {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1,
+          enclosingFunc.scopes.length - 1
         ),
-        variableType: convertVariableType(n.variableType),
+        variableType: variableTypeToWasmType[n.variableType],
       };
       enclosingFunc.locals[localVar.name] = localVar;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
-      const wasmVariableName = getWasmVariableName(n.name, enclosingFunc);
+      const wasmVariableName = getWasmVariableName(n.variable.name, enclosingFunc);
       if (
         wasmVariableName in enclosingFunc.params ||
         wasmVariableName in enclosingFunc.locals
@@ -211,7 +213,7 @@ export function translate(CAstRoot: Root) {
       const n = CAstNode as PrefixExpression | PostfixExpression;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
-        enclosingFunc,
+        enclosingFunc
       );
       let variableSetType: "GlobalSet" | "LocalSet" = "GlobalSet";
       let variableGetType: "GlobalGet" | "LocalGet" = "GlobalGet";
@@ -222,8 +224,8 @@ export function translate(CAstRoot: Root) {
         variableSetType = "LocalSet";
         variableGetType = "LocalGet";
       }
-      const varType = convertVariableType(n.variable.variableType);
-      enclosingFunc.body.push({
+      const varType = variableTypeToWasmType[n.variable.variableType];
+      const localSet: WasmLocalSet | WasmGlobalSet = {
         type: variableSetType,
         name: wasmVariableName,
         value: {
@@ -231,7 +233,7 @@ export function translate(CAstRoot: Root) {
           leftExpr: {
             type: variableGetType,
             name: wasmVariableName,
-          },
+          } as WasmLocalGet | WasmGlobalGet,
           rightExpr: {
             type: "Const",
             variableType: varType,
@@ -239,11 +241,57 @@ export function translate(CAstRoot: Root) {
           },
           varType: varType,
         },
-      });
+      }
+      enclosingFunc.body.push(localSet);
+    } else if (CAstNode.type === "CompoundAssignment") {
+      const n = CAstNode as CompoundAssignment;
+      const wasmVariableName = getWasmVariableName(n.variable.name, enclosingFunc);
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        const arithmeticExpr: WasmArithmeticExpression = {
+          type: arithmeticExpressionType[n.operator],
+          varType: variableTypeToWasmType[n.variable.variableType],
+          leftExpr: {
+            type: "LocalGet",
+            name: wasmVariableName,
+          },
+          rightExpr: evaluateExpression(n.value, enclosingFunc),
+        }
+        // parameter assignment or assignment to local scope variable
+        enclosingFunc.body.push({
+          type: "LocalSet",
+          name: wasmVariableName,
+          value: arithmeticExpr,
+        });
+      } else {
+        const arithmeticExpr: WasmArithmeticExpression = {
+          type: arithmeticExpressionType[n.operator],
+          varType: variableTypeToWasmType[n.variable.variableType],
+          leftExpr: {
+            type: "GlobalGet",
+            name: wasmVariableName,
+          },
+          rightExpr: evaluateExpression(n.value, enclosingFunc),
+        }
+        enclosingFunc.body.push({
+          type: "GlobalSet",
+          name: wasmVariableName,
+          value: arithmeticExpr,
+        });
+      }
     }
   }
 
-  const arithmeticExpressionType = {
+  const arithmeticExpressionType: Record<
+    string,
+    | "AddExpression"
+    | "SubtractExpression"
+    | "MultiplyExpression"
+    | "DivideExpression"
+    | "RemainderExpression"
+  > = {
     "+": "AddExpression",
     "-": "SubtractExpression",
     "*": "MultiplyExpression",
@@ -258,7 +306,7 @@ export function translate(CAstRoot: Root) {
    */
   function evaluateArithmeticExpression(
     node: ArithmeticExpression,
-    enclosingFunc: WasmFunction,
+    enclosingFunc: WasmFunction
   ) {
     const rootNode: any = {};
     // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
@@ -267,7 +315,7 @@ export function translate(CAstRoot: Root) {
       currNode.type = arithmeticExpressionType[node.exprs[i].operator];
       currNode.rightExpr = evaluateExpression(
         node.exprs[i].expr,
-        enclosingFunc,
+        enclosingFunc
       );
       currNode.leftExpr = {};
       currNode = currNode.leftExpr;
@@ -291,7 +339,7 @@ export function translate(CAstRoot: Root) {
    */
   function evaluateConditionalExpression(
     node: ConditionalExpression,
-    enclosingFunc: WasmFunction,
+    enclosingFunc: WasmFunction
   ) {
     const wasmNodeType =
       node.type === "OrConditionalExpression"
@@ -340,7 +388,7 @@ export function translate(CAstRoot: Root) {
    */
   function evaluateExpression(
     expr: Expression,
-    enclosingFunc: WasmFunction,
+    enclosingFunc: WasmFunction
   ): WasmExpression {
     if (expr.type === "Integer") {
       return convertLiteralToConst(expr);
@@ -375,7 +423,7 @@ export function translate(CAstRoot: Root) {
       const n: PrefixExpression = expr;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
-        enclosingFunc,
+        enclosingFunc
       );
       let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
       let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
@@ -386,7 +434,7 @@ export function translate(CAstRoot: Root) {
         nodeGetTypeStr = "LocalGet";
         nodeSetTypeStr = "LocalSet";
       }
-      return {
+      const wasmNode: WasmLocalGet | WasmGlobalGet = {
         type: nodeGetTypeStr,
         name: wasmVariableName,
         preStatements: [
@@ -401,19 +449,20 @@ export function translate(CAstRoot: Root) {
               },
               rightExpr: {
                 type: "Const",
-                variableType: convertVariableType(n.variable.variableType),
+                variableType: variableTypeToWasmType[n.variable.variableType],
                 value: 1,
               },
-              varType: convertVariableType(expr.variable.variableType),
+              varType: variableTypeToWasmType[expr.variable.variableType],
             },
-          },
+          } as WasmLocalSet | WasmGlobalSet,
         ],
       };
+      return wasmNode;
     } else if (expr.type === "PostfixExpression") {
       const n: PostfixExpression = expr;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
-        enclosingFunc,
+        enclosingFunc
       );
       let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
       let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
@@ -424,7 +473,7 @@ export function translate(CAstRoot: Root) {
         nodeGetTypeStr = "LocalGet";
         nodeSetTypeStr = "LocalSet";
       }
-      return {
+      const wasmNode: WasmLocalSet | WasmGlobalSet = {
         type: nodeSetTypeStr,
         name: wasmVariableName,
         value: {
@@ -438,15 +487,16 @@ export function translate(CAstRoot: Root) {
                 name: wasmVariableName,
               },
             ],
-          },
+          } as WasmLocalGet | WasmGlobalGet,
           rightExpr: {
             type: "Const",
-            variableType: convertVariableType(n.variable.variableType),
+            variableType: variableTypeToWasmType[n.variable.variableType],
             value: 1,
           },
-          varType: convertVariableType(n.variable.variableType),
+          varType: variableTypeToWasmType[n.variable.variableType],
         },
-      };
+      }
+      return wasmNode;
     } else if (
       expr.type === "AndConditionalExpression" ||
       expr.type === "OrConditionalExpression"
@@ -466,7 +516,7 @@ export function translate(CAstRoot: Root) {
         params[paramName] = {
           type: "FunctionParameter",
           name: paramName,
-          variableType: convertVariableType(param.variableType),
+          variableType: variableTypeToWasmType[param.variableType],
         };
       }
       const f: WasmFunction = {
@@ -479,7 +529,7 @@ export function translate(CAstRoot: Root) {
         return:
           n.returnType === "void" || n.name === "main"
             ? null
-            : convertVariableType(n.returnType),
+            : variableTypeToWasmType[n.returnType],
       };
       for (const child of n.body.children) {
         visit(child, f);
@@ -490,7 +540,7 @@ export function translate(CAstRoot: Root) {
       const globalVar: WasmGlobalVariable = {
         type: "GlobalVariable",
         name: n.name,
-        variableType: convertVariableType(n.variableType),
+        variableType: variableTypeToWasmType[n.variableType],
       };
       wasmRoot.globals.push(globalVar);
     } else if (child.type === "Initialization") {
@@ -498,7 +548,7 @@ export function translate(CAstRoot: Root) {
       const globalVar: WasmGlobalVariable = {
         type: "GlobalVariable",
         name: n.name,
-        variableType: convertVariableType(n.variableType),
+        variableType: variableTypeToWasmType[n.variableType],
         initializerValue: convertLiteralToConst(n.value as Literal),
       };
       wasmRoot.globals.push(globalVar);

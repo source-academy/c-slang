@@ -56,11 +56,7 @@ export type WasmExpression =
   | WasmConst
   | WasmLocalGet
   | WasmGlobalGet
-  | WasmAddExpression
-  | WasmSubtractExpression
-  | WasmMultiplyExpression
-  | WasmDivideExpression
-  | WasmRemainderExpression
+  | WasmArithmeticExpression
   | WasmExprStatement
   | WasmBooleanExpression
   | WasmAndExpression
@@ -168,3 +164,4 @@ export interface WasmOrExpression extends WasmAstNode {
   leftExpr: WasmOrExpression | WasmAndExpression | WasmBooleanExpression;
   rightExpr: WasmAndExpression | WasmBooleanExpression;
 }
+

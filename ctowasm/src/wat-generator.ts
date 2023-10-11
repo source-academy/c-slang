@@ -2,11 +2,24 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import {
+  WasmAddExpression,
+  WasmAndExpression,
+  WasmBooleanExpression,
+  WasmConst,
+  WasmDivideExpression,
   WasmExpression,
   WasmFunctionBodyLine,
   WasmFunctionCall,
   WasmFunctionCallStatement,
+  WasmGlobalGet,
+  WasmGlobalSet,
+  WasmLocalGet,
+  WasmLocalSet,
   WasmModule,
+  WasmMultiplyExpression,
+  WasmOrExpression,
+  WasmRemainderExpression,
+  WasmSubtractExpression,
 } from "wasm-ast/wasm-nodes";
 
 /**
@@ -45,67 +58,78 @@ function generateArgString(exprs: WasmExpression[]) {
  */
 function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
-    const n = expr as WasmFunctionCall;
-    const argString = generateArgString(n.args);
-    return `(call $${expr.name}${argString ? " " + argString : ""})`;
+    const e = expr as WasmFunctionCall;
+    const argString = generateArgString(e.args);
+    return `(call $${e.name}${argString ? " " + argString : ""})`;
   } else if (expr.type === "Const") {
-    return `(${expr.variableType}.const ${expr.value.toString()})`;
+    const e = expr as WasmConst;
+    return `(${e.variableType}.const ${e.value.toString()})`;
   } else if (expr.type === "LocalGet") {
-    const preStatements = expr.preStatements
-      ? expr.preStatements.map(
+    const e = expr as WasmLocalGet;
+    const preStatements = e.preStatements
+      ? e.preStatements.map(
           (s) =>
             generateStatementStr(s) ?? generateExprStr(s as WasmExpression),
         )
       : [];
     return (
-      "(" + `local.get $${expr.name} ${preStatements.join(" ")}`.trim() + ")"
+      "(" + `local.get $${e.name} ${preStatements.join(" ")}`.trim() + ")"
     );
   } else if (expr.type === "GlobalGet") {
-    return `(global.get $${expr.name})`;
+    const e = expr as WasmGlobalGet
+    return `(global.get $${e.name})`;
   } else if (expr.type === "AddExpression") {
+    const e = expr as WasmAddExpression;
     //TODO: support different op types other than i32
-    return `(i32.add ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    return `(i32.add ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else if (expr.type === "SubtractExpression") {
+    const e = expr as WasmSubtractExpression;
     //TODO: support different op types other than i32
-    return `(i32.sub ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    return `(i32.sub ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else if (expr.type === "MultiplyExpression") {
+    const e = expr as WasmMultiplyExpression;
     //TODO: support different op types other than i32
-    return `(i32.mul ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    return `(i32.mul ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else if (expr.type === "DivideExpression") {
+    const e = expr as WasmDivideExpression;
     //TODO: support different op types other than i32 unsigned
-    return `(i32.div_s ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    return `(i32.div_s ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else if (expr.type === "RemainderExpression") {
+    const e = expr as WasmRemainderExpression;
     //TODO: support different op types other than i32 unsigned
-    return `(i32.rem_s ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    return `(i32.rem_s ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
   } else if (expr.type === "BooleanExpression") {
+    const e = expr as WasmBooleanExpression;
     // TODO: need to know type of the variable to set the correct instruction
-    if (expr.isNegated) {
-      return `(i32.eqz ${generateExprStr(expr.expr)})`;
+    if (e.isNegated) {
+      return `(i32.eqz ${generateExprStr(e.expr)})`;
     } else {
-      return `(i32.ne (i32.const 0) ${generateExprStr(expr.expr)})`;
+      return `(i32.ne (i32.const 0) ${generateExprStr(e.expr)})`;
     }
   } else if (expr.type === "AndExpression") {
-    return `(i32.and ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    const e = expr as WasmAndExpression;
+    return `(i32.and ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else if (expr.type === "OrExpression") {
-    return `(i32.or ${generateExprStr(expr.leftExpr)} ${generateExprStr(
-      expr.rightExpr,
+    const e = expr as WasmOrExpression;
+    return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
     )})`;
   } else {
-    const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
+    console.assert(false, "WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion.")
   }
 }
 
@@ -114,21 +138,23 @@ function generateExprStr(expr: WasmExpression): string {
  */
 function generateStatementStr(statement: WasmFunctionBodyLine): string {
   if (statement.type === "GlobalSet") {
-    return `(global.set $${statement.name} ${generateExprStr(
-      statement.value,
+    const n = statement as WasmGlobalSet;
+    return `(global.set $${n.name} ${generateExprStr(
+      n.value,
     )})`;
   } else if (statement.type === "LocalSet") {
-    return `(local.set $${statement.name} ${generateExprStr(statement.value)})`;
+    const n = statement as WasmLocalSet;
+    return `(local.set $${n.name} ${generateExprStr(n.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
-    const argString = generateArgString(statement.args);
+    const argString = generateArgString(n.args);
     if (n.hasReturn) {
       // need to drop the return of the statement from the stack
-      return `(drop (call $${statement.name}${
+      return `(drop (call $${n.name}${
         argString ? " " + argString : ""
       }))`;
     }
-    return `(call $${statement.name}${argString ? " " + argString : ""})`;
+    return `(call $${n.name}${argString ? " " + argString : ""})`;
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||

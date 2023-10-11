@@ -27,6 +27,7 @@ translation_unit
     
 statement
 	= whitespace* @declaration whitespace* statement_end
+  / whitespace* @compound_assignment whitespace* statement_end
   / whitespace* @initialization whitespace* statement_end
   / whitespace* fn:function_call statement_end { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
   / whitespace* @expression whitespace* statement_end
@@ -37,7 +38,7 @@ return_statement
   = "return" whitespace* expr:expression { return generateNode("ReturnStatement", { value: expr}) } 
 
 assignment
-  = name:identifier whitespace* "=" whitespace* expr:expression { return generateNode("Assignment", { name: name, value: expr }) }
+  = variable:variable_term whitespace* "=" whitespace* value:expression { return generateNode("Assignment", { variable, value }) }
     
 block
 	= "{" whitespace* s:block_item_list whitespace* "}" { return generateNode("Block", {children: s}); }
@@ -74,6 +75,9 @@ function_argument_list
 
 initialization
 	= type:type _ name:identifier whitespace* "=" whitespace* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
+
+compound_assignment
+  = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
 
 expression
   = conditional_expression // try to match on conditonal first to ensure that a conditional is recognised when it exists
