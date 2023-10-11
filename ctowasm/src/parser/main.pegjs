@@ -94,8 +94,7 @@ compound_assignment
   = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
 
 expression
-  = conditional_expression // try to match on conditonal first to ensure that a conditional is recognised when it exists
-  / arithmetic_expression
+  = conditional_expression // start trying to match on conditional expression since && and || have lowest precedence
 
 conditional_expression 
   = or_conditional_expression
@@ -105,7 +104,18 @@ or_conditional_expression
   = left:and_conditional_expression tail:(_ "||" _ @and_conditional_expression)+ { return generateNode("OrConditionalExpression", { exprs: [left, ...tail] }); }
 
 and_conditional_expression
-  = left:arithmetic_expression tail:(_ "&&" _ @arithmetic_expression)+ { return generateNode("AndConditionalExpression", { exprs: [left, ...tail] }); }
+  = left:comparison_expression tail:(_ "&&" _ @comparison_expression)+ { return generateNode("AndConditionalExpression", { exprs: [left, ...tail] }); }
+  / comparison_expression
+
+comparison_expression
+  = relative_comparison_expression
+  / equality_comparison_expression
+
+relative_comparison_expression
+  = firstExpr:equality_comparison_expression whitespace* tail:(whitespace* @("<"/"<="/">="/">") whitespace* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
+
+equality_comparison_expression
+  = firstExpr:arithmetic_expression whitespace* tail:(whitespace* @("!="/"==") whitespace* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
   / arithmetic_expression
 
 arithmetic_expression

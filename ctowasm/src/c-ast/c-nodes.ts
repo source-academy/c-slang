@@ -125,6 +125,20 @@ export interface AndConditionalExpression extends ConditionalExpression {
   type: "AndConditionalExpression";
 }
 
+export type ComparisonOperator = "<" | "<=" | "!=" | "==" | ">=" | ">"
+
+export interface ComparisonExpression extends ScopedNode {
+  type: "ComparisonExpression";
+  firstExpr: Expression;
+  exprs: ComparisonSubExpression[];
+}
+
+export interface ComparisonSubExpression extends ScopedNode {
+  type: "ComparisonSubExpression";
+  operator: ComparisonOperator;
+  expr: Expression;
+}
+
 export type UnaryOperator = "++" | "--";
 
 export interface PrefixExpression extends ScopedNode {

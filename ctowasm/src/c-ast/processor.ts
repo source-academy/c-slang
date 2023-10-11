@@ -9,6 +9,7 @@ import {
   ArithmeticSubExpression,
   Assignment,
   Block,
+  ComparisonExpression,
   CompoundAssignment,
   ConditionalExpression,
   Declaration,
@@ -281,6 +282,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       for (const expr of n.exprs) {
         visit(expr);
       }
+    } else if (node.type === "ComparisonExpression") {
+      const n = node as ComparisonExpression;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.firstExpr);
+      for (const expr of n.exprs) {
+        visit(expr);
+      } 
     }
   } 
 

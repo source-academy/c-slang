@@ -1,12 +1,12 @@
 /**
  * Exports a generate function for generating a WAT string from WAT AST.
  */
+import { BinaryOperator } from "c-ast/c-nodes";
 import {
-  WasmAddExpression,
   WasmAndExpression,
+  WasmArithmeticExpression,
   WasmBooleanExpression,
   WasmConst,
-  WasmDivideExpression,
   WasmExpression,
   WasmFunctionBodyLine,
   WasmFunctionCall,
@@ -16,10 +16,7 @@ import {
   WasmLocalGet,
   WasmLocalSet,
   WasmModule,
-  WasmMultiplyExpression,
   WasmOrExpression,
-  WasmRemainderExpression,
-  WasmSubtractExpression,
 } from "wasm-ast/wasm-nodes";
 
 /**
@@ -54,6 +51,25 @@ function generateArgString(exprs: WasmExpression[]) {
 }
 
 /**
+ * Returns the correct WAT binary instruction, given a binary operator.
+ * TODO: add support for other types and unsigned/signed ints.
+ */
+function getBinaryInstruction(operator: BinaryOperator) {
+  switch (operator) {
+    case ("+"):
+      return "i32.add";
+    case ("-"):
+      return "i32.sub";
+    case ("*"):
+      return "i32.mul";
+    case ("/"):
+      return "i32.div_s";
+    case ("%"):
+      return "i32.rem_s";
+  }
+}
+
+/**
  * Given a wat Expression node, generates the string version of that expression, with brackets.
  */
 function generateExprStr(expr: WasmExpression): string {
@@ -78,34 +94,10 @@ function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet
     return `(global.get $${e.name})`;
-  } else if (expr.type === "AddExpression") {
-    const e = expr as WasmAddExpression;
+  } else if (expr.type === "ArithmeticExpression") {
+    const e = expr as WasmArithmeticExpression;
     //TODO: support different op types other than i32
-    return `(i32.add ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
-    )})`;
-  } else if (expr.type === "SubtractExpression") {
-    const e = expr as WasmSubtractExpression;
-    //TODO: support different op types other than i32
-    return `(i32.sub ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
-    )})`;
-  } else if (expr.type === "MultiplyExpression") {
-    const e = expr as WasmMultiplyExpression;
-    //TODO: support different op types other than i32
-    return `(i32.mul ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
-    )})`;
-  } else if (expr.type === "DivideExpression") {
-    const e = expr as WasmDivideExpression;
-    //TODO: support different op types other than i32 unsigned
-    return `(i32.div_s ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
-    )})`;
-  } else if (expr.type === "RemainderExpression") {
-    const e = expr as WasmRemainderExpression;
-    //TODO: support different op types other than i32 unsigned
-    return `(i32.rem_s ${generateExprStr(e.leftExpr)} ${generateExprStr(
+    return `(${getBinaryInstruction(e.operator)} ${generateExprStr(e.leftExpr)} ${generateExprStr(
       e.rightExpr,
     )})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {

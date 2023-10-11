@@ -1,3 +1,4 @@
+import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
 import { Scopes } from "wasm-ast/types";
 
 /**
@@ -107,29 +108,11 @@ export interface WasmGlobalGet extends WasmAstNode {
 }
 
 export interface WasmArithmeticExpression extends WasmAstNode {
+  type: "ArithmeticExpression";
+  operator: BinaryOperator;
   leftExpr: WasmExpression;
   rightExpr: WasmExpression;
   varType: WasmType; // the type of the variables that the arithmetic expression is running
-}
-
-export interface WasmAddExpression extends WasmArithmeticExpression {
-  type: "AddExpression";
-}
-
-export interface WasmSubtractExpression extends WasmArithmeticExpression {
-  type: "SubtractExpression";
-}
-
-export interface WasmMultiplyExpression extends WasmArithmeticExpression {
-  type: "MultiplyExpression";
-}
-
-export interface WasmDivideExpression extends WasmArithmeticExpression {
-  type: "DivideExpression";
-}
-
-export interface WasmRemainderExpression extends WasmArithmeticExpression {
-  type: "RemainderExpression";
 }
 
 /**
@@ -165,3 +148,10 @@ export interface WasmOrExpression extends WasmAstNode {
   rightExpr: WasmAndExpression | WasmBooleanExpression;
 }
 
+
+export interface WasmComparisonExpression {
+  type: "ComparisonExpression";
+  operator: ComparisonOperator;
+  leftExpr: WasmExpression;
+  rightExpr: WasmExpression;
+}

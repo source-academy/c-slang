@@ -22,6 +22,7 @@ import {
   FunctionCallStatement,
   ConditionalExpression,
   CompoundAssignment,
+  BinaryOperator,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -108,13 +109,11 @@ export function translate(CAstRoot: Root) {
 
   /**
    * Converts a given unary opeartor into the corresponding asm instruction node name.
+   * TODO: add other type support
    */
-  const unaryOperatorToInstructionName: Record<
-    string,
-    "AddExpression" | "SubtractExpression"
-  > = {
-    "++": "AddExpression",
-    "--": "SubtractExpression",
+  const unaryOperatorToBinaryOperator: Record<string, BinaryOperator> = {
+    "++": "+",
+    "--": "-",
   };
 
   /**
@@ -229,7 +228,8 @@ export function translate(CAstRoot: Root) {
         type: variableSetType,
         name: wasmVariableName,
         value: {
-          type: unaryOperatorToInstructionName[n.operator],
+          type: "ArithmeticExpression",
+          operator: unaryOperatorToBinaryOperator[n.operator],
           leftExpr: {
             type: variableGetType,
             name: wasmVariableName,
@@ -251,7 +251,8 @@ export function translate(CAstRoot: Root) {
         wasmVariableName in enclosingFunc.locals
       ) {
         const arithmeticExpr: WasmArithmeticExpression = {
-          type: arithmeticExpressionType[n.operator],
+          type: "ArithmeticExpression",
+          operator: n.operator,
           varType: variableTypeToWasmType[n.variable.variableType],
           leftExpr: {
             type: "LocalGet",
@@ -267,7 +268,8 @@ export function translate(CAstRoot: Root) {
         });
       } else {
         const arithmeticExpr: WasmArithmeticExpression = {
-          type: arithmeticExpressionType[n.operator],
+          type: "ArithmeticExpression",
+          operator: n.operator,
           varType: variableTypeToWasmType[n.variable.variableType],
           leftExpr: {
             type: "GlobalGet",
@@ -284,21 +286,6 @@ export function translate(CAstRoot: Root) {
     }
   }
 
-  const arithmeticExpressionType: Record<
-    string,
-    | "AddExpression"
-    | "SubtractExpression"
-    | "MultiplyExpression"
-    | "DivideExpression"
-    | "RemainderExpression"
-  > = {
-    "+": "AddExpression",
-    "-": "SubtractExpression",
-    "*": "MultiplyExpression",
-    "/": "DivideExpression",
-    "%": "RemainderExpression",
-  };
-
   /**
    * Function to evaluate a ArithmeticExpression node, evaluating and building wasm nodes
    * of all the subexpressions of the ArithmeticExpression.
@@ -308,19 +295,19 @@ export function translate(CAstRoot: Root) {
     node: ArithmeticExpression,
     enclosingFunc: WasmFunction
   ) {
-    const rootNode: any = {};
+    const rootNode: any = { type: "ArithmeticExpression" };
     // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
     let currNode = rootNode;
     for (let i = node.exprs.length - 1; i > 0; --i) {
-      currNode.type = arithmeticExpressionType[node.exprs[i].operator];
+      currNode.operator = node.exprs[i].operator;
       currNode.rightExpr = evaluateExpression(
         node.exprs[i].expr,
         enclosingFunc
       );
-      currNode.leftExpr = {};
+      currNode.leftExpr = { type: "ArithmeticExpression" };
       currNode = currNode.leftExpr;
     }
-    currNode.type = arithmeticExpressionType[node.exprs[0].operator];
+    currNode.operator = node.exprs[0].operator;
     currNode.rightExpr = evaluateExpression(node.exprs[0].expr, enclosingFunc);
     currNode.leftExpr = evaluateExpression(node.firstExpr, enclosingFunc);
     return rootNode;
@@ -332,6 +319,7 @@ export function translate(CAstRoot: Root) {
       node.type === "OrConditionalExpression"
     );
   }
+
 
   /**
    * Produces the correct left to right evaluation of a conditional expression,
@@ -442,7 +430,8 @@ export function translate(CAstRoot: Root) {
             type: nodeSetTypeStr,
             name: wasmVariableName,
             value: {
-              type: unaryOperatorToInstructionName[n.operator],
+              type: "ArithmeticExpression",
+              operator: unaryOperatorToBinaryOperator[n.operator],
               leftExpr: {
                 type: nodeGetTypeStr,
                 name: wasmVariableName,
@@ -477,7 +466,8 @@ export function translate(CAstRoot: Root) {
         type: nodeSetTypeStr,
         name: wasmVariableName,
         value: {
-          type: unaryOperatorToInstructionName[n.operator],
+          type: "ArithmeticExpression",
+          operator: unaryOperatorToBinaryOperator[n.operator],
           leftExpr: {
             type: nodeGetTypeStr,
             name: wasmVariableName,
