@@ -21,7 +21,8 @@ program = arr:translation_unit { return generateNode("Root", {children: arr}); }
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = s:statement whitespace* t:translation_unit { return [s, ...t]; }
+  = s:declaration whitespace* statement_end whitespace* t:translation_unit { return [s, ...t]; }
+  / i:initialization whitespace* statement_end whitespace* t:translation_unit { return [i, ...t]; }
   / f:function_definition whitespace* t:translation_unit { return [f, ...t]; }
   / whitespace* { return []; }
     
