@@ -145,6 +145,10 @@ const testLog = {
     ge_comparison_statement_1: {
       title: "Greater than or equals expression 1",
       expected: true
+    },
+    comparison_1: {
+      title: "Complex comparison expression 1",
+      expected: true
     }
   }
 };
