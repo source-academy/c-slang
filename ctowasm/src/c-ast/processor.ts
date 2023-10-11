@@ -11,6 +11,7 @@ import {
   Block,
   ComparisonExpression,
   CompoundAssignment,
+  ConditionalBlock,
   ConditionalExpression,
   Declaration,
   FunctionCall,
@@ -25,6 +26,7 @@ import {
   Root,
   Scope,
   ScopedNode,
+  SelectStatement,
   Variable,
   VariableDeclaration,
   VariableExpr,
@@ -64,7 +66,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node AST node that the variable is at
    */
   function checkForRedeclaration(
-    node: Declaration | Initialization | FunctionDefinition,
+    node: Declaration | Initialization | FunctionDefinition
   ) {
     if (
       node.name in node.scope.variables ||
@@ -74,7 +76,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       throw new ProcessingError(
         `Redeclaration error: '${node.name}' redeclared`,
         sourceCode,
-        node.position,
+        node.position
       );
     }
   }
@@ -85,7 +87,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node
    */
   function getFunctionParams(
-    node: FunctionDeclaration | FunctionDefinition,
+    node: FunctionDeclaration | FunctionDefinition
   ): Variable[] {
     const s: Record<string, boolean> = {};
     return node.parameters.map((param) => {
@@ -93,7 +95,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         throw new ProcessingError(
           `Redeclaration of function parameter ${param.name}`,
           sourceCode,
-          node.position,
+          node.position
         );
       }
       s[param.name] = true;
@@ -110,7 +112,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function checkForVariableDeclaration(
     name: string,
     scope: Scope,
-    position: Position,
+    position: Position
   ) {
     let curr = scope;
     while (curr != null) {
@@ -122,7 +124,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared variable: '${name}' undeclared before use`,
       sourceCode,
-      position,
+      position
     );
   }
 
@@ -130,7 +132,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * Checks if a given function is declared.
    */
   function checkForFunctionDeclaration(
-    node: FunctionCall | FunctionCallStatement,
+    node: FunctionCall | FunctionCallStatement
   ) {
     let curr = node.scope;
     while (curr != null) {
@@ -142,7 +144,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared function: '${node.name}' undeclared before use`,
       sourceCode,
-      node.position,
+      node.position
     );
   }
 
@@ -220,13 +222,16 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       // add a new scope just for function variables TODO: see if this is a good idea later
       n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
-      for (const param of params) {
-        n.scope.variables[param.name] = { ...param, isParam: true };
-      }
+      params.forEach(
+        (param) => (n.scope.variables[param.name] = { ...param, isParam: true })
+      );
       // traverse function body nodes
       visit(n.body, n);
       scopeStack.pop();
-    } else if (node.type === "Assignment" || node.type === "CompoundAssignment") {
+    } else if (
+      node.type === "Assignment" ||
+      node.type === "CompoundAssignment"
+    ) {
       const n = node as Assignment | CompoundAssignment;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.variable); // vist the variable being assigned
@@ -235,16 +240,12 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as FunctionCall;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForFunctionDeclaration(n);
-      for (const arg of n.args) {
-        visit(arg); // visit each arg
-      }
+      n.args.forEach((arg) => visit(arg));
     } else if (node.type === "FunctionCallStatement") {
       const n = node as FunctionCallStatement;
       n.scope = scopeStack[scopeStack.length - 1];
       n.hasReturn = checkForFunctionDeclaration(n) === "void" ? false : true;
-      for (const arg of n.args) {
-        visit(arg); // visit each arg
-      }
+      n.args.forEach((arg) => visit(arg));
     } else if (node.type === "VariableExpr") {
       const n = node as VariableExpr;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -255,9 +256,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as ArithmeticExpression;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.firstExpr);
-      for (const expr of n.exprs) {
-        visit(expr);
-      }
+      n.exprs.forEach((expr) => visit(expr));
     } else if (node.type === "ArithmeticSubExpression") {
       const n = node as ArithmeticSubExpression;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -274,23 +273,29 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.value);
     } else if (
-      node.type === "OrConditionalExpression" ||
-      node.type === "AndConditionalExpression"
+      node.type === "ConditionalExpression"
     ) {
       const n = node as ConditionalExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      for (const expr of n.exprs) {
-        visit(expr);
-      }
+      n.exprs.forEach((expr) => visit(expr));
     } else if (node.type === "ComparisonExpression") {
       const n = node as ComparisonExpression;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.firstExpr);
-      for (const expr of n.exprs) {
-        visit(expr);
-      } 
+      n.exprs.forEach((expr) => visit(expr));
+    } else if (node.type === "SelectStatement") {
+      const n = node as SelectStatement;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.ifBlock);
+      n.elseIfBlocks.forEach((block) => visit(block));
+      visit(n.elseBlock);
+    } else if (node.type === "ConditionalBlock") {
+      const n = node as ConditionalBlock;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.condition);
+      visit(n.block);
     }
-  } 
+  }
 
   visit(ast);
 }

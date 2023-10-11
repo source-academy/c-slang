@@ -149,6 +149,10 @@ const testLog = {
     comparison_1: {
       title: "Complex comparison expression 1",
       expected: true
+    },
+    select_statement_1: {
+      title: "Select statement (if else-if else blocks) 1",
+      expected: true
     }
   }
 };

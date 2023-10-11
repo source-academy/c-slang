@@ -49,7 +49,7 @@ export interface WasmFunction extends WasmAstNode {
   return: WasmType | null;
 }
 
-type WasmStatement = WasmGlobalSet | WasmLocalSet | WasmFunctionCallStatement;
+export type WasmStatement = WasmGlobalSet | WasmLocalSet | WasmFunctionCallStatement | WasmSelectStatement | WasmReturnStatement;
 
 // TODO: figure out if this necessary
 export type WasmExpression =
@@ -63,6 +63,11 @@ export type WasmExpression =
   | WasmAndExpression
   | WasmOrExpression
   | WasmComparisonExpression;
+
+export interface WasmReturnStatement {
+  type: "ReturnStatement";
+  value: WasmExpression;
+}
 
 export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
@@ -155,4 +160,11 @@ export interface WasmComparisonExpression {
   operator: ComparisonOperator;
   leftExpr: WasmExpression;
   rightExpr: WasmExpression;
+}
+
+export interface WasmSelectStatement {
+  type: "SelectStatement";
+  condition: WasmExpression;
+  actions: WasmStatement[];
+  elseStatements: WasmStatement[];
 }

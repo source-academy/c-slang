@@ -101,10 +101,10 @@ conditional_expression
   / and_conditional_expression
 
 or_conditional_expression
-  = left:and_conditional_expression tail:(_ "||" _ @and_conditional_expression)+ { return generateNode("OrConditionalExpression", { exprs: [left, ...tail] }); }
+  = left:and_conditional_expression tail:(_ "||" _ @and_conditional_expression)+ { return generateNode("ConditionalExpression", { conditionType: "or", exprs: [left, ...tail] }); }
 
 and_conditional_expression
-  = left:comparison_expression tail:(_ "&&" _ @comparison_expression)+ { return generateNode("AndConditionalExpression", { exprs: [left, ...tail] }); }
+  = left:comparison_expression tail:(_ "&&" _ @comparison_expression)+ { return generateNode("ConditionalExpression", { conditionType: "and", exprs: [left, ...tail] }); }
   / comparison_expression
 
 comparison_expression

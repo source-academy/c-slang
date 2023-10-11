@@ -1,7 +1,10 @@
 /**
  * Exports a generate function for generating a WAT string from WAT AST.
  */
-import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
+import {
+  BinaryOperator,
+  ComparisonOperator,
+} from "c-ast/c-nodes";
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
@@ -18,6 +21,8 @@ import {
   WasmLocalSet,
   WasmModule,
   WasmOrExpression,
+  WasmReturnStatement,
+  WasmSelectStatement,
 } from "wasm-ast/wasm-nodes";
 
 /**
@@ -57,27 +62,27 @@ function generateArgString(exprs: WasmExpression[]) {
  */
 function getBinaryInstruction(operator: BinaryOperator | ComparisonOperator) {
   switch (operator) {
-    case ("+"):
+    case "+":
       return "i32.add";
-    case ("-"):
+    case "-":
       return "i32.sub";
-    case ("*"):
+    case "*":
       return "i32.mul";
-    case ("/"):
+    case "/":
       return "i32.div_s";
-    case ("%"):
+    case "%":
       return "i32.rem_s";
-    case ("<"):
+    case "<":
       return "i32.lt_s";
-    case ("<="):
+    case "<=":
       return "i32.le_s";
-    case ("!="):
+    case "!=":
       return "i32.ne";
-    case ("=="):
+    case "==":
       return "i32.eq";
-    case (">="):
+    case ">=":
       return "i32.ge_s";
-    case (">"):
+    case ">":
       return "i32.gt_s";
   }
 }
@@ -97,22 +102,22 @@ function generateExprStr(expr: WasmExpression): string {
     const e = expr as WasmLocalGet;
     const preStatements = e.preStatements
       ? e.preStatements.map(
-          (s) =>
-            generateStatementStr(s) ?? generateExprStr(s as WasmExpression),
+          (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
         )
       : [];
-    return (
-      "(" + `local.get $${e.name} ${preStatements.join(" ")}`.trim() + ")"
-    );
+    return `(local.get $${e.name}${preStatements.length > 0 ? " " + preStatements.join(" ") : ""})`;
   } else if (expr.type === "GlobalGet") {
-    const e = expr as WasmGlobalGet
+    const e = expr as WasmGlobalGet;
     return `(global.get $${e.name})`;
-  } else if (expr.type === "ArithmeticExpression" || expr.type === "ComparisonExpression") {
+  } else if (
+    expr.type === "ArithmeticExpression" ||
+    expr.type === "ComparisonExpression"
+  ) {
     const e = expr as WasmArithmeticExpression | WasmComparisonExpression;
     //TODO: support different op types other than i32
-    return `(${getBinaryInstruction(e.operator)} ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
-    )})`;
+    return `(${getBinaryInstruction(e.operator)} ${generateExprStr(
+      e.leftExpr
+    )} ${generateExprStr(e.rightExpr)})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
   } else if (expr.type === "BooleanExpression") {
@@ -126,15 +131,18 @@ function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "AndExpression") {
     const e = expr as WasmAndExpression;
     return `(i32.and ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
+      e.rightExpr
     )})`;
   } else if (expr.type === "OrExpression") {
     const e = expr as WasmOrExpression;
     return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
+      e.rightExpr
     )})`;
   } else {
-    console.assert(false, "WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion.")
+    console.assert(
+      false,
+      "WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion."
+    );
   }
 }
 
@@ -144,9 +152,7 @@ function generateExprStr(expr: WasmExpression): string {
 function generateStatementStr(statement: WasmFunctionBodyLine): string {
   if (statement.type === "GlobalSet") {
     const n = statement as WasmGlobalSet;
-    return `(global.set $${n.name} ${generateExprStr(
-      n.value,
-    )})`;
+    return `(global.set $${n.name} ${generateExprStr(n.value)})`;
   } else if (statement.type === "LocalSet") {
     const n = statement as WasmLocalSet;
     return `(local.set $${n.name} ${generateExprStr(n.value)})`;
@@ -155,9 +161,7 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     const argString = generateArgString(n.args);
     if (n.hasReturn) {
       // need to drop the return of the statement from the stack
-      return `(drop (call $${n.name}${
-        argString ? " " + argString : ""
-      }))`;
+      return `(drop (call $${n.name}${argString ? " " + argString : ""}))`;
     }
     return `(call $${n.name}${argString ? " " + argString : ""})`;
   } else if (
@@ -166,6 +170,22 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     statement.type === "LocalGet"
   ) {
     return generateExprStr(statement);
+  } else if (statement.type === "SelectStatement") {
+    const n = statement as WasmSelectStatement;
+    return `(if ${generateExprStr(statement.condition)} (then ${n.actions
+      .map((action) => generateStatementStr(action))
+      .join(" ")})${
+      n.elseStatements
+        ? " (else" +
+          n.elseStatements
+            .map((statement) => generateStatementStr(statement))
+            .join(" ") +
+          ")"
+        : ""
+    })`;
+  } else if (statement.type === "ReturnStatement") {
+    const n = statement as WasmReturnStatement;
+    return `(return ${generateExprStr(statement.value)})`
   }
   return "";
 }
@@ -180,7 +200,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
       }) ${
         global.initializerValue ? generateExprStr(global.initializerValue) : ""
       })`,
-      1,
+      1
     );
   }
   for (const func of module.functions) {
@@ -189,7 +209,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
     for (const param of Object.keys(func.params)) {
       watStr += generateLine(
         `(param $${param} ${func.params[param].variableType})`,
-        baseIndentation + 2,
+        baseIndentation + 2
       );
     }
     // write the result type
@@ -200,13 +220,13 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
     for (const local of Object.keys(func.locals)) {
       watStr += generateLine(
         `(local $${local} ${func.locals[local].variableType})`,
-        baseIndentation + 2,
+        baseIndentation + 2
       );
     }
     for (const statement of func.body) {
       watStr += generateLine(
         generateStatementStr(statement),
-        baseIndentation + 2,
+        baseIndentation + 2
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

@@ -24,6 +24,7 @@ import {
   CompoundAssignment,
   BinaryOperator,
   ComparisonExpression,
+  SelectStatement,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -37,6 +38,8 @@ import {
   WasmLocalSet,
   WasmLocalVariable,
   WasmModule,
+  WasmSelectStatement,
+  WasmStatement,
   WasmType,
   WasmVariable,
 } from "wasm-ast/wasm-nodes";
@@ -66,10 +69,9 @@ export function translate(CAstRoot: Root) {
     return PARAM_PREFIX + name;
   }
 
-
   const variableTypeToWasmType: Record<VariableType, WasmType> = {
-    "int": "i32"
-  }
+    int: "i32",
+  };
 
   /**
    * Converts a given Literal to a WasmConst
@@ -117,26 +119,47 @@ export function translate(CAstRoot: Root) {
     "--": "-",
   };
 
+  function addStatement(
+    n: WasmStatement,
+    enclosingFunc: WasmFunction,
+    enclosingBody?: WasmStatement[]
+  ) {
+    if (typeof enclosingBody !== "undefined") {
+      enclosingBody.push(n);
+    } else {
+      enclosingFunc.body.push(n);
+    }
+  }
+
   /**
    * Function for visting the statements within a function body.
    * For now, expressions execpt function calls are ignored since they are inconsequential. TODO: check this
    * @param CAstNode Node being visited.
    * @param enclosingFunc The enclosing function within which we are visiting lines.
-   * @param enclosingBlockNum The block that this node is in. Everytime we enter a new block we increment by 1
+   * @param enclosingBody If provided, add the new statement to this enclosing body instead of then enclosing function
    */
-  function visit(CAstNode: Node, enclosingFunc: WasmFunction) {
+  function visit(
+    CAstNode: Node,
+    enclosingFunc: WasmFunction,
+    enclosingBody?: WasmStatement[]
+  ) {
     if (CAstNode.type === "Block") {
       const n = CAstNode as Block;
       enclosingFunc.scopes.push(new Set()); // push on new scope for this block
-      for (const child of n.children) {
-        visit(child, enclosingFunc);
-      }
+      n.children.forEach((child) => visit(child, enclosingFunc, enclosingBody));
       enclosingFunc.scopes.pop(); // pop off the scope for this block
     } else if (CAstNode.type === "ReturnStatement") {
       const n = CAstNode as ReturnStatement;
       if (enclosingFunc.name !== "main") {
         // main shouldnt have any return for wasm
-        enclosingFunc.body.push(evaluateExpression(n.value, enclosingFunc));
+        addStatement(
+          {
+            type: "ReturnStatement",
+            value: evaluateExpression(n.value, enclosingFunc),
+          },
+          enclosingFunc,
+          enclosingBody
+        );
       }
     } else if (CAstNode.type === "Initialization") {
       const n = CAstNode as Initialization;
@@ -150,14 +173,18 @@ export function translate(CAstRoot: Root) {
         variableType: variableTypeToWasmType[n.variableType],
       };
       enclosingFunc.locals[v.name] = v;
-      enclosingFunc.body.push({
-        type: "LocalSet",
-        name: convertVarNameToScopedVarName(
-          n.name,
-          enclosingFunc.scopes.length - 1
-        ),
-        value: evaluateExpression(n.value, enclosingFunc),
-      });
+      addStatement(
+        {
+          type: "LocalSet",
+          name: convertVarNameToScopedVarName(
+            n.name,
+            enclosingFunc.scopes.length - 1
+          ),
+          value: evaluateExpression(n.value, enclosingFunc),
+        },
+        enclosingFunc,
+        enclosingBody
+      );
     } else if (CAstNode.type === "VariableDeclaration") {
       const n = CAstNode as VariableDeclaration;
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
@@ -172,25 +199,36 @@ export function translate(CAstRoot: Root) {
       enclosingFunc.locals[localVar.name] = localVar;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
-      const wasmVariableName = getWasmVariableName(n.variable.name, enclosingFunc);
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
       if (
         wasmVariableName in enclosingFunc.params ||
         wasmVariableName in enclosingFunc.locals
       ) {
         // parameter assignment or assignment to local scope variable
-        enclosingFunc.body.push({
-          type: "LocalSet",
-          name: wasmVariableName,
-          value: evaluateExpression(n.value, enclosingFunc),
-        });
+        addStatement(
+          {
+            type: "LocalSet",
+            name: wasmVariableName,
+            value: evaluateExpression(n.value, enclosingFunc),
+          },
+          enclosingFunc,
+          enclosingBody
+        );
       } else {
         // this assignment is to a global variable
         // no need do any checks, this would have been done in semantic analysis TODO: check this
-        enclosingFunc.body.push({
-          type: "GlobalSet",
-          name: wasmVariableName,
-          value: evaluateExpression(n.value, enclosingFunc),
-        });
+        addStatement(
+          {
+            type: "GlobalSet",
+            name: wasmVariableName,
+            value: evaluateExpression(n.value, enclosingFunc),
+          },
+          enclosingFunc,
+          enclosingBody
+        );
       }
     } else if (CAstNode.type === "FunctionCallStatement") {
       // function calls are the only expression that are recognised as a statement
@@ -199,12 +237,16 @@ export function translate(CAstRoot: Root) {
       for (const arg of n.args) {
         args.push(evaluateExpression(arg, enclosingFunc));
       }
-      enclosingFunc.body.push({
-        type: "FunctionCallStatement",
-        name: n.name,
-        args,
-        hasReturn: n.hasReturn,
-      });
+      addStatement(
+        {
+          type: "FunctionCallStatement",
+          name: n.name,
+          args,
+          hasReturn: n.hasReturn,
+        },
+        enclosingFunc,
+        enclosingBody
+      );
     } else if (
       CAstNode.type === "PrefixExpression" ||
       CAstNode.type === "PostfixExpression"
@@ -242,11 +284,14 @@ export function translate(CAstRoot: Root) {
           },
           varType: varType,
         },
-      }
-      enclosingFunc.body.push(localSet);
+      };
+      addStatement(localSet, enclosingFunc, enclosingBody);
     } else if (CAstNode.type === "CompoundAssignment") {
       const n = CAstNode as CompoundAssignment;
-      const wasmVariableName = getWasmVariableName(n.variable.name, enclosingFunc);
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
       if (
         wasmVariableName in enclosingFunc.params ||
         wasmVariableName in enclosingFunc.locals
@@ -260,7 +305,7 @@ export function translate(CAstRoot: Root) {
             name: wasmVariableName,
           },
           rightExpr: evaluateExpression(n.value, enclosingFunc),
-        }
+        };
         // parameter assignment or assignment to local scope variable
         enclosingFunc.body.push({
           type: "LocalSet",
@@ -277,18 +322,51 @@ export function translate(CAstRoot: Root) {
             name: wasmVariableName,
           },
           rightExpr: evaluateExpression(n.value, enclosingFunc),
-        }
-        enclosingFunc.body.push({
-          type: "GlobalSet",
-          name: wasmVariableName,
-          value: arithmeticExpr,
-        });
+        };
+        addStatement(
+          {
+            type: "GlobalSet",
+            name: wasmVariableName,
+            value: arithmeticExpr,
+          },
+          enclosingFunc,
+          enclosingBody
+        );
       }
+    } else if (CAstNode.type === "SelectStatement") {
+      const n = CAstNode as SelectStatement;
+      const actions: WasmStatement[] = [];
+      visit(n.ifBlock.block, enclosingFunc, actions); // visit all the actions inside the if block
+      const rootNode: WasmSelectStatement = {
+        type: "SelectStatement",
+        condition: evaluateExpression(n.ifBlock.condition, enclosingFunc),
+        actions,
+        elseStatements: [],
+      };
+      let currNode = rootNode;
+      for (const elseIfBlock of n.elseIfBlocks) {
+        const actions: WasmStatement[] = [];
+        visit(elseIfBlock.block, enclosingFunc, actions);
+        const elseIfNode: WasmSelectStatement = {
+          type: "SelectStatement",
+          condition: evaluateExpression(elseIfBlock.condition, enclosingFunc),
+          actions,
+          elseStatements: [],
+        };
+        currNode.elseStatements = [elseIfNode];
+        currNode = elseIfNode;
+      }
+      if (n.elseBlock) {
+        const elseActions: WasmStatement[] = [];
+        visit(n.elseBlock, enclosingFunc, elseActions);
+        currNode.elseStatements = elseActions;
+      }
+      addStatement(rootNode, enclosingFunc, enclosingBody);
     }
   }
 
   /**
-   * Function to evaluate a binary expressionnode, evaluating and building wasm nodes
+   * Function to evaluate a binary expression node, evaluating and building wasm nodes
    * of all the subexpressions of the ArithmeticExpression.
    * TODO: support different type of ops other than i32 ops.
    */
@@ -315,12 +393,8 @@ export function translate(CAstRoot: Root) {
   }
 
   function isConditionalExpression(node: Expression) {
-    return (
-      node.type === "AndConditionalExpression" ||
-      node.type === "OrConditionalExpression"
-    );
+    return node.type === "ConditionalExpression";
   }
-
 
   /**
    * Produces the correct left to right evaluation of a conditional expression,
@@ -331,9 +405,7 @@ export function translate(CAstRoot: Root) {
     enclosingFunc: WasmFunction
   ) {
     const wasmNodeType =
-      node.type === "OrConditionalExpression"
-        ? "OrExpression"
-        : "AndExpression";
+      node.conditionType === "or" ? "OrExpression" : "AndExpression";
     const rootNode: any = { type: wasmNodeType };
     // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
     // each expression must be converted into a boolean expression
@@ -406,7 +478,10 @@ export function translate(CAstRoot: Root) {
           name: wasmVariableName,
         };
       }
-    } else if (expr.type === "ArithmeticExpression" || expr.type === "ComparisonExpression") {
+    } else if (
+      expr.type === "ArithmeticExpression" ||
+      expr.type === "ComparisonExpression"
+    ) {
       return evaluateLeftToRightBinaryExpression(expr, enclosingFunc);
     } else if (expr.type === "PrefixExpression") {
       const n: PrefixExpression = expr;
@@ -486,11 +561,10 @@ export function translate(CAstRoot: Root) {
           },
           varType: variableTypeToWasmType[n.variable.variableType],
         },
-      }
+      };
       return wasmNode;
     } else if (
-      expr.type === "AndConditionalExpression" ||
-      expr.type === "OrConditionalExpression"
+      expr.type === "ConditionalExpression"
     ) {
       return evaluateConditionalExpression(expr, enclosingFunc);
     } else {

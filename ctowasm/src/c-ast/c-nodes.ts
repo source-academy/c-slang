@@ -65,7 +65,7 @@ export interface SelectStatement extends ScopedNode {
 
 export interface ConditionalBlock extends ScopedNode {
   type: "ConditionalBlock";
-  condition: ConditionalExpression;
+  condition: Expression;
   block: Block;
 }
 
@@ -79,11 +79,10 @@ export type Expression =
   | ArithmeticExpression
   | PostfixExpression
   | PrefixExpression
-  | AndConditionalExpression
-  | OrConditionalExpression
+  | ConditionalExpression
   | ComparisonExpression;
 
-export type Statement = Declaration | Initialization | ReturnStatement;
+export type Statement = Declaration | Initialization | ReturnStatement | SelectStatement;
 
 //TODO: See if literal is right
 export interface ReturnStatement extends ScopedNode {
@@ -115,15 +114,9 @@ export interface ArithmeticSubExpression extends ScopedNode {
 }
 
 export interface ConditionalExpression extends ScopedNode {
+  type: "ConditionalExpression"
+  conditionType: "and" | "or";
   exprs: Expression[];
-}
-
-export interface OrConditionalExpression extends ConditionalExpression {
-  type: "OrConditionalExpression";
-}
-
-export interface AndConditionalExpression extends ConditionalExpression {
-  type: "AndConditionalExpression";
 }
 
 export type ComparisonOperator = "<" | "<=" | "!=" | "==" | ">=" | ">"
