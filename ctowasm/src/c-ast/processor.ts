@@ -291,7 +291,9 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.ifBlock);
       n.elseIfBlocks.forEach((block) => visit(block));
-      visit(n.elseBlock);
+      if (n.elseBlock) {
+        visit(n.elseBlock);
+      }
     } else if (node.type === "ConditionalBlock") {
       const n = node as ConditionalBlock;
       n.scope = scopeStack[scopeStack.length - 1];

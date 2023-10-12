@@ -173,6 +173,10 @@ const testLog = {
     for_loop_1: {
       title: "For loop 1",
       expected: true
+    },
+    overall_1: {
+      title: "Overall feature test 1 - Pow function",
+      expected: true
     }
   }
 };

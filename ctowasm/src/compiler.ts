@@ -14,6 +14,11 @@ export function compile(cSourceCode: string) {
 }
 
 export function generate_C_AST(cSourceCode: string) {
+  const ast = parser.parse(cSourceCode) 
+  return JSON.stringify(ast);
+}
+
+export function generate_processed_C_AST(cSourceCode: string) {
   const ast = process(parser.parse(cSourceCode), cSourceCode);
   return JSON.stringify(ast);
 }

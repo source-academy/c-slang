@@ -186,7 +186,7 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return `(if ${generateExprStr(statement.condition)} (then ${n.actions
       .map((action) => generateStatementStr(action))
       .join(" ")})${
-      n.elseStatements
+      n.elseStatements.length > 0
         ? " (else" +
           n.elseStatements
             .map((statement) => generateStatementStr(statement))

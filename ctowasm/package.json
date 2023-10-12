@@ -29,8 +29,9 @@
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
     "compile": "yarn build && node cmd.js compile",
-    "generate-c-ast": "yarn build && node cmd.js generate-c-ast",
-    "generate-wat-ast": "yarn build && node cmd.js generate-wat-ast",
+    "gen-c-ast": "yarn build && node cmd.js generate-c-ast",
+    "gen-p-c-ast": "yarn build && node cmd.js generate-processed-c-ast",
+    "gen-wat-ast": "yarn build && node cmd.js generate-wat-ast",
     "test": "yarn build && jest"
   },
   "dependencies": {
