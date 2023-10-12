@@ -168,11 +168,11 @@ const testLog = {
     },
     while_loop_1: {
       title: "While loop 1",
-      expected: false
+      expected: true
     }, 
     for_loop_1: {
       title: "For loop 1",
-      expected: false
+      expected: true
     }
   }
 };

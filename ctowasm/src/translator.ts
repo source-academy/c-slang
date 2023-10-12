@@ -29,6 +29,7 @@ import {
   CompoundAssignmentExpression,
   DoWhileLoop,
   WhileLoop,
+  ForLoop,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -311,11 +312,11 @@ export function translate(CAstRoot: Root) {
           rightExpr: evaluateExpression(n.value, enclosingFunc),
         };
         // parameter assignment or assignment to local scope variable
-        enclosingFunc.body.push({
+        addStatement({
           type: "LocalSet",
           name: wasmVariableName,
           value: arithmeticExpr,
-        });
+        }, enclosingFunc, enclosingBody);
       } else {
         const arithmeticExpr: WasmArithmeticExpression = {
           type: "ArithmeticExpression",
@@ -422,6 +423,45 @@ export function translate(CAstRoot: Root) {
         enclosingFunc,
         enclosingBody
       );
+    } else if (CAstNode.type === "ForLoop") {
+      const n = CAstNode as ForLoop;
+      const blockLabel = `block_${(enclosingFunc.blockCount++).toString()}`;
+      const loopLabel = `loop_${(enclosingFunc.loopCount++).toString()}`;
+      enclosingFunc.scopes.push(new Set()); // push on new scope for this for loop initialization
+      visit(n.initialization, enclosingFunc, enclosingBody); // add init statement for for loop
+      const body: WasmStatement[] = [];
+      // add the branch if statement to start of loop body
+      body.push({
+        type: "BranchIf",
+        label: blockLabel,
+        condition: {
+          type: "BooleanExpression",
+          isNegated: true,
+          expr: evaluateExpression(n.condition, enclosingFunc),
+        },
+      });
+      visit(n.body, enclosingFunc, body); // visit all the statements in the body of the for loop
+      // add the for loop update expression   
+      visit(n.update, enclosingFunc, body);
+      // add the branching statement at end of loop body
+      body.push({
+        type: "Branch",
+        label: loopLabel,
+      });
+      enclosingFunc.scopes.pop(); // pop off the scope for this for loop
+      addStatement({
+        type: "Block",
+        label: blockLabel,
+        body: [
+          {
+            type: "Loop",
+            label: loopLabel,
+            body,
+          },
+        ],
+      },
+      enclosingFunc,
+      enclosingBody)
     }
   }
 
