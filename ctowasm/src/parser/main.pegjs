@@ -29,23 +29,36 @@ translation_unit
   / i:initialization whitespace* statement_end whitespace* t:translation_unit { return [i, ...t]; }
   / f:function_definition whitespace* t:translation_unit { return [f, ...t]; }
   / whitespace* { return []; }
-    
-statement
-	= whitespace* @declaration whitespace* statement_end
-  / whitespace* @compound_assignment whitespace* statement_end
-  / whitespace* @initialization whitespace* statement_end
-  / whitespace* fn:function_call statement_end { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
-  / whitespace* @assignment whitespace* statement_end
-  / whitespace* @return_statement whitespace* statement_end
-  / whitespace* @select_statement whitespace*
-  / whitespace* @iteration_statement whitespace*
-  / whitespace* @expression whitespace* statement_end // match on expression last so it does not interfere with other things like assignment
 
+function_definition
+	= whitespace* type:function_return_type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace* ")" whitespace* body:block whitespace* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
+    
+block
+	= "{" whitespace* s:block_item_list whitespace* "}" { return generateNode("Block", {children: s}); }
+    
+block_item_list
+  = block_item |.., whitespace*|
+
+block_item
+  = whitespace* @select_statement// select statement must come before functon call as it is more specific
+  / whitespace* @iteration_statement
+	/ whitespace* @statement whitespace* statement_end
+  / whitespace* @return_statement whitespace* statement_end
+  / block
+
+statement
+  = @initialization // initialization must come before declaration as it is more specific
+	/ @declaration 
+  / @compound_assignment 
+  / @assignment
+  / fn:function_call  { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
+  / @expression // match on expression last so it does not interfere with other things like assignment
+  / whitespace*  // empty statement
 
 iteration_statement
   = "do" whitespace* body:block whitespace* "while" whitespace* "(" whitespace* condition:expression whitespace* ")" 
   / "while" whitespace* "(" whitespace* condition:expression whitespace* ")" body:block
-  / "for" whitespace* "(" whitespace* init:(declaration / initialization / expression)? whitespace* ";" whitespace* condition:expression? whitespace* ";" whitespace* update:expression?  whitespace*")"
+  / "for" whitespace* "(" whitespace* init:(statement)? whitespace* ";" whitespace* condition:expression? whitespace* ";" whitespace* update:expression?  whitespace*")"
 
 select_statement
   = ifBlock:if_block whitespace* elseIfBlocks:(@else_if_block whitespace*)* whitespace* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
@@ -65,19 +78,6 @@ return_statement
 assignment
   = variable:variable_term whitespace* "=" whitespace* value:expression { return generateNode("Assignment", { variable, value }) }
     
-block
-	= "{" whitespace* s:block_item_list whitespace* "}" { return generateNode("Block", {children: s}); }
-    
-block_item_list
-  = block_item |.., whitespace*|
-
-block_item
-	= statement
-  / block
-
-function_definition
-	= whitespace* type:function_return_type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace* ")" whitespace* body:block whitespace* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
-
 // returns an array of Declaration
 declaration_list
 	= declaration|.., whitespace* "," whitespace*|
