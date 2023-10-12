@@ -31,10 +31,10 @@ statement
   / whitespace* @compound_assignment whitespace* statement_end
   / whitespace* @initialization whitespace* statement_end
   / whitespace* fn:function_call statement_end { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
-  / whitespace* @expression whitespace* statement_end
   / whitespace* @assignment whitespace* statement_end
   / whitespace* @return_statement whitespace* statement_end
   / whitespace* @select_statement whitespace*
+  / whitespace* @expression whitespace* statement_end // match on expression last so it does not interfere with other things like assignment
 
 select_statement
   = ifBlock:if_block whitespace* elseIfBlocks:(@else_if_block whitespace*)* whitespace* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
@@ -94,7 +94,11 @@ compound_assignment
   = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
 
 expression
-  = conditional_expression // start trying to match on conditional expression since && and || have lowest precedence
+  = assignment_expression 
+  / conditional_expression // start trying to match on conditional expression since && and || have lowest precedence
+
+assignment_expression
+  = variable:variable_term whitespace* "=" whitespace* expr:expression { return generateNode("AssignmentExpression", { variable, expr }); } 
 
 conditional_expression 
   = or_conditional_expression

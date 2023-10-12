@@ -8,6 +8,7 @@ import {
   ArithmeticExpression,
   ArithmeticSubExpression,
   Assignment,
+  AssignmentExpression,
   Block,
   ComparisonExpression,
   CompoundAssignment,
@@ -294,6 +295,11 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.condition);
       visit(n.block);
+    } else if (node.type === "AssignmentExpression") {
+      const n = node as AssignmentExpression;
+      n.scope = scopeStack[scopeStack.length - 1]; 
+      visit(n.variable);
+      visit(n.expr);
     }
   }
 

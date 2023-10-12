@@ -25,6 +25,7 @@ import {
   BinaryOperator,
   ComparisonExpression,
   SelectStatement,
+  AssignmentExpression,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -567,7 +568,33 @@ export function translate(CAstRoot: Root) {
       expr.type === "ConditionalExpression"
     ) {
       return evaluateConditionalExpression(expr, enclosingFunc);
-    } else {
+    } else if (expr.type === "AssignmentExpression") {
+      const n = expr as AssignmentExpression;
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        // parameter assignment or assignment to local scope variable
+        return {
+            type: "LocalTee",
+            name: wasmVariableName,
+            value: evaluateExpression(n.expr, enclosingFunc),
+          }
+      } else {
+        // this assignment is to a global variable
+        // no need do any checks, this would have been done in semantic analysis TODO: check this
+        return {
+            type: "GlobalTee",
+            name: wasmVariableName,
+            value: evaluateExpression(n.expr, enclosingFunc),
+          }
+      }
+    }
+    else {
       const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }
   }

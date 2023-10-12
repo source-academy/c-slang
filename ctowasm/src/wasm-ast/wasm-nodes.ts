@@ -62,7 +62,24 @@ export type WasmExpression =
   | WasmBooleanExpression
   | WasmAndExpression
   | WasmOrExpression
-  | WasmComparisonExpression;
+  | WasmComparisonExpression
+  | WasmLocalTee
+  | WasmGlobalTee;
+
+/**
+ * Tee is an assignment expression that loads the assigned value back onto stack
+ */
+export interface WasmLocalTee {
+  type: "LocalTee";
+  name: string;
+  value: WasmExpression;
+}
+
+export interface WasmGlobalTee {
+  type: "GlobalTee";
+  name: string;
+  value: WasmExpression;
+}
 
 export interface WasmReturnStatement {
   type: "ReturnStatement";

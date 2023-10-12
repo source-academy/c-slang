@@ -80,7 +80,8 @@ export type Expression =
   | PostfixExpression
   | PrefixExpression
   | ConditionalExpression
-  | ComparisonExpression;
+  | ComparisonExpression
+  | AssignmentExpression;
 
 export type Statement = Declaration | Initialization | ReturnStatement | SelectStatement;
 
@@ -176,6 +177,16 @@ export interface Assignment extends ScopedNode {
   variable: VariableExpr;
   value: Expression;
 }
+
+/**
+ * For the case when an assignment is used as an expression.
+ */
+export interface AssignmentExpression extends ScopedNode {
+  type: "AssignmentExpression";
+  variable: VariableExpr;
+  expr: Expression;
+}
+
 
 // Information on a function - return type, name and parameters
 interface FunctionInformation {

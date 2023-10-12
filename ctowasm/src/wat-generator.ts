@@ -17,8 +17,10 @@ import {
   WasmFunctionCallStatement,
   WasmGlobalGet,
   WasmGlobalSet,
+  WasmGlobalTee,
   WasmLocalGet,
   WasmLocalSet,
+  WasmLocalTee,
   WasmModule,
   WasmOrExpression,
   WasmReturnStatement,
@@ -138,7 +140,13 @@ function generateExprStr(expr: WasmExpression): string {
     return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
       e.rightExpr
     )})`;
-  } else {
+  } else if (expr.type === "LocalTee") {
+    const n = expr as WasmLocalTee;
+    return `(local.tee $${n.name} ${generateExprStr(n.value)})`
+  } else if (expr.type === "GlobalTee") {
+    const n = expr as WasmGlobalTee;
+    return `(global.tee $${n.name} ${generateExprStr(n.value)})` 
+  }else {
     console.assert(
       false,
       "WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion."

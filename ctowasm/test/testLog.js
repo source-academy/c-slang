@@ -153,6 +153,10 @@ const testLog = {
     select_statement_1: {
       title: "Select statement (if else-if else blocks) 1",
       expected: true
+    },
+    assign_expr_1: {
+      title: "Assignment expression 1",
+      expected: true
     }
   }
 };
