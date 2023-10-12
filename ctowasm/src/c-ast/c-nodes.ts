@@ -184,7 +184,7 @@ export interface Assignment extends ScopedNode {
 export interface AssignmentExpression extends ScopedNode {
   type: "AssignmentExpression";
   variable: VariableExpr;
-  expr: Expression;
+  value: Expression;
 }
 
 
@@ -226,6 +226,12 @@ export interface CompoundAssignment extends ScopedNode {
   operator: Operator;
   variable: VariableExpr;
   value: Expression;
+}
+
+export interface CompoundAssignmentExpression extends ScopedNode {
+  operator: Operator;
+  variable: VariableExpr;
+  value: Expression; 
 }
 
 export type LoopType = "doWhile" | "while" | "for";

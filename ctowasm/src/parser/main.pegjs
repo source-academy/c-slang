@@ -104,12 +104,16 @@ initialization
 compound_assignment
   = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
 
+compound_assignment_expression
+  = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CommpoundAssignmentExpression", { operator, variable, value }); } 
+
 expression
   = assignment_expression 
+  / compound_assignment_expression
   / conditional_expression // start trying to match on conditional expression since && and || have lowest precedence
 
 assignment_expression
-  = variable:variable_term whitespace* "=" whitespace* expr:expression { return generateNode("AssignmentExpression", { variable, expr }); } 
+  = variable:variable_term whitespace* "=" whitespace* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
 
 conditional_expression 
   = or_conditional_expression

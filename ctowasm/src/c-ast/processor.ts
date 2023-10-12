@@ -299,7 +299,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as AssignmentExpression;
       n.scope = scopeStack[scopeStack.length - 1]; 
       visit(n.variable);
-      visit(n.expr);
+      visit(n.value);
     }
   }
 

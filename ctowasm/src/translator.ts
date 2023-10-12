@@ -582,7 +582,7 @@ export function translate(CAstRoot: Root) {
         return {
             type: "LocalTee",
             name: wasmVariableName,
-            value: evaluateExpression(n.expr, enclosingFunc),
+            value: evaluateExpression(n.value, enclosingFunc),
           }
       } else {
         // this assignment is to a global variable
@@ -590,7 +590,7 @@ export function translate(CAstRoot: Root) {
         return {
             type: "GlobalTee",
             name: wasmVariableName,
-            value: evaluateExpression(n.expr, enclosingFunc),
+            value: evaluateExpression(n.value, enclosingFunc),
           }
       }
     }
