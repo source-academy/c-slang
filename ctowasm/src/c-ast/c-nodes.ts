@@ -49,7 +49,7 @@ export interface Root extends ScopedNode {
   children: (Statement | FunctionDefinition)[];
 }
 
-type BlockItem = Statement | Block;
+type BlockItem = Statement | Block | ReturnStatement | SelectStatement | DoWhileLoop | WhileLoop | ForLoop;
 
 export interface Block extends ScopedNode {
   type: "Block";
@@ -84,7 +84,7 @@ export type Expression =
   | AssignmentExpression
   | CompoundAssignmentExpression;
 
-export type Statement = Declaration | Initialization | ReturnStatement | SelectStatement;
+export type Statement = Declaration | Initialization;
 
 //TODO: See if literal is right
 export interface ReturnStatement extends ScopedNode {

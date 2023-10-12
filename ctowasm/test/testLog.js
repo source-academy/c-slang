@@ -161,6 +161,18 @@ const testLog = {
     compound_assign_expr_1: {
       title: "Compound assignment expression 1",
       expected: true
+    },
+    do_while_loop_1: {
+      title: "Do while loop 1",
+      expected: true
+    },
+    while_loop_1: {
+      title: "While loop 1",
+      expected: false
+    }, 
+    for_loop_1: {
+      title: "For loop 1",
+      expected: false
     }
   }
 };

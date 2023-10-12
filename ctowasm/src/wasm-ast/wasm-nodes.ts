@@ -44,12 +44,23 @@ export interface WasmFunction extends WasmAstNode {
   name: string;
   params: Record<string, WasmVariable>;
   locals: Record<string, WasmVariable>;
+  loopCount: number; // count of the loops in this function. used for giving unique label names to loops
+  blockCount: number; // same as loopCount, but for WasmBlocks
   scopes: Scopes;
   body: WasmFunctionBodyLine[];
   return: WasmType | null;
 }
 
-export type WasmStatement = WasmGlobalSet | WasmLocalSet | WasmFunctionCallStatement | WasmSelectStatement | WasmReturnStatement;
+export type WasmStatement =
+  | WasmGlobalSet
+  | WasmLocalSet
+  | WasmFunctionCallStatement
+  | WasmSelectStatement
+  | WasmReturnStatement
+  | WasmLoop
+  | WasmBranchIf
+  | WasmBranch
+  | WasmBlock;
 
 // TODO: figure out if this necessary
 export type WasmExpression =
@@ -171,17 +182,39 @@ export interface WasmOrExpression extends WasmAstNode {
   rightExpr: WasmAndExpression | WasmBooleanExpression;
 }
 
-
-export interface WasmComparisonExpression {
+export interface WasmComparisonExpression extends WasmAstNode {
   type: "ComparisonExpression";
   operator: ComparisonOperator;
   leftExpr: WasmExpression;
   rightExpr: WasmExpression;
 }
 
-export interface WasmSelectStatement {
+export interface WasmSelectStatement extends WasmAstNode {
   type: "SelectStatement";
   condition: WasmExpression;
   actions: WasmStatement[];
   elseStatements: WasmStatement[];
+}
+
+export interface WasmLoop extends WasmAstNode {
+  type: "Loop";
+  label: string;
+  body: WasmStatement[];
+}
+
+export interface WasmBranchIf extends WasmAstNode {
+  type: "BranchIf";
+  label: string; // the label to jump to
+  condition: WasmExpression;
+}
+
+export interface WasmBranch extends WasmAstNode {
+  type: "Branch";
+  label: string;
+}
+
+export interface WasmBlock extends WasmAstNode {
+  type: "Block";
+  label: string;
+  body: WasmStatement[]
 }

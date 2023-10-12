@@ -27,6 +27,8 @@ import {
   SelectStatement,
   AssignmentExpression,
   CompoundAssignmentExpression,
+  DoWhileLoop,
+  WhileLoop,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -364,6 +366,62 @@ export function translate(CAstRoot: Root) {
         currNode.elseStatements = elseActions;
       }
       addStatement(rootNode, enclosingFunc, enclosingBody);
+    } else if (CAstNode.type === "DoWhileLoop") {
+      const n = CAstNode as DoWhileLoop;
+      const loopLabel = `loop_${(enclosingFunc.loopCount++).toString()}`;
+      const body: WasmStatement[] = [];
+      visit(n.body, enclosingFunc, body); // visit all the statements in the body of the do while loop
+      // add the branching statement at end of loop body
+      body.push({
+        type: "BranchIf",
+        label: loopLabel,
+        condition: evaluateExpression(n.condition, enclosingFunc),
+      });
+      addStatement(
+        {
+          type: "Loop",
+          label: loopLabel,
+          body,
+        },
+        enclosingFunc,
+        enclosingBody
+      );
+    } else if (CAstNode.type === "WhileLoop") {
+      const n = CAstNode as WhileLoop;
+      const blockLabel = `block_${(enclosingFunc.blockCount++).toString()}`;
+      const loopLabel = `loop_${(enclosingFunc.loopCount++).toString()}`;
+      const body: WasmStatement[] = [];
+      // add the branch if statement to start of loop body
+      body.push({
+        type: "BranchIf",
+        label: blockLabel,
+        condition: {
+          type: "BooleanExpression",
+          isNegated: true,
+          expr: evaluateExpression(n.condition, enclosingFunc),
+        },
+      });
+      visit(n.body, enclosingFunc, body); // visit all the statements in the body of the while loop
+      // add the branching statement at end of loop body
+      body.push({
+        type: "Branch",
+        label: loopLabel,
+      });
+      addStatement(
+        {
+          type: "Block",
+          label: blockLabel,
+          body: [
+            {
+              type: "Loop",
+              label: loopLabel,
+              body,
+            },
+          ],
+        },
+        enclosingFunc,
+        enclosingBody
+      );
     }
   }
 
@@ -594,7 +652,10 @@ export function translate(CAstRoot: Root) {
       }
     } else if (expr.type === "CompoundAssignmentExpression") {
       const n = expr as CompoundAssignmentExpression;
-      const wasmVariableName = getWasmVariableName(n.variable.name, enclosingFunc);
+      const wasmVariableName = getWasmVariableName(
+        n.variable.name,
+        enclosingFunc
+      );
       let varTeeCommand: "GlobalTee" | "LocalTee" = "GlobalTee";
       let varGetCommand: "GlobalGet" | "LocalGet" = "GlobalGet";
       if (
@@ -615,9 +676,9 @@ export function translate(CAstRoot: Root) {
             name: wasmVariableName,
           },
           rightExpr: evaluateExpression(n.value, enclosingFunc),
-          varType: variableTypeToWasmType[n.variable.variableType]
-        }
-      }
+          varType: variableTypeToWasmType[n.variable.variableType],
+        },
+      };
     } else {
       const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }
@@ -639,6 +700,8 @@ export function translate(CAstRoot: Root) {
         type: "Function",
         name: n.name,
         params,
+        loopCount: 0,
+        blockCount: 0,
         locals: {},
         scopes: [new Set()],
         body: [],

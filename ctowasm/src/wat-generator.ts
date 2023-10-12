@@ -5,7 +5,10 @@ import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
+  WasmBlock,
   WasmBooleanExpression,
+  WasmBranch,
+  WasmBranchIf,
   WasmComparisonExpression,
   WasmConst,
   WasmExpression,
@@ -18,6 +21,7 @@ import {
   WasmLocalGet,
   WasmLocalSet,
   WasmLocalTee,
+  WasmLoop,
   WasmModule,
   WasmOrExpression,
   WasmReturnStatement,
@@ -192,7 +196,27 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     })`;
   } else if (statement.type === "ReturnStatement") {
     const n = statement as WasmReturnStatement;
-    return `(return ${generateExprStr(statement.value)})`;
+    return `(return ${generateExprStr(n.value)})`;
+  } else if (statement.type === "Loop") {
+    const n = statement as WasmLoop;
+    return `(loop $${n.label}${
+      n.body.length > 0
+        ? " " + n.body.map((line) => generateStatementStr(line)).join(" ")
+        : ""
+    })`;
+  } else if (statement.type === "Block") {
+    const n = statement as WasmBlock;
+    return `(block $${n.label}${
+      n.body.length > 0
+        ? " " + n.body.map((line) => generateStatementStr(line)).join(" ")
+        : ""
+    })`;
+  } else if (statement.type === "Branch") {
+    const n = statement as WasmBranch;
+    return `(br $${n.label})`;
+  } else if (statement.type === "BranchIf") {
+    const n = statement as WasmBranchIf;
+    return `(br_if $${n.label} ${generateExprStr(n.condition)})`;
   }
   return "";
 }
