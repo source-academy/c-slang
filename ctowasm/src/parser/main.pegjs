@@ -20,30 +20,32 @@
   ])
 }
 
-program = arr:translation_unit { return generateNode("Root", {children: arr}); }
+program = arr:translation_unit  { return generateNode("Root", {children: arr}); }
 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = s:declaration whitespace* statement_end whitespace* t:translation_unit { return [s, ...t]; }
-  / i:initialization whitespace* statement_end whitespace* t:translation_unit { return [i, ...t]; }
-  / f:function_definition whitespace* t:translation_unit { return [f, ...t]; }
-  / whitespace* { return []; }
+  = _* s:declaration _* statement_end _* t:translation_unit { return [s, ...t]; }
+  / _* i:initialization _* statement_end _* t:translation_unit { return [i, ...t]; }
+  / _* f:function_definition _* t:translation_unit { return [f, ...t]; }
+  / single_line_comment_body { return []; } // match a single line comment at end of program without newline ending it. this rule must come before the next as it is more specific
+  / _* { return []; }
+
 
 function_definition
-	= whitespace* type:function_return_type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace* ")" whitespace* body:block whitespace* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
+	= type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _* ")" _* body:block _* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
     
 block
-	= "{" whitespace* s:block_item_list whitespace* "}" { return generateNode("Block", {children: s}); }
+	= "{" _* s:block_item_list _* "}" { return generateNode("Block", {children: s}); }
     
 block_item_list
-  = block_item |.., whitespace*|
+  = block_item |.., _*|
 
 block_item
-  = whitespace* @select_statement// select statement must come before functon call as it is more specific
-  / whitespace* @iteration_statement
-	/ whitespace* @statement whitespace* statement_end
-  / whitespace* @return_statement whitespace* statement_end
+  = _* @select_statement // select statement must come before functon call as it is more specific
+  / _* @iteration_statement
+	/ _* @statement _* statement_end
+  / _* @return_statement _* statement_end
   / block
 
 statement
@@ -53,59 +55,59 @@ statement
   / @assignment
   / fn:function_call  { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
   / @expression // match on expression last so it does not interfere with other things like assignment
-  / whitespace*  // empty statement
+  / _*  // empty statement
 
 iteration_statement
-  = "do" whitespace* body:block whitespace* "while" whitespace* "(" whitespace* condition:expression whitespace* ")" { return generateNode("DoWhileLoop", { condition, body }); }
-  / "while" whitespace* "(" whitespace* condition:expression whitespace* ")" whitespace* body:block { return generateNode("WhileLoop", { condition, body }); }
-  / "for" whitespace* "(" whitespace* initialization:(statement)? whitespace* ";" whitespace* condition:expression? whitespace* ";" whitespace* update:expression? whitespace* ")" whitespace* body:block { return generateNode("ForLoop", { initialization, condition, update, body }); }
+  = "do" _* body:block _* "while" _* "(" _* condition:expression _* ")" { return generateNode("DoWhileLoop", { condition, body }); }
+  / "while" _* "(" _* condition:expression _* ")" _* body:block { return generateNode("WhileLoop", { condition, body }); }
+  / "for" _* "(" _* initialization:(statement)? _* ";" _* condition:expression? _* ";" _* update:expression? _* ")" _* body:block { return generateNode("ForLoop", { initialization, condition, update, body }); }
 
 select_statement
-  = ifBlock:if_block whitespace* elseIfBlocks:(@else_if_block whitespace*)* whitespace* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
+  = ifBlock:if_block _* elseIfBlocks:(@else_if_block _*)* _* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
 
 if_block 
-  = "if" whitespace* "(" whitespace* condition:expression whitespace* ")" whitespace* block:block { return generateNode("ConditionalBlock", { condition, block }); }
+  = "if" _* "(" _* condition:expression _* ")" _* block:block { return generateNode("ConditionalBlock", { condition, block }); }
 
 else_if_block 
-  = "else" _ @if_block
+  = "else" _+ @if_block
 
 else_block
-  = "else" whitespace* @block
+  = "else" _* @block
 
 return_statement 
-  = "return" whitespace* expr:expression { return generateNode("ReturnStatement", { value: expr}) } 
+  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}) } 
 
 assignment
-  = variable:variable_term whitespace* "=" whitespace* value:expression { return generateNode("Assignment", { variable, value }) }
+  = variable:variable_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }) }
     
 // returns an array of Declaration
 declaration_list
-	= declaration|.., whitespace* "," whitespace*|
+	= declaration|.., _* "," _*|
 
 declaration
   = function_declaration //function declaration must come first, as the first few symbols of func and var declarations are exactly the same, meaning var will always be
   / variable_declaration 
 
 variable_declaration 
-  = type:type _ name:identifier { return generateNode("VariableDeclaration", { variableType: type, name: name }); }
+  = type:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType: type, name: name }); }
 
 function_declaration
-  = type:function_return_type _ name:identifier whitespace*  "(" whitespace* parameters:declaration_list whitespace*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
+  = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
 
 function_call
-  = name:identifier whitespace* "(" whitespace* args:function_argument_list whitespace* ")" { return generateNode("FunctionCall", { name: name, args: args}); }
+  = name:identifier _* "(" _* args:function_argument_list _* ")" { return generateNode("FunctionCall", { name: name, args: args}); }
 
 function_argument_list
-  = expression|.., whitespace* "," whitespace*|
+  = expression|.., _* "," _*|
 
 initialization
-	= type:type _ name:identifier whitespace* "=" whitespace* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
+	= type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 compound_assignment
-  = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
+  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
 
 compound_assignment_expression
-  = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignmentExpression", { operator, variable, value }); } 
+  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("CompoundAssignmentExpression", { operator, variable, value }); } 
 
 expression
   = assignment_expression 
@@ -113,17 +115,17 @@ expression
   / conditional_expression // start trying to match on conditional expression since && and || have lowest precedence
 
 assignment_expression
-  = variable:variable_term whitespace* "=" whitespace* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
+  = variable:variable_term _* "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
 
 conditional_expression 
   = or_conditional_expression
   / and_conditional_expression
 
 or_conditional_expression
-  = left:and_conditional_expression tail:(_ "||" _ @and_conditional_expression)+ { return generateNode("ConditionalExpression", { conditionType: "or", exprs: [left, ...tail] }); }
+  = left:and_conditional_expression tail:(_+ "||" _+ @and_conditional_expression)+ { return generateNode("ConditionalExpression", { conditionType: "or", exprs: [left, ...tail] }); }
 
 and_conditional_expression
-  = left:comparison_expression tail:(_ "&&" _ @comparison_expression)+ { return generateNode("ConditionalExpression", { conditionType: "and", exprs: [left, ...tail] }); }
+  = left:comparison_expression tail:(_+ "&&" _+ @comparison_expression)+ { return generateNode("ConditionalExpression", { conditionType: "and", exprs: [left, ...tail] }); }
   / comparison_expression
 
 comparison_expression
@@ -131,10 +133,10 @@ comparison_expression
   / relative_comparison_expression
 
 equality_comparison_expression
-  = firstExpr:relative_comparison_expression whitespace* tail:(whitespace* @("!="/"==") whitespace* @relative_comparison_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
+  = firstExpr:relative_comparison_expression _* tail:(_* @("!="/"==") _* @relative_comparison_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
 
 relative_comparison_expression
-  = firstExpr:arithmetic_expression whitespace* tail:(whitespace* @("<="/">="/"<"/">") whitespace* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
+  = firstExpr:arithmetic_expression _* tail:(_* @("<="/">="/"<"/">") _* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
   / arithmetic_expression
 
 arithmetic_expression
@@ -142,10 +144,10 @@ arithmetic_expression
   / multiply_divide_expression
 
 add_subtract_expression
-  = left:multiply_divide_expression tail:(_ @[+\-] _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) } )}
+  = left:multiply_divide_expression tail:(_+ @[+\-] _+ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) } )}
   
 multiply_divide_expression
-  = left:term tail:(_ @[%/*] _ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) }); }
+  = left:term tail:(_+ @[%/*] _+ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) }); }
   / term
 
 term
@@ -171,7 +173,7 @@ type
 	= $"int"
 
 function_return_type
-  = type 
+  = type
   / $"void"
 
 // identifiers must not start with a digit
@@ -185,13 +187,32 @@ literal
 integer
 	= $[0-9]+
  
-// match at least 1 whitespace
-_ "whitespace"
-	= whitespace+
+// separator, must be at least whitespace or some comments
+_ "separator"
+  = single_line_comment
+  / multi_line_comment
+	/ whitespace
 
-// any ignorable whitespace character
 whitespace
 	= [ \t\n]
-    
+  
+// any continous space character that is not a newline
+spaces
+  = [ \t]*
+
 statement_end
   = ";"+
+
+single_line_comment
+	= single_line_comment_body "\n" // this rule must be first as it is more specific
+
+// for use at end of program. There a single-line-comment need not end with newline
+single_line_comment_body
+  = "//" (!"\n" c_char)* 
+
+multi_line_comment
+  = "/*" (!"*/" c_char)* "*/"
+
+// all the characters im the c char set
+c_char
+  = [a-z0-9 \t\n\v\f\r\`\~\@\!\$\#\^\*\%\&\(\)\[\]\{\}\<\>\+\=\_\-\|\/\\\;\:\'\“\,\.\?]i

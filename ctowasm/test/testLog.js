@@ -174,6 +174,14 @@ const testLog = {
       title: "For loop 1",
       expected: true
     },
+    single_line_comments_1: {
+      title: "Single-line comments 1",
+      expected: true
+    },
+    multi_line_comments_1: {
+      title: "Multi-line comments 1",
+      expected: true
+    },
     overall_1: {
       title: "Overall feature test 1 - Pow function",
       expected: true
