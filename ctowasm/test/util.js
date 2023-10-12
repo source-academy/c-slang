@@ -78,7 +78,7 @@ export async function testFileCompilationSuccess(subset, testFileName) {
       if (expected === output) {
         return COMPILATION_SUCCESS;
       } else {
-        return "WAT DOES NOT MATCH EXPECTED: " + testFileName;
+        return `WAT DOES NOT MATCH EXPECTED:\nexpected file: ${getExpectedFilePath(subset, testFileName)}\nactual file: ${watFilePath}`;
       }
     }
 
