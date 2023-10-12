@@ -56,9 +56,9 @@ statement
   / whitespace*  // empty statement
 
 iteration_statement
-  = "do" whitespace* body:block whitespace* "while" whitespace* "(" whitespace* condition:expression whitespace* ")" 
-  / "while" whitespace* "(" whitespace* condition:expression whitespace* ")" body:block
-  / "for" whitespace* "(" whitespace* init:(statement)? whitespace* ";" whitespace* condition:expression? whitespace* ";" whitespace* update:expression?  whitespace*")"
+  = "do" whitespace* body:block whitespace* "while" whitespace* "(" whitespace* condition:expression whitespace* ")" { return generateNode("DoWhileLoop", { condition, body }); }
+  / "while" whitespace* "(" whitespace* condition:expression whitespace* ")" whitespace* body:block { return generateNode("WhileLoop", { condition, body }); }
+  / "for" whitespace* "(" whitespace* initialization:(statement)? whitespace* ";" whitespace* condition:expression? whitespace* ";" whitespace* update:expression? whitespace* ")" whitespace* body:block { return generateNode("ForLoop", { initialization, condition, update, body }); }
 
 select_statement
   = ifBlock:if_block whitespace* elseIfBlocks:(@else_if_block whitespace*)* whitespace* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }

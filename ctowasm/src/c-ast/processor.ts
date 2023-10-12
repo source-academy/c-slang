@@ -16,6 +16,8 @@ import {
   ConditionalBlock,
   ConditionalExpression,
   Declaration,
+  DoWhileLoop,
+  ForLoop,
   FunctionCall,
   FunctionCallStatement,
   FunctionDeclaration,
@@ -32,6 +34,7 @@ import {
   Variable,
   VariableDeclaration,
   VariableExpr,
+  WhileLoop,
 } from "c-ast/c-nodes";
 import { ProcessingError } from "errors";
 
@@ -274,9 +277,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as ReturnStatement;
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.value);
-    } else if (
-      node.type === "ConditionalExpression"
-    ) {
+    } else if (node.type === "ConditionalExpression") {
       const n = node as ConditionalExpression;
       n.scope = scopeStack[scopeStack.length - 1];
       n.exprs.forEach((expr) => visit(expr));
@@ -296,11 +297,28 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.condition);
       visit(n.block);
-    } else if (node.type === "AssignmentExpression" || node.type === "CompoundAssignmentExpression") {
+    } else if (
+      node.type === "AssignmentExpression" ||
+      node.type === "CompoundAssignmentExpression"
+    ) {
       const n = node as AssignmentExpression | CompoundAssignmentExpression;
-      n.scope = scopeStack[scopeStack.length - 1]; 
+      n.scope = scopeStack[scopeStack.length - 1];
       visit(n.variable);
       visit(n.value);
+    } else if (node.type === "DoWhileLoop" || node.type === "WhileLoop") {
+      const n = node as DoWhileLoop | WhileLoop;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.condition);
+      visit(n.body);
+    } else if (node.type === "ForLoop") {
+      const n = node as ForLoop;
+      // create a new scope for the initialization variables
+      n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
+      scopeStack.push(n.scope);
+      visit(n.initialization);
+      visit(n.condition);
+      visit(n.update);
+      visit(n.body);
     }
   }
 
