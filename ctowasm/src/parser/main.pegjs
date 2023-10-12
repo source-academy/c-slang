@@ -14,6 +14,10 @@
       ...data
     };
   }
+
+  const C_Keywords = new Set([
+    "auto", "float", "break", "short", "switch", "void", "const", "if", "else", "for", "long", "signed", "typedef", "int", "continue", "volatile", "enum", "while", "rigester", "static", "union", "case", "sizeof", "goto", "extern", "double", "return", "struct ", "unsigned", "char", "do", "default"
+  ])
 }
 
 program = arr:translation_unit { return generateNode("Root", {children: arr}); }
@@ -34,13 +38,20 @@ statement
   / whitespace* @assignment whitespace* statement_end
   / whitespace* @return_statement whitespace* statement_end
   / whitespace* @select_statement whitespace*
+  / whitespace* @iteration_statement whitespace*
   / whitespace* @expression whitespace* statement_end // match on expression last so it does not interfere with other things like assignment
+
+
+iteration_statement
+  = "do" whitespace* body:block whitespace* "while" whitespace* "(" whitespace* condition:expression whitespace* ")" 
+  / "while" whitespace* "(" whitespace* condition:expression whitespace* ")" body:block
+  / "for" whitespace* "(" whitespace* init:(declaration / initialization / expression)? whitespace* ";" whitespace* condition:expression? whitespace* ";" whitespace* update:expression?  whitespace*")"
 
 select_statement
   = ifBlock:if_block whitespace* elseIfBlocks:(@else_if_block whitespace*)* whitespace* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
 
 if_block 
-  = "if" whitespace* "(" whitespace* condition:conditional_expression whitespace* ")" whitespace* block:block { return generateNode("ConditionalBlock", { condition, block }); }
+  = "if" whitespace* "(" whitespace* condition:expression whitespace* ")" whitespace* block:block { return generateNode("ConditionalBlock", { condition, block }); }
 
 else_if_block 
   = "else" _ @if_block

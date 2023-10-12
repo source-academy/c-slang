@@ -227,3 +227,12 @@ export interface CompoundAssignment extends ScopedNode {
   variable: VariableExpr;
   value: Expression;
 }
+
+export type LoopType = "doWhile" | "while" | "for";
+
+export interface IterationStatement extends ScopedNode {
+  type: "IterationStatement";
+  loopType: "doWhile"
+  condition: Expression;
+  body: Block;
+}
