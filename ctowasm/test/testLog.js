@@ -157,6 +157,10 @@ const testLog = {
     assign_expr_1: {
       title: "Assignment expression 1",
       expected: true
+    },
+    compound_assign_expr_1: {
+      title: "Compound assignment expression 1",
+      expected: true
     }
   }
 };

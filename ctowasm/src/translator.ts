@@ -26,6 +26,7 @@ import {
   ComparisonExpression,
   SelectStatement,
   AssignmentExpression,
+  CompoundAssignmentExpression,
 } from "c-ast/c-nodes";
 import {
   WasmArithmeticExpression,
@@ -564,9 +565,7 @@ export function translate(CAstRoot: Root) {
         },
       };
       return wasmNode;
-    } else if (
-      expr.type === "ConditionalExpression"
-    ) {
+    } else if (expr.type === "ConditionalExpression") {
       return evaluateConditionalExpression(expr, enclosingFunc);
     } else if (expr.type === "AssignmentExpression") {
       const n = expr as AssignmentExpression;
@@ -580,21 +579,46 @@ export function translate(CAstRoot: Root) {
       ) {
         // parameter assignment or assignment to local scope variable
         return {
-            type: "LocalTee",
-            name: wasmVariableName,
-            value: evaluateExpression(n.value, enclosingFunc),
-          }
+          type: "LocalTee",
+          name: wasmVariableName,
+          value: evaluateExpression(n.value, enclosingFunc),
+        };
       } else {
         // this assignment is to a global variable
         // no need do any checks, this would have been done in semantic analysis TODO: check this
         return {
-            type: "GlobalTee",
-            name: wasmVariableName,
-            value: evaluateExpression(n.value, enclosingFunc),
-          }
+          type: "GlobalTee",
+          name: wasmVariableName,
+          value: evaluateExpression(n.value, enclosingFunc),
+        };
       }
-    }
-    else {
+    } else if (expr.type === "CompoundAssignmentExpression") {
+      const n = expr as CompoundAssignmentExpression;
+      const wasmVariableName = getWasmVariableName(n.variable.name, enclosingFunc);
+      let varTeeCommand: "GlobalTee" | "LocalTee" = "GlobalTee";
+      let varGetCommand: "GlobalGet" | "LocalGet" = "GlobalGet";
+      if (
+        wasmVariableName in enclosingFunc.params ||
+        wasmVariableName in enclosingFunc.locals
+      ) {
+        varTeeCommand = "LocalTee";
+        varGetCommand = "LocalGet";
+      }
+      return {
+        type: varTeeCommand,
+        name: wasmVariableName,
+        value: {
+          type: "ArithmeticExpression",
+          operator: n.operator,
+          leftExpr: {
+            type: varGetCommand,
+            name: wasmVariableName,
+          },
+          rightExpr: evaluateExpression(n.value, enclosingFunc),
+          varType: variableTypeToWasmType[n.variable.variableType]
+        }
+      }
+    } else {
       const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
     }
   }

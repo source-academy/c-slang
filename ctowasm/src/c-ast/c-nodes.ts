@@ -81,7 +81,8 @@ export type Expression =
   | PrefixExpression
   | ConditionalExpression
   | ComparisonExpression
-  | AssignmentExpression;
+  | AssignmentExpression
+  | CompoundAssignmentExpression;
 
 export type Statement = Declaration | Initialization | ReturnStatement | SelectStatement;
 
@@ -223,12 +224,14 @@ export interface FunctionCallStatement extends ScopedNode {
 type Operator = "+" | "-" | "/" | "*" | "%"
 
 export interface CompoundAssignment extends ScopedNode {
+  type: "CompoundAssignment";
   operator: Operator;
   variable: VariableExpr;
   value: Expression;
 }
 
 export interface CompoundAssignmentExpression extends ScopedNode {
+  type: "CompoundAssignmentExpression";
   operator: Operator;
   variable: VariableExpr;
   value: Expression; 

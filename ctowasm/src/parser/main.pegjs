@@ -105,7 +105,7 @@ compound_assignment
   = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
 
 compound_assignment_expression
-  = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CommpoundAssignmentExpression", { operator, variable, value }); } 
+  = variable:variable_term whitespace* operator:[%/*+\-] "=" whitespace* value:expression { return generateNode("CompoundAssignmentExpression", { operator, variable, value }); } 
 
 expression
   = assignment_expression 

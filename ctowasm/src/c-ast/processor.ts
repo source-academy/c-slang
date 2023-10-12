@@ -12,6 +12,7 @@ import {
   Block,
   ComparisonExpression,
   CompoundAssignment,
+  CompoundAssignmentExpression,
   ConditionalBlock,
   ConditionalExpression,
   Declaration,
@@ -295,8 +296,8 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.condition);
       visit(n.block);
-    } else if (node.type === "AssignmentExpression") {
-      const n = node as AssignmentExpression;
+    } else if (node.type === "AssignmentExpression" || node.type === "CompoundAssignmentExpression") {
+      const n = node as AssignmentExpression | CompoundAssignmentExpression;
       n.scope = scopeStack[scopeStack.length - 1]; 
       visit(n.variable);
       visit(n.value);

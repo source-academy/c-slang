@@ -1,10 +1,7 @@
 /**
  * Exports a generate function for generating a WAT string from WAT AST.
  */
-import {
-  BinaryOperator,
-  ComparisonOperator,
-} from "c-ast/c-nodes";
+import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
@@ -107,7 +104,9 @@ function generateExprStr(expr: WasmExpression): string {
           (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
         )
       : [];
-    return `(local.get $${e.name}${preStatements.length > 0 ? " " + preStatements.join(" ") : ""})`;
+    return `(local.get $${e.name}${
+      preStatements.length > 0 ? " " + preStatements.join(" ") : ""
+    })`;
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet;
     return `(global.get $${e.name})`;
@@ -142,11 +141,11 @@ function generateExprStr(expr: WasmExpression): string {
     )})`;
   } else if (expr.type === "LocalTee") {
     const n = expr as WasmLocalTee;
-    return `(local.tee $${n.name} ${generateExprStr(n.value)})`
+    return `(local.tee $${n.name} ${generateExprStr(n.value)})`;
   } else if (expr.type === "GlobalTee") {
     const n = expr as WasmGlobalTee;
-    return `(global.tee $${n.name} ${generateExprStr(n.value)})` 
-  }else {
+    return `(global.tee $${n.name} ${generateExprStr(n.value)})`;
+  } else {
     console.assert(
       false,
       "WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion."
@@ -193,7 +192,7 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     })`;
   } else if (statement.type === "ReturnStatement") {
     const n = statement as WasmReturnStatement;
-    return `(return ${generateExprStr(statement.value)})`
+    return `(return ${generateExprStr(statement.value)})`;
   }
   return "";
 }
