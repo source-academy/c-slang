@@ -36,6 +36,7 @@ import {
   VariableExpr,
   WhileLoop,
 } from "c-ast/c-nodes";
+import { variableSizes } from "constant";
 import { ProcessingError } from "errors";
 
 function createNewScope(parentScope: Scope | null) {
@@ -62,7 +63,7 @@ export default function process(ast: Root, sourceCode: string) {
  * @param sourceCode
  */
 function createScopesAndVariables(ast: Root, sourceCode: string) {
-  const scopeStack: Scope[] = []; // stores a stack of scopes
+  const scopeStack: Scope[] = []; // stores a stack of scopes3
 
   /**
    * Checks for redeclaration of a variable, throw ProcessingError if redeclaration has occured.
@@ -104,6 +105,8 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         );
       }
       s[param.name] = true;
+      // add the size of the param
+      node.sizeOfParameters += variableSizes[param.variableType]
       return {
         name: param.name,
         type: param.variableType,
@@ -142,7 +145,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     let curr = node.scope;
     while (curr != null) {
       if (node.name in curr.functions) {
-        return curr.functions[node.name].returnType;
+        return curr.functions[node.name];
       }
       curr = curr.parentScope;
     }
@@ -161,7 +164,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   }
 
   // the visitor function for visiting nodes
-  function visit(node: ScopedNode, pre: ScopedNode = null) {
+  function visit(node: ScopedNode, enclosingFunc?: FunctionDefinition, pre: ScopedNode = null, ) {
     if (node.type === "Root") {
       const n = node as Root;
       node.scope = createNewScope(null);
@@ -180,7 +183,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       }
 
       for (const child of n.children) {
-        visit(child);
+        visit(child, enclosingFunc);
       }
 
       if (pre?.type !== "FunctionDefinition") {
@@ -195,6 +198,9 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         type: n.variableType,
         name: n.name,
       };
+      if (enclosingFunc) {
+        enclosingFunc.sizeOfLocals += variableSizes[n.variableType]
+      }
     } else if (node.type === "Initialization") {
       const n = node as Initialization;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -204,7 +210,10 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         type: n.variableType,
         name: n.name,
       };
-      visit(n.value);
+      if (enclosingFunc) {
+        enclosingFunc.sizeOfLocals += variableSizes[n.variableType]
+      }
+      visit(n.value, enclosingFunc);
     } else if (node.type === "FunctionDeclaration") {
       const n = node as FunctionDeclaration;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -216,6 +225,8 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       };
     } else if (node.type === "FunctionDefinition") {
       const n = node as FunctionDefinition;
+      n.sizeOfLocals = 0;
+      n.sizeOfParameters = 0;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForRedeclaration(n);
       const params = getFunctionParams(n);
@@ -231,7 +242,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         (param) => (n.scope.variables[param.name] = { ...param, isParam: true })
       );
       // traverse function body nodes
-      visit(n.body, n);
+      visit(n.body, n, n);
       scopeStack.pop();
     } else if (
       node.type === "Assignment" ||
@@ -239,17 +250,15 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     ) {
       const n = node as Assignment | CompoundAssignment;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.variable); // vist the variable being assigned
-      visit(n.value);
+      visit(n.variable, enclosingFunc); // vist the variable being assigned
+      visit(n.value, enclosingFunc);
     } else if (node.type === "FunctionCall") {
       const n = node as FunctionCall;
       n.scope = scopeStack[scopeStack.length - 1];
-      checkForFunctionDeclaration(n);
       n.args.forEach((arg) => visit(arg));
     } else if (node.type === "FunctionCallStatement") {
       const n = node as FunctionCallStatement;
       n.scope = scopeStack[scopeStack.length - 1];
-      n.hasReturn = checkForFunctionDeclaration(n) === "void" ? false : true;
       n.args.forEach((arg) => visit(arg));
     } else if (node.type === "VariableExpr") {
       const n = node as VariableExpr;
@@ -260,23 +269,23 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     } else if (node.type === "ArithmeticExpression") {
       const n = node as ArithmeticExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.firstExpr);
+      visit(n.firstExpr, enclosingFunc);
       n.exprs.forEach((expr) => visit(expr));
     } else if (node.type === "ArithmeticSubExpression") {
       const n = node as ArithmeticSubExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.expr);
+      visit(n.expr, enclosingFunc);
     } else if (
       node.type === "PrefixExpression" ||
       node.type === "PostfixExpression"
     ) {
       const n = node as PrefixExpression | PostfixExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.variable);
+      visit(n.variable, enclosingFunc);
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.value);
+      visit(n.value, enclosingFunc);
     } else if (node.type === "ConditionalExpression") {
       const n = node as ConditionalExpression;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -284,43 +293,43 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     } else if (node.type === "ComparisonExpression") {
       const n = node as ComparisonExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.firstExpr);
+      visit(n.firstExpr, enclosingFunc);
       n.exprs.forEach((expr) => visit(expr));
     } else if (node.type === "SelectStatement") {
       const n = node as SelectStatement;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.ifBlock);
+      visit(n.ifBlock, enclosingFunc);
       n.elseIfBlocks.forEach((block) => visit(block));
       if (n.elseBlock) {
-        visit(n.elseBlock);
+        visit(n.elseBlock, enclosingFunc);
       }
     } else if (node.type === "ConditionalBlock") {
       const n = node as ConditionalBlock;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.condition);
-      visit(n.block);
+      visit(n.condition, enclosingFunc);
+      visit(n.block, enclosingFunc);
     } else if (
       node.type === "AssignmentExpression" ||
       node.type === "CompoundAssignmentExpression"
     ) {
       const n = node as AssignmentExpression | CompoundAssignmentExpression;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.variable);
-      visit(n.value);
+      visit(n.variable, enclosingFunc);
+      visit(n.value, enclosingFunc);
     } else if (node.type === "DoWhileLoop" || node.type === "WhileLoop") {
       const n = node as DoWhileLoop | WhileLoop;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.condition);
-      visit(n.body);
+      visit(n.condition, enclosingFunc);
+      visit(n.body, enclosingFunc);
     } else if (node.type === "ForLoop") {
       const n = node as ForLoop;
       // create a new scope for the initialization variables
       n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
-      visit(n.initialization);
-      visit(n.condition);
-      visit(n.update);
-      visit(n.body);
+      visit(n.initialization, enclosingFunc);
+      visit(n.condition, enclosingFunc);
+      visit(n.update, enclosingFunc);
+      visit(n.body, enclosingFunc);
     }
   }
 

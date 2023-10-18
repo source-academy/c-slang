@@ -16,13 +16,39 @@ export interface WasmVariable extends WasmAstNode {
   variableType: WasmType;
 }
 
-export interface WasmLocalVariable extends WasmVariable, WasmAstNode {
-  type: "LocalVariable";
+/**
+ * A variable that is meant to be stored in memory.
+ */
+export interface WasmMemoryVariable extends WasmAstNode {
+  name: string;
+  size: number; // size in bytes of this variable
 }
 
-export interface WasmGlobalVariable extends WasmVariable, WasmAstNode {
-  type: "GlobalVariable";
+export interface WasmLocalVariable extends WasmMemoryVariable {
+  type: "LocalVariable" | "FunctionParameter";
+  bpOffset: number // offset in number of bytes from base pointer
+}
+
+export interface WasmFunctionParameter extends WasmLocalVariable {
+  type: "FunctionParameter",
+  paramIndex: number; // index of this param in the list of params of the function
+}
+
+/**
+ * Global variables will be in the 'data' segment of memory.
+ */
+export interface WasmDataSegmentVariable extends WasmMemoryVariable {
+  type: "DataSegmentVariable";
   initializerValue?: WasmConst; // initial value to set this global value to
+  memoryAddr: number; // offset from start of memory that this variable is at
+}
+
+/**
+ * Actual WASM globals variables.
+ */
+export interface WasmGlobalVariable extends WasmVariable {
+  type: "GlobalVariable";
+  initializerValue?: WasmConst; 
 }
 
 export interface WasmConst extends WasmAstNode {
@@ -33,8 +59,10 @@ export interface WasmConst extends WasmAstNode {
 
 export interface WasmModule extends WasmAstNode {
   type: "Module";
-  globals: WasmGlobalVariable[];
-  functions: WasmFunction[];
+  globals: Record<string, WasmDataSegmentVariable>;
+  globalWasmVariables: WasmGlobalVariable[];
+  functions: Record<string, WasmFunction>;
+  memorySize: number; // number of pages of memory needed for this module
 }
 
 export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
@@ -42,13 +70,16 @@ export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
 export interface WasmFunction extends WasmAstNode {
   type: "Function";
   name: string;
-  params: Record<string, WasmVariable>;
-  locals: Record<string, WasmVariable>;
+  params: Record<string, WasmFunctionParameter>;
+  locals: Record<string, WasmLocalVariable>;
+  sizeOfLocals: number,
+  sizeOfParams: number,
   loopCount: number; // count of the loops in this function. used for giving unique label names to loops
   blockCount: number; // same as loopCount, but for WasmBlocks
   scopes: Scopes;
   body: WasmFunctionBodyLine[];
   return: WasmType | null;
+  bpOffset: number; // current offset from base pointer, initially 0
 }
 
 export type WasmStatement =
@@ -60,7 +91,9 @@ export type WasmStatement =
   | WasmLoop
   | WasmBranchIf
   | WasmBranch
-  | WasmBlock;
+  | WasmBlock
+  | WasmMemoryStore
+  | WasmMemoryGrow;
 
 // TODO: figure out if this necessary
 export type WasmExpression =
@@ -75,19 +108,14 @@ export type WasmExpression =
   | WasmOrExpression
   | WasmComparisonExpression
   | WasmLocalTee
-  | WasmGlobalTee;
+  | WasmMemoryLoad
+  | WasmMemorySize;
 
 /**
  * Tee is an assignment expression that loads the assigned value back onto stack
  */
 export interface WasmLocalTee {
   type: "LocalTee";
-  name: string;
-  value: WasmExpression;
-}
-
-export interface WasmGlobalTee {
-  type: "GlobalTee";
   name: string;
   value: WasmExpression;
 }
@@ -100,21 +128,14 @@ export interface WasmReturnStatement {
 export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
   name: string;
-  args: WasmExpression[];
+  stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
 }
 
 export interface WasmFunctionCallStatement extends WasmAstNode {
   type: "FunctionCallStatement";
   name: string;
-  args: WasmExpression[];
+  stackFrameSetup: WasmStatement[];
   hasReturn: boolean;
-}
-
-// A procedure is a function with no return value
-export interface WasmProcedureCall extends WasmAstNode {
-  type: "ProcedureCall";
-  name: string;
-  args: WasmExpression[];
 }
 
 export interface WasmGlobalSet extends WasmAstNode {
@@ -141,6 +162,33 @@ export interface WasmGlobalGet extends WasmAstNode {
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
+type memoryVariableByteSize = 1 | 4 | 8;
+
+export interface WasmMemoryLoad extends WasmAstNode {
+  type: "MemoryLoad";
+  addr: WasmExpression; // the offset in memory to load from
+  preStatements?: (WasmStatement | WasmExpression)[]; 
+  varType: WasmType; // wasm var type for the store instruction
+  numOfBytes: memoryVariableByteSize // number of bytes to store 
+}
+
+export interface WasmMemoryStore extends WasmAstNode {
+  type: "MemoryStore";
+  addr: WasmExpression;
+  value: WasmExpression;
+  varType: WasmType; // wasm var type for the store instruction
+  numOfBytes: memoryVariableByteSize // number of bytes to store 
+}
+
+export interface WasmMemoryGrow extends WasmAstNode {
+  type: "MemoryGrow";
+  pagesToGrowBy: WasmExpression;
+}
+
+export interface WasmMemorySize extends WasmAstNode {
+  type: "MemorySize";
+}
+
 export interface WasmArithmeticExpression extends WasmAstNode {
   type: "ArithmeticExpression";
   operator: BinaryOperator;
@@ -155,7 +203,7 @@ export interface WasmArithmeticExpression extends WasmAstNode {
  *
  * Currently this is only enabled for setting statements, to allowing postfix/prefix operators to work.
  */
-export type WasmExprStatement = WasmLocalSet | WasmGlobalSet;
+export type WasmExprStatement = WasmLocalSet | WasmGlobalSet | WasmMemoryStore;
 
 /**
  * Forms a wrapper around a regular wasm expression, to indicate that it is to be
@@ -216,5 +264,5 @@ export interface WasmBranch extends WasmAstNode {
 export interface WasmBlock extends WasmAstNode {
   type: "Block";
   label: string;
-  body: WasmStatement[]
+  body: WasmStatement[];
 }

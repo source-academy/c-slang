@@ -2,6 +2,8 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
+import { functionStackFrameTeardownStatements } from "constant";
+
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
@@ -17,15 +19,18 @@ import {
   WasmFunctionCallStatement,
   WasmGlobalGet,
   WasmGlobalSet,
-  WasmGlobalTee,
   WasmLocalGet,
   WasmLocalSet,
   WasmLocalTee,
   WasmLoop,
+  WasmMemoryGrow,
+  WasmMemoryLoad,
+  WasmMemoryStore,
   WasmModule,
   WasmOrExpression,
   WasmReturnStatement,
   WasmSelectStatement,
+  WasmType,
 } from "wasm-ast/wasm-nodes";
 
 /**
@@ -47,6 +52,30 @@ function generateBlock(block: string, indentation: number) {
 }
 
 /**
+ * Returns the approprite memory instruction for a memory load.
+ * TODO: support unsigned types in future.
+ */
+function getWasmMemoryLoadInstruction(varType: WasmType, numOfBytes: number) {
+  if (
+    ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
+    ((varType === "i64" || varType === "f64") && numOfBytes === 8)
+  ) {
+    return `${varType}.load`;
+  }
+  return `${varType}.load${numOfBytes.toString()}_s`;
+}
+
+function getWasmMemoryStoreInstruction(varType: WasmType, numOfBytes: number) {
+  if (
+    ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
+    ((varType === "i64" || varType === "f64") && numOfBytes === 8)
+  ) {
+    return `${varType}.store`;
+  }
+  return `${varType}.store${numOfBytes.toString()}`;
+}
+
+/**
  * Returns string of argument expressions that are provided to function calls, or certain instructions like add.
  * Basically any instruction that needs to read multiple variables from the stack can use this function to conveniently attach all
  * the subexpressions that form the stack values.
@@ -58,6 +87,10 @@ function generateArgString(exprs: WasmExpression[]) {
   }
   return argsStr.trim();
 }
+
+const stackFrameTeardownStatements = functionStackFrameTeardownStatements
+  .map((s) => generateStatementStr(s))
+  .join(" ");
 
 /**
  * Returns the correct WAT binary instruction, given a binary operator.
@@ -96,8 +129,9 @@ function getBinaryInstruction(operator: BinaryOperator | ComparisonOperator) {
 function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const e = expr as WasmFunctionCall;
-    const argString = generateArgString(e.args);
-    return `(call $${e.name}${argString ? " " + argString : ""})`;
+    return `(call $${e.name} ${e.stackFrameSetup
+      .map((s) => generateStatementStr(s))
+      .join(" ")}) ${stackFrameTeardownStatements}`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
     return `(${e.variableType}.const ${e.value.toString()})`;
@@ -113,7 +147,14 @@ function generateExprStr(expr: WasmExpression): string {
     })`;
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet;
-    return `(global.get $${e.name})`;
+    const preStatements = e.preStatements
+      ? e.preStatements.map(
+          (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
+        )
+      : [];
+    return `(global.get $${e.name}${
+      preStatements.length > 0 ? " " + preStatements.join(" ") : ""
+    })`;
   } else if (
     expr.type === "ArithmeticExpression" ||
     expr.type === "ComparisonExpression"
@@ -146,13 +187,30 @@ function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "LocalTee") {
     const n = expr as WasmLocalTee;
     return `(local.tee $${n.name} ${generateExprStr(n.value)})`;
-  } else if (expr.type === "GlobalTee") {
-    const n = expr as WasmGlobalTee;
-    return `(global.tee $${n.name} ${generateExprStr(n.value)})`;
+  } else if (expr.type === "MemorySize") {
+    return "(memory.size)";
+  } else if (expr.type === "MemoryLoad") {
+    const n = expr as WasmMemoryLoad;
+
+    const preStatements = n.preStatements
+      ? n.preStatements.map(
+          (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
+        )
+      : [];
+    return `(${getWasmMemoryLoadInstruction(
+      n.varType,
+      n.numOfBytes
+    )} ${generateExprStr(expr.addr)}${
+      preStatements.length > 0 ? " " + preStatements.join(" ") : ""
+    })`;
+  } else if (expr.type === "MemoryStore") {
+    return generateStatementStr(expr);
   } else {
     console.assert(
       false,
-      "WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion."
+      `WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion\n${JSON.stringify(
+        expr
+      )}`
     );
   }
 }
@@ -169,12 +227,15 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return `(local.set $${n.name} ${generateExprStr(n.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
-    const argString = generateArgString(n.args);
     if (n.hasReturn) {
       // need to drop the return of the statement from the stack
-      return `(drop (call $${n.name}${argString ? " " + argString : ""}))`;
+      return `(drop (call $${n.name} ${statement.stackFrameSetup
+        .map((s) => generateStatementStr(s))
+        .join(" ")}) ${stackFrameTeardownStatements})`;
     }
-    return `(call $${n.name}${argString ? " " + argString : ""})`;
+    return `(call $${n.name} ${statement.stackFrameSetup
+      .map((s) => generateStatementStr(s))
+      .join(" ")}) ${stackFrameTeardownStatements}`;
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||
@@ -217,13 +278,26 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
   } else if (statement.type === "BranchIf") {
     const n = statement as WasmBranchIf;
     return `(br_if $${n.label} ${generateExprStr(n.condition)})`;
+  } else if (statement.type === "MemoryGrow") {
+    const n = statement as WasmMemoryGrow;
+    return `(drop (memory.grow ${generateExprStr(n.pagesToGrowBy)}))`;
+  } else if (statement.type === "MemoryStore") {
+    const n = statement as WasmMemoryStore;
+    return `(${getWasmMemoryStoreInstruction(
+      n.varType,
+      n.numOfBytes
+    )} ${generateExprStr(n.addr)} ${generateExprStr(n.value)})`;
   }
-  return "";
+  return null;
 }
 
 export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
   let watStr = generateLine("(module", baseIndentation);
-  for (const global of module.globals) {
+
+  // add the memory declaration
+  watStr += generateLine(`(memory ${module.memorySize})`, baseIndentation + 1);
+
+  for (const global of module.globalWasmVariables) {
     // add all the global variables first
     watStr += generateLine(
       `(global $${global.name} (${global.isConst ? "" : "mut"} ${
@@ -234,25 +308,12 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
       1
     );
   }
-  for (const func of module.functions) {
+  for (const functionName of Object.keys(module.functions)) {
+    const func = module.functions[functionName];
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);
-    // write in all params line by line
-    for (const param of Object.keys(func.params)) {
-      watStr += generateLine(
-        `(param $${param} ${func.params[param].variableType})`,
-        baseIndentation + 2
-      );
-    }
     // write the result type
     if (func.return) {
       watStr += generateLine(`(result ${func.return})`, baseIndentation + 2);
-    }
-    // write in the locals
-    for (const local of Object.keys(func.locals)) {
-      watStr += generateLine(
-        `(local $${local} ${func.locals[local].variableType})`,
-        baseIndentation + 2
-      );
     }
     for (const statement of func.body) {
       watStr += generateLine(

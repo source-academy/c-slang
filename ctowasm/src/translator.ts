@@ -30,33 +30,105 @@ import {
   DoWhileLoop,
   WhileLoop,
   ForLoop,
+  Integer,
 } from "c-ast/c-nodes";
+import {
+  variableSizes,
+  WASM_PAGE_SIZE,
+  BASE_POINTER,
+  PARAM_PREFIX,
+  WASM_ADDR_SIZE,
+  STACK_POINTER,
+  HEAP_POINTER,
+  REG_1,
+  REG_2,
+} from "constant";
+
 import {
   WasmArithmeticExpression,
   WasmConst,
   WasmExpression,
   WasmFunction,
-  WasmGlobalGet,
-  WasmGlobalSet,
-  WasmGlobalVariable,
-  WasmLocalGet,
-  WasmLocalSet,
+  WasmDataSegmentVariable,
   WasmLocalVariable,
+  WasmMemoryLoad,
+  WasmMemoryStore,
   WasmModule,
   WasmSelectStatement,
   WasmStatement,
   WasmType,
-  WasmVariable,
+  WasmFunctionParameter,
 } from "wasm-ast/wasm-nodes";
-
-const PARAM_PREFIX = "param_";
 
 export function translate(CAstRoot: Root) {
   const wasmRoot: WasmModule = {
     type: "Module",
-    globals: [],
-    functions: [],
+    globals: {}, // global variables that are stored in memory
+    globalWasmVariables: [], // actual wasm globals
+    functions: {},
+    memorySize: 1,
   };
+
+  let currMemoryOffset = 0;
+
+  /**
+   * Returns memory address for a global variable.
+   * Increases memory size if needed.
+   */
+  function getGlobalMemoryAddr(variableType: VariableType) {
+    const offset = currMemoryOffset;
+    currMemoryOffset += variableSizes[variableType];
+    if (currMemoryOffset >= wasmRoot.memorySize * WASM_PAGE_SIZE) {
+      // not enough pages, incr pages by 1
+      ++wasmRoot.memorySize;
+    }
+    return offset;
+  }
+
+  /**
+   * Returns the address to use for memory instructions for a variable,
+   * depending on whether it is a local or global variable.
+   */
+  function getVariableAddr(
+    variableName: string,
+    enclosingFunc: WasmFunction
+  ): WasmExpression {
+    const wasmVariableName = getWasmVariableName(variableName, enclosingFunc);
+    if (
+      wasmVariableName in enclosingFunc.params ||
+      wasmVariableName in enclosingFunc.locals
+    ) {
+      // local variable
+      let variable: WasmLocalVariable;
+      if (wasmVariableName in enclosingFunc.params) {
+        variable = enclosingFunc.params[wasmVariableName];
+      } else {
+        variable = enclosingFunc.locals[wasmVariableName];
+      }
+      return {
+        type: "ArithmeticExpression",
+        operator: "-",
+        leftExpr: {
+          type: "GlobalGet",
+          name: BASE_POINTER,
+        },
+        rightExpr: {
+          type: "Const",
+          variableType: "i32",
+          value: variable.bpOffset,
+        },
+        varType: "i32",
+      };
+    } else {
+      // global variable
+      const variable = wasmRoot.globals[wasmVariableName];
+      return {
+        type: "Const",
+        variableType: "i32",
+        value: variable.memoryAddr,
+      };
+    }
+  }
 
   /**
    * Converts a given variable name to a scoped variable name (meaning that scope information is included in the name itself).
@@ -76,6 +148,7 @@ export function translate(CAstRoot: Root) {
 
   const variableTypeToWasmType: Record<VariableType, WasmType> = {
     int: "i32",
+    char: "i32",
   };
 
   /**
@@ -113,6 +186,360 @@ export function translate(CAstRoot: Root) {
 
     // if reach this point, variable must be a global variable
     return originalVariableName;
+  }
+
+  /**
+   * Returns the wasm nodes responsible for the pre function call setup.
+   */
+  function getFunctionCallStackFrameSetupStatements(
+    fn: FunctionCall | FunctionCallStatement,
+    enclosingFunc: WasmFunction
+  ): WasmStatement[] {
+    const f = wasmRoot.functions[fn.name];
+
+    // evaluate all the arguments for function call
+    const args: WasmExpression[] = fn.args.map((arg) =>
+      evaluateExpression(arg, enclosingFunc)
+    );
+
+    const statements: WasmStatement[] = [];
+
+    // check that there is sufficient space for memory expansion
+    const totalStackSpaceRequired =
+      WASM_ADDR_SIZE + f.sizeOfLocals + f.sizeOfParams;
+    statements.push({
+      type: "SelectStatement",
+      condition: {
+        type: "ComparisonExpression",
+        operator: "<=",
+        leftExpr: {
+          type: "ArithmeticExpression",
+          operator: "-",
+          leftExpr: {
+            type: "GlobalGet",
+            name: STACK_POINTER,
+          },
+          rightExpr: {
+            type: "Const",
+            variableType: "i32",
+            value: totalStackSpaceRequired,
+          },
+          varType: "i32",
+        },
+        rightExpr: {
+          type: "GlobalGet",
+          name: HEAP_POINTER,
+        },
+      },
+      actions: [
+        // expand the memory since not enough space
+        // save the last address of stack in REG_1
+        {
+          type: "GlobalSet",
+          name: REG_1,
+          value: {
+            type: "ArithmeticExpression",
+            operator: "*",
+            leftExpr: {
+              type: "MemorySize",
+            },
+            rightExpr: {
+              type: "Const",
+              variableType: "i32",
+              value: WASM_PAGE_SIZE,
+            },
+            varType: "i32",
+          },
+        },
+        // save address of last item in memory to REG_2
+        {
+          type: "GlobalSet",
+          name: REG_2,
+          value: {
+            type: "ArithmeticExpression",
+            operator: "-",
+            leftExpr: {
+              type: "GlobalGet",
+              name: REG_1,
+            },
+            rightExpr: {
+              type: "Const",
+              value: 1,
+              variableType: "i32",
+            },
+            varType: "i32",
+          },
+        },
+        // save the size of stack in REG_1
+        {
+          type: "GlobalSet",
+          name: REG_1,
+          value: {
+            type: "ArithmeticExpression",
+            operator: "-",
+            leftExpr: {
+              type: "GlobalGet",
+              name: REG_1,
+            },
+            rightExpr: {
+              type: "GlobalGet",
+              name: STACK_POINTER,
+            },
+            varType: "i32",
+          },
+        },
+        // expand the memory since not enough space
+        {
+          type: "MemoryGrow",
+          pagesToGrowBy: {
+            type: "Const",
+            variableType: "i32",
+            value: Math.ceil(totalStackSpaceRequired / WASM_PAGE_SIZE),
+          },
+        },
+        // set stack pointer to target stack pointer adddress
+        {
+          type: "GlobalSet",
+          name: STACK_POINTER,
+          value: {
+            type: "ArithmeticExpression",
+            operator: "-",
+            leftExpr: {
+              type: "ArithmeticExpression",
+              operator: "*",
+              leftExpr: {
+                type: "MemorySize",
+              },
+              rightExpr: {
+                type: "Const",
+                variableType: "i32",
+                value: WASM_PAGE_SIZE,
+              },
+              varType: "i32",
+            },
+            rightExpr: {
+              type: "GlobalGet",
+              name: REG_1,
+            },
+            varType: "i32",
+          },
+        },
+        // set REG_1 to the last address of new memory
+        {
+          type: "GlobalSet",
+          name: REG_1,
+          value: {
+            type: "ArithmeticExpression",
+            operator: "-",
+            leftExpr: {
+              type: "ArithmeticExpression",
+              operator: "*",
+              leftExpr: {
+                type: "MemorySize",
+              },
+              rightExpr: {
+                type: "Const",
+                variableType: "i32",
+                value: WASM_PAGE_SIZE,
+              },
+              varType: "i32",
+            },
+            rightExpr: {
+              type: "Const",
+              value: 1,
+              variableType: "i32",
+            },
+            varType: "i32",
+          },
+        },
+        // copy the stack memory to the end, get REG_1 to below stack pointer
+        {
+          type: "Block",
+          label: "memcopy_block",
+          body: [
+            {
+              type: "Loop",
+              label: "memcopy_loop",
+              body: [
+                {
+                  type: "BranchIf",
+                  label: "memcopy_block",
+                  condition: {
+                    type: "BooleanExpression",
+                    expr: {
+                      type: "ComparisonExpression",
+                      operator: "<",
+                      leftExpr: {
+                        type: "GlobalGet",
+                        name: REG_1,
+                      },
+                      rightExpr: {
+                        type: "GlobalGet",
+                        name: STACK_POINTER,
+                      },
+                    },
+                  },
+                },
+                // load item addressed by REG_2 to addr of REG_1
+                {
+                  type: "MemoryStore",
+                  addr: {
+                    type: "GlobalGet",
+                    name: REG_1,
+                  },
+                  value: {
+                    type: "MemoryLoad",
+                    addr: {
+                      type: "GlobalGet",
+                      name: REG_2,
+                    },
+                    varType: "i32",
+                    numOfBytes: WASM_ADDR_SIZE,
+                  },
+                  varType: "i32",
+                  numOfBytes: WASM_ADDR_SIZE,
+                },
+                // decrement REG_1
+                {
+                  type: "GlobalSet",
+                  name: REG_1,
+                  value: {
+                    type: "ArithmeticExpression",
+                    operator: "-",
+                    leftExpr: {
+                      type: "GlobalGet",
+                      name: REG_1,
+                    },
+                    rightExpr: {
+                      type: "Const",
+                      value: 1,
+                      variableType: "i32",
+                    },
+                    varType: "i32",
+                  },
+                },
+                // decrement REG_2
+                {
+                  type: "GlobalSet",
+                  name: REG_2,
+                  value: {
+                    type: "ArithmeticExpression",
+                    operator: "-",
+                    leftExpr: {
+                      type: "GlobalGet",
+                      name: REG_2,
+                    },
+                    rightExpr: {
+                      type: "Const",
+                      value: 1,
+                      variableType: "i32",
+                    },
+                    varType: "i32",
+                  },
+                },
+                {
+                  type: "Branch",
+                  label: "memcopy_loop",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      elseStatements: [],
+    });
+
+    // push BP onto stack
+    statements.push({
+      type: "MemoryStore",
+      addr: {
+        type: "GlobalGet",
+        name: STACK_POINTER,
+        preStatements: [
+          {
+            type: "GlobalSet",
+            name: STACK_POINTER,
+            value: {
+              type: "ArithmeticExpression",
+              varType: "i32",
+              operator: "-",
+              leftExpr: {
+                type: "GlobalGet",
+                name: STACK_POINTER,
+              },
+              rightExpr: {
+                type: "Const",
+                variableType: "i32",
+                value: WASM_ADDR_SIZE,
+              },
+            },
+          },
+        ],
+      },
+      value: {
+        type: "GlobalGet",
+        name: BASE_POINTER,
+      },
+      varType: "i32",
+      numOfBytes: WASM_ADDR_SIZE,
+    });
+
+    // set BP to be SP
+    statements.push({
+      type: "GlobalSet",
+      name: BASE_POINTER,
+      value: {
+        type: "GlobalGet",
+        name: STACK_POINTER,
+      },
+    });
+
+    // allocate space for params and locals
+    statements.push({
+      type: "GlobalSet",
+      name: STACK_POINTER,
+      value: {
+        type: "ArithmeticExpression",
+        operator: "-",
+        varType: "i32",
+        leftExpr: {
+          type: "GlobalGet",
+          name: STACK_POINTER,
+        },
+        rightExpr: {
+          type: "Const",
+          variableType: "i32",
+          value: f.sizeOfLocals + f.sizeOfParams,
+        },
+      },
+    });
+
+    // set the values of all params
+    for (const paramName of Object.keys(f.params)) {
+      const param = f.params[paramName];
+      statements.push({
+        type: "MemoryStore",
+        addr: {
+          type: "ArithmeticExpression",
+          operator: "-",
+          varType: "i32",
+          leftExpr: {
+            type: "GlobalGet",
+            name: STACK_POINTER,
+          },
+          rightExpr: {
+            type: "Const",
+            variableType: "i32",
+            value: param.bpOffset,
+          },
+        },
+        value: args[param.paramIndex],
+        varType: "i32",
+        numOfBytes: WASM_ADDR_SIZE,
+      });
+    }
+
+    return statements;
   }
 
   /**
@@ -175,17 +602,18 @@ export function translate(CAstRoot: Root) {
           n.name,
           enclosingFunc.scopes.length - 1
         ),
-        variableType: variableTypeToWasmType[n.variableType],
+        size: variableSizes[n.variableType],
+        bpOffset: enclosingFunc.bpOffset,
       };
+      enclosingFunc.bpOffset += variableSizes[n.variableType]; // increment bpOffset by size of the variable
       enclosingFunc.locals[v.name] = v;
       addStatement(
         {
-          type: "LocalSet",
-          name: convertVarNameToScopedVarName(
-            n.name,
-            enclosingFunc.scopes.length - 1
-          ),
+          type: "MemoryStore",
+          addr: getVariableAddr(n.name, enclosingFunc),
           value: evaluateExpression(n.value, enclosingFunc),
+          varType: variableTypeToWasmType[n.variableType],
+          numOfBytes: variableSizes[n.variableType],
         },
         enclosingFunc,
         enclosingBody
@@ -193,14 +621,16 @@ export function translate(CAstRoot: Root) {
     } else if (CAstNode.type === "VariableDeclaration") {
       const n = CAstNode as VariableDeclaration;
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
-      const localVar = {
+      const localVar: WasmLocalVariable = {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
           enclosingFunc.scopes.length - 1
         ),
-        variableType: variableTypeToWasmType[n.variableType],
+        size: variableSizes[n.variableType],
+        bpOffset: enclosingFunc.bpOffset,
       };
+      enclosingFunc.bpOffset += variableSizes[n.variableType];
       enclosingFunc.locals[localVar.name] = localVar;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
@@ -208,46 +638,28 @@ export function translate(CAstRoot: Root) {
         n.variable.name,
         enclosingFunc
       );
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        // parameter assignment or assignment to local scope variable
-        addStatement(
-          {
-            type: "LocalSet",
-            name: wasmVariableName,
-            value: evaluateExpression(n.value, enclosingFunc),
-          },
-          enclosingFunc,
-          enclosingBody
-        );
-      } else {
-        // this assignment is to a global variable
-        // no need do any checks, this would have been done in semantic analysis TODO: check this
-        addStatement(
-          {
-            type: "GlobalSet",
-            name: wasmVariableName,
-            value: evaluateExpression(n.value, enclosingFunc),
-          },
-          enclosingFunc,
-          enclosingBody
-        );
-      }
+      addStatement(
+        {
+          type: "MemoryStore",
+          addr: getVariableAddr(wasmVariableName, enclosingFunc),
+          value: evaluateExpression(n.value, enclosingFunc),
+          varType: variableTypeToWasmType[n.variable.variableType],
+          numOfBytes: variableSizes[n.variable.variableType],
+        },
+        enclosingFunc,
+        enclosingBody
+      );
     } else if (CAstNode.type === "FunctionCallStatement") {
-      // function calls are the only expression that are recognised as a statement
       const n = CAstNode as FunctionCallStatement;
-      const args: WasmExpression[] = [];
-      for (const arg of n.args) {
-        args.push(evaluateExpression(arg, enclosingFunc));
-      }
       addStatement(
         {
           type: "FunctionCallStatement",
           name: n.name,
-          args,
-          hasReturn: n.hasReturn,
+          stackFrameSetup: getFunctionCallStackFrameSetupStatements(
+            n,
+            enclosingFunc
+          ),
+          hasReturn: wasmRoot.functions[n.name].return !== null,
         },
         enclosingFunc,
         enclosingBody
@@ -258,30 +670,21 @@ export function translate(CAstRoot: Root) {
     ) {
       // handle the case where a prefix or postfix expression is used as a statement, not an expression.
       const n = CAstNode as PrefixExpression | PostfixExpression;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
-      let variableSetType: "GlobalSet" | "LocalSet" = "GlobalSet";
-      let variableGetType: "GlobalGet" | "LocalGet" = "GlobalGet";
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        variableSetType = "LocalSet";
-        variableGetType = "LocalGet";
-      }
+      const addr = getVariableAddr(n.variable.name, enclosingFunc);
       const varType = variableTypeToWasmType[n.variable.variableType];
-      const localSet: WasmLocalSet | WasmGlobalSet = {
-        type: variableSetType,
-        name: wasmVariableName,
+
+      const localMemStore: WasmMemoryStore = {
+        type: "MemoryStore",
+        addr,
         value: {
           type: "ArithmeticExpression",
           operator: unaryOperatorToBinaryOperator[n.operator],
           leftExpr: {
-            type: variableGetType,
-            name: wasmVariableName,
-          } as WasmLocalGet | WasmGlobalGet,
+            type: "MemoryLoad",
+            addr,
+            varType: variableTypeToWasmType[n.variable.variableType],
+            numOfBytes: variableSizes[n.variable.variableType],
+          },
           rightExpr: {
             type: "Const",
             variableType: varType,
@@ -289,55 +692,41 @@ export function translate(CAstRoot: Root) {
           },
           varType: varType,
         },
+        varType: variableTypeToWasmType[n.variable.variableType],
+        numOfBytes: variableSizes[n.variable.variableType],
       };
-      addStatement(localSet, enclosingFunc, enclosingBody);
+      addStatement(localMemStore, enclosingFunc, enclosingBody);
     } else if (CAstNode.type === "CompoundAssignment") {
       const n = CAstNode as CompoundAssignment;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
         enclosingFunc
       );
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        const arithmeticExpr: WasmArithmeticExpression = {
-          type: "ArithmeticExpression",
-          operator: n.operator,
+      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const arithmeticExpr: WasmArithmeticExpression = {
+        type: "ArithmeticExpression",
+        operator: n.operator,
+        varType: variableTypeToWasmType[n.variable.variableType],
+        leftExpr: {
+          type: "MemoryLoad",
+          addr,
           varType: variableTypeToWasmType[n.variable.variableType],
-          leftExpr: {
-            type: "LocalGet",
-            name: wasmVariableName,
-          },
-          rightExpr: evaluateExpression(n.value, enclosingFunc),
-        };
-        // parameter assignment or assignment to local scope variable
-        addStatement({
-          type: "LocalSet",
-          name: wasmVariableName,
+          numOfBytes: variableSizes[n.variable.variableType],
+        },
+        rightExpr: evaluateExpression(n.value, enclosingFunc),
+      };
+      // parameter assignment or assignment to local scope variable
+      addStatement(
+        {
+          type: "MemoryStore",
+          addr,
           value: arithmeticExpr,
-        }, enclosingFunc, enclosingBody);
-      } else {
-        const arithmeticExpr: WasmArithmeticExpression = {
-          type: "ArithmeticExpression",
-          operator: n.operator,
           varType: variableTypeToWasmType[n.variable.variableType],
-          leftExpr: {
-            type: "GlobalGet",
-            name: wasmVariableName,
-          },
-          rightExpr: evaluateExpression(n.value, enclosingFunc),
-        };
-        addStatement(
-          {
-            type: "GlobalSet",
-            name: wasmVariableName,
-            value: arithmeticExpr,
-          },
-          enclosingFunc,
-          enclosingBody
-        );
-      }
+          numOfBytes: variableSizes[n.variable.variableType],
+        },
+        enclosingFunc,
+        enclosingBody
+      );
     } else if (CAstNode.type === "SelectStatement") {
       const n = CAstNode as SelectStatement;
       const actions: WasmStatement[] = [];
@@ -441,7 +830,7 @@ export function translate(CAstRoot: Root) {
         },
       });
       visit(n.body, enclosingFunc, body); // visit all the statements in the body of the for loop
-      // add the for loop update expression   
+      // add the for loop update expression
       visit(n.update, enclosingFunc, body);
       // add the branching statement at end of loop body
       body.push({
@@ -449,19 +838,21 @@ export function translate(CAstRoot: Root) {
         label: loopLabel,
       });
       enclosingFunc.scopes.pop(); // pop off the scope for this for loop
-      addStatement({
-        type: "Block",
-        label: blockLabel,
-        body: [
-          {
-            type: "Loop",
-            label: loopLabel,
-            body,
-          },
-        ],
-      },
-      enclosingFunc,
-      enclosingBody)
+      addStatement(
+        {
+          type: "Block",
+          label: blockLabel,
+          body: [
+            {
+              type: "Loop",
+              label: loopLabel,
+              body,
+            },
+          ],
+        },
+        enclosingFunc,
+        enclosingBody
+      );
     }
   }
 
@@ -552,194 +943,199 @@ export function translate(CAstRoot: Root) {
     enclosingFunc: WasmFunction
   ): WasmExpression {
     if (expr.type === "Integer") {
-      return convertLiteralToConst(expr);
+      const n = expr as Integer;
+      return convertLiteralToConst(n);
     } else if (expr.type === "FunctionCall") {
-      const n: FunctionCall = expr;
-      const args: WasmExpression[] = [];
-      for (const arg of n.args) {
-        args.push(evaluateExpression(arg, enclosingFunc));
-      }
-      return { type: "FunctionCall", name: n.name, args };
+      const n = expr as FunctionCall;
+      return {
+        type: "FunctionCall",
+        name: n.name,
+        stackFrameSetup: getFunctionCallStackFrameSetupStatements(
+          n,
+          enclosingFunc
+        ),
+      };
     } else if (expr.type === "VariableExpr") {
-      const n: VariableExpr = expr;
+      const n = expr as VariableExpr;
       const wasmVariableName = getWasmVariableName(n.name, enclosingFunc);
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        // the expression is a function parameter OR a local variable
-        return {
-          type: "LocalGet",
-          name: wasmVariableName,
-        };
-      } else {
-        return {
-          type: "GlobalGet",
-          name: wasmVariableName,
-        };
-      }
+
+      // the expression is a function parameter OR a local variable
+      return {
+        type: "MemoryLoad",
+        addr: getVariableAddr(wasmVariableName, enclosingFunc),
+        varType: variableTypeToWasmType[n.variableType],
+        numOfBytes: variableSizes[n.variableType],
+      };
     } else if (
       expr.type === "ArithmeticExpression" ||
       expr.type === "ComparisonExpression"
     ) {
-      return evaluateLeftToRightBinaryExpression(expr, enclosingFunc);
+      const n = expr as ArithmeticExpression | ComparisonExpression;
+      return evaluateLeftToRightBinaryExpression(n, enclosingFunc);
     } else if (expr.type === "PrefixExpression") {
-      const n: PrefixExpression = expr;
+      const n: PrefixExpression = expr as PrefixExpression;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
         enclosingFunc
       );
-      let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
-      let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        nodeGetTypeStr = "LocalGet";
-        nodeSetTypeStr = "LocalSet";
-      }
-      const wasmNode: WasmLocalGet | WasmGlobalGet = {
-        type: nodeGetTypeStr,
-        name: wasmVariableName,
+      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const wasmNode: WasmMemoryLoad = {
+        type: "MemoryLoad",
+        addr,
         preStatements: [
           {
-            type: nodeSetTypeStr,
-            name: wasmVariableName,
+            type: "MemoryStore",
+            addr,
             value: {
               type: "ArithmeticExpression",
               operator: unaryOperatorToBinaryOperator[n.operator],
               leftExpr: {
-                type: nodeGetTypeStr,
-                name: wasmVariableName,
+                type: "MemoryLoad",
+                addr,
+                varType: variableTypeToWasmType[n.variable.variableType],
+                numOfBytes: variableSizes[n.variable.variableType],
               },
               rightExpr: {
                 type: "Const",
-                variableType: variableTypeToWasmType[n.variable.variableType],
+                variableType: "i32",
                 value: 1,
               },
-              varType: variableTypeToWasmType[expr.variable.variableType],
+              varType: "i32",
             },
-          } as WasmLocalSet | WasmGlobalSet,
+            varType: variableTypeToWasmType[n.variable.variableType],
+            numOfBytes: variableSizes[n.variable.variableType],
+          },
         ],
+        varType: variableTypeToWasmType[n.variable.variableType],
+        numOfBytes: variableSizes[n.variable.variableType],
       };
       return wasmNode;
     } else if (expr.type === "PostfixExpression") {
-      const n: PostfixExpression = expr;
+      const n: PostfixExpression = expr as PostfixExpression;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
         enclosingFunc
       );
-      let nodeGetTypeStr: "GlobalGet" | "LocalGet" = "GlobalGet";
-      let nodeSetTypeStr: "GlobalSet" | "LocalSet" = "GlobalSet";
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        nodeGetTypeStr = "LocalGet";
-        nodeSetTypeStr = "LocalSet";
-      }
-      const wasmNode: WasmLocalSet | WasmGlobalSet = {
-        type: nodeSetTypeStr,
-        name: wasmVariableName,
+      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const wasmNode: WasmMemoryStore = {
+        type: "MemoryStore",
+        addr,
         value: {
           type: "ArithmeticExpression",
           operator: unaryOperatorToBinaryOperator[n.operator],
           leftExpr: {
-            type: nodeGetTypeStr,
-            name: wasmVariableName,
+            type: "MemoryLoad",
+            addr,
             preStatements: [
               {
-                type: nodeGetTypeStr,
-                name: wasmVariableName,
+                type: "MemoryLoad",
+                addr,
+                varType: variableTypeToWasmType[n.variable.variableType],
+                numOfBytes: variableSizes[n.variable.variableType],
               },
             ],
-          } as WasmLocalGet | WasmGlobalGet,
+            varType: variableTypeToWasmType[n.variable.variableType],
+            numOfBytes: variableSizes[n.variable.variableType],
+          },
           rightExpr: {
             type: "Const",
-            variableType: variableTypeToWasmType[n.variable.variableType],
+            variableType: "i32",
             value: 1,
           },
-          varType: variableTypeToWasmType[n.variable.variableType],
+          varType: "i32",
         },
+        varType: variableTypeToWasmType[n.variable.variableType],
+        numOfBytes: variableSizes[n.variable.variableType],
       };
       return wasmNode;
     } else if (expr.type === "ConditionalExpression") {
-      return evaluateConditionalExpression(expr, enclosingFunc);
+      const n = expr as ConditionalExpression;
+      return evaluateConditionalExpression(n, enclosingFunc);
     } else if (expr.type === "AssignmentExpression") {
       const n = expr as AssignmentExpression;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
         enclosingFunc
       );
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        // parameter assignment or assignment to local scope variable
-        return {
-          type: "LocalTee",
-          name: wasmVariableName,
-          value: evaluateExpression(n.value, enclosingFunc),
-        };
-      } else {
-        // this assignment is to a global variable
-        // no need do any checks, this would have been done in semantic analysis TODO: check this
-        return {
-          type: "GlobalTee",
-          name: wasmVariableName,
-          value: evaluateExpression(n.value, enclosingFunc),
-        };
-      }
+      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      return {
+        type: "MemoryLoad",
+        addr,
+        preStatements: [
+          {
+            type: "MemoryStore",
+            addr,
+            value: evaluateExpression(n.value, enclosingFunc),
+            varType: variableTypeToWasmType[n.variable.variableType],
+            numOfBytes: variableSizes[n.variable.variableType],
+          },
+        ],
+        varType: variableTypeToWasmType[n.variable.variableType],
+        numOfBytes: variableSizes[n.variable.variableType],
+      };
     } else if (expr.type === "CompoundAssignmentExpression") {
       const n = expr as CompoundAssignmentExpression;
       const wasmVariableName = getWasmVariableName(
         n.variable.name,
         enclosingFunc
       );
-      let varTeeCommand: "GlobalTee" | "LocalTee" = "GlobalTee";
-      let varGetCommand: "GlobalGet" | "LocalGet" = "GlobalGet";
-      if (
-        wasmVariableName in enclosingFunc.params ||
-        wasmVariableName in enclosingFunc.locals
-      ) {
-        varTeeCommand = "LocalTee";
-        varGetCommand = "LocalGet";
-      }
+      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
       return {
-        type: varTeeCommand,
-        name: wasmVariableName,
-        value: {
-          type: "ArithmeticExpression",
-          operator: n.operator,
-          leftExpr: {
-            type: varGetCommand,
-            name: wasmVariableName,
+        type: "MemoryLoad",
+        addr,
+        preStatements: [
+          {
+            type: "MemoryStore",
+            addr,
+            value: {
+              type: "ArithmeticExpression",
+              operator: n.operator,
+              leftExpr: {
+                type: "MemoryLoad",
+                addr,
+                varType: variableTypeToWasmType[n.variable.variableType],
+                numOfBytes: variableSizes[n.variable.variableType],
+              },
+              rightExpr: evaluateExpression(n.value, enclosingFunc),
+              varType: variableTypeToWasmType[n.variable.variableType],
+            },
+            varType: variableTypeToWasmType[n.variable.variableType],
+            numOfBytes: variableSizes[n.variable.variableType],
           },
-          rightExpr: evaluateExpression(n.value, enclosingFunc),
-          varType: variableTypeToWasmType[n.variable.variableType],
-        },
+        ],
+        varType: variableTypeToWasmType[n.variable.variableType],
+        numOfBytes: variableSizes[n.variable.variableType],
       };
     } else {
-      const ensureAllCasesHandled: never = expr; // simple compile time check that all cases are handled and expr is never
+      console.assert(
+        false,
+        `WASM TRANSLATION ERROR: Unhandled C expression node\n${expr}`
+      );
     }
   }
 
   for (const child of CAstRoot.children) {
     if (child.type === "FunctionDefinition") {
       const n = child as FunctionDefinition;
-      const params: Record<string, WasmVariable> = {};
-      for (const param of n.parameters) {
+      let bpOffset = WASM_ADDR_SIZE; // BP offset starts at the address of first param, so need account for BP pointing to the addr of old BP
+      const params: Record<string, WasmFunctionParameter> = {};
+      n.parameters.forEach((param, paramIndex) => {
         const paramName = generateParamName(param.name);
         params[paramName] = {
           type: "FunctionParameter",
           name: paramName,
-          variableType: variableTypeToWasmType[param.variableType],
+          size: variableSizes[param.variableType],
+          paramIndex,
+          bpOffset,
         };
-      }
+        bpOffset += variableSizes[param.variableType];
+      });
       const f: WasmFunction = {
         type: "Function",
         name: n.name,
         params,
+        sizeOfLocals: n.sizeOfLocals,
+        sizeOfParams: n.sizeOfParameters,
         loopCount: 0,
         blockCount: 0,
         locals: {},
@@ -749,28 +1145,93 @@ export function translate(CAstRoot: Root) {
           n.returnType === "void" || n.name === "main"
             ? null
             : variableTypeToWasmType[n.returnType],
+        bpOffset,
       };
-      for (const child of n.body.children) {
-        visit(child, f);
-      }
-      wasmRoot.functions.push(f);
+      wasmRoot.functions[f.name] = f;
     } else if (child.type === "VariableDeclaration") {
       const n = child as VariableDeclaration;
-      const globalVar: WasmGlobalVariable = {
-        type: "GlobalVariable",
+      const globalVar: WasmDataSegmentVariable = {
+        type: "DataSegmentVariable",
         name: n.name,
-        variableType: variableTypeToWasmType[n.variableType],
+        size: variableSizes[n.variableType],
+        memoryAddr: getGlobalMemoryAddr(n.variableType),
       };
-      wasmRoot.globals.push(globalVar);
+      wasmRoot.globals[n.name] = globalVar;
     } else if (child.type === "Initialization") {
       const n = child as Initialization;
-      const globalVar: WasmGlobalVariable = {
-        type: "GlobalVariable",
+      const globalVar: WasmDataSegmentVariable = {
+        type: "DataSegmentVariable",
         name: n.name,
-        variableType: variableTypeToWasmType[n.variableType],
+        size: variableSizes[n.variableType],
         initializerValue: convertLiteralToConst(n.value as Literal),
+        memoryAddr: getGlobalMemoryAddr(n.variableType),
       };
-      wasmRoot.globals.push(globalVar);
+      wasmRoot.globals[n.name] = globalVar;
+    }
+  }
+
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: STACK_POINTER,
+    variableType: "i32",
+    initializerValue: {
+      type: "Const",
+      variableType: "i32",
+      value: wasmRoot.memorySize * WASM_PAGE_SIZE - wasmRoot.functions["main"].sizeOfLocals // preallocate space for main's local variables
+    },
+  });
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: BASE_POINTER,
+    variableType: "i32",
+    initializerValue: {
+      type: "Const",
+      variableType: "i32",
+      value: wasmRoot.memorySize * WASM_PAGE_SIZE, // BP starts at the memory boundary
+    },
+  });
+  // heap segment follows immediately after data segment
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: HEAP_POINTER,
+    variableType: "i32",
+    initializerValue: {
+      type: "Const",
+      variableType: "i32",
+      value: Math.ceil(currMemoryOffset / 4) * 4, // align to 4 byte boundary
+    },
+  });
+
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: REG_1,
+    variableType: "i32",
+    initializerValue: {
+      type: "Const",
+      variableType: "i32",
+      value: 0, // align to 4 byte boundary
+    },
+  });
+
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: REG_2,
+    variableType: "i32",
+    initializerValue: {
+      type: "Const",
+      variableType: "i32",
+      value: 0, // align to 4 byte boundary
+    },
+  });
+
+  // visit all the child nodes of function definitions
+  // do this only after all the globals and function information have been set
+  for (const child of CAstRoot.children) {
+    if (child.type === "FunctionDefinition") {
+      const n = child as FunctionDefinition;
+      for (const child of n.body.children) {
+        visit(child, wasmRoot.functions[n.name]);
+      }
     }
   }
 
