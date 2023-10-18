@@ -958,7 +958,6 @@ export function translate(CAstRoot: Root) {
     } else if (expr.type === "VariableExpr") {
       const n = expr as VariableExpr;
       const wasmVariableName = getWasmVariableName(n.name, enclosingFunc);
-
       // the expression is a function parameter OR a local variable
       return {
         type: "MemoryLoad",

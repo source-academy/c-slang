@@ -11,6 +11,7 @@ import {
   AssignmentExpression,
   Block,
   ComparisonExpression,
+  ComparisonSubExpression,
   CompoundAssignment,
   CompoundAssignmentExpression,
   ConditionalBlock,
@@ -145,7 +146,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     let curr = node.scope;
     while (curr != null) {
       if (node.name in curr.functions) {
-        return curr.functions[node.name];
+        return
       }
       curr = curr.parentScope;
     }
@@ -255,10 +256,12 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     } else if (node.type === "FunctionCall") {
       const n = node as FunctionCall;
       n.scope = scopeStack[scopeStack.length - 1];
+      checkForFunctionDeclaration(n)
       n.args.forEach((arg) => visit(arg));
     } else if (node.type === "FunctionCallStatement") {
       const n = node as FunctionCallStatement;
       n.scope = scopeStack[scopeStack.length - 1];
+      checkForFunctionDeclaration(n)
       n.args.forEach((arg) => visit(arg));
     } else if (node.type === "VariableExpr") {
       const n = node as VariableExpr;
@@ -295,6 +298,10 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       visit(n.firstExpr, enclosingFunc);
       n.exprs.forEach((expr) => visit(expr));
+    } else if (node.type === "ComparisonSubExpression") {
+      const n = node as ComparisonSubExpression;
+      n.scope = scopeStack[scopeStack.length - 1];
+      visit(n.expr, enclosingFunc);
     } else if (node.type === "SelectStatement") {
       const n = node as SelectStatement;
       n.scope = scopeStack[scopeStack.length - 1];
