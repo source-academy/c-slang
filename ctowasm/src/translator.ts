@@ -449,32 +449,32 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       elseStatements: [],
     });
 
+    //allocate space for BP on stack
+    statements.push({
+      type: "GlobalSet",
+      name: STACK_POINTER,
+      value: {
+        type: "ArithmeticExpression",
+        varType: "i32",
+        operator: "-",
+        leftExpr: {
+          type: "GlobalGet",
+          name: STACK_POINTER,
+        },
+        rightExpr: {
+          type: "Const",
+          variableType: "i32",
+          value: WASM_ADDR_SIZE,
+        },
+      },
+    })
+
     // push BP onto stack
     statements.push({
       type: "MemoryStore",
       addr: {
         type: "GlobalGet",
         name: STACK_POINTER,
-        preStatements: [
-          {
-            type: "GlobalSet",
-            name: STACK_POINTER,
-            value: {
-              type: "ArithmeticExpression",
-              varType: "i32",
-              operator: "-",
-              leftExpr: {
-                type: "GlobalGet",
-                name: STACK_POINTER,
-              },
-              rightExpr: {
-                type: "Const",
-                variableType: "i32",
-                value: WASM_ADDR_SIZE,
-              },
-            },
-          },
-        ],
       },
       value: {
         type: "GlobalGet",
@@ -525,7 +525,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           varType: "i32",
           leftExpr: {
             type: "GlobalGet",
-            name: STACK_POINTER,
+            name: BASE_POINTER,
           },
           rightExpr: {
             type: "Const",
@@ -1025,14 +1025,6 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           leftExpr: {
             type: "MemoryLoad",
             addr,
-            preStatements: [
-              {
-                type: "MemoryLoad",
-                addr,
-                varType: variableTypeToWasmType[n.variable.variableType],
-                numOfBytes: variableSizes[n.variable.variableType],
-              },
-            ],
             varType: variableTypeToWasmType[n.variable.variableType],
             numOfBytes: variableSizes[n.variable.variableType],
           },
@@ -1045,6 +1037,15 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         },
         varType: variableTypeToWasmType[n.variable.variableType],
         numOfBytes: variableSizes[n.variable.variableType],
+        // load the original value of the variable onto wasm stack first
+        preStatements: [
+          {
+            type: "MemoryLoad",
+            addr,
+            varType: variableTypeToWasmType[n.variable.variableType],
+            numOfBytes: variableSizes[n.variable.variableType],
+          },
+        ]
       };
       return wasmNode;
     } else if (expr.type === "ConditionalExpression") {
@@ -1239,19 +1240,28 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   if (testMode) {
     // find the main function and add the logging code for the locals
     for (const child of CAstRoot.children) {
-      if (child.type === "FunctionDefinition" && child.name === 'main') {
+      if (child.type === "FunctionDefinition" && child.name === "main") {
         for (const statement of child.body.children) {
-          if (statement.type === "Initialization" || statement.type === "VariableDeclaration") {
+          if (
+            statement.type === "Initialization" ||
+            statement.type === "VariableDeclaration"
+          ) {
             // add logs at end of main wasm code to log the values of these variables in order of declaration
-            addStatement({
-              type: "Log",
-              value: {
-                type: "MemoryLoad",
-                addr: getVariableAddr(`${statement.name}_0`, wasmRoot.functions["main"]),
-                varType: variableTypeToWasmType[statement.variableType],
-                numOfBytes: variableSizes[statement.variableType],
-              }
-            }, wasmRoot.functions["main"])
+            addStatement(
+              {
+                type: "Log",
+                value: {
+                  type: "MemoryLoad",
+                  addr: getVariableAddr(
+                    `${statement.name}_0`,
+                    wasmRoot.functions["main"]
+                  ),
+                  varType: variableTypeToWasmType[statement.variableType],
+                  numOfBytes: variableSizes[statement.variableType],
+                },
+              },
+              wasmRoot.functions["main"]
+            );
           }
         }
       }

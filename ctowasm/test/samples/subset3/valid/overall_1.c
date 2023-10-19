@@ -19,6 +19,5 @@ int pow(int base, int exp) {
 }
 
 int main() {
-  int x = 2;
-  x = pow(2, 10);
+  int x = pow(2, 10);
 } 

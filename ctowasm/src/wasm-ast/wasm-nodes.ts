@@ -151,24 +151,26 @@ export interface WasmGlobalSet extends WasmAstNode {
   type: "GlobalSet";
   name: string;
   value: WasmExpression;
+  preStatements?: (WasmStatement | WasmExpression)[]; 
 }
 
 export interface WasmLocalSet extends WasmAstNode {
   type: "LocalSet";
   name: string;
   value: WasmExpression;
+  preStatements?: (WasmStatement | WasmExpression)[]; 
 }
 
 export interface WasmLocalGet extends WasmAstNode {
   type: "LocalGet";
   name: string;
-  preStatements?: (WasmStatement | WasmExpression)[]; // any statements to run before a local get
+  preStatements?: (WasmStatement | WasmExpression)[];  
 }
 
 export interface WasmGlobalGet extends WasmAstNode {
   type: "GlobalGet";
   name: string;
-  preStatements?: (WasmStatement | WasmExpression)[];
+  preStatements?: (WasmStatement | WasmExpression)[];  
 }
 
 type memoryVariableByteSize = 1 | 4 | 8;
@@ -176,9 +178,9 @@ type memoryVariableByteSize = 1 | 4 | 8;
 export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
-  preStatements?: (WasmStatement | WasmExpression)[]; 
   varType: WasmType; // wasm var type for the store instruction
   numOfBytes: memoryVariableByteSize // number of bytes to store 
+  preStatements?: (WasmStatement | WasmExpression)[]; 
 }
 
 export interface WasmMemoryStore extends WasmAstNode {
@@ -187,6 +189,7 @@ export interface WasmMemoryStore extends WasmAstNode {
   value: WasmExpression;
   varType: WasmType; // wasm var type for the store instruction
   numOfBytes: memoryVariableByteSize // number of bytes to store 
+  preStatements?: (WasmStatement | WasmExpression)[]; 
 }
 
 export interface WasmMemoryGrow extends WasmAstNode {

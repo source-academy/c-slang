@@ -31,6 +31,7 @@ import {
   WasmOrExpression,
   WasmReturnStatement,
   WasmSelectStatement,
+  WasmStatement,
   WasmType,
 } from "wasm-ast/wasm-nodes";
 
@@ -124,6 +125,15 @@ function getBinaryInstruction(operator: BinaryOperator | ComparisonOperator) {
   }
 }
 
+function getPreStatementsStr(preStatements?: (WasmStatement | WasmExpression)[]) {
+  const s = preStatements
+  ? preStatements.map(
+      (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
+    )
+  : [];
+  return s.length > 0 ? " " + s.join(" ") : ""
+}
+
 /**
  * Given a wat Expression node, generates the string version of that expression, with brackets.
  */
@@ -138,23 +148,13 @@ function generateExprStr(expr: WasmExpression): string {
     return `(${e.variableType}.const ${e.value.toString()})`;
   } else if (expr.type === "LocalGet") {
     const e = expr as WasmLocalGet;
-    const preStatements = e.preStatements
-      ? e.preStatements.map(
-          (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
-        )
-      : [];
     return `(local.get $${e.name}${
-      preStatements.length > 0 ? " " + preStatements.join(" ") : ""
+      getPreStatementsStr(e.preStatements)
     })`;
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet;
-    const preStatements = e.preStatements
-      ? e.preStatements.map(
-          (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
-        )
-      : [];
     return `(global.get $${e.name}${
-      preStatements.length > 0 ? " " + preStatements.join(" ") : ""
+      getPreStatementsStr(e.preStatements)
     })`;
   } else if (
     expr.type === "ArithmeticExpression" ||
@@ -192,18 +192,10 @@ function generateExprStr(expr: WasmExpression): string {
     return "(memory.size)";
   } else if (expr.type === "MemoryLoad") {
     const n = expr as WasmMemoryLoad;
-
-    const preStatements = n.preStatements
-      ? n.preStatements.map(
-          (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
-        )
-      : [];
     return `(${getWasmMemoryLoadInstruction(
       n.varType,
       n.numOfBytes
-    )} ${generateExprStr(expr.addr)}${
-      preStatements.length > 0 ? " " + preStatements.join(" ") : ""
-    })`;
+    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(expr.addr)})`;
   } else if (expr.type === "MemoryStore") {
     return generateStatementStr(expr);
   } else {
@@ -222,10 +214,10 @@ function generateExprStr(expr: WasmExpression): string {
 function generateStatementStr(statement: WasmFunctionBodyLine): string {
   if (statement.type === "GlobalSet") {
     const n = statement as WasmGlobalSet;
-    return `(global.set $${n.name} ${generateExprStr(n.value)})`;
+    return `(global.set $${n.name}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.value)})`;
   } else if (statement.type === "LocalSet") {
     const n = statement as WasmLocalSet;
-    return `(local.set $${n.name} ${generateExprStr(n.value)})`;
+    return `(local.set $${n.name}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
     if (n.hasReturn) {
@@ -287,7 +279,7 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return `(${getWasmMemoryStoreInstruction(
       n.varType,
       n.numOfBytes
-    )} ${generateExprStr(n.addr)} ${generateExprStr(n.value)})`;
+    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.addr)} ${generateExprStr(n.value)})`;
   } else if (statement.type === "Log") {
     const n = statement as WasmLog;
     return `(call $log ${generateExprStr(n.value)})`
