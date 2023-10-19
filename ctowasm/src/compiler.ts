@@ -8,13 +8,25 @@ import { generateWAT } from "wat-generator";
 
 export function compile(cSourceCode: string) {
   const output = generateWAT(
-    translate(process(parser.parse(cSourceCode), cSourceCode)),
+    translate(process(parser.parse(cSourceCode), cSourceCode))
+  );
+  return output;
+}
+
+/**
+ * Generates WAT code with log statements for testing.
+ */
+export function testCompile(cSourceCode: string) {
+  const output = generateWAT(
+    translate(process(parser.parse(cSourceCode), cSourceCode), true),
+    0,
+    true
   );
   return output;
 }
 
 export function generate_C_AST(cSourceCode: string) {
-  const ast = parser.parse(cSourceCode) 
+  const ast = parser.parse(cSourceCode);
   return JSON.stringify(ast);
 }
 

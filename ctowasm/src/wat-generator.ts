@@ -22,6 +22,7 @@ import {
   WasmLocalGet,
   WasmLocalSet,
   WasmLocalTee,
+  WasmLog,
   WasmLoop,
   WasmMemoryGrow,
   WasmMemoryLoad,
@@ -287,13 +288,21 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
       n.varType,
       n.numOfBytes
     )} ${generateExprStr(n.addr)} ${generateExprStr(n.value)})`;
+  } else if (statement.type === "Log") {
+    const n = statement as WasmLog;
+    return `(call $log ${generateExprStr(n.value)})`
   }
   return null;
 }
 
-export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
+export function generateWAT(module: WasmModule, baseIndentation: number = 0, testMode?: boolean) {
   let watStr = generateLine("(module", baseIndentation);
 
+  // if in test mode, need to import the log function
+  // TODO: add logging of vars other than i32
+  if (testMode) {
+    watStr += generateLine("(import \"console\" \"log\" (func $log (param i32)))", baseIndentation + 1);
+  }
   // add the memory declaration
   watStr += generateLine(`(memory ${module.memorySize})`, baseIndentation + 1);
 

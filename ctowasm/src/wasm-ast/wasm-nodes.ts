@@ -93,7 +93,8 @@ export type WasmStatement =
   | WasmBranch
   | WasmBlock
   | WasmMemoryStore
-  | WasmMemoryGrow;
+  | WasmMemoryGrow
+  | WasmLog;
 
 // TODO: figure out if this necessary
 export type WasmExpression =
@@ -136,6 +137,14 @@ export interface WasmFunctionCallStatement extends WasmAstNode {
   name: string;
   stackFrameSetup: WasmStatement[];
   hasReturn: boolean;
+}
+
+/**
+ * A function call to the $log function. for testing purposes only.
+ */
+export interface WasmLog extends WasmAstNode {
+  type: "Log";
+  value: WasmExpression // the value to log
 }
 
 export interface WasmGlobalSet extends WasmAstNode {

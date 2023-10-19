@@ -60,7 +60,7 @@ import {
   WasmFunctionParameter,
 } from "wasm-ast/wasm-nodes";
 
-export function translate(CAstRoot: Root) {
+export function translate(CAstRoot: Root, testMode?: boolean) {
   const wasmRoot: WasmModule = {
     type: "Module",
     globals: {}, // global variables that are stored in memory
@@ -1176,7 +1176,9 @@ export function translate(CAstRoot: Root) {
     initializerValue: {
       type: "Const",
       variableType: "i32",
-      value: wasmRoot.memorySize * WASM_PAGE_SIZE - wasmRoot.functions["main"].sizeOfLocals // preallocate space for main's local variables
+      value:
+        wasmRoot.memorySize * WASM_PAGE_SIZE -
+        wasmRoot.functions["main"].sizeOfLocals, // preallocate space for main's local variables
     },
   });
   wasmRoot.globalWasmVariables.push({
@@ -1230,6 +1232,28 @@ export function translate(CAstRoot: Root) {
       const n = child as FunctionDefinition;
       for (const child of n.body.children) {
         visit(child, wasmRoot.functions[n.name]);
+      }
+    }
+  }
+
+  if (testMode) {
+    // find the main function and add the logging code for the locals
+    for (const child of CAstRoot.children) {
+      if (child.type === "FunctionDefinition" && child.name === 'main') {
+        for (const statement of child.body.children) {
+          if (statement.type === "Initialization" || statement.type === "VariableDeclaration") {
+            // add logs at end of main wasm code to log the values of these variables in order of declaration
+            addStatement({
+              type: "Log",
+              value: {
+                type: "MemoryLoad",
+                addr: getVariableAddr(`${statement.name}_0`, wasmRoot.functions["main"]),
+                varType: variableTypeToWasmType[statement.variableType],
+                numOfBytes: variableSizes[statement.variableType],
+              }
+            }, wasmRoot.functions["main"])
+          }
+        }
       }
     }
   }

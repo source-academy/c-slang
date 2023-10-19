@@ -29,6 +29,7 @@
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
     "compile": "yarn build && node cmd.js compile",
+    "test-compile": "yarn build && node cmd.js test-compile",
     "gen-c-ast": "yarn build && node cmd.js generate-c-ast",
     "gen-p-c-ast": "yarn build && node cmd.js generate-processed-c-ast",
     "gen-wat-ast": "yarn build && node cmd.js generate-wat-ast",
