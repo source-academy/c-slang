@@ -233,7 +233,19 @@ const testLog = {
       title: "Overall feature test 1 - Pow function",
       expectedCode: false,
       expectedValues: [1024] 
-    }
+    },
+    array_declaration_1: {
+      title: "Array declaration 1",
+      expectedCode: false, 
+    },
+    array_initialization_1: {
+      title: "Array initialization 1 - Initialize with inferred size from initializer list",
+      expectedCode: false, 
+    },
+    array_initialization_2: {
+      title: "Array intialization 2 - Initialize with defined size",
+      expectedCode: false, 
+    }  
   }
 };
 

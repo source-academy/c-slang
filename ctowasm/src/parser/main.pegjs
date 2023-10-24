@@ -75,13 +75,16 @@ else_block
   = "else" _* @block
 
 return_statement 
-  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}) }
-  / "return" { return generateNode("ReturnStatement") } // can also return nothing 
+  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}); }
+  / "return" { return generateNode("ReturnStatement"); } // can also return nothing 
 
 assignment
-  = variable:variable_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }) }
-    
-// returns an array of Declaration
+  = variable:variable_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }
+
+array_index_assignment
+  = arrayElement:array_element_term _* "=" _* value:expression { return generateNode("ArrayIndexAssignment", { ...arrayElement, value }); }    
+
+// returns an array of Declaration TODO: implementation not done yet
 declaration_list
 	= declaration|.., _* "," _*|
 
@@ -90,7 +93,11 @@ declaration
   / variable_declaration 
 
 variable_declaration 
-  = type:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType: type, name: name }); }
+  = array_declaration
+  / variableType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType, name, }); }
+
+array_declaration
+  = variableType:type _+ name:identifier _* "[" _* size:integer _*"]" { return generateNode("ArrayDeclaration", { variableType, name, size: parseInt(size) }); }  // match on array first as it is a more specific expression 
 
 function_declaration
   = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
@@ -102,7 +109,15 @@ function_argument_list
   = expression|.., _* "," _*|
 
 initialization
-	= type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
+  = array_initialization // match on array first as it is a more specific expression
+	/ type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
+
+array_initialization
+  = variableType:type _+ name:identifier _* "[" _* size:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: parseInt(size), elements }); }  
+  / variableType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: elements.length, elements }); }  
+
+list_initializer
+  = "{" _* @expression|.., _* "," _* | _* "}"
 
 compound_assignment
   = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
@@ -160,7 +175,12 @@ term
   / variable_term
 
 variable_term
-  = name:identifier { return generateNode("VariableExpr", { name: name }); } // for variables
+  = array_element_term
+  / name:identifier { return generateNode("VariableExpr", { name }); } // for variables
+
+// array element used as an experssion. like a[2]
+array_element_term
+  = arrayName:identifier _* "[" _* index:integer _* "]" { return generateNode("ArrayElementExpr", { arrayName, index }); } 
 
 prefix_expression
   = "--" variable:variable_term { return generateNode("PrefixExpression", { operator: "--", variable: variable }); }

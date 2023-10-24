@@ -7,6 +7,8 @@
 import {
   ArithmeticExpression,
   ArithmeticSubExpression,
+  ArrayDeclaration,
+  ArrayInitialization,
   Assignment,
   AssignmentExpression,
   Block,
@@ -45,6 +47,7 @@ function createNewScope(parentScope: Scope | null) {
     parentScope,
     functions: {},
     variables: {},
+    arrays: {}
   };
 }
 
@@ -73,11 +76,12 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node AST node that the variable is at
    */
   function checkForRedeclaration(
-    node: Declaration | Initialization | FunctionDefinition
+    node: Declaration | Initialization | FunctionDefinition | ArrayDeclaration | ArrayInitialization
   ) {
     if (
       node.name in node.scope.variables ||
-      node.name in node.scope.functions
+      node.name in node.scope.functions ||
+      node.name in node.scope.arrays
     ) {
       // check for redeclaration
       throw new ProcessingError(
@@ -202,6 +206,16 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       if (enclosingFunc) {
         enclosingFunc.sizeOfLocals += getVariableSize(n.variableType)
       }
+    } else if (node.type === "ArrayDeclaration") {
+      const n = node as ArrayDeclaration;
+      n.scope = scopeStack[scopeStack.length - 1];
+      checkForRedeclaration(n);
+      // add this new variable to the scope
+      n.scope.arrays[n.name] = {
+        type: n.variableType,
+        name: n.name,
+        size: n.size
+      };
     } else if (node.type === "Initialization") {
       const n = node as Initialization;
       n.scope = scopeStack[scopeStack.length - 1];

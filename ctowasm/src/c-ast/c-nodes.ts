@@ -27,6 +27,7 @@ export type Scope = {
   parentScope: Scope | undefined | null; // the parent scope that this scope is in
   functions: Record<string, FunctionDetails>; // mapping from name of function to object that contains information on the function
   variables: Record<string, Variable>; // mapping from name of variable to object that contains information on the variable
+  arrays: Record<string, ArrayVariable>;
 };
 
 // Contains the information of a declared function. To be stored in the scope of a ScopedParent.
@@ -41,6 +42,12 @@ export interface Variable {
   type: VariableType;
   name: string;
   isParam?: boolean; // to distinguish function parameters from regular vars
+}
+
+export interface ArrayVariable {
+  type: VariableType;
+  name: string;
+  size: number;
 }
 
 // Root represents the starting node of the AST
@@ -82,20 +89,7 @@ export interface Expression extends ScopedNode {
   variableType: VariableType // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
 }
 
-// to be expanded later to include proper expressions
-export type Expression2 =
-  | Literal
-  | FunctionCall
-  | VariableExpr
-  | ArithmeticExpression
-  | PostfixExpression
-  | PrefixExpression
-  | ConditionalExpression
-  | ComparisonExpression
-  | AssignmentExpression
-  | CompoundAssignmentExpression;
-
-export type Statement = Declaration | Initialization;
+export type Statement = Declaration | Initialization | ArrayDeclaration | ArrayInitialization;
 
 //TODO: See if literal is right
 export interface ReturnStatement extends ScopedNode {
@@ -109,6 +103,13 @@ export interface VariableExpr extends Expression {
   name: string; //name of the variable
   variableType: VariableType;
   isParam?: boolean;
+}
+
+export interface ArrayElementExpr extends Expression {
+  type: "ArrayElementExpr";
+  arrayName: string; // name of the array
+  variableType: VariableType;
+  index: number;
 }
 
 export type BinaryOperator = "+" | "-" | "*" | "/" | "%";
@@ -187,7 +188,7 @@ export interface Initialization extends ScopedNode {
 // A variable assignment
 export interface Assignment extends ScopedNode {
   type: "Assignment";
-  variable: VariableExpr;
+  variable: VariableExpr | ArrayElementExpr;
   value: Expression;
 }
 
@@ -196,7 +197,7 @@ export interface Assignment extends ScopedNode {
  */
 export interface AssignmentExpression extends Expression {
   type: "AssignmentExpression";
-  variable: VariableExpr;
+  variable: VariableExpr | ArrayElementExpr;
   value: Expression;
 }
 
@@ -239,16 +240,17 @@ type Operator = "+" | "-" | "/" | "*" | "%";
 export interface CompoundAssignment extends ScopedNode {
   type: "CompoundAssignment";
   operator: Operator;
-  variable: VariableExpr;
+  variable: VariableExpr | ArrayElementExpr;
   value: Expression;
 }
 
 export interface CompoundAssignmentExpression extends Expression {
   type: "CompoundAssignmentExpression";
   operator: Operator;
-  variable: VariableExpr;
+  variable: VariableExpr | ArrayElementExpr;
   value: Expression;
 }
+
 
 export interface IterationStatement extends ScopedNode {
   type: "DoWhileLoop" | "WhileLoop" | "ForLoop";
@@ -269,3 +271,16 @@ export interface ForLoop extends IterationStatement {
   initialization: Statement;
   update: Expression;
 }
+
+export interface ArrayDeclaration extends ScopedNode {
+  type: "ArrayDeclaration" | "ArrayInitialization";
+  name: string;
+  variableType: VariableType;
+  size: number;
+}
+
+export interface ArrayInitialization extends ArrayDeclaration {
+  type: "ArrayInitialization";
+  elements: Expression[];
+}
+
