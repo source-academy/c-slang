@@ -30,6 +30,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [10]
     },
+    var_global_1: {
+      title: "Global variable declaration, initialization & assignment 1",
+      expectedCode: false,
+      expectedValues: [20, 10]
+    }
   },
   subset2: {
     add_1: {
