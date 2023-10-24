@@ -2,8 +2,6 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
-import { functionStackFrameTeardownStatements } from "constant";
-
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
@@ -14,6 +12,7 @@ import {
   WasmComparisonExpression,
   WasmConst,
   WasmExpression,
+  WasmExpressionWithPostStatements,
   WasmFunctionBodyLine,
   WasmFunctionCall,
   WasmFunctionCallStatement,
@@ -90,9 +89,16 @@ function generateArgString(exprs: WasmExpression[]) {
   return argsStr.trim();
 }
 
-const stackFrameTeardownStatements = functionStackFrameTeardownStatements
-  .map((s) => generateStatementStr(s))
-  .join(" ");
+/**
+ * Given an array of WASM statement AST nodes, returns a list of WAT statements.
+ */
+function generateStatementsList(
+  statements: (WasmStatement | WasmExpression)[]
+) {
+  return statements
+    .map((s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression))
+    .join(" ");
+}
 
 /**
  * Returns the correct WAT binary instruction, given a binary operator.
@@ -142,9 +148,16 @@ function getPreStatementsStr(
 function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const e = expr as WasmFunctionCall;
-    return `(call $${e.name} ${e.stackFrameSetup
-      .map((s) => generateStatementStr(s))
-      .join(" ")}) ${stackFrameTeardownStatements}`;
+    return `(call $${e.name} ${generateStatementsList(
+      e.stackFrameSetup
+    )}) ${generateStatementsList(e.stackFrameTearDown)}`;
+  } else if (expr.type === "ExpressionWithPostStatements") {
+    const e = expr as WasmExpressionWithPostStatements;
+    return `${generateExprStr(e.expr)}${
+      e.postStatements.length > 0
+        ? " " + generateStatementsList(e.postStatements)
+        : ""
+    }`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
     return `(${e.variableType}.const ${e.value.toString()})`;
@@ -222,15 +235,9 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
-    if (n.hasReturn) {
-      // need to drop the return of the statement from the stack
-      return `(drop (call $${n.name} ${statement.stackFrameSetup
-        .map((s) => generateStatementStr(s))
-        .join(" ")}) ${stackFrameTeardownStatements})`;
-    }
-    return `(call $${n.name} ${statement.stackFrameSetup
-      .map((s) => generateStatementStr(s))
-      .join(" ")}) ${stackFrameTeardownStatements}`;
+    return `(call $${n.name} ${generateStatementsList(
+      n.stackFrameSetup
+    )}) ${generateStatementsList(n.stackFrameTearDown)}`;
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||
@@ -251,8 +258,7 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
         : ""
     })`;
   } else if (statement.type === "ReturnStatement") {
-    const n = statement as WasmReturnStatement;
-    return `(return ${generateExprStr(n.value)})`;
+    return `(return)`;
   } else if (statement.type === "Loop") {
     const n = statement as WasmLoop;
     return `(loop $${n.label}${
@@ -323,10 +329,6 @@ export function generateWAT(
   for (const functionName of Object.keys(module.functions)) {
     const func = module.functions[functionName];
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);
-    // write the result type
-    if (func.return) {
-      watStr += generateLine(`(result ${func.return})`, baseIndentation + 2);
-    }
     for (const statement of func.body) {
       watStr += generateLine(
         generateStatementStr(statement),

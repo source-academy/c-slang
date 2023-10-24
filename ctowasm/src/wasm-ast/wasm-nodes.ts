@@ -80,7 +80,6 @@ export interface WasmFunction extends WasmAstNode {
   blockCount: number; // same as loopCount, but for WasmBlocks
   scopes: Scopes;
   body: WasmFunctionBodyLine[];
-  return: WasmType | null;
   bpOffset: number; // current offset from base pointer, initially 0
 }
 
@@ -112,7 +111,8 @@ export type WasmExpression =
   | WasmComparisonExpression
   | WasmLocalTee
   | WasmMemoryLoad
-  | WasmMemorySize;
+  | WasmMemorySize
+  | WasmExpressionWithPostStatements;
 
 /**
  * Tee is an assignment expression that loads the assigned value back onto stack
@@ -125,20 +125,20 @@ export interface WasmLocalTee {
 
 export interface WasmReturnStatement {
   type: "ReturnStatement";
-  value: WasmExpression;
 }
 
 export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
   name: string;
   stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
+  stackFrameTearDown: (WasmStatement | WasmMemoryLoad)[]; // statements teardown the stack frame
 }
 
 export interface WasmFunctionCallStatement extends WasmAstNode {
   type: "FunctionCallStatement";
   name: string;
-  stackFrameSetup: WasmStatement[];
-  hasReturn: boolean;
+  stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
+  stackFrameTearDown: (WasmStatement | WasmMemoryLoad)[]; // statements teardown the stack frame
 }
 
 /**
@@ -175,13 +175,13 @@ export interface WasmGlobalGet extends WasmAstNode {
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
-type memoryVariableByteSize = 1 | 4 | 8;
+export type MemoryVariableByteSize = 1 | 4 | 8;
 
 export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
   varType: WasmType; // wasm var type for the store instruction
-  numOfBytes: memoryVariableByteSize; // number of bytes to store
+  numOfBytes: MemoryVariableByteSize; // number of bytes to store
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
@@ -190,7 +190,7 @@ export interface WasmMemoryStore extends WasmAstNode {
   addr: WasmExpression;
   value: WasmExpression;
   varType: WasmType; // wasm var type for the store instruction
-  numOfBytes: memoryVariableByteSize; // number of bytes to store
+  numOfBytes: MemoryVariableByteSize; // number of bytes to store
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
@@ -209,6 +209,13 @@ export interface WasmArithmeticExpression extends WasmAstNode {
   leftExpr: WasmExpression;
   rightExpr: WasmExpression;
   varType: WasmType; // the type of the variables that the arithmetic expression is running
+}
+
+// any expressions that have post staements to run immediately after the expression
+export interface WasmExpressionWithPostStatements extends WasmAstNode {
+  type: "ExpressionWithPostStatements";
+  expr: WasmExpression;
+  postStatements: (WasmStatement | WasmMemoryLoad)[];
 }
 
 /**

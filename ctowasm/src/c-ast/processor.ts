@@ -289,7 +289,9 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.value, enclosingFunc);
+      if (typeof n.value !== "undefined") {
+        visit(n.value, enclosingFunc);
+      }
     } else if (node.type === "ConditionalExpression") {
       const n = node as ConditionalExpression;
       n.scope = scopeStack[scopeStack.length - 1];

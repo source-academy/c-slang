@@ -127,7 +127,7 @@ export async function testFileCompilationSuccess(subset, testFileName) {
             const expectedValues = testLog[`subset${subset.toString()}`][testFileName].expectedValues.toString()
             const actualValues = programVariableValues.toString()
             if (expectedValues !== actualValues) {
-              return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\n Expected values: ${expectedValues}\nActual values: ${actualValues}`;
+              return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
             }
 
           // Test 3: checks that the translated WASM code is runnable without errors

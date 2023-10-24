@@ -75,7 +75,8 @@ else_block
   = "else" _* @block
 
 return_statement 
-  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}) } 
+  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}) }
+  / "return" { return generateNode("ReturnStatement") } // can also return nothing 
 
 assignment
   = variable:variable_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }) }

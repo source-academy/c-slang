@@ -42,6 +42,13 @@ import {
   REG_1,
   REG_2,
   getVariableSize,
+  basePointerGetNode,
+  heapPointerGetNode,
+  stackPointerGetNode,
+  getStackPointerSetNode,
+  getBasePointerSetNode,
+  getFunctionStackFrameTeardownStatements,
+  getPointerArithmeticNode,
 } from "constant";
 
 import {
@@ -58,6 +65,7 @@ import {
   WasmStatement,
   WasmType,
   WasmFunctionParameter,
+  MemoryVariableByteSize,
 } from "wasm-ast/wasm-nodes";
 
 export function translate(CAstRoot: Root, testMode?: boolean) {
@@ -206,7 +214,10 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
 
     // check that there is sufficient space for memory expansion
     const totalStackSpaceRequired =
-      WASM_ADDR_SIZE + f.sizeOfLocals + f.sizeOfParams;
+      WASM_ADDR_SIZE +
+      f.sizeOfLocals +
+      f.sizeOfParams +
+      (f.returnVariable !== null ? f.returnVariable.size : 0);
     statements.push({
       type: "SelectStatement",
       condition: {
@@ -226,10 +237,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           },
           varType: "i32",
         },
-        rightExpr: {
-          type: "GlobalGet",
-          name: HEAP_POINTER,
-        },
+        rightExpr: heapPointerGetNode,
       },
       actions: [
         // expand the memory since not enough space
@@ -281,10 +289,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
               type: "GlobalGet",
               name: REG_1,
             },
-            rightExpr: {
-              type: "GlobalGet",
-              name: STACK_POINTER,
-            },
+            rightExpr: stackPointerGetNode,
             varType: "i32",
           },
         },
@@ -298,32 +303,30 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           },
         },
         // set stack pointer to target stack pointer adddress
-        {
-          type: "GlobalSet",
-          name: STACK_POINTER,
-          value: {
+
+        getStackPointerSetNode({
+          type: "ArithmeticExpression",
+          operator: "-",
+          leftExpr: {
             type: "ArithmeticExpression",
-            operator: "-",
+            operator: "*",
             leftExpr: {
-              type: "ArithmeticExpression",
-              operator: "*",
-              leftExpr: {
-                type: "MemorySize",
-              },
-              rightExpr: {
-                type: "Const",
-                variableType: "i32",
-                value: WASM_PAGE_SIZE,
-              },
-              varType: "i32",
+              type: "MemorySize",
             },
             rightExpr: {
-              type: "GlobalGet",
-              name: REG_1,
+              type: "Const",
+              variableType: "i32",
+              value: WASM_PAGE_SIZE,
             },
             varType: "i32",
           },
-        },
+          rightExpr: {
+            type: "GlobalGet",
+            name: REG_1,
+          },
+          varType: "i32",
+        }),
+
         // set REG_1 to the last address of new memory
         {
           type: "GlobalSet",
@@ -373,10 +376,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                         type: "GlobalGet",
                         name: REG_1,
                       },
-                      rightExpr: {
-                        type: "GlobalGet",
-                        name: STACK_POINTER,
-                      },
+                      rightExpr: stackPointerGetNode,
                     },
                   },
                 },
@@ -449,70 +449,64 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       elseStatements: [],
     });
 
+    //allocate space for Return type on stack (if have)
+    if (f.returnVariable !== null) {
+      statements.push(
+        getStackPointerSetNode({
+          type: "ArithmeticExpression",
+          operator: "-",
+          varType: "i32",
+          leftExpr: stackPointerGetNode,
+          rightExpr: {
+            type: "Const",
+            variableType: "i32",
+            value: f.returnVariable.size,
+          },
+        })
+      );
+    }
+
     //allocate space for BP on stack
-    statements.push({
-      type: "GlobalSet",
-      name: STACK_POINTER,
-      value: {
+    statements.push(
+      getStackPointerSetNode({
         type: "ArithmeticExpression",
         varType: "i32",
         operator: "-",
-        leftExpr: {
-          type: "GlobalGet",
-          name: STACK_POINTER,
-        },
+        leftExpr: stackPointerGetNode,
         rightExpr: {
           type: "Const",
           variableType: "i32",
           value: WASM_ADDR_SIZE,
         },
-      },
-    });
+      })
+    );
 
     // push BP onto stack
     statements.push({
       type: "MemoryStore",
-      addr: {
-        type: "GlobalGet",
-        name: STACK_POINTER,
-      },
-      value: {
-        type: "GlobalGet",
-        name: BASE_POINTER,
-      },
+      addr: stackPointerGetNode,
+      value: basePointerGetNode,
       varType: "i32",
       numOfBytes: WASM_ADDR_SIZE,
     });
 
     // set BP to be SP
-    statements.push({
-      type: "GlobalSet",
-      name: BASE_POINTER,
-      value: {
-        type: "GlobalGet",
-        name: STACK_POINTER,
-      },
-    });
+    statements.push(getBasePointerSetNode(stackPointerGetNode));
 
     // allocate space for params and locals
-    statements.push({
-      type: "GlobalSet",
-      name: STACK_POINTER,
-      value: {
+    statements.push(
+      getStackPointerSetNode({
         type: "ArithmeticExpression",
         operator: "-",
         varType: "i32",
-        leftExpr: {
-          type: "GlobalGet",
-          name: STACK_POINTER,
-        },
+        leftExpr: stackPointerGetNode,
         rightExpr: {
           type: "Const",
           variableType: "i32",
           value: f.sizeOfLocals + f.sizeOfParams,
         },
-      },
-    });
+      })
+    );
 
     // set the values of all params
     for (const paramName of Object.keys(f.params)) {
@@ -523,10 +517,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           type: "ArithmeticExpression",
           operator: "-",
           varType: "i32",
-          leftExpr: {
-            type: "GlobalGet",
-            name: BASE_POINTER,
-          },
+          leftExpr: basePointerGetNode,
           rightExpr: {
             type: "Const",
             variableType: "i32",
@@ -584,10 +575,23 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       const n = CAstNode as ReturnStatement;
       if (enclosingFunc.name !== "main") {
         // main shouldnt have any return for wasm
+        if (typeof n.value !== "undefined") {
+          addStatement(
+            {
+              type: "MemoryStore",
+              addr: getPointerArithmeticNode(BASE_POINTER, "+", WASM_ADDR_SIZE),
+              value: evaluateExpression(n.value, enclosingFunc),
+              varType: enclosingFunc.returnVariable.varType,
+              numOfBytes: enclosingFunc.returnVariable
+                .size as MemoryVariableByteSize, // TODO: change when implement structs
+            },
+            enclosingFunc,
+            enclosingBody
+          );
+        }
         addStatement(
           {
             type: "ReturnStatement",
-            value: evaluateExpression(n.value, enclosingFunc),
           },
           enclosingFunc,
           enclosingBody
@@ -604,7 +608,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         ),
         size: getVariableSize(n.variableType),
         bpOffset: enclosingFunc.bpOffset,
-        varType: variableTypeToWasmType[n.variableType]
+        varType: variableTypeToWasmType[n.variableType],
       };
       enclosingFunc.bpOffset += getVariableSize(n.variableType); // increment bpOffset by size of the variable
       enclosingFunc.locals[v.name] = v;
@@ -630,7 +634,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         ),
         size: getVariableSize(n.variableType),
         bpOffset: enclosingFunc.bpOffset,
-        varType: variableTypeToWasmType[n.variableType]
+        varType: variableTypeToWasmType[n.variableType],
       };
       enclosingFunc.bpOffset += getVariableSize(n.variableType);
       enclosingFunc.locals[localVar.name] = localVar;
@@ -657,7 +661,10 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
             n,
             enclosingFunc
           ),
-          hasReturn: wasmRoot.functions[n.name].return !== null,
+          stackFrameTearDown: getFunctionStackFrameTeardownStatements(
+            wasmRoot.functions[n.name],
+            false
+          ),
         },
         enclosingFunc,
         enclosingBody
@@ -945,12 +952,17 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       return convertLiteralToConst(n);
     } else if (expr.type === "FunctionCall") {
       const n = expr as FunctionCall;
+      // load the return from its region in memory
+      // TODO: need to do multiple loads interspaced with stores to support structs later on
       return {
         type: "FunctionCall",
         name: n.name,
         stackFrameSetup: getFunctionCallStackFrameSetupStatements(
           n,
           enclosingFunc
+        ),
+        stackFrameTearDown: getFunctionStackFrameTeardownStatements(
+          wasmRoot.functions[n.name], true
         ),
       };
     } else if (expr.type === "VariableExpr") {
@@ -1125,7 +1137,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           size: getVariableSize(param.variableType),
           paramIndex,
           bpOffset,
-          varType: variableTypeToWasmType[param.variableType]
+          varType: variableTypeToWasmType[param.variableType],
         };
         bpOffset += getVariableSize(param.variableType);
       });
@@ -1135,21 +1147,20 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         params,
         sizeOfLocals: n.sizeOfLocals,
         sizeOfParams: n.sizeOfParameters,
-        returnVariable: n.returnType !== "void" ? {
-          type: "ReturnVariable",
-          name: `${n.name}_return`,
-          size: n.sizeOfReturn,
-          varType: variableTypeToWasmType[n.returnType]
-        } : null,
+        returnVariable:
+          n.returnType !== "void"
+            ? {
+                type: "ReturnVariable",
+                name: `${n.name}_return`,
+                size: n.sizeOfReturn,
+                varType: variableTypeToWasmType[n.returnType],
+              }
+            : null,
         loopCount: 0,
         blockCount: 0,
         locals: {},
         scopes: [new Set()],
         body: [],
-        return:
-          n.returnType === "void" || n.name === "main"
-            ? null
-            : variableTypeToWasmType[n.returnType],
         bpOffset,
       };
       wasmRoot.functions[f.name] = f;
@@ -1160,7 +1171,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         name: n.name,
         size: getVariableSize(n.variableType),
         memoryAddr: getGlobalMemoryAddr(n.variableType),
-        varType: variableTypeToWasmType[n.variableType]
+        varType: variableTypeToWasmType[n.variableType],
       };
       wasmRoot.globals[n.name] = globalVar;
     } else if (child.type === "Initialization") {
@@ -1171,7 +1182,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         size: getVariableSize(n.variableType),
         initializerValue: convertLiteralToConst(n.value as Literal),
         memoryAddr: getGlobalMemoryAddr(n.variableType),
-        varType: variableTypeToWasmType[n.variableType]
+        varType: variableTypeToWasmType[n.variableType],
       };
       wasmRoot.globals[n.name] = globalVar;
     }

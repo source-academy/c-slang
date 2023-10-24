@@ -100,7 +100,7 @@ export type Statement = Declaration | Initialization;
 //TODO: See if literal is right
 export interface ReturnStatement extends ScopedNode {
   type: "ReturnStatement";
-  value: Expression;
+  value?: Expression;
 }
 
 //TODO: Find better name to distinguish from Variable in name
