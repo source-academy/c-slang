@@ -245,7 +245,11 @@ const testLog = {
     array_initialization_2: {
       title: "Array intialization 2 - Initialize with defined size",
       expectedCode: false, 
-    }  
+    },
+    array_element_assignment_1: {
+      title: "Array element assignment 1 - Assign value to element in array",
+      expectedCode: false, 
+    }
   }
 };
 
