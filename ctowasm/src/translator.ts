@@ -33,7 +33,6 @@ import {
   Integer,
 } from "c-ast/c-nodes";
 import {
-  variableSizes,
   WASM_PAGE_SIZE,
   BASE_POINTER,
   PARAM_PREFIX,
@@ -42,6 +41,7 @@ import {
   HEAP_POINTER,
   REG_1,
   REG_2,
+  getVariableSize,
 } from "constant";
 
 import {
@@ -77,7 +77,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function getGlobalMemoryAddr(variableType: VariableType) {
     const offset = currMemoryOffset;
-    currMemoryOffset += variableSizes[variableType];
+    currMemoryOffset += getVariableSize(variableType);
     if (currMemoryOffset >= wasmRoot.memorySize * WASM_PAGE_SIZE) {
       // not enough pages, incr pages by 1
       ++wasmRoot.memorySize;
@@ -467,7 +467,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           value: WASM_ADDR_SIZE,
         },
       },
-    })
+    });
 
     // push BP onto stack
     statements.push({
@@ -602,10 +602,11 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           n.name,
           enclosingFunc.scopes.length - 1
         ),
-        size: variableSizes[n.variableType],
+        size: getVariableSize(n.variableType),
         bpOffset: enclosingFunc.bpOffset,
+        varType: variableTypeToWasmType[n.variableType]
       };
-      enclosingFunc.bpOffset += variableSizes[n.variableType]; // increment bpOffset by size of the variable
+      enclosingFunc.bpOffset += getVariableSize(n.variableType); // increment bpOffset by size of the variable
       enclosingFunc.locals[v.name] = v;
       addStatement(
         {
@@ -613,7 +614,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           addr: getVariableAddr(n.name, enclosingFunc),
           value: evaluateExpression(n.value, enclosingFunc),
           varType: variableTypeToWasmType[n.variableType],
-          numOfBytes: variableSizes[n.variableType],
+          numOfBytes: getVariableSize(n.variableType),
         },
         enclosingFunc,
         enclosingBody
@@ -627,24 +628,21 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           n.name,
           enclosingFunc.scopes.length - 1
         ),
-        size: variableSizes[n.variableType],
+        size: getVariableSize(n.variableType),
         bpOffset: enclosingFunc.bpOffset,
+        varType: variableTypeToWasmType[n.variableType]
       };
-      enclosingFunc.bpOffset += variableSizes[n.variableType];
+      enclosingFunc.bpOffset += getVariableSize(n.variableType);
       enclosingFunc.locals[localVar.name] = localVar;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
       addStatement(
         {
           type: "MemoryStore",
-          addr: getVariableAddr(wasmVariableName, enclosingFunc),
+          addr: getVariableAddr(n.variable.name, enclosingFunc),
           value: evaluateExpression(n.value, enclosingFunc),
           varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: variableSizes[n.variable.variableType],
+          numOfBytes: getVariableSize(n.variable.variableType),
         },
         enclosingFunc,
         enclosingBody
@@ -683,7 +681,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
             type: "MemoryLoad",
             addr,
             varType: variableTypeToWasmType[n.variable.variableType],
-            numOfBytes: variableSizes[n.variable.variableType],
+            numOfBytes: getVariableSize(n.variable.variableType),
           },
           rightExpr: {
             type: "Const",
@@ -693,7 +691,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           varType: varType,
         },
         varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: variableSizes[n.variable.variableType],
+        numOfBytes: getVariableSize(n.variable.variableType),
       };
       addStatement(localMemStore, enclosingFunc, enclosingBody);
     } else if (CAstNode.type === "CompoundAssignment") {
@@ -711,7 +709,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           type: "MemoryLoad",
           addr,
           varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: variableSizes[n.variable.variableType],
+          numOfBytes: getVariableSize(n.variable.variableType),
         },
         rightExpr: evaluateExpression(n.value, enclosingFunc),
       };
@@ -722,7 +720,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           addr,
           value: arithmeticExpr,
           varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: variableSizes[n.variable.variableType],
+          numOfBytes: getVariableSize(n.variable.variableType),
         },
         enclosingFunc,
         enclosingBody
@@ -963,7 +961,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         type: "MemoryLoad",
         addr: getVariableAddr(wasmVariableName, enclosingFunc),
         varType: variableTypeToWasmType[n.variableType],
-        numOfBytes: variableSizes[n.variableType],
+        numOfBytes: getVariableSize(n.variableType),
       };
     } else if (
       expr.type === "ArithmeticExpression" ||
@@ -992,7 +990,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                 type: "MemoryLoad",
                 addr,
                 varType: variableTypeToWasmType[n.variable.variableType],
-                numOfBytes: variableSizes[n.variable.variableType],
+                numOfBytes: getVariableSize(n.variable.variableType),
               },
               rightExpr: {
                 type: "Const",
@@ -1002,11 +1000,11 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
               varType: "i32",
             },
             varType: variableTypeToWasmType[n.variable.variableType],
-            numOfBytes: variableSizes[n.variable.variableType],
+            numOfBytes: getVariableSize(n.variable.variableType),
           },
         ],
         varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: variableSizes[n.variable.variableType],
+        numOfBytes: getVariableSize(n.variable.variableType),
       };
       return wasmNode;
     } else if (expr.type === "PostfixExpression") {
@@ -1026,7 +1024,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
             type: "MemoryLoad",
             addr,
             varType: variableTypeToWasmType[n.variable.variableType],
-            numOfBytes: variableSizes[n.variable.variableType],
+            numOfBytes: getVariableSize(n.variable.variableType),
           },
           rightExpr: {
             type: "Const",
@@ -1036,16 +1034,16 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           varType: "i32",
         },
         varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: variableSizes[n.variable.variableType],
+        numOfBytes: getVariableSize(n.variable.variableType),
         // load the original value of the variable onto wasm stack first
         preStatements: [
           {
             type: "MemoryLoad",
             addr,
             varType: variableTypeToWasmType[n.variable.variableType],
-            numOfBytes: variableSizes[n.variable.variableType],
+            numOfBytes: getVariableSize(n.variable.variableType),
           },
-        ]
+        ],
       };
       return wasmNode;
     } else if (expr.type === "ConditionalExpression") {
@@ -1067,11 +1065,11 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
             addr,
             value: evaluateExpression(n.value, enclosingFunc),
             varType: variableTypeToWasmType[n.variable.variableType],
-            numOfBytes: variableSizes[n.variable.variableType],
+            numOfBytes: getVariableSize(n.variable.variableType),
           },
         ],
         varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: variableSizes[n.variable.variableType],
+        numOfBytes: getVariableSize(n.variable.variableType),
       };
     } else if (expr.type === "CompoundAssignmentExpression") {
       const n = expr as CompoundAssignmentExpression;
@@ -1094,17 +1092,17 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                 type: "MemoryLoad",
                 addr,
                 varType: variableTypeToWasmType[n.variable.variableType],
-                numOfBytes: variableSizes[n.variable.variableType],
+                numOfBytes: getVariableSize(n.variable.variableType),
               },
               rightExpr: evaluateExpression(n.value, enclosingFunc),
               varType: variableTypeToWasmType[n.variable.variableType],
             },
             varType: variableTypeToWasmType[n.variable.variableType],
-            numOfBytes: variableSizes[n.variable.variableType],
+            numOfBytes: getVariableSize(n.variable.variableType),
           },
         ],
         varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: variableSizes[n.variable.variableType],
+        numOfBytes: getVariableSize(n.variable.variableType),
       };
     } else {
       console.assert(
@@ -1124,11 +1122,12 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         params[paramName] = {
           type: "FunctionParameter",
           name: paramName,
-          size: variableSizes[param.variableType],
+          size: getVariableSize(param.variableType),
           paramIndex,
           bpOffset,
+          varType: variableTypeToWasmType[param.variableType]
         };
-        bpOffset += variableSizes[param.variableType];
+        bpOffset += getVariableSize(param.variableType);
       });
       const f: WasmFunction = {
         type: "Function",
@@ -1136,6 +1135,12 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         params,
         sizeOfLocals: n.sizeOfLocals,
         sizeOfParams: n.sizeOfParameters,
+        returnVariable: n.returnType !== "void" ? {
+          type: "ReturnVariable",
+          name: `${n.name}_return`,
+          size: n.sizeOfReturn,
+          varType: variableTypeToWasmType[n.returnType]
+        } : null,
         loopCount: 0,
         blockCount: 0,
         locals: {},
@@ -1153,8 +1158,9 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       const globalVar: WasmDataSegmentVariable = {
         type: "DataSegmentVariable",
         name: n.name,
-        size: variableSizes[n.variableType],
+        size: getVariableSize(n.variableType),
         memoryAddr: getGlobalMemoryAddr(n.variableType),
+        varType: variableTypeToWasmType[n.variableType]
       };
       wasmRoot.globals[n.name] = globalVar;
     } else if (child.type === "Initialization") {
@@ -1162,9 +1168,10 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       const globalVar: WasmDataSegmentVariable = {
         type: "DataSegmentVariable",
         name: n.name,
-        size: variableSizes[n.variableType],
+        size: getVariableSize(n.variableType),
         initializerValue: convertLiteralToConst(n.value as Literal),
         memoryAddr: getGlobalMemoryAddr(n.variableType),
+        varType: variableTypeToWasmType[n.variableType]
       };
       wasmRoot.globals[n.name] = globalVar;
     }
@@ -1173,7 +1180,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
     name: STACK_POINTER,
-    variableType: "i32",
+    varType: "i32",
     initializerValue: {
       type: "Const",
       variableType: "i32",
@@ -1185,7 +1192,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
     name: BASE_POINTER,
-    variableType: "i32",
+    varType: "i32",
     initializerValue: {
       type: "Const",
       variableType: "i32",
@@ -1196,7 +1203,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
     name: HEAP_POINTER,
-    variableType: "i32",
+    varType: "i32",
     initializerValue: {
       type: "Const",
       variableType: "i32",
@@ -1207,7 +1214,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
     name: REG_1,
-    variableType: "i32",
+    varType: "i32",
     initializerValue: {
       type: "Const",
       variableType: "i32",
@@ -1218,7 +1225,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
     name: REG_2,
-    variableType: "i32",
+    varType: "i32",
     initializerValue: {
       type: "Const",
       variableType: "i32",
@@ -1257,7 +1264,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                     wasmRoot.functions["main"]
                   ),
                   varType: variableTypeToWasmType[statement.variableType],
-                  numOfBytes: variableSizes[statement.variableType],
+                  numOfBytes: getVariableSize(statement.variableType),
                 },
               },
               wasmRoot.functions["main"]

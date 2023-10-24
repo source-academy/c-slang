@@ -13,7 +13,7 @@ export interface WasmAstNode {
 export interface WasmVariable extends WasmAstNode {
   name: string; // not technically needed for wasm, but useful
   isConst?: boolean; // TODO: to support later on
-  variableType: WasmType;
+  varType: WasmType;
 }
 
 /**
@@ -22,15 +22,16 @@ export interface WasmVariable extends WasmAstNode {
 export interface WasmMemoryVariable extends WasmAstNode {
   name: string;
   size: number; // size in bytes of this variable
+  varType: WasmType; // the wasm type to use when loading/storing this variable
 }
 
 export interface WasmLocalVariable extends WasmMemoryVariable {
   type: "LocalVariable" | "FunctionParameter";
-  bpOffset: number // offset in number of bytes from base pointer
+  bpOffset: number; // offset in number of bytes from base pointer
 }
 
 export interface WasmFunctionParameter extends WasmLocalVariable {
-  type: "FunctionParameter",
+  type: "FunctionParameter";
   paramIndex: number; // index of this param in the list of params of the function
 }
 
@@ -48,7 +49,7 @@ export interface WasmDataSegmentVariable extends WasmMemoryVariable {
  */
 export interface WasmGlobalVariable extends WasmVariable {
   type: "GlobalVariable";
-  initializerValue?: WasmConst; 
+  initializerValue?: WasmConst;
 }
 
 export interface WasmConst extends WasmAstNode {
@@ -72,8 +73,9 @@ export interface WasmFunction extends WasmAstNode {
   name: string;
   params: Record<string, WasmFunctionParameter>;
   locals: Record<string, WasmLocalVariable>;
-  sizeOfLocals: number,
-  sizeOfParams: number,
+  returnVariable: WasmMemoryVariable | null; // the return of this function, null if it does not return anything
+  sizeOfLocals: number;
+  sizeOfParams: number;
   loopCount: number; // count of the loops in this function. used for giving unique label names to loops
   blockCount: number; // same as loopCount, but for WasmBlocks
   scopes: Scopes;
@@ -144,33 +146,33 @@ export interface WasmFunctionCallStatement extends WasmAstNode {
  */
 export interface WasmLog extends WasmAstNode {
   type: "Log";
-  value: WasmExpression // the value to log
+  value: WasmExpression; // the value to log
 }
 
 export interface WasmGlobalSet extends WasmAstNode {
   type: "GlobalSet";
   name: string;
   value: WasmExpression;
-  preStatements?: (WasmStatement | WasmExpression)[]; 
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmLocalSet extends WasmAstNode {
   type: "LocalSet";
   name: string;
   value: WasmExpression;
-  preStatements?: (WasmStatement | WasmExpression)[]; 
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmLocalGet extends WasmAstNode {
   type: "LocalGet";
   name: string;
-  preStatements?: (WasmStatement | WasmExpression)[];  
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmGlobalGet extends WasmAstNode {
   type: "GlobalGet";
   name: string;
-  preStatements?: (WasmStatement | WasmExpression)[];  
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 type memoryVariableByteSize = 1 | 4 | 8;
@@ -179,8 +181,8 @@ export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
   varType: WasmType; // wasm var type for the store instruction
-  numOfBytes: memoryVariableByteSize // number of bytes to store 
-  preStatements?: (WasmStatement | WasmExpression)[]; 
+  numOfBytes: memoryVariableByteSize; // number of bytes to store
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmMemoryStore extends WasmAstNode {
@@ -188,8 +190,8 @@ export interface WasmMemoryStore extends WasmAstNode {
   addr: WasmExpression;
   value: WasmExpression;
   varType: WasmType; // wasm var type for the store instruction
-  numOfBytes: memoryVariableByteSize // number of bytes to store 
-  preStatements?: (WasmStatement | WasmExpression)[]; 
+  numOfBytes: memoryVariableByteSize; // number of bytes to store
+  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmMemoryGrow extends WasmAstNode {

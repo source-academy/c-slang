@@ -216,6 +216,7 @@ export interface FunctionDefinition extends FunctionInformation, ScopedNode {
   type: "FunctionDefinition";
   body: Block;
   sizeOfLocals: number; // size of all the locals in bytes
+  sizeOfReturn: number; /// size of the return type
 }
 
 export interface FunctionCall extends Expression {

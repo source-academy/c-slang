@@ -125,13 +125,15 @@ function getBinaryInstruction(operator: BinaryOperator | ComparisonOperator) {
   }
 }
 
-function getPreStatementsStr(preStatements?: (WasmStatement | WasmExpression)[]) {
+function getPreStatementsStr(
+  preStatements?: (WasmStatement | WasmExpression)[]
+) {
   const s = preStatements
-  ? preStatements.map(
-      (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
-    )
-  : [];
-  return s.length > 0 ? " " + s.join(" ") : ""
+    ? preStatements.map(
+        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
+      )
+    : [];
+  return s.length > 0 ? " " + s.join(" ") : "";
 }
 
 /**
@@ -148,14 +150,10 @@ function generateExprStr(expr: WasmExpression): string {
     return `(${e.variableType}.const ${e.value.toString()})`;
   } else if (expr.type === "LocalGet") {
     const e = expr as WasmLocalGet;
-    return `(local.get $${e.name}${
-      getPreStatementsStr(e.preStatements)
-    })`;
+    return `(local.get $${e.name}${getPreStatementsStr(e.preStatements)})`;
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet;
-    return `(global.get $${e.name}${
-      getPreStatementsStr(e.preStatements)
-    })`;
+    return `(global.get $${e.name}${getPreStatementsStr(e.preStatements)})`;
   } else if (
     expr.type === "ArithmeticExpression" ||
     expr.type === "ComparisonExpression"
@@ -214,10 +212,14 @@ function generateExprStr(expr: WasmExpression): string {
 function generateStatementStr(statement: WasmFunctionBodyLine): string {
   if (statement.type === "GlobalSet") {
     const n = statement as WasmGlobalSet;
-    return `(global.set $${n.name}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.value)})`;
+    return `(global.set $${n.name}${getPreStatementsStr(
+      n.preStatements
+    )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "LocalSet") {
     const n = statement as WasmLocalSet;
-    return `(local.set $${n.name}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.value)})`;
+    return `(local.set $${n.name}${getPreStatementsStr(
+      n.preStatements
+    )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
     if (n.hasReturn) {
@@ -279,21 +281,30 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return `(${getWasmMemoryStoreInstruction(
       n.varType,
       n.numOfBytes
-    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.addr)} ${generateExprStr(n.value)})`;
+    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(
+      n.addr
+    )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "Log") {
     const n = statement as WasmLog;
-    return `(call $log ${generateExprStr(n.value)})`
+    return `(call $log ${generateExprStr(n.value)})`;
   }
   return null;
 }
 
-export function generateWAT(module: WasmModule, baseIndentation: number = 0, testMode?: boolean) {
+export function generateWAT(
+  module: WasmModule,
+  baseIndentation: number = 0,
+  testMode?: boolean
+) {
   let watStr = generateLine("(module", baseIndentation);
 
   // if in test mode, need to import the log function
   // TODO: add logging of vars other than i32
   if (testMode) {
-    watStr += generateLine("(import \"console\" \"log\" (func $log (param i32)))", baseIndentation + 1);
+    watStr += generateLine(
+      '(import "console" "log" (func $log (param i32)))',
+      baseIndentation + 1
+    );
   }
   // add the memory declaration
   watStr += generateLine(`(memory ${module.memorySize})`, baseIndentation + 1);
@@ -302,7 +313,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0, tes
     // add all the global variables first
     watStr += generateLine(
       `(global $${global.name} (${global.isConst ? "" : "mut"} ${
-        global.variableType
+        global.varType
       }) ${
         global.initializerValue ? generateExprStr(global.initializerValue) : ""
       })`,

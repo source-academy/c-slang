@@ -37,7 +37,7 @@ import {
   VariableExpr,
   WhileLoop,
 } from "c-ast/c-nodes";
-import { variableSizes } from "constant";
+import { getVariableSize } from "constant";
 import { ProcessingError } from "errors";
 
 function createNewScope(parentScope: Scope | null) {
@@ -107,7 +107,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       }
       s[param.name] = true;
       // add the size of the param
-      node.sizeOfParameters += variableSizes[param.variableType]
+      node.sizeOfParameters += getVariableSize(param.variableType)
       return {
         name: param.name,
         type: param.variableType,
@@ -200,7 +200,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         name: n.name,
       };
       if (enclosingFunc) {
-        enclosingFunc.sizeOfLocals += variableSizes[n.variableType]
+        enclosingFunc.sizeOfLocals += getVariableSize(n.variableType)
       }
     } else if (node.type === "Initialization") {
       const n = node as Initialization;
@@ -212,7 +212,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         name: n.name,
       };
       if (enclosingFunc) {
-        enclosingFunc.sizeOfLocals += variableSizes[n.variableType]
+        enclosingFunc.sizeOfLocals += getVariableSize(n.variableType)
       }
       visit(n.value, enclosingFunc);
     } else if (node.type === "FunctionDeclaration") {
@@ -228,6 +228,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       const n = node as FunctionDefinition;
       n.sizeOfLocals = 0;
       n.sizeOfParameters = 0;
+      n.sizeOfReturn = n.returnType !== "void" ? getVariableSize(n.returnType) : 0;
       n.scope = scopeStack[scopeStack.length - 1];
       checkForRedeclaration(n);
       const params = getFunctionParams(n);

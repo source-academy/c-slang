@@ -2,11 +2,15 @@ import { VariableType } from "c-ast/c-nodes";
 import { WasmStatement } from "wasm-ast/wasm-nodes";
 
 /**
- * Map of variable type to its size in bytes.
+ * Returns the size in bytes of a variable given its type.
  */
-export const variableSizes: Record<VariableType, 1 | 4 | 8 > = {
-  int: 4,
-  char: 1,
+export function getVariableSize(varType: VariableType) {
+  switch(varType) {
+    case ("int"):
+      return 4;
+    case ("char"):
+      return 1;
+  }
 };
 
 export const PARAM_PREFIX = "param_";
