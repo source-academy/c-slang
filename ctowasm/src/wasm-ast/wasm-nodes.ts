@@ -26,8 +26,12 @@ export interface WasmMemoryVariable extends WasmAstNode {
 }
 
 export interface WasmLocalVariable extends WasmMemoryVariable {
-  type: "LocalVariable" | "FunctionParameter";
+  type: "LocalVariable" | "FunctionParameter" | "LocalArray";
   bpOffset: number; // offset in number of bytes from base pointer
+}
+
+export interface WasmLocalArray extends WasmLocalVariable {
+  elementSize: number; // size of each element
 }
 
 export interface WasmFunctionParameter extends WasmLocalVariable {
@@ -42,6 +46,13 @@ export interface WasmDataSegmentVariable extends WasmMemoryVariable {
   type: "DataSegmentVariable";
   initializerValue?: WasmConst; // initial value to set this global value to
   memoryAddr: number; // offset from start of memory that this variable is at
+}
+
+export interface WasmDataSegmentArray extends WasmMemoryVariable {
+  type: "MemoryVariable";
+  elementSize: number; // size of elements of the array
+  memoryAddr: number;
+  initializerList?: WasmConst[];
 }
 
 /**
@@ -60,7 +71,7 @@ export interface WasmConst extends WasmAstNode {
 
 export interface WasmModule extends WasmAstNode {
   type: "Module";
-  globals: Record<string, WasmDataSegmentVariable>;
+  globals: Record<string, WasmDataSegmentVariable | WasmDataSegmentArray>;
   globalWasmVariables: WasmGlobalVariable[];
   functions: Record<string, WasmFunction>;
   memorySize: number; // number of pages of memory needed for this module
@@ -72,7 +83,7 @@ export interface WasmFunction extends WasmAstNode {
   type: "Function";
   name: string;
   params: Record<string, WasmFunctionParameter>;
-  locals: Record<string, WasmLocalVariable>;
+  locals: Record<string, WasmLocalVariable | WasmLocalArray>;
   returnVariable: WasmMemoryVariable | null; // the return of this function, null if it does not return anything
   sizeOfLocals: number;
   sizeOfParams: number;

@@ -28,7 +28,6 @@ import {
   WasmMemoryStore,
   WasmModule,
   WasmOrExpression,
-  WasmReturnStatement,
   WasmSelectStatement,
   WasmStatement,
   WasmType,

@@ -31,6 +31,9 @@ import {
   WhileLoop,
   ForLoop,
   Integer,
+  ArrayDeclaration,
+  ArrayInitialization,
+  ArrayElementExpr,
 } from "c-ast/c-nodes";
 import {
   WASM_PAGE_SIZE,
@@ -66,6 +69,7 @@ import {
   WasmType,
   WasmFunctionParameter,
   MemoryVariableByteSize,
+  WasmLocalArray,
 } from "wasm-ast/wasm-nodes";
 
 export function translate(CAstRoot: Root, testMode?: boolean) {
@@ -94,7 +98,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   }
 
   /**
-   * Returns the address to use for memory instructions for a variable,
+   * Returns the ast nodes that equal to the address to use for memory instructions for a variable,
    * depending on whether it is a local or global variable.
    */
   function getVariableAddr(
@@ -107,12 +111,13 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       wasmVariableName in enclosingFunc.locals
     ) {
       // local variable
-      let variable: WasmLocalVariable;
+      let variable: WasmLocalVariable | WasmLocalArray;
       if (wasmVariableName in enclosingFunc.params) {
         variable = enclosingFunc.params[wasmVariableName];
       } else {
         variable = enclosingFunc.locals[wasmVariableName];
       }
+
       return {
         type: "ArithmeticExpression",
         operator: "-",
@@ -136,6 +141,45 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         value: variable.memoryAddr,
       };
     }
+  }
+
+  /**
+   * Returns the ast nodes that equal to the address to use for memory instructions for a array variable.
+   */
+  function getArrayElementAddr(
+    arrayName: string,
+    elementIndex: number,
+    elementSize: number,
+    enclosingFunc: WasmFunction,
+  ): WasmExpression {
+    return {
+      type: "ArithmeticExpression",
+      operator: "+",
+      leftExpr: getVariableAddr(arrayName, enclosingFunc),
+      rightExpr: {
+        type: "Const",
+        variableType: "i32",
+        value: elementIndex * elementSize,
+      },
+      varType: "i32",
+    };
+  }
+
+  /**
+   * Returns the AST nodes representing expression to get the address of a variable or array element.
+   */
+  function getVariableOrArrayExprAddr(
+    variableExpr: VariableExpr | ArrayElementExpr,
+    enclosingFunc: WasmFunction
+  ) {
+    return variableExpr.type === "ArrayElementExpr"
+      ? getArrayElementAddr(
+          variableExpr.arrayName,
+          variableExpr.index,
+          getVariableSize(variableExpr.variableType),
+          enclosingFunc
+        )
+      : getVariableAddr(variableExpr.name, enclosingFunc);
   }
 
   /**
@@ -600,17 +644,18 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
     } else if (CAstNode.type === "Initialization") {
       const n = CAstNode as Initialization;
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
+      const variableSize = getVariableSize(n.variableType);
+      enclosingFunc.bpOffset += variableSize; // increment bpOffset by size of the variable
       const v: WasmLocalVariable = {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
           enclosingFunc.scopes.length - 1
         ),
-        size: getVariableSize(n.variableType),
+        size: variableSize,
         bpOffset: enclosingFunc.bpOffset,
         varType: variableTypeToWasmType[n.variableType],
       };
-      enclosingFunc.bpOffset += getVariableSize(n.variableType); // increment bpOffset by size of the variable
       enclosingFunc.locals[v.name] = v;
       addStatement(
         {
@@ -623,27 +668,83 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         enclosingFunc,
         enclosingBody
       );
+    } else if (CAstNode.type === "ArrayInitialization") {
+      const n = CAstNode as ArrayInitialization;
+      enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
+      const elementSize = getVariableSize(n.variableType);
+      enclosingFunc.bpOffset += n.size * elementSize;
+      const array: WasmLocalArray = {
+        type: "LocalArray",
+        name: convertVarNameToScopedVarName(
+          n.name,
+          enclosingFunc.scopes.length - 1
+        ),
+        size: n.size, // size in number of elements
+        bpOffset: enclosingFunc.bpOffset,
+        varType: variableTypeToWasmType[n.variableType],
+        elementSize,
+      };
+      
+      enclosingFunc.locals[array.name] = array;
+
+      for (let i = 0; i < n.size; ++i) {
+        addStatement(
+          {
+            type: "MemoryStore",
+            addr: getArrayElementAddr(
+              n.name,
+              i,
+              getVariableSize(n.variableType),
+              enclosingFunc
+            ),
+            value: evaluateExpression(n.elements[i], enclosingFunc),
+            varType: variableTypeToWasmType[n.variableType],
+            numOfBytes: getVariableSize(n.variableType),
+          },
+          enclosingFunc,
+          enclosingBody
+        );
+      }
     } else if (CAstNode.type === "VariableDeclaration") {
       const n = CAstNode as VariableDeclaration;
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
+      const variableSize = getVariableSize(n.variableType);
+      enclosingFunc.bpOffset += variableSize;
       const localVar: WasmLocalVariable = {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
           enclosingFunc.scopes.length - 1
         ),
-        size: getVariableSize(n.variableType),
+        size: variableSize,
         bpOffset: enclosingFunc.bpOffset,
         varType: variableTypeToWasmType[n.variableType],
       };
-      enclosingFunc.bpOffset += getVariableSize(n.variableType);
       enclosingFunc.locals[localVar.name] = localVar;
+    } else if (CAstNode.type === "ArrayDeclaration") {
+      const n = CAstNode as ArrayDeclaration;
+      enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
+      const elementSize = getVariableSize(n.variableType)
+      enclosingFunc.bpOffset += n.size * elementSize;
+      const array: WasmLocalArray = {
+        type: "LocalArray",
+        name: convertVarNameToScopedVarName(
+          n.name,
+          enclosingFunc.scopes.length - 1
+        ),
+        size: n.size, // size in number of elements
+        bpOffset: enclosingFunc.bpOffset,
+        varType: variableTypeToWasmType[n.variableType],
+        elementSize: elementSize,
+      };
+  
+      enclosingFunc.locals[array.name] = array;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
       addStatement(
         {
           type: "MemoryStore",
-          addr: getVariableAddr(n.variable.name, enclosingFunc),
+          addr: getVariableOrArrayExprAddr(n.variable, enclosingFunc),
           value: evaluateExpression(n.value, enclosingFunc),
           varType: variableTypeToWasmType[n.variable.variableType],
           numOfBytes: getVariableSize(n.variable.variableType),
@@ -675,7 +776,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
     ) {
       // handle the case where a prefix or postfix expression is used as a statement, not an expression.
       const n = CAstNode as PrefixExpression | PostfixExpression;
-      const addr = getVariableAddr(n.variable.name, enclosingFunc);
+      const addr = getVariableOrArrayExprAddr(n.variable, enclosingFunc);
       const varType = variableTypeToWasmType[n.variable.variableType];
 
       const localMemStore: WasmMemoryStore = {
@@ -703,11 +804,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       addStatement(localMemStore, enclosingFunc, enclosingBody);
     } else if (CAstNode.type === "CompoundAssignment") {
       const n = CAstNode as CompoundAssignment;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
-      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const addr = getVariableOrArrayExprAddr(n.variable, enclosingFunc);
       const arithmeticExpr: WasmArithmeticExpression = {
         type: "ArithmeticExpression",
         operator: n.operator,
@@ -962,7 +1059,8 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           enclosingFunc
         ),
         stackFrameTearDown: getFunctionStackFrameTeardownStatements(
-          wasmRoot.functions[n.name], true
+          wasmRoot.functions[n.name],
+          true
         ),
       };
     } else if (expr.type === "VariableExpr") {
@@ -983,11 +1081,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       return evaluateLeftToRightBinaryExpression(n, enclosingFunc);
     } else if (expr.type === "PrefixExpression") {
       const n: PrefixExpression = expr as PrefixExpression;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
-      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const addr = getVariableOrArrayExprAddr(n.variable, enclosingFunc);
       const wasmNode: WasmMemoryLoad = {
         type: "MemoryLoad",
         addr,
@@ -1021,11 +1115,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       return wasmNode;
     } else if (expr.type === "PostfixExpression") {
       const n: PostfixExpression = expr as PostfixExpression;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
-      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const addr = getVariableOrArrayExprAddr(n.variable, enclosingFunc);
       const wasmNode: WasmMemoryStore = {
         type: "MemoryStore",
         addr,
@@ -1063,11 +1153,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       return evaluateConditionalExpression(n, enclosingFunc);
     } else if (expr.type === "AssignmentExpression") {
       const n = expr as AssignmentExpression;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
-      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const addr = getVariableOrArrayExprAddr(n.variable, enclosingFunc);
       return {
         type: "MemoryLoad",
         addr,
@@ -1085,11 +1171,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       };
     } else if (expr.type === "CompoundAssignmentExpression") {
       const n = expr as CompoundAssignmentExpression;
-      const wasmVariableName = getWasmVariableName(
-        n.variable.name,
-        enclosingFunc
-      );
-      const addr = getVariableAddr(wasmVariableName, enclosingFunc);
+      const addr = getVariableOrArrayExprAddr(n.variable, enclosingFunc);
       return {
         type: "MemoryLoad",
         addr,
@@ -1127,10 +1209,11 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   for (const child of CAstRoot.children) {
     if (child.type === "FunctionDefinition") {
       const n = child as FunctionDefinition;
-      let bpOffset = WASM_ADDR_SIZE; // BP offset starts at the address of first param, so need account for BP pointing to the addr of old BP
+      let bpOffset = 0;
       const params: Record<string, WasmFunctionParameter> = {};
       n.parameters.forEach((param, paramIndex) => {
         const paramName = generateParamName(param.name);
+        bpOffset += getVariableSize(param.variableType);
         params[paramName] = {
           type: "FunctionParameter",
           name: paramName,
@@ -1139,7 +1222,6 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           bpOffset,
           varType: variableTypeToWasmType[param.variableType],
         };
-        bpOffset += getVariableSize(param.variableType);
       });
       const f: WasmFunction = {
         type: "Function",
@@ -1210,6 +1292,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       value: wasmRoot.memorySize * WASM_PAGE_SIZE, // BP starts at the memory boundary
     },
   });
+
   // heap segment follows immediately after data segment
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
@@ -1280,6 +1363,29 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
               },
               wasmRoot.functions["main"]
             );
+          } else if (
+            statement.type === "ArrayInitialization" ||
+            statement.type === "ArrayDeclaration"
+          ) {
+            for (let i = 0; i < statement.size; ++i) {
+              addStatement(
+                {
+                  type: "Log",
+                  value: {
+                    type: "MemoryLoad",
+                    addr: getArrayElementAddr(
+                      statement.name,
+                      i,
+                      getVariableSize(statement.variableType),
+                      wasmRoot.functions["main"]
+                    ),
+                    varType: variableTypeToWasmType[statement.variableType],
+                    numOfBytes: getVariableSize(statement.variableType),
+                  },
+                },
+                wasmRoot.functions["main"]
+              );
+            }
           }
         }
       }

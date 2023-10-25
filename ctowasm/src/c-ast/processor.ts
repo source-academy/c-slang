@@ -8,6 +8,7 @@ import {
   ArithmeticExpression,
   ArithmeticSubExpression,
   ArrayDeclaration,
+  ArrayElementExpr,
   ArrayInitialization,
   Assignment,
   AssignmentExpression,
@@ -141,6 +142,25 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     );
   }
 
+ function checkForArrayDeclaration(
+   arrayName: string,
+   scope: Scope,
+   position: Position
+ ) {
+   let curr = scope;
+   while (curr != null) {
+      if (arrayName in curr.arrays) {
+       return curr.arrays[arrayName];
+     }
+     curr = curr.parentScope;
+   }
+   throw new ProcessingError(
+     `Undeclared array: '${arrayName}' undeclared before use`,
+     sourceCode,
+     position
+   );
+ }
+
   /**
    * Checks if a given function is declared.
    */
@@ -216,6 +236,9 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         name: n.name,
         size: n.size
       };
+      if (enclosingFunc) {
+        enclosingFunc.sizeOfLocals += getVariableSize(n.variableType) * n.size
+      }
     } else if (node.type === "Initialization") {
       const n = node as Initialization;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -229,6 +252,21 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         enclosingFunc.sizeOfLocals += getVariableSize(n.variableType)
       }
       visit(n.value, enclosingFunc);
+    } else if (node.type === "ArrayInitialization") {
+      const n = node as ArrayInitialization;
+      n.scope = scopeStack[scopeStack.length - 1];
+      checkForRedeclaration(n);
+      n.scope.arrays[n.name] = {
+        type: n.variableType,
+        name: n.name,
+        size: n.size
+      };
+      if (enclosingFunc) {
+        enclosingFunc.sizeOfLocals += getVariableSize(n.variableType) * n.size
+      }
+      for (const element of n.elements) {
+        visit(element, enclosingFunc);
+      }
     } else if (node.type === "FunctionDeclaration") {
       const n = node as FunctionDeclaration;
       n.scope = scopeStack[scopeStack.length - 1];
@@ -266,7 +304,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     ) {
       const n = node as Assignment | CompoundAssignment;
       n.scope = scopeStack[scopeStack.length - 1];
-      visit(n.variable, enclosingFunc); // vist the variable being assigned
+      visit(n.variable, enclosingFunc); // visit the variable being assigned
       visit(n.value, enclosingFunc);
     } else if (node.type === "FunctionCall") {
       const n = node as FunctionCall;
@@ -283,7 +321,12 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       const v = checkForVariableDeclaration(n.name, n.scope, n.position);
       n.variableType = v.type;
-      n.isParam = v.isParam; // to know if this was a parameter being used in expression
+      n.isParam = v.isParam // to know if this was a parameter being used in expression
+    } else if (node.type === "ArrayElementExpr") {
+      const n = node as ArrayElementExpr;
+      n.scope = scopeStack[scopeStack.length - 1];
+      const v = checkForArrayDeclaration(n.arrayName, n.scope, n.position);
+      n.variableType = v.type;
     } else if (node.type === "ArithmeticExpression") {
       const n = node as ArithmeticExpression;
       n.scope = scopeStack[scopeStack.length - 1];

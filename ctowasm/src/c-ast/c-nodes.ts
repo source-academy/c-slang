@@ -152,13 +152,13 @@ export type UnaryOperator = "++" | "--";
 export interface PrefixExpression extends Expression {
   type: "PrefixExpression";
   operator: UnaryOperator;
-  variable: VariableExpr; // the variable being prefix operated on
+  variable: VariableExpr | ArrayElementExpr; // the variable being prefix operated on
 }
 
 export interface PostfixExpression extends Expression {
   type: "PostfixExpression";
   operator: UnaryOperator;
-  variable: VariableExpr;
+  variable: VariableExpr | ArrayElementExpr;
 }
 
 // For now literals are only ints TODO: need to handle other type + do overflow underflow checks of nubmers later

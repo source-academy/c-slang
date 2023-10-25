@@ -241,14 +241,17 @@ const testLog = {
     array_initialization_1: {
       title: "Array initialization 1 - Initialize with inferred size from initializer list",
       expectedCode: false, 
+      expectedValues: [1, 2, 3]
     },
     array_initialization_2: {
       title: "Array intialization 2 - Initialize with defined size",
       expectedCode: false, 
+      expectedValues: [1, 2, 3, 4, 5]
     },
     array_element_assignment_1: {
       title: "Array element assignment 1 - Assign value to element in array",
       expectedCode: false, 
+      expectedValues: [10, 2]
     }
   }
 };
