@@ -1,6 +1,9 @@
 import { VariableType } from "c-ast/c-nodes";
 import {
   MemoryVariableByteSize,
+  WasmConst,
+  WasmDataSegmentArray,
+  WasmDataSegmentVariable,
   WasmExpression,
   WasmFunction,
   WasmMemoryLoad,
@@ -152,4 +155,32 @@ export function getFunctionStackFrameTeardownStatements(
   }
 
   return statements;
+}
+
+/**
+ * Converts a given variable to byte string, for storage in data segment.
+ */
+export function convertVariableToByteStr(variable: WasmDataSegmentArray | WasmDataSegmentVariable) {
+  if (variable.type === "DataSegmentVariable") {
+    return convertWasmNumberToByteStr(variable.initializerValue)
+  }
+  // DataSegmentArray
+  let finalStr = ""
+  variable.initializerList.forEach(element => {finalStr += convertWasmNumberToByteStr(element)});
+  return finalStr;
+}
+
+export function convertWasmNumberToByteStr(num: WasmConst) {
+  const hexString = num.value.toString(16);
+  const strSplit = hexString.split("");
+  if (hexString.length % 2 == 1) {
+    const lastDigit = strSplit[strSplit.length - 1]
+    strSplit[strSplit.length - 1] = "0";
+    strSplit.push(lastDigit);
+  }
+  let finalStr = "";
+  for (let i = strSplit.length - 1; i >= 0; i = i - 2) {
+    finalStr += "\\" + strSplit[i - 1]  + strSplit[i]
+  }
+  return finalStr
 }

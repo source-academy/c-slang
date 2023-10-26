@@ -180,7 +180,7 @@ variable_term
 
 // array element used as an experssion. like a[2]
 array_element_term
-  = arrayName:identifier _* "[" _* index:integer _* "]" { return generateNode("ArrayElementExpr", { arrayName, index }); } 
+  = arrayName:identifier _* "[" _* index:expression _* "]" { return generateNode("ArrayElementExpr", { arrayName, index }); } 
 
 prefix_expression
   = "--" variable:variable_term { return generateNode("PrefixExpression", { operator: "--", variable: variable }); }

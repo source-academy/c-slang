@@ -2,6 +2,7 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
+import { convertVariableToByteStr } from "constant";
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
@@ -325,6 +326,13 @@ export function generateWAT(
       1
     );
   }
+
+  for (const globalVariableName of Object.keys(module.globals)) {
+    const globalVariable = module.globals[globalVariableName];
+    if ((globalVariable.type === "DataSegmentVariable" && typeof globalVariable.initializerValue !== "undefined") || (globalVariable.type === "DataSegmentArray" && typeof globalVariable.initializerList !== "undefined"))
+    watStr += generateLine(`(data (i32.const ${globalVariable.memoryAddr}) "${convertVariableToByteStr(globalVariable)}")`, baseIndentation + 1)
+  }
+
   for (const functionName of Object.keys(module.functions)) {
     const func = module.functions[functionName];
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);

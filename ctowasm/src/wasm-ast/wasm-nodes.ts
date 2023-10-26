@@ -49,7 +49,7 @@ export interface WasmDataSegmentVariable extends WasmMemoryVariable {
 }
 
 export interface WasmDataSegmentArray extends WasmMemoryVariable {
-  type: "MemoryVariable";
+  type: "DataSegmentArray";
   elementSize: number; // size of elements of the array
   memoryAddr: number;
   initializerList?: WasmConst[];

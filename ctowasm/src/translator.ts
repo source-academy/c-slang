@@ -87,9 +87,9 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    * Returns memory address for a global variable.
    * Increases memory size if needed.
    */
-  function getGlobalMemoryAddr(variableType: VariableType) {
+  function getGlobalMemoryAddr(variableSize: number) {
     const offset = currMemoryOffset;
-    currMemoryOffset += getVariableSize(variableType);
+    currMemoryOffset += variableSize;
     if (currMemoryOffset >= wasmRoot.memorySize * WASM_PAGE_SIZE) {
       // not enough pages, incr pages by 1
       ++wasmRoot.memorySize;
@@ -148,9 +148,37 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function getArrayElementAddr(
     arrayName: string,
+    elementIndex: Expression,
+    elementSize: number,
+    enclosingFunc: WasmFunction
+  ): WasmExpression {
+    return {
+      type: "ArithmeticExpression",
+      operator: "+",
+      leftExpr: getVariableAddr(arrayName, enclosingFunc),
+      rightExpr: {
+        type: "ArithmeticExpression",
+        operator: "*",
+        leftExpr: evaluateExpression(elementIndex, enclosingFunc),
+        rightExpr: {
+          type: "Const",
+          variableType: "i32",
+          value: elementSize
+        },
+        varType: "i32"
+      },
+      varType: "i32",
+    };
+  }
+
+  /**
+   * Returns the ast nodes that equal to the address to use for memory instructions for a array variable given a constant number as index.
+   */
+  function getArrayConstantIndexElementAddr(
+    arrayName: string,
     elementIndex: number,
     elementSize: number,
-    enclosingFunc: WasmFunction,
+    enclosingFunc: WasmFunction
   ): WasmExpression {
     return {
       type: "ArithmeticExpression",
@@ -158,10 +186,10 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       leftExpr: getVariableAddr(arrayName, enclosingFunc),
       rightExpr: {
         type: "Const",
-        variableType: "i32",
-        value: elementIndex * elementSize,
+        variableType: 'i32',
+        value: elementIndex * elementSize
       },
-      varType: "i32",
+      varType: "i32"
     };
   }
 
@@ -684,14 +712,14 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         varType: variableTypeToWasmType[n.variableType],
         elementSize,
       };
-      
+
       enclosingFunc.locals[array.name] = array;
 
       for (let i = 0; i < n.size; ++i) {
         addStatement(
           {
             type: "MemoryStore",
-            addr: getArrayElementAddr(
+            addr: getArrayConstantIndexElementAddr(
               n.name,
               i,
               getVariableSize(n.variableType),
@@ -724,7 +752,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
     } else if (CAstNode.type === "ArrayDeclaration") {
       const n = CAstNode as ArrayDeclaration;
       enclosingFunc.scopes[enclosingFunc.scopes.length - 1].add(n.name);
-      const elementSize = getVariableSize(n.variableType)
+      const elementSize = getVariableSize(n.variableType);
       enclosingFunc.bpOffset += n.size * elementSize;
       const array: WasmLocalArray = {
         type: "LocalArray",
@@ -737,7 +765,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         varType: variableTypeToWasmType[n.variableType],
         elementSize: elementSize,
       };
-  
+
       enclosingFunc.locals[array.name] = array;
     } else if (CAstNode.type === "Assignment") {
       const n = CAstNode as Assignment;
@@ -1065,11 +1093,10 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       };
     } else if (expr.type === "VariableExpr") {
       const n = expr as VariableExpr;
-      const wasmVariableName = getWasmVariableName(n.name, enclosingFunc);
       // the expression is a function parameter OR a local variable
       return {
         type: "MemoryLoad",
-        addr: getVariableAddr(wasmVariableName, enclosingFunc),
+        addr: getVariableAddr(n.name, enclosingFunc),
         varType: variableTypeToWasmType[n.variableType],
         numOfBytes: getVariableSize(n.variableType),
       };
@@ -1198,10 +1225,26 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         varType: variableTypeToWasmType[n.variable.variableType],
         numOfBytes: getVariableSize(n.variable.variableType),
       };
+    } else if (expr.type === "ArrayElementExpr") {
+      const n = expr as ArrayElementExpr;
+      // the expression is a function parameter OR a local variable
+      return {
+        type: "MemoryLoad",
+        addr: getArrayElementAddr(
+          n.arrayName,
+          n.index,
+          getVariableSize(n.variableType),
+          enclosingFunc
+        ),
+        varType: variableTypeToWasmType[n.variableType],
+        numOfBytes: getVariableSize(n.variableType),
+      };
     } else {
       console.assert(
         false,
-        `WASM TRANSLATION ERROR: Unhandled C expression node\n${expr}`
+        `WASM TRANSLATION ERROR: Unhandled C expression node\n${JSON.stringify(
+          expr
+        )}`
       );
     }
   }
@@ -1252,7 +1295,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         type: "DataSegmentVariable",
         name: n.name,
         size: getVariableSize(n.variableType),
-        memoryAddr: getGlobalMemoryAddr(n.variableType),
+        memoryAddr: getGlobalMemoryAddr(getVariableSize(n.variableType)),
         varType: variableTypeToWasmType[n.variableType],
       };
       wasmRoot.globals[n.name] = globalVar;
@@ -1263,10 +1306,39 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         name: n.name,
         size: getVariableSize(n.variableType),
         initializerValue: convertLiteralToConst(n.value as Literal),
-        memoryAddr: getGlobalMemoryAddr(n.variableType),
+        memoryAddr: getGlobalMemoryAddr(getVariableSize(n.variableType)),
         varType: variableTypeToWasmType[n.variableType],
       };
       wasmRoot.globals[n.name] = globalVar;
+    } else if (child.type === "ArrayDeclaration") {
+      const n = child as ArrayDeclaration;
+      const elementSize = getVariableSize(n.variableType);
+      const arraySize = n.size * elementSize;
+      wasmRoot.globals[n.name] = {
+        type: "DataSegmentArray",
+        name: n.name,
+        size: arraySize,
+        //TODO: setting vartype for structs will require some kind of array of vartype loads
+        varType: variableTypeToWasmType[n.variableType],
+        elementSize,
+        memoryAddr: getGlobalMemoryAddr(arraySize),
+      };
+    } else if (child.type === "ArrayInitialization") {
+      const n = child as ArrayInitialization;
+      const elementSize = getVariableSize(n.variableType);
+      const arraySize = n.size * elementSize;
+      wasmRoot.globals[n.name] = {
+        type: "DataSegmentArray",
+        name: n.name,
+        size: arraySize,
+        //TODO: setting vartype for structs will require some kind of array of vartype loads
+        varType: variableTypeToWasmType[n.variableType],
+        elementSize,
+        memoryAddr: getGlobalMemoryAddr(arraySize),
+        initializerList: n.elements.map((element) =>
+          convertLiteralToConst(element as Literal)
+        ),
+      };
     }
   }
 
@@ -1373,7 +1445,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                   type: "Log",
                   value: {
                     type: "MemoryLoad",
-                    addr: getArrayElementAddr(
+                    addr: getArrayConstantIndexElementAddr(
                       statement.name,
                       i,
                       getVariableSize(statement.variableType),

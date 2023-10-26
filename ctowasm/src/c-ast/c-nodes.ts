@@ -109,7 +109,7 @@ export interface ArrayElementExpr extends Expression {
   type: "ArrayElementExpr";
   arrayName: string; // name of the array
   variableType: VariableType;
-  index: number;
+  index: Expression;
 }
 
 export type BinaryOperator = "+" | "-" | "*" | "/" | "%";
