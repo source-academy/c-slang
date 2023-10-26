@@ -52,6 +52,8 @@ import {
   getBasePointerSetNode,
   getFunctionStackFrameTeardownStatements,
   getPointerArithmeticNode,
+  getReg1SetNode,
+  reg1GetNode,
 } from "constant";
 
 import {
@@ -562,8 +564,8 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       numOfBytes: WASM_ADDR_SIZE,
     });
 
-    // set BP to be SP
-    statements.push(getBasePointerSetNode(stackPointerGetNode));
+    // set REG_1 to be SP - use it for setting param values later. This is the BP of the new stack frame.
+    statements.push(getReg1SetNode(stackPointerGetNode));
 
     // allocate space for params and locals
     statements.push(
@@ -589,7 +591,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           type: "ArithmeticExpression",
           operator: "-",
           varType: "i32",
-          leftExpr: basePointerGetNode,
+          leftExpr: reg1GetNode,
           rightExpr: {
             type: "Const",
             variableType: "i32",
@@ -601,6 +603,9 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         numOfBytes: WASM_ADDR_SIZE,
       });
     }
+
+    // set BP to be reg 1
+    statements.push(getBasePointerSetNode(reg1GetNode));
 
     return statements;
   }

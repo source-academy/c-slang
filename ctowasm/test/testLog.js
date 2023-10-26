@@ -257,6 +257,21 @@ const testLog = {
       title: "Array global declaration & assignment 1",
       expectedCode: false, 
       expectedValues: [3, 5, 10, 20] 
+    },
+    merge_sort: {
+      title: "Overall test of array features using mergesort algorithm",
+      expectedCode: false,
+      expectedValues: [2, 2, 4, 4, 5, 6, 7, 10, 23, 199]
+    },
+    array_indexing_1: {
+      title: "Test more complicated array indexing 1",
+      expectedCode: false,
+      expectedValues: [1, 2, 0, 1]
+    },
+    recursion_test_1: {
+      title: "Recursion test 1",
+      expectedCode: false,
+      expectedValues: [2]
     }
   }
 };

@@ -42,10 +42,10 @@ block_item_list
   = block_item |.., _*|
 
 block_item
-  = _* @select_statement // select statement must come before functon call as it is more specific
+  = _* @return_statement _* statement_end // need to put return statement first, as it may be confused with keywords 
+  / _* @select_statement // select statement must come before functon call as it is more specific
   / _* @iteration_statement
 	/ _* @statement _* statement_end
-  / _* @return_statement _* statement_end
   / block
 
 statement

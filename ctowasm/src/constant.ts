@@ -48,6 +48,11 @@ export const heapPointerGetNode: WasmExpression = {
   name: HEAP_POINTER,
 };
 
+export const reg1GetNode: WasmExpression = {
+  type: "GlobalGet",
+  name: REG_1,
+};
+
 // Returns the wasm ast node for setting base pointer to the value of an expression
 export function getBasePointerSetNode(value: WasmExpression): WasmStatement {
   return {
@@ -61,6 +66,15 @@ export function getStackPointerSetNode(value: WasmExpression): WasmStatement {
   return {
     type: "GlobalSet",
     name: STACK_POINTER,
+    value,
+  };
+}
+
+// Returns the wasm ast node for setting base pointer to the value of an expression
+export function getReg1SetNode(value: WasmExpression): WasmStatement {
+  return {
+    type: "GlobalSet",
+    name: REG_1,
     value,
   };
 }
