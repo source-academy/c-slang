@@ -3,3 +3,4 @@ input
 output
 node_modules
 test/temp
+.parcel-cache
