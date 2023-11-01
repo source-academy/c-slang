@@ -58,7 +58,7 @@ export function compileAndSaveFileToWat({
   const watFilePath = path.resolve(
     TEMP_DIRECTORY,
     `subset${subset.toString()}${
-      logValues ? "/log-values" : "/"
+      logValues ? "/log-values/" : "/"
     }wat/${testFileName}.wat`
   );
   const input = fs.readFileSync(
