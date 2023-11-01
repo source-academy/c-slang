@@ -1,22 +1,40 @@
 /**
  * Compiler for C to webassembly
  */
-import parser from "parser/parser";
-import process from "c-ast/processor";
-import { translate } from "translator";
-import { generateWAT } from "wat-generator";
+import parser from "./parser/parser";
+import process from "./c-ast/processor";
+import { translate } from "./translator";
+import { generateWAT } from "./wat-generator";
+import { compileWatToWasm } from "./wat-compiler";
 
-export function compile(cSourceCode: string) {
+
+export async function compile(cSourceCode: string): Promise<Uint8Array> {
+  const output = await compileWatToWasm(generateWAT(
+    translate(process(parser.parse(cSourceCode), cSourceCode))
+  ));
+  return output;
+}
+
+export function compileToWat(cSourceCode: string) {
   const output = generateWAT(
     translate(process(parser.parse(cSourceCode), cSourceCode))
   );
   return output;
 }
 
+export async function compileWithLogStatements(cSourceCode: string): Promise<Uint8Array>  {
+  const output = await compileWatToWasm(generateWAT(
+    translate(process(parser.parse(cSourceCode), cSourceCode), true),
+    0,
+    true
+  ));
+  return output;
+}
+
 /**
  * Generates WAT code with log statements for testing.
  */
-export function testCompile(cSourceCode: string) {
+export function compileToWatWithLogStatements(cSourceCode: string) {
   const output = generateWAT(
     translate(process(parser.parse(cSourceCode), cSourceCode), true),
     0,

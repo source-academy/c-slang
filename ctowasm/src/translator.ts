@@ -34,7 +34,7 @@ import {
   ArrayDeclaration,
   ArrayInitialization,
   ArrayElementExpr,
-} from "c-ast/c-nodes";
+} from "./c-ast/c-nodes";
 import {
   WASM_PAGE_SIZE,
   BASE_POINTER,
@@ -54,7 +54,7 @@ import {
   getPointerArithmeticNode,
   getReg1SetNode,
   reg1GetNode,
-} from "constant";
+} from "./constant";
 
 import {
   WasmArithmeticExpression,
@@ -72,7 +72,7 @@ import {
   WasmFunctionParameter,
   MemoryVariableByteSize,
   WasmLocalArray,
-} from "wasm-ast/wasm-nodes";
+} from "./wasm-ast/wasm-nodes";
 
 export function translate(CAstRoot: Root, testMode?: boolean) {
   const wasmRoot: WasmModule = {

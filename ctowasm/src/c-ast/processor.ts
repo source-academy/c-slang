@@ -40,10 +40,10 @@ import {
   VariableDeclaration,
   VariableExpr,
   WhileLoop,
-} from "c-ast/c-nodes";
-import { evaluateConstantArithmeticExpression } from "c-ast/constant";
-import { getVariableSize } from "constant";
-import { ProcessingError } from "errors";
+} from "../c-ast/c-nodes";
+import { evaluateConstantArithmeticExpression } from "../c-ast/constant";
+import { getVariableSize } from "../constant";
+import { ProcessingError } from "../errors";
 
 function createNewScope(parentScope: Scope | null) {
   return {

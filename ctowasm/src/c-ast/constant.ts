@@ -1,4 +1,4 @@
-import { BinaryOperator } from "c-ast/c-nodes";
+import { BinaryOperator } from "../c-ast/c-nodes";
 
 // Evaluates the value of a <operator> b
 export function evaluateConstantArithmeticExpression(a: number, operator: BinaryOperator, b: number) {

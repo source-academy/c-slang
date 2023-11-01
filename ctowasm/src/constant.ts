@@ -1,4 +1,4 @@
-import { VariableType } from "c-ast/c-nodes";
+import { VariableType } from "./c-ast/c-nodes";
 import {
   MemoryVariableByteSize,
   WasmConst,
@@ -8,7 +8,7 @@ import {
   WasmFunction,
   WasmMemoryLoad,
   WasmStatement,
-} from "wasm-ast/wasm-nodes";
+} from "./wasm-ast/wasm-nodes";
 
 /**
  * Returns the size in bytes of a variable given its type.
