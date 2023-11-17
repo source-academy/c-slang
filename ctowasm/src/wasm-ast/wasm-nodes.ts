@@ -1,5 +1,5 @@
-import { BinaryOperator, ComparisonOperator } from "c-ast/c-nodes";
-import { Scopes } from "wasm-ast/types";
+import { BinaryOperator, ComparisonOperator } from "~/src/c-ast/c-nodes";
+import { Scopes } from "./types";
 
 /**
  * This file contains all the typescript definitions for the nodes of the wasm AST.
