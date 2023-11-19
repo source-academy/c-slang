@@ -2,7 +2,7 @@
  * This file contains all the error classes that can be thrown by the compiler.
  */
 
-import { Position } from "c-ast/c-nodes";
+import { Position } from "~/src/c-ast/c-nodes";
 
 /**
  * An error that occured in relation to the C source code during compilation.
