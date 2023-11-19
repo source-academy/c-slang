@@ -27,19 +27,22 @@ const argv = yargs(hideBin(process.argv))
   })
   .command("compile", "Compile the given input file to wasm")
   .command("compile-to-wat", "Compile the given file to WAT")
-  .command("compile-log", "Compile with the log statements for testing purposes")
+  .command(
+    "compile-log",
+    "Compile with the log statements for testing purposes",
+  )
   .command("compile-to-wat-log", "Compile to WAT with the log statements")
   .command(
     "generate-c-ast",
-    "Generate the initial C AST from parsing as a JSON file for visualisation"
+    "Generate the initial C AST from parsing as a JSON file for visualisation",
   )
   .command(
     "generate-processed-c-ast",
-    "Generate the processed C AST as a JSON file for visualisation"
+    "Generate the processed C AST as a JSON file for visualisation",
   )
   .command(
     "generate-wat-ast",
-    "Generate the WAT AST as a JSON file for visualisation"
+    "Generate the WAT AST as a JSON file for visualisation",
   )
   .demandCommand(2).argv;
 

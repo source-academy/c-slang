@@ -7,27 +7,30 @@ import { translate } from "./translator";
 import { generateWAT } from "./wat-generator";
 import { compileWatToWasm } from "./wat-compiler";
 
-
 export async function compile(cSourceCode: string): Promise<Uint8Array> {
-  const output = await compileWatToWasm(generateWAT(
-    translate(process(parser.parse(cSourceCode), cSourceCode))
-  ));
+  const output = await compileWatToWasm(
+    generateWAT(translate(process(parser.parse(cSourceCode), cSourceCode))),
+  );
   return output;
 }
 
 export function compileToWat(cSourceCode: string) {
   const output = generateWAT(
-    translate(process(parser.parse(cSourceCode), cSourceCode))
+    translate(process(parser.parse(cSourceCode), cSourceCode)),
   );
   return output;
 }
 
-export async function compileWithLogStatements(cSourceCode: string): Promise<Uint8Array>  {
-  const output = await compileWatToWasm(generateWAT(
-    translate(process(parser.parse(cSourceCode), cSourceCode), true),
-    0,
-    true
-  ));
+export async function compileWithLogStatements(
+  cSourceCode: string,
+): Promise<Uint8Array> {
+  const output = await compileWatToWasm(
+    generateWAT(
+      translate(process(parser.parse(cSourceCode), cSourceCode), true),
+      0,
+      true,
+    ),
+  );
   return output;
 }
 
@@ -38,7 +41,7 @@ export function compileToWatWithLogStatements(cSourceCode: string) {
   const output = generateWAT(
     translate(process(parser.parse(cSourceCode), cSourceCode), true),
     0,
-    true
+    true,
   );
   return output;
 }

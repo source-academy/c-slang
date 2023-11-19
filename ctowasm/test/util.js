@@ -12,8 +12,8 @@ import * as fs from "fs";
 import * as path from "path";
 import testLog from "./testLog.js";
 
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -21,7 +21,7 @@ const TEMP_DIRECTORY = path.resolve(__dirname, "temp");
 const getExpectedCodeFilePath = (subset, fileName) => {
   return path.resolve(
     __dirname,
-    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`
+    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`,
   );
 };
 
@@ -38,9 +38,9 @@ export async function compileFile({
       __dirname,
       `samples/subset${subset.toString()}/${
         testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`
+      }/${testFileName}.c`,
     ),
-    "utf-8"
+    "utf-8",
   );
 
   const output = logValues
@@ -59,16 +59,16 @@ export function compileAndSaveFileToWat({
     TEMP_DIRECTORY,
     `subset${subset.toString()}${
       logValues ? "/log-values/" : "/"
-    }wat/${testFileName}.wat`
+    }wat/${testFileName}.wat`,
   );
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
       `samples/subset${subset.toString()}/${
         testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`
+      }/${testFileName}.c`,
     ),
-    "utf-8"
+    "utf-8",
   );
 
   const output = logValues
@@ -102,14 +102,14 @@ export async function testFileCompilationSuccess(subset, testFileName) {
     ) {
       const expected = fs.readFileSync(
         getExpectedCodeFilePath(subset, testFileName),
-        "utf-8"
+        "utf-8",
       );
       if (expected === output) {
         return COMPILATION_SUCCESS;
       } else {
         return `WAT DOES NOT MATCH EXPECTED:\nexpected file: ${getExpectedCodeFilePath(
           subset,
-          testFileName
+          testFileName,
         )}\nactual file: ${watFilePath}`;
       }
     } else {

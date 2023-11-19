@@ -86,10 +86,14 @@ export interface ConditionalBlock extends ScopedNode {
 export type VariableType = "int" | "char";
 
 export interface Expression extends ScopedNode {
-  variableType: VariableType // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
+  variableType: VariableType; // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
 }
 
-export type Statement = Declaration | Initialization | ArrayDeclaration | ArrayInitialization;
+export type Statement =
+  | Declaration
+  | Initialization
+  | ArrayDeclaration
+  | ArrayInitialization;
 
 //TODO: See if literal is right
 export interface ReturnStatement extends ScopedNode {
@@ -166,7 +170,7 @@ export type Literal = Integer;
 
 export interface Integer extends Expression {
   type: "Integer";
-  variableType: "int",
+  variableType: "int";
   value: number;
 }
 
@@ -251,7 +255,6 @@ export interface CompoundAssignmentExpression extends Expression {
   value: Expression;
 }
 
-
 export interface IterationStatement extends ScopedNode {
   type: "DoWhileLoop" | "WhileLoop" | "ForLoop";
   condition: Expression;
@@ -283,4 +286,3 @@ export interface ArrayInitialization extends ArrayDeclaration {
   type: "ArrayInitialization";
   elements: Expression[];
 }
-

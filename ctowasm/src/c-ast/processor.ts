@@ -84,7 +84,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       | Initialization
       | FunctionDefinition
       | ArrayDeclaration
-      | ArrayInitialization
+      | ArrayInitialization,
   ) {
     if (
       node.name in node.scope.variables ||
@@ -95,7 +95,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       throw new ProcessingError(
         `Redeclaration error: '${node.name}' redeclared`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
   }
@@ -106,7 +106,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node
    */
   function getFunctionParams(
-    node: FunctionDeclaration | FunctionDefinition
+    node: FunctionDeclaration | FunctionDefinition,
   ): Variable[] {
     const s: Record<string, boolean> = {};
     return node.parameters.map((param) => {
@@ -114,7 +114,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         throw new ProcessingError(
           `Redeclaration of function parameter ${param.name}`,
           sourceCode,
-          node.position
+          node.position,
         );
       }
       s[param.name] = true;
@@ -133,7 +133,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function checkForVariableDeclaration(
     name: string,
     scope: Scope,
-    position: Position
+    position: Position,
   ) {
     let curr = scope;
     while (curr != null) {
@@ -145,14 +145,14 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared variable: '${name}' undeclared before use`,
       sourceCode,
-      position
+      position,
     );
   }
 
   function checkForArrayDeclaration(
     arrayName: string,
     scope: Scope,
-    position: Position
+    position: Position,
   ) {
     let curr = scope;
     while (curr != null) {
@@ -164,7 +164,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared array: '${arrayName}' undeclared before use`,
       sourceCode,
-      position
+      position,
     );
   }
 
@@ -172,7 +172,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * Checks if a given function is declared.
    */
   function checkForFunctionDeclaration(
-    node: FunctionCall | FunctionCallStatement
+    node: FunctionCall | FunctionCallStatement,
   ) {
     let curr = node.scope;
     while (curr != null) {
@@ -184,7 +184,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared function: '${node.name}' undeclared before use`,
       sourceCode,
-      node.position
+      node.position,
     );
   }
 
@@ -199,7 +199,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function visit(
     node: ScopedNode,
     enclosingFunc?: FunctionDefinition,
-    pre: ScopedNode = null
+    pre: ScopedNode = null,
   ) {
     if (node.type === "Root") {
       const n = node as Root;
@@ -270,7 +270,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
             throw new ProcessingError(
               "Intializer element of global variable is not constant",
               sourceCode,
-              node.position
+              node.position,
             );
           }
           let val = (arithmeticExpression.firstExpr as Integer).value;
@@ -280,13 +280,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
               throw new ProcessingError(
                 "Intializer element of global variable is not constant",
                 sourceCode,
-                node.position
+                node.position,
               );
             }
             val = evaluateConstantArithmeticExpression(
               val,
               operand.operator,
-              (operand.expr as Integer).value
+              (operand.expr as Integer).value,
             );
           }
           n.value = {
@@ -307,7 +307,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       };
       if (enclosingFunc) {
         enclosingFunc.sizeOfLocals += getVariableSize(n.variableType) * n.size;
-        n.elements.forEach(e => visit(e, enclosingFunc))
+        n.elements.forEach((e) => visit(e, enclosingFunc));
       } else {
         // this intialization is global. Needs to be a constant expression (assumed), which we can evaluate now
         const evaluatedElements = [];
@@ -318,7 +318,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
               throw new ProcessingError(
                 "Intializer element of global variable is not constant",
                 sourceCode,
-                node.position
+                node.position,
               );
             }
             let val = (arithmeticExpression.firstExpr as Integer).value;
@@ -328,13 +328,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
                 throw new ProcessingError(
                   "Intializer element of global variable is not constant",
                   sourceCode,
-                  node.position
+                  node.position,
                 );
               }
               val = evaluateConstantArithmeticExpression(
                 val,
                 operand.operator,
-                (operand.expr as Integer).value
+                (operand.expr as Integer).value,
               );
             }
             evaluatedElements.push({
@@ -344,12 +344,12 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
             } as Integer);
           } else if (element.type === "Integer") {
             // element is already an integer
-            evaluatedElements.push(element)
+            evaluatedElements.push(element);
           } else {
             throw new ProcessingError(
               "Intializer element of global variable is not constant",
               sourceCode,
-              node.position
+              node.position,
             );
           }
         }
@@ -382,7 +382,8 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
       params.forEach(
-        (param) => (n.scope.variables[param.name] = { ...param, isParam: true })
+        (param) =>
+          (n.scope.variables[param.name] = { ...param, isParam: true }),
       );
       // traverse function body nodes
       visit(n.body, n, n);
@@ -416,7 +417,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = scopeStack[scopeStack.length - 1];
       const v = checkForArrayDeclaration(n.arrayName, n.scope, n.position);
       n.variableType = v.type;
-      visit(n.index)
+      visit(n.index);
     } else if (node.type === "ArithmeticExpression") {
       const n = node as ArithmeticExpression;
       n.scope = scopeStack[scopeStack.length - 1];

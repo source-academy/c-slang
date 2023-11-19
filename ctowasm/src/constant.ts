@@ -85,7 +85,7 @@ export function getReg1SetNode(value: WasmExpression): WasmStatement {
 export function getPointerArithmeticNode(
   pointer: "sp" | "bp" | "hp",
   operator: "+" | "-",
-  operand: number
+  operand: number,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
@@ -105,7 +105,7 @@ export function getPointerArithmeticNode(
 
 export function getPointerIncrementNode(
   pointer: "sp" | "bp" | "hp",
-  incVal: number
+  incVal: number,
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -116,7 +116,7 @@ export function getPointerIncrementNode(
 
 export function getPointerDecrementNode(
   pointer: "sp" | "bp" | "hp",
-  decVal: number
+  decVal: number,
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -131,7 +131,7 @@ export function getPointerDecrementNode(
  */
 export function getFunctionStackFrameTeardownStatements(
   fn: WasmFunction,
-  useReturn?: boolean
+  useReturn?: boolean,
 ): (WasmStatement | WasmMemoryLoad)[] {
   const statements: (WasmStatement | WasmMemoryLoad)[] = [
     getStackPointerSetNode({
@@ -152,7 +152,7 @@ export function getFunctionStackFrameTeardownStatements(
       numOfBytes: WASM_ADDR_SIZE,
     }),
   ];
-  
+
   if (useReturn) {
     statements.push({
       type: "MemoryLoad",
@@ -164,7 +164,7 @@ export function getFunctionStackFrameTeardownStatements(
 
   if (fn.returnVariable !== null) {
     statements.push(
-      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size)
+      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size),
     );
   }
 
@@ -174,13 +174,17 @@ export function getFunctionStackFrameTeardownStatements(
 /**
  * Converts a given variable to byte string, for storage in data segment.
  */
-export function convertVariableToByteStr(variable: WasmDataSegmentArray | WasmDataSegmentVariable) {
+export function convertVariableToByteStr(
+  variable: WasmDataSegmentArray | WasmDataSegmentVariable,
+) {
   if (variable.type === "DataSegmentVariable") {
-    return convertWasmNumberToByteStr(variable.initializerValue, variable.size)
+    return convertWasmNumberToByteStr(variable.initializerValue, variable.size);
   }
   // DataSegmentArray
-  let finalStr = ""
-  variable.initializerList.forEach(element => {finalStr += convertWasmNumberToByteStr(element, variable.elementSize)});
+  let finalStr = "";
+  variable.initializerList.forEach((element) => {
+    finalStr += convertWasmNumberToByteStr(element, variable.elementSize);
+  });
   return finalStr;
 }
 
@@ -191,17 +195,17 @@ export function convertWasmNumberToByteStr(num: WasmConst, size: number) {
   const hexString = num.value.toString(16);
   const strSplit = hexString.split("");
   if (hexString.length % 2 == 1) {
-    const lastDigit = strSplit[strSplit.length - 1]
+    const lastDigit = strSplit[strSplit.length - 1];
     strSplit[strSplit.length - 1] = "0";
     strSplit.push(lastDigit);
   }
   let finalStr = "";
   for (let i = strSplit.length - 1; i >= 0; i = i - 2) {
-    finalStr += "\\" + strSplit[i - 1]  + strSplit[i]
+    finalStr += "\\" + strSplit[i - 1] + strSplit[i];
   }
-  const goalSize = size * 3
+  const goalSize = size * 3;
   while (finalStr.length < goalSize) {
-    finalStr += "\\00"
+    finalStr += "\\00";
   }
-  return finalStr
+  return finalStr;
 }

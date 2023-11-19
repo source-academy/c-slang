@@ -105,7 +105,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function getVariableAddr(
     variableName: string,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ): WasmExpression {
     const wasmVariableName = getWasmVariableName(variableName, enclosingFunc);
     if (
@@ -152,7 +152,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
     arrayName: string,
     elementIndex: Expression,
     elementSize: number,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ): WasmExpression {
     return {
       type: "ArithmeticExpression",
@@ -165,9 +165,9 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         rightExpr: {
           type: "Const",
           variableType: "i32",
-          value: elementSize
+          value: elementSize,
         },
-        varType: "i32"
+        varType: "i32",
       },
       varType: "i32",
     };
@@ -180,7 +180,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
     arrayName: string,
     elementIndex: number,
     elementSize: number,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ): WasmExpression {
     return {
       type: "ArithmeticExpression",
@@ -188,10 +188,10 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       leftExpr: getVariableAddr(arrayName, enclosingFunc),
       rightExpr: {
         type: "Const",
-        variableType: 'i32',
-        value: elementIndex * elementSize
+        variableType: "i32",
+        value: elementIndex * elementSize,
       },
-      varType: "i32"
+      varType: "i32",
     };
   }
 
@@ -200,14 +200,14 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function getVariableOrArrayExprAddr(
     variableExpr: VariableExpr | ArrayElementExpr,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ) {
     return variableExpr.type === "ArrayElementExpr"
       ? getArrayElementAddr(
           variableExpr.arrayName,
           variableExpr.index,
           getVariableSize(variableExpr.variableType),
-          enclosingFunc
+          enclosingFunc,
         )
       : getVariableAddr(variableExpr.name, enclosingFunc);
   }
@@ -254,7 +254,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function getWasmVariableName(
     originalVariableName: string,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ) {
     for (let i = enclosingFunc.scopes.length - 1; i >= 0; --i) {
       if (enclosingFunc.scopes[i].has(originalVariableName)) {
@@ -275,13 +275,13 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function getFunctionCallStackFrameSetupStatements(
     fn: FunctionCall | FunctionCallStatement,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ): WasmStatement[] {
     const f = wasmRoot.functions[fn.name];
 
     // evaluate all the arguments for function call
     const args: WasmExpression[] = fn.args.map((arg) =>
-      evaluateExpression(arg, enclosingFunc)
+      evaluateExpression(arg, enclosingFunc),
     );
 
     const statements: WasmStatement[] = [];
@@ -536,7 +536,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
             variableType: "i32",
             value: f.returnVariable.size,
           },
-        })
+        }),
       );
     }
 
@@ -552,7 +552,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           variableType: "i32",
           value: WASM_ADDR_SIZE,
         },
-      })
+      }),
     );
 
     // push BP onto stack
@@ -579,7 +579,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           variableType: "i32",
           value: f.sizeOfLocals + f.sizeOfParams,
         },
-      })
+      }),
     );
 
     // set the values of all params
@@ -622,7 +622,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   function addStatement(
     n: WasmStatement,
     enclosingFunc: WasmFunction,
-    enclosingBody?: WasmStatement[]
+    enclosingBody?: WasmStatement[],
   ) {
     if (typeof enclosingBody !== "undefined") {
       enclosingBody.push(n);
@@ -641,7 +641,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
   function visit(
     CAstNode: Node,
     enclosingFunc: WasmFunction,
-    enclosingBody?: WasmStatement[]
+    enclosingBody?: WasmStatement[],
   ) {
     if (CAstNode.type === "Block") {
       const n = CAstNode as Block;
@@ -663,7 +663,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                 .size as MemoryVariableByteSize, // TODO: change when implement structs
             },
             enclosingFunc,
-            enclosingBody
+            enclosingBody,
           );
         }
         addStatement(
@@ -671,7 +671,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
             type: "ReturnStatement",
           },
           enclosingFunc,
-          enclosingBody
+          enclosingBody,
         );
       }
     } else if (CAstNode.type === "Initialization") {
@@ -683,7 +683,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         size: variableSize,
         bpOffset: enclosingFunc.bpOffset,
@@ -699,7 +699,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           numOfBytes: getVariableSize(n.variableType),
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     } else if (CAstNode.type === "ArrayInitialization") {
       const n = CAstNode as ArrayInitialization;
@@ -710,7 +710,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         type: "LocalArray",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         size: n.size, // size in number of elements
         bpOffset: enclosingFunc.bpOffset,
@@ -728,14 +728,14 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
               n.name,
               i,
               getVariableSize(n.variableType),
-              enclosingFunc
+              enclosingFunc,
             ),
             value: evaluateExpression(n.elements[i], enclosingFunc),
             varType: variableTypeToWasmType[n.variableType],
             numOfBytes: getVariableSize(n.variableType),
           },
           enclosingFunc,
-          enclosingBody
+          enclosingBody,
         );
       }
     } else if (CAstNode.type === "VariableDeclaration") {
@@ -747,7 +747,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         type: "LocalVariable",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         size: variableSize,
         bpOffset: enclosingFunc.bpOffset,
@@ -763,7 +763,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         type: "LocalArray",
         name: convertVarNameToScopedVarName(
           n.name,
-          enclosingFunc.scopes.length - 1
+          enclosingFunc.scopes.length - 1,
         ),
         size: n.size, // size in number of elements
         bpOffset: enclosingFunc.bpOffset,
@@ -783,7 +783,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           numOfBytes: getVariableSize(n.variable.variableType),
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     } else if (CAstNode.type === "FunctionCallStatement") {
       const n = CAstNode as FunctionCallStatement;
@@ -793,15 +793,15 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           name: n.name,
           stackFrameSetup: getFunctionCallStackFrameSetupStatements(
             n,
-            enclosingFunc
+            enclosingFunc,
           ),
           stackFrameTearDown: getFunctionStackFrameTeardownStatements(
             wasmRoot.functions[n.name],
-            false
+            false,
           ),
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     } else if (
       CAstNode.type === "PrefixExpression" ||
@@ -860,7 +860,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           numOfBytes: getVariableSize(n.variable.variableType),
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     } else if (CAstNode.type === "SelectStatement") {
       const n = CAstNode as SelectStatement;
@@ -909,7 +909,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           body,
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     } else if (CAstNode.type === "WhileLoop") {
       const n = CAstNode as WhileLoop;
@@ -945,7 +945,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           ],
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     } else if (CAstNode.type === "ForLoop") {
       const n = CAstNode as ForLoop;
@@ -986,7 +986,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           ],
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     }
   }
@@ -998,7 +998,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function evaluateLeftToRightBinaryExpression(
     node: ArithmeticExpression | ComparisonExpression,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ) {
     const rootNode: any = { type: node.type };
     // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
@@ -1007,7 +1007,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       currNode.operator = node.exprs[i].operator;
       currNode.rightExpr = evaluateExpression(
         node.exprs[i].expr,
-        enclosingFunc
+        enclosingFunc,
       );
       currNode.leftExpr = { type: node.type };
       currNode = currNode.leftExpr;
@@ -1028,7 +1028,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function evaluateConditionalExpression(
     node: ConditionalExpression,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ) {
     const wasmNodeType =
       node.conditionType === "or" ? "OrExpression" : "AndExpression";
@@ -1075,7 +1075,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
    */
   function evaluateExpression(
     expr: Expression,
-    enclosingFunc: WasmFunction
+    enclosingFunc: WasmFunction,
   ): WasmExpression {
     if (expr.type === "Integer") {
       const n = expr as Integer;
@@ -1089,11 +1089,11 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         name: n.name,
         stackFrameSetup: getFunctionCallStackFrameSetupStatements(
           n,
-          enclosingFunc
+          enclosingFunc,
         ),
         stackFrameTearDown: getFunctionStackFrameTeardownStatements(
           wasmRoot.functions[n.name],
-          true
+          true,
         ),
       };
     } else if (expr.type === "VariableExpr") {
@@ -1239,7 +1239,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
           n.arrayName,
           n.index,
           getVariableSize(n.variableType),
-          enclosingFunc
+          enclosingFunc,
         ),
         varType: variableTypeToWasmType[n.variableType],
         numOfBytes: getVariableSize(n.variableType),
@@ -1248,8 +1248,8 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
       console.assert(
         false,
         `WASM TRANSLATION ERROR: Unhandled C expression node\n${JSON.stringify(
-          expr
-        )}`
+          expr,
+        )}`,
       );
     }
   }
@@ -1341,7 +1341,7 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
         elementSize,
         memoryAddr: getGlobalMemoryAddr(arraySize),
         initializerList: n.elements.map((element) =>
-          convertLiteralToConst(element as Literal)
+          convertLiteralToConst(element as Literal),
         ),
       };
     }
@@ -1432,13 +1432,13 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                   type: "MemoryLoad",
                   addr: getVariableAddr(
                     `${statement.name}_0`,
-                    wasmRoot.functions["main"]
+                    wasmRoot.functions["main"],
                   ),
                   varType: variableTypeToWasmType[statement.variableType],
                   numOfBytes: getVariableSize(statement.variableType),
                 },
               },
-              wasmRoot.functions["main"]
+              wasmRoot.functions["main"],
             );
           } else if (
             statement.type === "ArrayInitialization" ||
@@ -1454,13 +1454,13 @@ export function translate(CAstRoot: Root, testMode?: boolean) {
                       statement.name,
                       i,
                       getVariableSize(statement.variableType),
-                      wasmRoot.functions["main"]
+                      wasmRoot.functions["main"],
                     ),
                     varType: variableTypeToWasmType[statement.variableType],
                     numOfBytes: getVariableSize(statement.variableType),
                   },
                 },
-                wasmRoot.functions["main"]
+                wasmRoot.functions["main"],
               );
             }
           }
