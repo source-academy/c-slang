@@ -1,17 +1,14 @@
 import wasmModuleImports from "~src/translator/wasmModuleImports";
 import {
-  compile,
-  compileToWat,
+  compile as originalCompile,
+  compileToWat as originalCompileToWat,
   generate_C_AST,
-  generate_WAT_AST,
+  generate_WAT_AST as originalGenerate_WAT_AST,
   generate_processed_C_AST,
 } from "./compiler";
 
 export {
-  compile,
-  compileToWat,
   generate_C_AST,
-  generate_WAT_AST,
   generate_processed_C_AST,
 };
 
@@ -37,10 +34,26 @@ export function runWasm(wasm: Uint8Array, initialMemory: number) {
 }
 
 /**
+ * Compiles with standard imported functons.
+ */
+export async function compile(program: string) {
+  const { wasm } = await originalCompile(program, wasmModuleImports);
+  return wasm;
+}
+
+export function compileToWat(program: string) {
+  return originalCompileToWat(program, wasmModuleImports);
+}
+
+export function generate_WAT_AST(program: string) {
+  return originalGenerate_WAT_AST(program, wasmModuleImports);
+}
+
+/**
  * Compiles the given C program, including all default imported functions.
- * @param program
  */
 export async function compileAndRun(program: string) {
-  const { wasm, initialMemory } = await compile(program, wasmModuleImports);
+  const { wasm, initialMemory } = await originalCompile(program, wasmModuleImports);
   runWasm(wasm, initialMemory);
 }
+
