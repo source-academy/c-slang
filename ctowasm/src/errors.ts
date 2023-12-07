@@ -32,6 +32,6 @@ export class ProcessingError extends SourceCodeError {
 
 export class TranslationError extends Error {
   constructor(message: string) {
-    super(message);
+    super("TRANSLATION ERROR\n" + message);
   }
 }

@@ -3,33 +3,48 @@
  */
 import parser from "./parser/parser";
 import process from "./c-ast/processor";
-import { translate } from "./translator";
 import { generateWAT } from "./wat-generator";
-import { compileWatToWasm } from "./wat-compiler";
+import { compileWatToWasm } from "./wat-to-wasm";
+import { WasmImportedFunction } from "~src/translator/wasmModuleImports";
+import translate from "~src/translator";
 
-export async function compile(cSourceCode: string): Promise<Uint8Array> {
-  const output = await compileWatToWasm(
-    generateWAT(translate(process(parser.parse(cSourceCode), cSourceCode))),
-  );
-  return output;
+export interface CompilationResult {
+  wasm: Uint8Array
+  initialMemory: number // initial memory in pages needed for this wasm module
 }
 
+export async function compile(cSourceCode: string, wasmModuleImports?: Record<string, WasmImportedFunction>): Promise<CompilationResult> {
+  const wasmModule = translate(process(parser.parse(cSourceCode), cSourceCode), wasmModuleImports); // generates a wasm-ast
+  const initialMemory = wasmModule.memorySize // save the initial memory in pages needed for the module
+  const output = await compileWatToWasm(generateWAT(wasmModule));
+  return {
+    wasm: output,
+    initialMemory
+  }
+}
+
+// TODO: this function does NOT include handling of memory
 export function compileToWat(cSourceCode: string) {
   const output = generateWAT(
-    translate(process(parser.parse(cSourceCode), cSourceCode)),
+    translate(process(parser.parse(cSourceCode), cSourceCode))
   );
   return output;
 }
 
+/*
 export async function compileWithLogStatements(
-  cSourceCode: string,
+  cSourceCode: string
 ): Promise<Uint8Array> {
   const output = await compileWatToWasm(
     generateWAT(
-      translate(process(parser.parse(cSourceCode), cSourceCode), true),
+      translate(
+        process(parser.parse(cSourceCode), cSourceCode),
+        wasmModuleImports,
+        true
+      ),
       0,
-      true,
-    ),
+      true
+    )
   );
   return output;
 }
@@ -37,14 +52,21 @@ export async function compileWithLogStatements(
 /**
  * Generates WAT code with log statements for testing.
  */
+/*
 export function compileToWatWithLogStatements(cSourceCode: string) {
   const output = generateWAT(
-    translate(process(parser.parse(cSourceCode), cSourceCode), true),
+    translate(
+      process(parser.parse(cSourceCode), cSourceCode),
+      wasmModuleImports,
+      true
+    ),
     0,
-    true,
+    true
   );
   return output;
 }
+*/
+
 
 export function generate_C_AST(cSourceCode: string) {
   const ast = parser.parse(cSourceCode);

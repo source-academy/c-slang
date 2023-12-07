@@ -1,10 +1,9 @@
 import { BinaryOperator, ComparisonOperator } from "~/src/c-ast/c-nodes";
-import { Scopes } from "./types";
+import { Scopes, WasmType } from "./types";
 
 /**
  * This file contains all the typescript definitions for the nodes of the wasm AST.
  */
-export type WasmType = "i32" | "i64" | "f32" | "f64";
 
 export interface WasmAstNode {
   type: string;
@@ -75,6 +74,7 @@ export interface WasmModule extends WasmAstNode {
   globalWasmVariables: WasmGlobalVariable[];
   functions: Record<string, WasmFunction>;
   memorySize: number; // number of pages of memory needed for this module
+  importedFunctions: WasmFunctionImport[];
 }
 
 export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
@@ -111,6 +111,7 @@ export type WasmStatement =
 // TODO: figure out if this necessary
 export type WasmExpression =
   | WasmFunctionCall
+  | WasmRegularFunctionCall
   | WasmConst
   | WasmLocalGet
   | WasmGlobalGet
@@ -145,11 +146,29 @@ export interface WasmFunctionCall extends WasmAstNode {
   stackFrameTearDown: (WasmStatement | WasmMemoryLoad)[]; // statements teardown the stack frame
 }
 
+/**
+ * Node to represent a function call that is a typical wasm function call - not participating in the logic of the memory model.
+ */
+export interface WasmRegularFunctionCall extends WasmAstNode {
+  type: "RegularFunctionCall";
+  name: string;
+  args: WasmExpression[];
+}
+
 export interface WasmFunctionCallStatement extends WasmAstNode {
   type: "FunctionCallStatement";
   name: string;
   stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
   stackFrameTearDown: (WasmStatement | WasmMemoryLoad)[]; // statements teardown the stack frame
+}
+
+/**
+ * Node to represent a function call that is a typical wasm function call - not participating in the logic of the memory model.
+ */
+export interface WasmRegularFunctionCallStatement extends WasmAstNode {
+  type: "RegularFunctionCallStatement";
+  name: string;
+  args: WasmExpression[];
 }
 
 /**
@@ -192,7 +211,7 @@ export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
   varType: WasmType; // wasm var type for the store instruction
-  numOfBytes: MemoryVariableByteSize; // number of bytes to store
+  numOfBytes: MemoryVariableByteSize; // number of bytes to load 
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
@@ -297,4 +316,12 @@ export interface WasmBlock extends WasmAstNode {
   type: "Block";
   label: string;
   body: WasmStatement[];
+}
+
+export interface WasmFunctionImport extends WasmAstNode {
+  type: "FunctionImport";
+  importPath: string[]; // the path to this imported function e.g. ["console", "log"]
+  name: string; // name of this function within the wasm module. May not match the last index of import path!
+  params: WasmType[];
+  return: WasmType | null;
 }

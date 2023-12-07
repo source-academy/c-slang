@@ -1,3 +1,5 @@
+import { VariableType } from "~src/common/types";
+
 /**
  * This file contains the typescript interfaces for each astNode.
  */
@@ -12,13 +14,13 @@ export interface Position {
   end: Point;
 }
 
-export interface Node {
+export interface CNode {
   type: string;
   position: Position;
 }
 
 // Modified versions of Node and Parent respectively to contain scope infr
-export interface ScopedNode extends Node {
+export interface ScopedNode extends CNode {
   scope: Scope;
 }
 
@@ -82,8 +84,6 @@ export interface ConditionalBlock extends ScopedNode {
   condition: Expression;
   block: Block;
 }
-
-export type VariableType = "int" | "char";
 
 export interface Expression extends ScopedNode {
   variableType: VariableType; // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet

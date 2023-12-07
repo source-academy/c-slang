@@ -4,6 +4,7 @@
  * 1. Adding scope to each node of the AST. (to serve as an in-built symbol table with lexcial scoping)
  */
 
+import { getVariableSize } from "~src/common/utils";
 import {
   ArithmeticExpression,
   ArithmeticSubExpression,
@@ -42,8 +43,8 @@ import {
   WhileLoop,
 } from "../c-ast/c-nodes";
 import { evaluateConstantArithmeticExpression } from "../c-ast/constant";
-import { getVariableSize } from "../constant";
 import { ProcessingError } from "../errors";
+import wasmModuleImports from "~src/translator/wasmModuleImports";
 
 function createNewScope(parentScope: Scope | null) {
   return {
@@ -84,7 +85,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       | Initialization
       | FunctionDefinition
       | ArrayDeclaration
-      | ArrayInitialization,
+      | ArrayInitialization
   ) {
     if (
       node.name in node.scope.variables ||
@@ -95,7 +96,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       throw new ProcessingError(
         `Redeclaration error: '${node.name}' redeclared`,
         sourceCode,
-        node.position,
+        node.position
       );
     }
   }
@@ -106,7 +107,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * @param node
    */
   function getFunctionParams(
-    node: FunctionDeclaration | FunctionDefinition,
+    node: FunctionDeclaration | FunctionDefinition
   ): Variable[] {
     const s: Record<string, boolean> = {};
     return node.parameters.map((param) => {
@@ -114,7 +115,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
         throw new ProcessingError(
           `Redeclaration of function parameter ${param.name}`,
           sourceCode,
-          node.position,
+          node.position
         );
       }
       s[param.name] = true;
@@ -133,7 +134,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function checkForVariableDeclaration(
     name: string,
     scope: Scope,
-    position: Position,
+    position: Position
   ) {
     let curr = scope;
     while (curr != null) {
@@ -145,14 +146,14 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared variable: '${name}' undeclared before use`,
       sourceCode,
-      position,
+      position
     );
   }
 
   function checkForArrayDeclaration(
     arrayName: string,
     scope: Scope,
-    position: Position,
+    position: Position
   ) {
     let curr = scope;
     while (curr != null) {
@@ -164,7 +165,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared array: '${arrayName}' undeclared before use`,
       sourceCode,
-      position,
+      position
     );
   }
 
@@ -172,9 +173,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
    * Checks if a given function is declared.
    */
   function checkForFunctionDeclaration(
-    node: FunctionCall | FunctionCallStatement,
+    node: FunctionCall | FunctionCallStatement
   ) {
     let curr = node.scope;
+    if (node.name in wasmModuleImports) {
+      // one of the special pre-built functions
+      return;
+    }
     while (curr != null) {
       if (node.name in curr.functions) {
         return;
@@ -184,7 +189,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
     throw new ProcessingError(
       `Undeclared function: '${node.name}' undeclared before use`,
       sourceCode,
-      node.position,
+      node.position
     );
   }
 
@@ -199,7 +204,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
   function visit(
     node: ScopedNode,
     enclosingFunc?: FunctionDefinition,
-    pre: ScopedNode = null,
+    pre: ScopedNode = null
   ) {
     if (node.type === "Root") {
       const n = node as Root;
@@ -270,7 +275,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
             throw new ProcessingError(
               "Intializer element of global variable is not constant",
               sourceCode,
-              node.position,
+              node.position
             );
           }
           let val = (arithmeticExpression.firstExpr as Integer).value;
@@ -280,13 +285,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
               throw new ProcessingError(
                 "Intializer element of global variable is not constant",
                 sourceCode,
-                node.position,
+                node.position
               );
             }
             val = evaluateConstantArithmeticExpression(
               val,
               operand.operator,
-              (operand.expr as Integer).value,
+              (operand.expr as Integer).value
             );
           }
           n.value = {
@@ -318,7 +323,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
               throw new ProcessingError(
                 "Intializer element of global variable is not constant",
                 sourceCode,
-                node.position,
+                node.position
               );
             }
             let val = (arithmeticExpression.firstExpr as Integer).value;
@@ -328,13 +333,13 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
                 throw new ProcessingError(
                   "Intializer element of global variable is not constant",
                   sourceCode,
-                  node.position,
+                  node.position
                 );
               }
               val = evaluateConstantArithmeticExpression(
                 val,
                 operand.operator,
-                (operand.expr as Integer).value,
+                (operand.expr as Integer).value
               );
             }
             evaluatedElements.push({
@@ -349,7 +354,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
             throw new ProcessingError(
               "Intializer element of global variable is not constant",
               sourceCode,
-              node.position,
+              node.position
             );
           }
         }
@@ -382,8 +387,7 @@ function createScopesAndVariables(ast: Root, sourceCode: string) {
       n.scope = createNewScope(scopeStack[scopeStack.length - 1]);
       scopeStack.push(n.scope);
       params.forEach(
-        (param) =>
-          (n.scope.variables[param.name] = { ...param, isParam: true }),
+        (param) => (n.scope.variables[param.name] = { ...param, isParam: true })
       );
       // traverse function body nodes
       visit(n.body, n, n);
