@@ -39,6 +39,7 @@
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
     "compile": "node cmd.js compile",
+    "compile-run": "node cmd.js compile-run",
     "compile-wat": "yarn build && node cmd.js compile-to-wat",
     "compile-log": "yarn build && node cmd.js compile-log",
     "compile-wat-log": "yarn build && node cmd.js compile-to-wat-log",

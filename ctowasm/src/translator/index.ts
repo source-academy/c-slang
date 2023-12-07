@@ -290,15 +290,15 @@ function addImportedFunctionsToModule(wasmRoot: WasmModule, imports: Record<stri
     let bpOffset = 0;
     for (let i = 0; i < moduleImport.params.length; i++) {
       const wasmParamType = moduleImport.params[i];
+      bpOffset += wasmTypeToSize[wasmParamType];
       params[`param${i}`] = {
         type: "FunctionParameter",
-        name: `param${i}`,
+        name: `param_${i}`,
         size: wasmTypeToSize[wasmParamType],
         varType: wasmParamType,
         paramIndex: i,
         bpOffset: bpOffset,
       };
-      bpOffset += wasmTypeToSize[wasmParamType];
     }
 
     wasmRoot.functions[moduleImportName] = {
@@ -321,7 +321,7 @@ function addImportedFunctionsToModule(wasmRoot: WasmModule, imports: Record<stri
       blockCount: 0,
       bpOffset: 0,
       scopes: [],
-      body: [],
+      body: moduleImport.body
     };
   }
 

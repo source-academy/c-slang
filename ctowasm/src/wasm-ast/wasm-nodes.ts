@@ -106,12 +106,12 @@ export type WasmStatement =
   | WasmBlock
   | WasmMemoryStore
   | WasmMemoryGrow
-  | WasmLog;
+  | WasmLog
+  | WasmRegularFunctionCall;
 
 // TODO: figure out if this necessary
 export type WasmExpression =
   | WasmFunctionCall
-  | WasmRegularFunctionCall
   | WasmConst
   | WasmLocalGet
   | WasmGlobalGet

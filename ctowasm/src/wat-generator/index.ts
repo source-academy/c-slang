@@ -30,6 +30,7 @@ import {
   WasmMemoryStore,
   WasmModule,
   WasmOrExpression,
+  WasmRegularFunctionCall,
   WasmSelectStatement,
   WasmStatement,
 } from "../wasm-ast/wasm-nodes";
@@ -293,6 +294,13 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
   } else if (statement.type === "Log") {
     const n = statement as WasmLog;
     return `(call $log ${generateExprStr(n.value)})`;
+  } else if (statement.type === "RegularFunctionCall") {
+    const n = statement as WasmRegularFunctionCall;
+    return `(call $${n.name}${
+      n.args.length > 0
+        ? " " + n.args.map((arg) => generateExprStr(arg)).join(" ")
+        : ""
+    })`;
   }
   return null;
 }
@@ -325,15 +333,14 @@ export function generateWAT(
         importedFunction.importPath.length > 0
           ? importedFunction.importPath.map((str) => `"${str}"`).join(" ") + " "
           : ""
-      }(func $${importedFunction.name} ${
+      }(func $${importedFunction.name}${
         importedFunction.params.length > 0
-          ? importedFunction.params
-              .map((param) => `(param ${param})`)
-              .join(" ") + " "
+          ? " " +
+            importedFunction.params.map((param) => `(param ${param})`).join(" ")
           : ""
       }${
         importedFunction.return !== null
-          ? `(result ${importedFunction.return})`
+          ? ` (result ${importedFunction.return})`
           : ""
       }))`,
       baseIndentation + 1
