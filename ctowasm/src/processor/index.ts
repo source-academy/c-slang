@@ -41,7 +41,7 @@ import {
 } from "~src/c-ast/functions";
 import { Integer } from "~src/c-ast/literals";
 import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
-import { Scope, Variable, Position } from "~src/c-ast/types";
+import { Variable, Position, Scope } from "~src/c-ast/types";
 import {
   Initialization,
   VariableDeclaration,

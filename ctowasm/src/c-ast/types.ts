@@ -26,7 +26,7 @@ export interface FunctionDetails {
 }
 
 // Contains all variables and functions declared in a lexical scope
-export type Scope = {
+export interface Scope {
   parentScope: Scope | undefined | null; // the parent scope that this scope is in
   functions: Record<string, FunctionDetails>; // mapping from name of function to object that contains information on the function
   variables: Record<string, Variable>; // mapping from name of variable to object that contains information on the variable

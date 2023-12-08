@@ -1,5 +1,6 @@
-import { BinaryOperator, ComparisonOperator } from "~src/c-ast/root";
-import { Scopes, WasmType } from "./types";
+import { BinaryOperator } from "~src/c-ast/arithmetic";
+import { ComparisonOperator } from "~src/c-ast/boolean";
+import { WasmScopes, WasmType } from "~src/wasm-ast/types";
 
 /**
  * This file contains all the typescript definitions for the nodes of the wasm AST.
@@ -89,7 +90,7 @@ export interface WasmFunction extends WasmAstNode {
   sizeOfParams: number;
   loopCount: number; // count of the loops in this function. used for giving unique label names to loops
   blockCount: number; // same as loopCount, but for WasmBlocks
-  scopes: Scopes;
+  scopes: WasmScopes;
   body: WasmFunctionBodyLine[];
   bpOffset: number; // current offset from base pointer, initially 0
 }

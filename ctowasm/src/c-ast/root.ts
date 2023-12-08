@@ -2,10 +2,9 @@ import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDefinition, ReturnStatement, FunctionDeclaration } from "~src/c-ast/functions";
 import { IterationStatement } from "~src/c-ast/loops";
 import { SelectStatement } from "~src/c-ast/select";
-import { Position } from "~src/c-ast/types";
+import { Position, Scope } from "~src/c-ast/types";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
-import { Scope } from "~src/wasm-ast/types";
 
 export interface CNode {
   type: string;
