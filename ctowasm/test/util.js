@@ -3,10 +3,9 @@
  */
 
 import {
-  compile,
-  compileWithLogStatements,
   compileToWat,
-  compileToWatWithLogStatements,
+  compileAndRun,
+  setPrintFunction,
 } from "../build/index.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -21,59 +20,42 @@ const TEMP_DIRECTORY = path.resolve(__dirname, "temp");
 const getExpectedCodeFilePath = (subset, fileName) => {
   return path.resolve(
     __dirname,
-    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`,
+    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`
   );
 };
 
 export const COMPILATION_SUCCESS = "success";
 
-export async function compileFile({
-  subset,
-  testType,
-  testFileName,
-  logValues,
-}) {
+export async function compileAndRunFile({ subset, testType, testFileName }) {
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
       `samples/subset${subset.toString()}/${
         testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`,
+      }/${testFileName}.c`
     ),
-    "utf-8",
+    "utf-8"
   );
 
-  const output = logValues
-    ? await compileWithLogStatements(input)
-    : await compile(input);
-  return output;
+  await compileAndRun(input);
 }
 
-export function compileAndSaveFileToWat({
-  subset,
-  testType,
-  testFileName,
-  logValues,
-}) {
+export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
   const watFilePath = path.resolve(
     TEMP_DIRECTORY,
-    `subset${subset.toString()}${
-      logValues ? "/log-values/" : "/"
-    }wat/${testFileName}.wat`,
+    `subset${subset.toString()}/wat/${testFileName}.wat`
   );
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
       `samples/subset${subset.toString()}/${
         testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`,
+      }/${testFileName}.c`
     ),
-    "utf-8",
+    "utf-8"
   );
 
-  const output = logValues
-    ? compileToWatWithLogStatements(input)
-    : compileToWat(input);
+  const output = compileToWat(input);
 
   fs.mkdirSync(path.dirname(watFilePath), { recursive: true });
   fs.writeFileSync(watFilePath, output);
@@ -84,7 +66,7 @@ export function compileAndSaveFileToWat({
  * Helper function to run a test defined by the given information.
  */
 export async function testFileCompilationError(subset, testFileName) {
-  await compileFile({ subset, testType: "assertError", testFileName });
+  await compileAndRunFile({ subset, testType: "assertError", testFileName });
 }
 
 export async function testFileCompilationSuccess(subset, testFileName) {
@@ -102,79 +84,45 @@ export async function testFileCompilationSuccess(subset, testFileName) {
     ) {
       const expected = fs.readFileSync(
         getExpectedCodeFilePath(subset, testFileName),
-        "utf-8",
+        "utf-8"
       );
       if (expected === output) {
         return COMPILATION_SUCCESS;
       } else {
         return `WAT DOES NOT MATCH EXPECTED:\nexpected file: ${getExpectedCodeFilePath(
           subset,
-          testFileName,
+          testFileName
         )}\nactual file: ${watFilePath}`;
       }
     } else {
-      // Test 2: checks that the file is is compilable to WASM, with logging statements, and runs fine
-      if (
-        "expectedValues" in testLog[`subset${subset.toString()}`][testFileName]
-      ) {
+      // Test 2: checks that the file is runnable, and outputs the correct values
+      try {
+        const programVariableOutputtedInts = [];
+        // set printed ints from program using print_int to go to this array instead of console.log
+        setPrintFunction((val) => programVariableOutputtedInts.push(val));
         try {
-          // save the WAT in case needed for debugging
-          compileAndSaveFileToWat({
-            subset,
-            testType: "assertCorrectness",
-            testFileName,
-            logValues: true,
-          });
-        } catch (e) {
-          return "COMPILATION WITH LOG TO WAT ERROR:\n" + e;
-        }
-
-        try {
-          // recompile file with the logging statements
-          const wasmBinary = await compileFile({
-            subset,
-            testType: "assertCorrectness",
-            testFileName,
-            logValues: true,
-          });
-
-          const programVariableValues = [];
-          function log(value) {
-            programVariableValues.push(value);
-          }
-          try {
-            // if there is a expectedValues for variables in the file, check that they are equal
-            await WebAssembly.instantiate(wasmBinary, { console: { log } });
-            const expectedValues =
-              testLog[`subset${subset.toString()}`][
-                testFileName
-              ].expectedValues.toString();
-            const actualValues = programVariableValues.toString();
-            if (expectedValues !== actualValues) {
-              return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
-            }
-          } catch (e) {
-            return "WASM EXECUTION ERROR:\n" + e;
-          }
-        } catch (e) {
-          return "COMPILATION WITH LOG TO WASM ERROR:\n" + e;
-        }
-      } else {
-        // if no expected values to match against, simply try running the file
-        try {
-          const wasmBinary = await compileFile({
+          // if there is a expectedValues for variables in the file, check that they are equal
+          await compileAndRunFile({
             subset,
             testType: "assertCorrectness",
             testFileName,
           });
-          await WebAssembly.instantiate(wasmBinary, {});
-          try {
-          } catch (e) {
-            return "WASM EXECUTION ERROR:\n" + e;
+          const expectedValues =
+            "expectedValues" in
+            testLog[`subset${subset.toString()}`][testFileName]
+              ? testLog[`subset${subset.toString()}`][
+                  testFileName
+                ].expectedValues.toString()
+              : [].toString();
+          const actualValues = programVariableOutputtedInts.toString();
+          if (expectedValues !== actualValues) {
+            return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
           }
         } catch (e) {
-          return "COMPILATION TO WASM ERROR:\n" + e;
+          return "WASM EXECUTION ERROR:\n" + e;
         }
+      } catch (e) {
+        return "COMPILATION TO WASM ERROR:\n" + e;
       }
     }
   } catch (e) {

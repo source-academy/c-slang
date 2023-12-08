@@ -30,11 +30,6 @@ const argv = yargs(hideBin(process.argv))
   .command("compile-run", "Compile and run the given input file")
   .command("compile-to-wat", "Compile the given file to WAT")
   .command(
-    "compile-log",
-    "Compile with the log statements for testing purposes"
-  )
-  .command("compile-to-wat-log", "Compile to WAT with the log statements")
-  .command(
     "generate-c-ast",
     "Generate the initial C AST from parsing as a JSON file for visualisation"
   )
@@ -72,7 +67,6 @@ if (argv._[0] === "compile-run") {
         : path.resolve("output/a.wasm");
       output = await compile(input);
       break;
-
     case "compile-to-wat":
       outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
       output = compileToWat(input);
@@ -94,18 +88,6 @@ if (argv._[0] === "compile-run") {
         ? path.resolve(argv.o)
         : path.resolve("output/wat-ast.json");
       output = generate_WAT_AST(input);
-      break;
-    case "compile-log":
-      outputFile = argv.o
-        ? path.resolve(argv.o)
-        : path.resolve("output/a-log.wasm");
-      output = await compileWithLogStatements(input);
-      break;
-    case "compile-to-wat-log":
-      outputFile = argv.o
-        ? path.resolve(argv.o)
-        : path.resolve("output/a-log.wat");
-      output = compileToWatWithLogStatements(input);
       break;
   }
   // create the output directory if output file path provided

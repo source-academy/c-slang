@@ -41,8 +41,6 @@
     "compile": "node cmd.js compile",
     "compile-run": "node cmd.js compile-run",
     "compile-wat": "yarn build && node cmd.js compile-to-wat",
-    "compile-log": "yarn build && node cmd.js compile-log",
-    "compile-wat-log": "yarn build && node cmd.js compile-to-wat-log",
     "gen-c-ast": "yarn build && node cmd.js generate-c-ast",
     "gen-p-c-ast": "yarn build && node cmd.js generate-processed-c-ast",
     "gen-wat-ast": "yarn build && node cmd.js generate-wat-ast",

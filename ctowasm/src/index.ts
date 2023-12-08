@@ -20,7 +20,7 @@ export function setPrintFunction(printFunc: (str: string) => void) {
   print = printFunc;
 }
 
-export function runWasm(wasm: Uint8Array, initialMemory: number) {
+export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   const memory = new WebAssembly.Memory({
     initial: initialMemory
   })
@@ -30,7 +30,7 @@ export function runWasm(wasm: Uint8Array, initialMemory: number) {
       print(intArr[0].toString());
     },
   };
-  WebAssembly.instantiate(wasm, { imports: moduleImports, js: { mem: memory } });
+  await WebAssembly.instantiate(wasm, { imports: moduleImports, js: { mem: memory } });
 }
 
 /**
@@ -54,6 +54,6 @@ export function generate_WAT_AST(program: string) {
  */
 export async function compileAndRun(program: string) {
   const { wasm, initialMemory } = await originalCompile(program, wasmModuleImports);
-  runWasm(wasm, initialMemory);
+  await runWasm(wasm, initialMemory);
 }
 

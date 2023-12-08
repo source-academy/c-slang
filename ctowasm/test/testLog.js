@@ -272,13 +272,13 @@ const testLog = {
     recursion_test_1: {
       title: "Recursion test 1",
       expectedCode: false,
-      expectedValues: [2],
+      expectedValues: [0, 3, 0, 2, 0, 1, 2],
     },
     if_statement_1: {
       title: "If statement test 1",
       expectedCode: false,
-      expectedValues: [10]
-    }
+      expectedValues: [10],
+    },
   },
 };
 

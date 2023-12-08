@@ -1,6 +1,8 @@
 int x = 0;
 
 void f(int a, int b) {
+  print_int(a);
+  print_int(b);
   if (b - a <= 1) {
     return;
   }
@@ -9,5 +11,6 @@ void f(int a, int b) {
 }
 
 int main() {
-  print_int(f(0, 3));
+  f(0, 3);
+  print_int(x);
 }
