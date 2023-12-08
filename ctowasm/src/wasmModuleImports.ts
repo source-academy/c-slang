@@ -1,4 +1,6 @@
-// Definitions of all functions imported to every wasm program
+/**
+ *  Definitions of all special functions imported to every wasm program
+ */ 
 
 import { BASE_POINTER, WASM_ADDR_SIZE, basePointerGetNode, getPointerArithmeticNode } from "~src/translator/memoryUtils";
 import { wasmTypeToSize } from "~src/translator/util";

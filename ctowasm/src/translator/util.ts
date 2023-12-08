@@ -2,7 +2,7 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { BinaryOperator } from "~src/c-ast/c-nodes";
+import { BinaryOperator } from "~src/c-ast/root";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmStatement, WasmFunction } from "~src/wasm-ast/wasm-nodes";
 
@@ -13,7 +13,6 @@ export const unaryOperatorToBinaryOperator: Record<string, BinaryOperator> = {
   "++": "+",
   "--": "-",
 };
-
 
 export function addStatement(
   n: WasmStatement,

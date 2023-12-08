@@ -1,4 +1,4 @@
-import { BinaryOperator, ComparisonOperator } from "~/src/c-ast/c-nodes";
+import { BinaryOperator, ComparisonOperator } from "~src/c-ast/root";
 import { Scopes, WasmType } from "./types";
 
 /**
@@ -211,7 +211,7 @@ export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
   varType: WasmType; // wasm var type for the store instruction
-  numOfBytes: MemoryVariableByteSize; // number of bytes to load 
+  numOfBytes: MemoryVariableByteSize; // number of bytes to load
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 

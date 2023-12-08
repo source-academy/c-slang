@@ -1,4 +1,4 @@
-import wasmModuleImports from "~src/translator/wasmModuleImports";
+import wasmModuleImports from "~src/wasmModuleImports";
 import {
   compile as originalCompile,
   compileToWat as originalCompileToWat,
@@ -7,10 +7,7 @@ import {
   generate_processed_C_AST,
 } from "./compiler";
 
-export {
-  generate_C_AST,
-  generate_processed_C_AST,
-};
+export { generate_C_AST, generate_processed_C_AST };
 
 // default print to stdout is to console.log
 let print = (str: string) => console.log(str);
@@ -22,15 +19,18 @@ export function setPrintFunction(printFunc: (str: string) => void) {
 
 export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   const memory = new WebAssembly.Memory({
-    initial: initialMemory
-  })
+    initial: initialMemory,
+  });
   const moduleImports = {
     print_int: (addr: number) => {
-      const intArr = new Int32Array(memory.buffer, addr, 1);  // view of the 1 integer in memory
+      const intArr = new Int32Array(memory.buffer, addr, 1); // view of the 1 integer in memory
       print(intArr[0].toString());
     },
   };
-  await WebAssembly.instantiate(wasm, { imports: moduleImports, js: { mem: memory } });
+  await WebAssembly.instantiate(wasm, {
+    imports: moduleImports,
+    js: { mem: memory },
+  });
 }
 
 /**
@@ -53,7 +53,9 @@ export function generate_WAT_AST(program: string) {
  * Compiles the given C program, including all default imported functions.
  */
 export async function compileAndRun(program: string) {
-  const { wasm, initialMemory } = await originalCompile(program, wasmModuleImports);
+  const { wasm, initialMemory } = await originalCompile(
+    program,
+    wasmModuleImports
+  );
   await runWasm(wasm, initialMemory);
 }
-

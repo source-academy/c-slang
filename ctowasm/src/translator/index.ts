@@ -33,7 +33,7 @@ import {
   ArrayDeclaration,
   ArrayInitialization,
   ArrayElementExpr,
-} from "../c-ast/c-nodes";
+} from "../c-ast/root";
 import {
   WASM_PAGE_SIZE,
   BASE_POINTER,
@@ -67,7 +67,7 @@ import {
   variableTypeToWasmType,
 } from "~src/translator/variableUtil";
 import { wasmTypeToSize } from "~src/translator/util";
-import { WasmImportedFunction } from "~src/translator/wasmModuleImports";
+import { WasmImportedFunction } from "~src/wasmModuleImports";
 
 /**
  * Creates the global wasm variables that act as psuedo-registers.
@@ -271,8 +271,11 @@ function getFunctionDefAndGlobalVarInfo(
 /**
  * Adds all the imported functions to the Wasm Module.
  */
-function addImportedFunctionsToModule(wasmRoot: WasmModule, imports: Record<string, WasmImportedFunction>) {
-  // add all the imported functions to wasmRoot.functions 
+function addImportedFunctionsToModule(
+  wasmRoot: WasmModule,
+  imports: Record<string, WasmImportedFunction>
+) {
+  // add all the imported functions to wasmRoot.functions
   for (const moduleImportName in imports) {
     const moduleImport = imports[moduleImportName];
 
@@ -282,8 +285,8 @@ function addImportedFunctionsToModule(wasmRoot: WasmModule, imports: Record<stri
       importPath: [moduleImport.parentImportedObject, moduleImport.name],
       name: moduleImport.importedName,
       params: moduleImport.params,
-      return: moduleImport.return
-    })
+      return: moduleImport.return,
+    });
 
     // construct params
     const params: Record<string, WasmFunctionParameter> = {};
@@ -321,10 +324,9 @@ function addImportedFunctionsToModule(wasmRoot: WasmModule, imports: Record<stri
       blockCount: 0,
       bpOffset: 0,
       scopes: [],
-      body: moduleImport.body
+      body: moduleImport.body,
     };
   }
-
 }
 
 export default function translate(
@@ -337,7 +339,7 @@ export default function translate(
     globalWasmVariables: [], // actual wasm globals
     functions: {},
     memorySize: 1,
-    importedFunctions: []
+    importedFunctions: [],
   };
 
   // 1st pass over C AST

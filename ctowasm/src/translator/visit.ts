@@ -2,13 +2,55 @@
  * Defines the vist function for traversing the C AST and translating into WAT-AST.
  */
 
-import { CNode, Block, ReturnStatement, Initialization, ArrayInitialization, VariableDeclaration, ArrayDeclaration, Assignment, FunctionCallStatement, PrefixExpression, PostfixExpression, CompoundAssignment, SelectStatement, DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/c-nodes";
+import {
+  CNode,
+  Block,
+  ReturnStatement,
+  Initialization,
+  ArrayInitialization,
+  VariableDeclaration,
+  ArrayDeclaration,
+  Assignment,
+  FunctionCallStatement,
+  PrefixExpression,
+  PostfixExpression,
+  CompoundAssignment,
+  SelectStatement,
+  DoWhileLoop,
+  WhileLoop,
+  ForLoop,
+} from "~src/c-ast/root";
 import { getVariableSize } from "~src/common/utils";
 import evaluateExpression from "~src/translator/evaluateExpression";
-import { BASE_POINTER, WASM_ADDR_SIZE, getFunctionCallStackFrameSetupStatements, getFunctionStackFrameTeardownStatements, getPointerArithmeticNode } from "~src/translator/memoryUtils";
-import { addStatement, unaryOperatorToBinaryOperator } from "~src/translator/util";
-import { variableTypeToWasmType, getVariableOrArrayExprAddr, convertVarNameToScopedVarName, getArrayConstantIndexElementAddr, getVariableAddr } from "~src/translator/variableUtil";
-import { WasmModule, WasmFunction, WasmStatement, MemoryVariableByteSize, WasmLocalVariable, WasmLocalArray, WasmMemoryStore, WasmArithmeticExpression, WasmSelectStatement } from "~src/wasm-ast/wasm-nodes";
+import {
+  BASE_POINTER,
+  WASM_ADDR_SIZE,
+  getFunctionCallStackFrameSetupStatements,
+  getFunctionStackFrameTeardownStatements,
+  getPointerArithmeticNode,
+} from "~src/translator/memoryUtils";
+import {
+  addStatement,
+  unaryOperatorToBinaryOperator,
+} from "~src/translator/util";
+import {
+  variableTypeToWasmType,
+  getVariableOrArrayExprAddr,
+  convertVarNameToScopedVarName,
+  getArrayConstantIndexElementAddr,
+  getVariableAddr,
+} from "~src/translator/variableUtil";
+import {
+  WasmModule,
+  WasmFunction,
+  WasmStatement,
+  MemoryVariableByteSize,
+  WasmLocalVariable,
+  WasmLocalArray,
+  WasmMemoryStore,
+  WasmArithmeticExpression,
+  WasmSelectStatement,
+} from "~src/wasm-ast/wasm-nodes";
 
 /**
  * Function for visting the statements within a function body.
@@ -26,7 +68,9 @@ export default function visit(
   if (CAstNode.type === "Block") {
     const n = CAstNode as Block;
     enclosingFunc.scopes.push(new Set()); // push on new scope for this block
-    n.children.forEach((child) => visit(wasmRoot, child, enclosingFunc, enclosingBody));
+    n.children.forEach((child) =>
+      visit(wasmRoot, child, enclosingFunc, enclosingBody)
+    );
     enclosingFunc.scopes.pop(); // pop off the scope for this block
   } else if (CAstNode.type === "ReturnStatement") {
     const n = CAstNode as ReturnStatement;
@@ -105,7 +149,7 @@ export default function visit(
         {
           type: "MemoryStore",
           addr: getArrayConstantIndexElementAddr(
-            wasmRoot, 
+            wasmRoot,
             n.name,
             i,
             getVariableSize(n.variableType),
@@ -168,7 +212,7 @@ export default function visit(
     );
   } else if (CAstNode.type === "FunctionCallStatement") {
     const n = CAstNode as FunctionCallStatement;
-    const functionArgs = []
+    const functionArgs = [];
     for (const arg of n.args) {
       functionArgs.push(evaluateExpression(wasmRoot, arg, enclosingFunc));
     }
@@ -194,7 +238,11 @@ export default function visit(
   ) {
     // handle the case where a prefix or postfix expression is used as a statement, not an expression.
     const n = CAstNode as PrefixExpression | PostfixExpression;
-    const addr = getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc);
+    const addr = getVariableOrArrayExprAddr(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     const varType = variableTypeToWasmType[n.variable.variableType];
 
     const localMemStore: WasmMemoryStore = {
@@ -222,7 +270,11 @@ export default function visit(
     addStatement(localMemStore, enclosingFunc, enclosingBody);
   } else if (CAstNode.type === "CompoundAssignment") {
     const n = CAstNode as CompoundAssignment;
-    const addr = getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc);
+    const addr = getVariableOrArrayExprAddr(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     const arithmeticExpr: WasmArithmeticExpression = {
       type: "ArithmeticExpression",
       operator: n.operator,
@@ -253,7 +305,11 @@ export default function visit(
     visit(wasmRoot, n.ifBlock.block, enclosingFunc, actions); // visit all the actions inside the if block
     const rootNode: WasmSelectStatement = {
       type: "SelectStatement",
-      condition: evaluateExpression(wasmRoot, n.ifBlock.condition, enclosingFunc),
+      condition: evaluateExpression(
+        wasmRoot,
+        n.ifBlock.condition,
+        enclosingFunc
+      ),
       actions,
       elseStatements: [],
     };
@@ -263,7 +319,11 @@ export default function visit(
       visit(wasmRoot, elseIfBlock.block, enclosingFunc, actions);
       const elseIfNode: WasmSelectStatement = {
         type: "SelectStatement",
-        condition: evaluateExpression(wasmRoot, elseIfBlock.condition, enclosingFunc),
+        condition: evaluateExpression(
+          wasmRoot,
+          elseIfBlock.condition,
+          enclosingFunc
+        ),
         actions,
         elseStatements: [],
       };
@@ -375,4 +435,3 @@ export default function visit(
     );
   }
 }
-

@@ -2,7 +2,7 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import { WasmType } from "~src/wasm-ast/types";
-import { BinaryOperator, ComparisonOperator } from "../c-ast/c-nodes";
+import { BinaryOperator, ComparisonOperator } from "../c-ast/root";
 import { convertVariableToByteStr } from "../translator/memoryUtils";
 import {
   WasmAndExpression,

@@ -15,9 +15,12 @@ import {
   AssignmentExpression,
   CompoundAssignmentExpression,
   ArrayElementExpr,
-} from "~src/c-ast/c-nodes";
+} from "~src/c-ast/root";
 import { getVariableSize } from "~src/common/utils";
-import { getFunctionCallStackFrameSetupStatements, getFunctionStackFrameTeardownStatements } from "~src/translator/memoryUtils";
+import {
+  getFunctionCallStackFrameSetupStatements,
+  getFunctionStackFrameTeardownStatements,
+} from "~src/translator/memoryUtils";
 import { unaryOperatorToBinaryOperator } from "~src/translator/util";
 import {
   convertLiteralToConst,
@@ -49,13 +52,25 @@ function evaluateLeftToRightBinaryExpression(
   let currNode = rootNode;
   for (let i = node.exprs.length - 1; i > 0; --i) {
     currNode.operator = node.exprs[i].operator;
-    currNode.rightExpr = evaluateExpression(wasmRoot, node.exprs[i].expr, enclosingFunc);
+    currNode.rightExpr = evaluateExpression(
+      wasmRoot,
+      node.exprs[i].expr,
+      enclosingFunc
+    );
     currNode.leftExpr = { type: node.type };
     currNode = currNode.leftExpr;
   }
   currNode.operator = node.exprs[0].operator;
-  currNode.rightExpr = evaluateExpression(wasmRoot, node.exprs[0].expr, enclosingFunc);
-  currNode.leftExpr = evaluateExpression(wasmRoot, node.firstExpr, enclosingFunc);
+  currNode.rightExpr = evaluateExpression(
+    wasmRoot,
+    node.exprs[0].expr,
+    enclosingFunc
+  );
+  currNode.leftExpr = evaluateExpression(
+    wasmRoot,
+    node.firstExpr,
+    enclosingFunc
+  );
   return rootNode;
 }
 
@@ -81,7 +96,11 @@ function evaluateConditionalExpression(
   for (let i = node.exprs.length - 1; i > 1; --i) {
     if (isConditionalExpression(node.exprs[i])) {
       // no need to wrap inside a BooleanExpression if it was already a conditional expression
-      currNode.rightExpr = evaluateExpression(wasmRoot, node.exprs[i], enclosingFunc);
+      currNode.rightExpr = evaluateExpression(
+        wasmRoot,
+        node.exprs[i],
+        enclosingFunc
+      );
     } else {
       currNode.rightExpr = {
         type: "BooleanExpression",
@@ -93,7 +112,11 @@ function evaluateConditionalExpression(
   }
   if (isConditionalExpression(node.exprs[1])) {
     // no need to wrap inside a BooleanExpression if it was already a conditional expression
-    currNode.rightExpr = evaluateExpression(wasmRoot, node.exprs[1], enclosingFunc);
+    currNode.rightExpr = evaluateExpression(
+      wasmRoot,
+      node.exprs[1],
+      enclosingFunc
+    );
   } else {
     currNode.rightExpr = {
       type: "BooleanExpression",
@@ -102,7 +125,11 @@ function evaluateConditionalExpression(
   }
 
   if (isConditionalExpression(node.exprs[0])) {
-    currNode.leftExpr = evaluateExpression(wasmRoot, node.exprs[0], enclosingFunc);
+    currNode.leftExpr = evaluateExpression(
+      wasmRoot,
+      node.exprs[0],
+      enclosingFunc
+    );
   } else {
     currNode.leftExpr = {
       type: "BooleanExpression",
@@ -128,7 +155,7 @@ export default function evaluateExpression(
     // load the return from its region in memory
     // TODO: need to do multiple loads interspaced with stores to support structs later on
     // evaluate all the expressions used as arguments
-    const functionArgs = []
+    const functionArgs = [];
     for (const arg of n.args) {
       functionArgs.push(evaluateExpression(wasmRoot, arg, enclosingFunc));
     }
@@ -161,7 +188,11 @@ export default function evaluateExpression(
     return evaluateLeftToRightBinaryExpression(wasmRoot, n, enclosingFunc);
   } else if (expr.type === "PrefixExpression") {
     const n: PrefixExpression = expr as PrefixExpression;
-    const addr = getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc);
+    const addr = getVariableOrArrayExprAddr(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
       addr,
@@ -195,7 +226,11 @@ export default function evaluateExpression(
     return wasmNode;
   } else if (expr.type === "PostfixExpression") {
     const n: PostfixExpression = expr as PostfixExpression;
-    const addr = getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc);
+    const addr = getVariableOrArrayExprAddr(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
       addr,
@@ -233,7 +268,11 @@ export default function evaluateExpression(
     return evaluateConditionalExpression(wasmRoot, n, enclosingFunc);
   } else if (expr.type === "AssignmentExpression") {
     const n = expr as AssignmentExpression;
-    const addr = getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc);
+    const addr = getVariableOrArrayExprAddr(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     return {
       type: "MemoryLoad",
       addr,
@@ -251,7 +290,11 @@ export default function evaluateExpression(
     };
   } else if (expr.type === "CompoundAssignmentExpression") {
     const n = expr as CompoundAssignmentExpression;
-    const addr = getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc);
+    const addr = getVariableOrArrayExprAddr(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     return {
       type: "MemoryLoad",
       addr,
@@ -284,7 +327,7 @@ export default function evaluateExpression(
     return {
       type: "MemoryLoad",
       addr: getArrayElementAddr(
-        wasmRoot, 
+        wasmRoot,
         n.arrayName,
         n.index,
         getVariableSize(n.variableType),

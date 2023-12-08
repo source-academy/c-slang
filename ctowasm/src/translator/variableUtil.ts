@@ -7,7 +7,7 @@ import {
   VariableExpr,
   ArrayElementExpr,
   Literal,
-} from "~src/c-ast/c-nodes";
+} from "~src/c-ast/root";
 import { VariableType } from "~src/common/types";
 import { getVariableSize } from "~src/common/utils";
 import evaluateExpression from "~src/translator/evaluateExpression";
