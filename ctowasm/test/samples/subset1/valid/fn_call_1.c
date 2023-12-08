@@ -5,4 +5,5 @@ int f() {
 int main() {
   int x = f();
   f();
+  print_int(x);
 }

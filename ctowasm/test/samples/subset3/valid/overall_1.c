@@ -20,4 +20,5 @@ int pow(int base, int exp) {
 
 int main() {
   int x = pow(2, 10);
+  print_int(x);
 } 

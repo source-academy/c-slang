@@ -1,4 +1,5 @@
 int main() {
   int x = 10;
-  x = x++;
+  print_int(x++);
+  print_int(x);
 }

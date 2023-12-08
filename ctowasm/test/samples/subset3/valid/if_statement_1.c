@@ -1,5 +1,5 @@
 int main() {
   if (1) {
-    int x = 2;
+    print_int(10);
   }
 }

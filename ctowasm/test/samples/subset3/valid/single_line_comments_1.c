@@ -8,4 +8,6 @@ main() {
   = //adawd
   //awdad
   4;
+  print_int(x);
+  print_int(y);
 } // this is a test of single line comments

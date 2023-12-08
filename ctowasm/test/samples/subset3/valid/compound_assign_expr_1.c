@@ -7,4 +7,7 @@ int main() {
   x = y %= 2;
   x = y /= 2;
   x = z %= 3;
+  print_int(x);
+  print_int(y);
+  print_int(z);
 }

@@ -9,6 +9,5 @@ void f(int a, int b) {
 }
 
 int main() {
-  f(0, 3);
-  int a = x;
+  print_int(f(0, 3));
 }

@@ -43,8 +43,7 @@ void mergesort(int start, int end) {
 
 int main() {
   mergesort(0, 10);
-  int print_arr[10]; // for test printouts
   for (int i = 0; i < 10; ++i) {
-    print_arr[i] = arr[i];
+    print_int(arr[i]);
   }
 }
