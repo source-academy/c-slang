@@ -92,7 +92,10 @@ export async function testFileCompilationSuccess(subset, testFileName) {
         return `WAT DOES NOT MATCH EXPECTED:\nexpected file: ${getExpectedCodeFilePath(
           subset,
           testFileName
-        )}\nactual file: ${watFilePath}`;
+        )}\nactual file: ${path.resolve(
+          TEMP_DIRECTORY,
+          `subset${subset.toString()}/wat/${testFileName}.wat`
+        ).toString()}`;
       }
     } else {
       // Test 2: checks that the file is runnable, and outputs the correct values

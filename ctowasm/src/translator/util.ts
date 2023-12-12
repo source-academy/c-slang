@@ -2,7 +2,7 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { BinaryOperator } from "~src/c-ast/root";
+import { BinaryOperator } from "~src/common/constants";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmStatement, WasmFunction } from "~src/wasm-ast/wasm-nodes";
 

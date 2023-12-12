@@ -1,33 +1,34 @@
 /**
  * Defines functions for evaluating C AST expression nodes and converting them to corresponding WAT AST nodes.
  */
-
 import {
   ArithmeticExpression,
-  ComparisonExpression,
-  Expression,
-  ConditionalExpression,
-  Integer,
-  FunctionCall,
-  VariableExpr,
   PrefixExpression,
   PostfixExpression,
-  AssignmentExpression,
   CompoundAssignmentExpression,
-  ArrayElementExpr,
-} from "~src/c-ast/root";
+} from "~src/c-ast/arithmetic";
+import { ArrayElementExpr } from "~src/c-ast/arrays";
+import { AssignmentExpression } from "~src/c-ast/assignment";
+import {
+  ComparisonExpression,
+  ConditionalExpression,
+} from "~src/c-ast/boolean";
+import { FunctionCall } from "~src/c-ast/functions";
+import { Integer } from "~src/c-ast/literals";
+import { Expression } from "~src/c-ast/root";
+import { VariableExpr } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
 import {
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,
-} from "~src/translator/memoryUtils";
+} from "~src/translator/memoryUtil";
 import { unaryOperatorToBinaryOperator } from "~src/translator/util";
 import {
   convertLiteralToConst,
   variableTypeToWasmType,
-  getVariableOrArrayExprAddr,
   getVariableAddr,
   getArrayElementAddr,
+  getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
 import {
   WasmFunction,
@@ -171,14 +172,16 @@ export default function evaluateExpression(
         true
       ),
     };
-  } else if (expr.type === "VariableExpr") {
-    const n = expr as VariableExpr;
-    // the expression is a function parameter OR a local variable
+  } else if (expr.type === "VariableExpr" || expr.type === "ArrayElementExpr") {
+    const n = expr as VariableExpr | ArrayElementExpr;
+    const memoryAccessDetails = getMemoryAccessDetails(
+      wasmRoot,
+      n,
+      enclosingFunc
+    );
     return {
       type: "MemoryLoad",
-      addr: getVariableAddr(wasmRoot, n.name, enclosingFunc),
-      varType: variableTypeToWasmType[n.variableType],
-      numOfBytes: getVariableSize(n.variableType),
+      ...memoryAccessDetails,
     };
   } else if (
     expr.type === "ArithmeticExpression" ||
@@ -188,26 +191,23 @@ export default function evaluateExpression(
     return evaluateLeftToRightBinaryExpression(wasmRoot, n, enclosingFunc);
   } else if (expr.type === "PrefixExpression") {
     const n: PrefixExpression = expr as PrefixExpression;
-    const addr = getVariableOrArrayExprAddr(
+    const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
       enclosingFunc
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
-      addr,
       preStatements: [
         {
           type: "MemoryStore",
-          addr,
+
           value: {
             type: "ArithmeticExpression",
             operator: unaryOperatorToBinaryOperator[n.operator],
             leftExpr: {
               type: "MemoryLoad",
-              addr,
-              varType: variableTypeToWasmType[n.variable.variableType],
-              numOfBytes: getVariableSize(n.variable.variableType),
+              ...memoryAccessDetails,
             },
             rightExpr: {
               type: "Const",
@@ -216,32 +216,27 @@ export default function evaluateExpression(
             },
             varType: "i32",
           },
-          varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: getVariableSize(n.variable.variableType),
+          ...memoryAccessDetails,
         },
       ],
-      varType: variableTypeToWasmType[n.variable.variableType],
-      numOfBytes: getVariableSize(n.variable.variableType),
+      ...memoryAccessDetails,
     };
     return wasmNode;
   } else if (expr.type === "PostfixExpression") {
     const n: PostfixExpression = expr as PostfixExpression;
-    const addr = getVariableOrArrayExprAddr(
+    const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
       enclosingFunc
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
-      addr,
       value: {
         type: "ArithmeticExpression",
         operator: unaryOperatorToBinaryOperator[n.operator],
         leftExpr: {
           type: "MemoryLoad",
-          addr,
-          varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: getVariableSize(n.variable.variableType),
+          ...memoryAccessDetails,
         },
         rightExpr: {
           type: "Const",
@@ -250,17 +245,13 @@ export default function evaluateExpression(
         },
         varType: "i32",
       },
-      varType: variableTypeToWasmType[n.variable.variableType],
-      numOfBytes: getVariableSize(n.variable.variableType),
-      // load the original value of the variable onto wasm stack first
       preStatements: [
         {
           type: "MemoryLoad",
-          addr,
-          varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: getVariableSize(n.variable.variableType),
+          ...memoryAccessDetails,
         },
       ],
+      ...memoryAccessDetails,
     };
     return wasmNode;
   } else if (expr.type === "ConditionalExpression") {
@@ -268,73 +259,48 @@ export default function evaluateExpression(
     return evaluateConditionalExpression(wasmRoot, n, enclosingFunc);
   } else if (expr.type === "AssignmentExpression") {
     const n = expr as AssignmentExpression;
-    const addr = getVariableOrArrayExprAddr(
+    const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
       enclosingFunc
     );
     return {
       type: "MemoryLoad",
-      addr,
       preStatements: [
         {
           type: "MemoryStore",
-          addr,
           value: evaluateExpression(wasmRoot, n.value, enclosingFunc),
-          varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: getVariableSize(n.variable.variableType),
+          ...memoryAccessDetails,
         },
       ],
-      varType: variableTypeToWasmType[n.variable.variableType],
-      numOfBytes: getVariableSize(n.variable.variableType),
+      ...memoryAccessDetails,
     };
   } else if (expr.type === "CompoundAssignmentExpression") {
     const n = expr as CompoundAssignmentExpression;
-    const addr = getVariableOrArrayExprAddr(
+    const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
       enclosingFunc
     );
     return {
       type: "MemoryLoad",
-      addr,
       preStatements: [
         {
           type: "MemoryStore",
-          addr,
           value: {
             type: "ArithmeticExpression",
             operator: n.operator,
             leftExpr: {
               type: "MemoryLoad",
-              addr,
-              varType: variableTypeToWasmType[n.variable.variableType],
-              numOfBytes: getVariableSize(n.variable.variableType),
+              ...memoryAccessDetails,
             },
             rightExpr: evaluateExpression(wasmRoot, n.value, enclosingFunc),
-            varType: variableTypeToWasmType[n.variable.variableType],
+            varType: memoryAccessDetails.varType,
           },
-          varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: getVariableSize(n.variable.variableType),
+          ...memoryAccessDetails,
         },
       ],
-      varType: variableTypeToWasmType[n.variable.variableType],
-      numOfBytes: getVariableSize(n.variable.variableType),
-    };
-  } else if (expr.type === "ArrayElementExpr") {
-    const n = expr as ArrayElementExpr;
-    // the expression is a function parameter OR a local variable
-    return {
-      type: "MemoryLoad",
-      addr: getArrayElementAddr(
-        wasmRoot,
-        n.arrayName,
-        n.index,
-        getVariableSize(n.variableType),
-        enclosingFunc
-      ),
-      varType: variableTypeToWasmType[n.variableType],
-      numOfBytes: getVariableSize(n.variableType),
+      ...memoryAccessDetails,
     };
   } else {
     console.assert(

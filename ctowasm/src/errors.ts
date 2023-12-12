@@ -2,7 +2,8 @@
  * This file contains all the error classes that can be thrown by the compiler.
  */
 
-import { Position } from "~src/c-ast/root";
+import { Position } from "~src/c-ast/types";
+
 
 /**
  * An error that occured in relation to the C source code during compilation.
@@ -28,6 +29,12 @@ export class ProcessingError extends SourceCodeError {
   constructor(message: string, sourceCode: string, position: Position) {
     super(message, sourceCode, position);
   }
+}
+
+export class SemanticAnalysisError extends SourceCodeError {
+  constructor(message: string, sourceCode: string, position: Position) {
+    super(message, sourceCode, position);
+  } 
 }
 
 export class TranslationError extends Error {

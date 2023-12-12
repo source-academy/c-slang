@@ -2,12 +2,12 @@
  * Definitions of AST nodes for assignments.
  */
 
-import { ScopedNode, Expression } from "~src/c-ast/root";
+import { CNode, Expression } from "~src/c-ast/root";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { VariableExpr } from "~src/c-ast/variable";
 
 // A variable assignment
-export interface Assignment extends ScopedNode {
+export interface Assignment extends CNode {
   type: "Assignment";
   variable: VariableExpr | ArrayElementExpr;
   value: Expression;

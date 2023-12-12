@@ -1,9 +1,9 @@
-import { Block, Expression, ScopedNode, Statement } from "~src/c-ast/root";
+import { Block, Expression, CNode, Statement } from "~src/c-ast/root";
 
 /**
  * Contain definition for AST node relating to loops in C.
  */
-export interface IterationStatement extends ScopedNode {
+export interface IterationStatement extends CNode {
   type: "DoWhileLoop" | "WhileLoop" | "ForLoop";
   condition: Expression;
   body: Block;

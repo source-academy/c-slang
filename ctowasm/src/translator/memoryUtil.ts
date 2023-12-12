@@ -243,7 +243,7 @@ export function getFunctionCallStackFrameSetupStatements(
     },
     actions: [
       // expand the memory since not enough space
-      // save the last address of stack in REG_1
+      // save the last address of linear memory in REG_1
       {
         type: "GlobalSet",
         name: REG_1,

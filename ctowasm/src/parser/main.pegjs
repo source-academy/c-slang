@@ -33,7 +33,7 @@ translation_unit
 
 
 function_definition
-	= type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _* ")" _* body:block _* ";"* { return generateNode("FunctionDefinition", { returnType: type, name: name, parameters: parameters, body: body }); }
+	= returnType:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _* ")" _* body:block _* ";"* { return generateNode("FunctionDefinition", { returnType, name, parameters, body }); }
     
 block
 	= "{" _* s:block_item_list _* "}" { return generateNode("Block", {children: s}); }
@@ -84,9 +84,9 @@ assignment
 array_index_assignment
   = arrayElement:array_element_term _* "=" _* value:expression { return generateNode("ArrayIndexAssignment", { ...arrayElement, value }); }    
 
-// returns an array of Declaration TODO: implementation not done yet
+// returns an array of variable declarations 
 declaration_list
-	= declaration|.., _* "," _*|
+	= variable_declaration|.., _* "," _*|
 
 declaration
   = function_declaration //function declaration must come first, as the first few symbols of func and var declarations are exactly the same, meaning var will always be
@@ -94,7 +94,7 @@ declaration
 
 variable_declaration 
   = array_declaration
-  / variableType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType, name, }); }
+  / variableType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType, name }); }
 
 array_declaration
   = variableType:type _+ name:identifier _* "[" _* size:integer _*"]" { return generateNode("ArrayDeclaration", { variableType, name, size: parseInt(size) }); }  // match on array first as it is a more specific expression 
@@ -180,7 +180,7 @@ variable_term
 
 // array element used as an experssion. like a[2]
 array_element_term
-  = arrayName:identifier _* "[" _* index:expression _* "]" { return generateNode("ArrayElementExpr", { arrayName, index }); } 
+  = name:identifier _* "[" _* index:expression _* "]" { return generateNode("ArrayElementExpr", { name, index }); } 
 
 prefix_expression
   = "--" variable:variable_term { return generateNode("PrefixExpression", { operator: "--", variable: variable }); }
@@ -195,7 +195,7 @@ type
 
 function_return_type
   = type
-  / $"void"
+  / "void" { return null; }
 
 // identifiers must not start with a digit
 // can only contain letters, digits or underscore

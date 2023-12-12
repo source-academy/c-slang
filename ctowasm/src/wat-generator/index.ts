@@ -2,8 +2,7 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import { WasmType } from "~src/wasm-ast/types";
-import { BinaryOperator, ComparisonOperator } from "../c-ast/root";
-import { convertVariableToByteStr } from "../translator/memoryUtils";
+import { convertVariableToByteStr } from "../translator/memoryUtil";
 import {
   WasmAndExpression,
   WasmArithmeticExpression,
@@ -34,6 +33,7 @@ import {
   WasmSelectStatement,
   WasmStatement,
 } from "../wasm-ast/wasm-nodes";
+import { BinaryOperator, ComparisonOperator } from "~src/common/constants";
 
 /**
  * Function that returns a line in wat file with given level of identation & ending with newline.

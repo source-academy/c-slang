@@ -2,9 +2,8 @@
  * Definition of AST nodes for conditional constructs.
  */
 
-import { Expression, ScopedNode } from "~src/c-ast/root";
-
-export type ComparisonOperator = "<" | "<=" | "!=" | "==" | ">=" | ">";
+import { Expression, CNode } from "~src/c-ast/root";
+import { ComparisonOperator } from "~src/common/constants";
 
 export interface ConditionalExpression extends Expression {
   type: "ConditionalExpression";
@@ -18,7 +17,7 @@ export interface ComparisonExpression extends Expression {
   exprs: ComparisonSubExpression[];
 }
 
-export interface ComparisonSubExpression extends ScopedNode {
+export interface ComparisonSubExpression extends CNode {
   type: "ComparisonSubExpression";
   operator: ComparisonOperator;
   expr: Expression;

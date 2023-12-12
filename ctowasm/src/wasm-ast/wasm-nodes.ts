@@ -1,5 +1,4 @@
-import { BinaryOperator } from "~src/c-ast/arithmetic";
-import { ComparisonOperator } from "~src/c-ast/boolean";
+import { BinaryOperator, ComparisonOperator } from "~src/common/constants";
 import { WasmScopes, WasmType } from "~src/wasm-ast/types";
 
 /**
@@ -21,7 +20,7 @@ export interface WasmVariable extends WasmAstNode {
  */
 export interface WasmMemoryVariable extends WasmAstNode {
   name: string;
-  size: number; // size in bytes of this variable
+  size: number; // size in bytes of this variable 
   varType: WasmType; // the wasm type to use when loading/storing this variable
 }
 
@@ -31,6 +30,7 @@ export interface WasmLocalVariable extends WasmMemoryVariable {
 }
 
 export interface WasmLocalArray extends WasmLocalVariable {
+  // size field will represent size in number of elements instead
   elementSize: number; // size of each element
 }
 

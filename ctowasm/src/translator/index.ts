@@ -2,38 +2,7 @@
  * Exports a translate function that takes a C AST and produces a webassembly AST
  */
 
-import {
-  Root,
-  CNode,
-  FunctionDefinition,
-  VariableDeclaration,
-  Initialization,
-  Literal,
-  Block,
-  ReturnStatement,
-  VariableExpr,
-  Expression,
-  FunctionCall,
-  Assignment,
-  ArithmeticExpression,
-  PrefixExpression,
-  PostfixExpression,
-  FunctionCallStatement,
-  ConditionalExpression,
-  CompoundAssignment,
-  BinaryOperator,
-  ComparisonExpression,
-  SelectStatement,
-  AssignmentExpression,
-  CompoundAssignmentExpression,
-  DoWhileLoop,
-  WhileLoop,
-  ForLoop,
-  Integer,
-  ArrayDeclaration,
-  ArrayInitialization,
-  ArrayElementExpr,
-} from "../c-ast/root";
+
 import {
   WASM_PAGE_SIZE,
   BASE_POINTER,
@@ -43,7 +12,7 @@ import {
   HEAP_POINTER,
   REG_1,
   REG_2,
-} from "./memoryUtils";
+} from "./memoryUtil";
 
 import {
   WasmArithmeticExpression,
@@ -68,6 +37,11 @@ import {
 } from "~src/translator/variableUtil";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmImportedFunction } from "~src/wasmModuleImports";
+import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
+import { FunctionDefinition } from "~src/c-ast/functions";
+import { Literal } from "~src/c-ast/literals";
+import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
+import { CAstRoot } from "~src/c-ast/root";
 
 /**
  * Creates the global wasm variables that act as psuedo-registers.
@@ -142,7 +116,7 @@ function setPseudoRegisters(
  * Returns the size of data segment.
  */
 function getFunctionDefAndGlobalVarInfo(
-  CAstRoot: Root,
+  CAstRoot: CAstRoot,
   wasmRoot: WasmModule
 ): number {
   /**
@@ -182,7 +156,7 @@ function getFunctionDefAndGlobalVarInfo(
         sizeOfLocals: n.sizeOfLocals,
         sizeOfParams: n.sizeOfParameters,
         returnVariable:
-          n.returnType !== "void"
+          n.returnType !== null
             ? {
                 type: "ReturnVariable",
                 name: `${n.name}_return`,
@@ -330,7 +304,7 @@ function addImportedFunctionsToModule(
 }
 
 export default function translate(
-  CAstRoot: Root,
+  CAstRoot: CAstRoot,
   imports: Record<string, WasmImportedFunction> = {}
 ) {
   const wasmRoot: WasmModule = {

@@ -1,12 +1,11 @@
-import { Expression, ScopedNode } from "~src/c-ast/root";
-import { ArrayElementExpr } from "~src/c-ast/arrays";
-import { VariableExpr } from "~src/c-ast/variable";
-
 /**
  * Contains the definitions for AST nodes relating to arithmetic.
  */
-export type UnaryOperator = "++" | "--";
-export type BinaryOperator = "+" | "-" | "/" | "*" | "%";
+
+import { Expression, CNode } from "~src/c-ast/root";
+import { ArrayElementExpr } from "~src/c-ast/arrays";
+import { VariableExpr } from "~src/c-ast/variable";
+import { BinaryOperator, UnaryOperator } from "~src/common/constants";
 
 export interface ArithmeticExpression extends Expression {
   type: "ArithmeticExpression";
@@ -33,7 +32,7 @@ export interface PostfixExpression extends Expression {
   variable: VariableExpr | ArrayElementExpr;
 }
 
-export interface CompoundAssignment extends ScopedNode {
+export interface CompoundAssignment extends CNode {
   type: "CompoundAssignment";
   operator: BinaryOperator;
   variable: VariableExpr | ArrayElementExpr;

@@ -46,7 +46,7 @@ describe("Processor Semantic Error Tests", () => {
   test("Function parameter redeclaration throws error", async () => {
     await expect(() =>
       testFileCompilationError(1, "fn_param_redeclaration"),
-    ).rejects.toThrow("Redeclaration of function parameter");
+    ).rejects.toThrow("Redeclaration error: function parameter");
   });
   test("Assignment to undeclared variable throws error", async () => {
     await expect(

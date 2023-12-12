@@ -2,16 +2,15 @@
  * This file contains utility functions related to variables.
  */
 
-import {
-  Expression,
-  VariableExpr,
-  ArrayElementExpr,
-  Literal,
-} from "~src/c-ast/root";
+import { ArrayElementExpr } from "~src/c-ast/arrays";
+import { Literal } from "~src/c-ast/literals";
+import { Expression } from "~src/c-ast/root";
+import { VariableExpr } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
 import { getVariableSize } from "~src/common/utils";
+import { TranslationError } from "~src/errors";
 import evaluateExpression from "~src/translator/evaluateExpression";
-import { BASE_POINTER, PARAM_PREFIX } from "~src/translator/memoryUtils";
+import { BASE_POINTER, PARAM_PREFIX } from "~src/translator/memoryUtil";
 import { WasmType } from "~src/wasm-ast/types";
 import {
   WasmFunction,
@@ -20,6 +19,8 @@ import {
   WasmLocalArray,
   WasmConst,
   WasmModule,
+  MemoryVariableByteSize,
+  WasmDataSegmentArray,
 } from "~src/wasm-ast/wasm-nodes";
 
 export const variableTypeToWasmType: Record<VariableType, WasmType> = {
@@ -157,6 +158,79 @@ export function getArrayElementAddr(
 }
 
 /**
+ * All the info needed to access memory during variable read/write.
+ */
+interface MemoryAccessDetails {
+  varType: WasmType; // variable type for memory access
+  numOfBytes: MemoryVariableByteSize; // size of memory access
+  addr: WasmExpression;
+}
+
+/**
+ * Retrieve the details of the the primitive variable or array variable from enclosing func/wasmRoot
+ */
+export function getMemoryAccessDetails(
+  wasmRoot: WasmModule,
+  expr: VariableExpr | ArrayElementExpr,
+  enclosingFunc: WasmFunction
+): MemoryAccessDetails {
+  const wasmVarName = getWasmVariableName(expr.name, enclosingFunc);
+  let variable;
+  if (wasmVarName in enclosingFunc.params) {
+    variable = enclosingFunc.params[wasmVarName];
+  } else if (wasmVarName in enclosingFunc.locals) {
+    // the memory access could be
+    variable = enclosingFunc.locals[wasmVarName];
+  } else {
+    variable = wasmRoot.globals[wasmVarName];
+  }
+
+  if (expr.type === "VariableExpr") {
+    if (
+      !(
+        variable.type === "LocalVariable" ||
+        variable.type === "DataSegmentVariable" ||
+        variable.type === "FunctionParameter"
+      )
+    ) {
+      throw new TranslationError(
+        "getMemoryAccessDetails error: memory access variable does not match."
+      );
+    }
+    return {
+      addr: getVariableAddr(wasmRoot, expr.name, enclosingFunc),
+      numOfBytes: variable.size as MemoryVariableByteSize, //TODO: change in future
+      varType: variable.varType,
+    };
+  } else if (expr.type === "ArrayElementExpr") {
+    if (
+      !(variable.type === "LocalArray" || variable.type === "DataSegmentArray")
+    ) {
+      throw new TranslationError(
+        "getMemoryAccessDetails error: memory access variable does not match."
+      );
+    }
+    const v = variable as WasmDataSegmentArray | WasmLocalArray;
+    return {
+      addr: getArrayElementAddr(
+        wasmRoot,
+        expr.name,
+        expr.index,
+        v.elementSize,
+        enclosingFunc
+      ),
+      numOfBytes: v.elementSize as MemoryVariableByteSize, // the size of one element of //TODO: need to change when have more types
+      varType: v.varType,
+    };
+  } else {
+    console.assert(
+      false,
+      "Translator error: getMemoryAccessDetails failed - no matching expression type"
+    );
+  }
+}
+
+/**
  * Returns the ast nodes that equal to the address to use for memory instructions for a array variable given a constant number as index.
  */
 export function getArrayConstantIndexElementAddr(
@@ -177,23 +251,4 @@ export function getArrayConstantIndexElementAddr(
     },
     varType: "i32",
   };
-}
-
-/**
- * Returns the AST nodes representing expression to get the address of a variable or array element.
- */
-export function getVariableOrArrayExprAddr(
-  wasmRoot: WasmModule,
-  variableExpr: VariableExpr | ArrayElementExpr,
-  enclosingFunc: WasmFunction
-) {
-  return variableExpr.type === "ArrayElementExpr"
-    ? getArrayElementAddr(
-        wasmRoot,
-        variableExpr.arrayName,
-        variableExpr.index,
-        getVariableSize(variableExpr.variableType),
-        enclosingFunc
-      )
-    : getVariableAddr(wasmRoot, variableExpr.name, enclosingFunc);
 }

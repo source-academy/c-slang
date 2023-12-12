@@ -2,16 +2,16 @@
  * Definitions for nodes relating to simple variables (simple types, not arrays or pointer).
  */
 
-import { Expression, ScopedNode } from "~src/c-ast/root";
+import { Expression, CNode } from "~src/c-ast/root";
 import { VariableType } from "~src/common/types";
 
-export interface VariableDeclaration extends ScopedNode {
+export interface VariableDeclaration extends CNode {
   type: "VariableDeclaration";
   variableType: VariableType;
   name: string;
 }
 
-export interface Initialization extends ScopedNode {
+export interface Initialization extends CNode {
   type: "Initialization";
   variableType: VariableType;
   name: string;
@@ -23,5 +23,4 @@ export interface VariableExpr extends Expression {
   type: "VariableExpr";
   name: string; //name of the variable
   variableType: VariableType;
-  isParam?: boolean;
 }

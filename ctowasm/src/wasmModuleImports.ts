@@ -1,18 +1,28 @@
 /**
  *  Definitions of all special functions imported to every wasm program
- */ 
+ */
 
-import { BASE_POINTER, WASM_ADDR_SIZE, basePointerGetNode, getPointerArithmeticNode } from "~src/translator/memoryUtils";
+import {
+  BASE_POINTER,
+  WASM_ADDR_SIZE,
+  basePointerGetNode,
+  getPointerArithmeticNode,
+} from "~src/translator/memoryUtil";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmType } from "~src/wasm-ast/types";
-import { MemoryVariableByteSize, WasmExpression, WasmFunctionBodyLine, WasmRegularFunctionCall } from "~src/wasm-ast/wasm-nodes";
+import {
+  MemoryVariableByteSize,
+  WasmExpression,
+  WasmFunctionBodyLine,
+  WasmRegularFunctionCall,
+} from "~src/wasm-ast/wasm-nodes";
 
 const defaultParentImportedObject = "imports";
 
 // Defines the signature of a wasm imported function
 export interface WasmImportedFunction {
   type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
-  parentImportedObject: string // parent imported object
+  parentImportedObject: string; // parent imported object
   importedName: string; // name that the function is imported as. Should be "${name}_o"
   name: string; // function name
   params: WasmType[];
@@ -29,7 +39,7 @@ function getImportedFunctionName(funcName: string) {
 }
 
 export interface WasmOriginalImportedFunction extends WasmImportedFunction {
-  type: "original"
+  type: "original";
 }
 
 export interface WasmModifiedImportedFunction extends WasmImportedFunction {
@@ -52,13 +62,13 @@ function getOriginalFunctionCallNodes(func: WasmOriginalImportedFunction) {
       addr: getPointerArithmeticNode(BASE_POINTER, "-", bpOffset),
       varType: param,
       numOfBytes: wasmTypeToSize[param] as MemoryVariableByteSize,
-    })
+    });
   }
   const functionCall: WasmRegularFunctionCall = {
     type: "RegularFunctionCall",
     name: getImportedFunctionName(func.name),
-    args: funcArgs
-  }
+    args: funcArgs,
+  };
   if (func.return !== null) {
     return {
       type: "MemoryStore",
@@ -95,16 +105,16 @@ const wasmModuleImports: Record<
           {
             type: "ArithmeticExpression",
             operator: "-",
-            leftExpr:  basePointerGetNode,
+            leftExpr: basePointerGetNode,
             rightExpr: {
               type: "Const",
               variableType: "i32",
               value: WASM_ADDR_SIZE,
             },
-            varType: "i32"
-          }
-        ]
-      }
+            varType: "i32",
+          },
+        ],
+      },
     ],
   },
 };

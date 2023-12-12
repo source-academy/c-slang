@@ -3,23 +3,17 @@
  */
 
 import {
-  CNode,
-  Block,
-  ReturnStatement,
-  Initialization,
-  ArrayInitialization,
-  VariableDeclaration,
-  ArrayDeclaration,
-  Assignment,
-  FunctionCallStatement,
   PrefixExpression,
   PostfixExpression,
   CompoundAssignment,
-  SelectStatement,
-  DoWhileLoop,
-  WhileLoop,
-  ForLoop,
-} from "~src/c-ast/root";
+} from "~src/c-ast/arithmetic";
+import { ArrayInitialization, ArrayDeclaration } from "~src/c-ast/arrays";
+import { Assignment } from "~src/c-ast/assignment";
+import { ReturnStatement, FunctionCallStatement } from "~src/c-ast/functions";
+import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
+import { CNode, Block } from "~src/c-ast/root";
+import { SelectStatement } from "~src/c-ast/select";
+import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
 import evaluateExpression from "~src/translator/evaluateExpression";
 import {
@@ -28,17 +22,17 @@ import {
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,
   getPointerArithmeticNode,
-} from "~src/translator/memoryUtils";
+} from "~src/translator/memoryUtil";
 import {
   addStatement,
   unaryOperatorToBinaryOperator,
 } from "~src/translator/util";
 import {
   variableTypeToWasmType,
-  getVariableOrArrayExprAddr,
   convertVarNameToScopedVarName,
   getArrayConstantIndexElementAddr,
   getVariableAddr,
+  getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
 import {
   WasmModule,
@@ -117,7 +111,7 @@ export default function visit(
     addStatement(
       {
         type: "MemoryStore",
-        addr: getVariableAddr(wasmRoot, n.name, enclosingFunc),
+        addr: getVariableAddr(wasmRoot, v.name, enclosingFunc),
         value: evaluateExpression(wasmRoot, n.value, enclosingFunc),
         varType: variableTypeToWasmType[n.variableType],
         numOfBytes: getVariableSize(n.variableType),
@@ -199,13 +193,16 @@ export default function visit(
     enclosingFunc.locals[array.name] = array;
   } else if (CAstNode.type === "Assignment") {
     const n = CAstNode as Assignment;
+    const memoryAccessDetails = getMemoryAccessDetails(
+      wasmRoot,
+      n.variable,
+      enclosingFunc
+    );
     addStatement(
       {
         type: "MemoryStore",
-        addr: getVariableOrArrayExprAddr(wasmRoot, n.variable, enclosingFunc),
         value: evaluateExpression(wasmRoot, n.value, enclosingFunc),
-        varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: getVariableSize(n.variable.variableType),
+        ...memoryAccessDetails,
       },
       enclosingFunc,
       enclosingBody
@@ -238,39 +235,33 @@ export default function visit(
   ) {
     // handle the case where a prefix or postfix expression is used as a statement, not an expression.
     const n = CAstNode as PrefixExpression | PostfixExpression;
-    const addr = getVariableOrArrayExprAddr(
+    const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
       enclosingFunc
     );
-    const varType = variableTypeToWasmType[n.variable.variableType];
-
     const localMemStore: WasmMemoryStore = {
       type: "MemoryStore",
-      addr,
       value: {
         type: "ArithmeticExpression",
         operator: unaryOperatorToBinaryOperator[n.operator],
         leftExpr: {
           type: "MemoryLoad",
-          addr,
-          varType: variableTypeToWasmType[n.variable.variableType],
-          numOfBytes: getVariableSize(n.variable.variableType),
+          ...memoryAccessDetails,
         },
         rightExpr: {
           type: "Const",
-          variableType: varType,
+          variableType: "i32",
           value: 1,
         },
-        varType: varType,
+        varType: memoryAccessDetails.varType,
       },
-      varType: variableTypeToWasmType[n.variable.variableType],
-      numOfBytes: getVariableSize(n.variable.variableType),
+      ...memoryAccessDetails,
     };
     addStatement(localMemStore, enclosingFunc, enclosingBody);
   } else if (CAstNode.type === "CompoundAssignment") {
     const n = CAstNode as CompoundAssignment;
-    const addr = getVariableOrArrayExprAddr(
+    const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
       enclosingFunc
@@ -281,9 +272,7 @@ export default function visit(
       varType: variableTypeToWasmType[n.variable.variableType],
       leftExpr: {
         type: "MemoryLoad",
-        addr,
-        varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: getVariableSize(n.variable.variableType),
+        ...memoryAccessDetails,
       },
       rightExpr: evaluateExpression(wasmRoot, n.value, enclosingFunc),
     };
@@ -291,10 +280,8 @@ export default function visit(
     addStatement(
       {
         type: "MemoryStore",
-        addr,
         value: arithmeticExpr,
-        varType: variableTypeToWasmType[n.variable.variableType],
-        numOfBytes: getVariableSize(n.variable.variableType),
+        ...memoryAccessDetails,
       },
       enclosingFunc,
       enclosingBody
@@ -433,5 +420,7 @@ export default function visit(
       enclosingFunc,
       enclosingBody
     );
+  } else {
+    console.assert(false, "Translator error: Unhandled AST node")
   }
 }
