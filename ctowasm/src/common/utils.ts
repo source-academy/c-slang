@@ -14,6 +14,9 @@ export function getVariableSize(varType: VariableType) {
     case "char":
       return 1;
     default:
-      console.assert(false, "getVariableSize error: Unknown varType: ${varType}")
+      console.assert(
+        false,
+        "getVariableSize error: Unknown varType: ${varType}",
+      );
   }
 }

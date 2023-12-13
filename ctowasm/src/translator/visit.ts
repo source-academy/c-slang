@@ -37,7 +37,12 @@ import {
 import { WasmSelectStatement } from "~src/wasm-ast/control";
 import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
 import { WasmFunction } from "~src/wasm-ast/functions";
-import { MemoryVariableByteSize, WasmLocalVariable, WasmLocalArray, WasmMemoryStore } from "~src/wasm-ast/memory";
+import {
+  MemoryVariableByteSize,
+  WasmLocalVariable,
+  WasmLocalArray,
+  WasmMemoryStore,
+} from "~src/wasm-ast/memory";
 import { WasmArithmeticExpression } from "~src/wasm-ast/operations";
 
 /**
@@ -51,13 +56,13 @@ export default function visit(
   wasmRoot: WasmModule, // the wasm modul
   CAstNode: CNode,
   enclosingFunc: WasmFunction,
-  enclosingBody?: WasmStatement[]
+  enclosingBody?: WasmStatement[],
 ) {
   if (CAstNode.type === "Block") {
     const n = CAstNode as Block;
     enclosingFunc.scopes.push(new Set()); // push on new scope for this block
     n.children.forEach((child) =>
-      visit(wasmRoot, child, enclosingFunc, enclosingBody)
+      visit(wasmRoot, child, enclosingFunc, enclosingBody),
     );
     enclosingFunc.scopes.pop(); // pop off the scope for this block
   } else if (CAstNode.type === "ReturnStatement") {
@@ -75,7 +80,7 @@ export default function visit(
               .size as MemoryVariableByteSize, // TODO: change when implement structs
           },
           enclosingFunc,
-          enclosingBody
+          enclosingBody,
         );
       }
       addStatement(
@@ -83,7 +88,7 @@ export default function visit(
           type: "ReturnStatement",
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     }
   } else if (CAstNode.type === "Initialization") {
@@ -95,7 +100,7 @@ export default function visit(
       type: "LocalVariable",
       name: convertVarNameToScopedVarName(
         n.name,
-        enclosingFunc.scopes.length - 1
+        enclosingFunc.scopes.length - 1,
       ),
       size: variableSize,
       bpOffset: enclosingFunc.bpOffset,
@@ -111,7 +116,7 @@ export default function visit(
         numOfBytes: getVariableSize(n.variableType),
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else if (CAstNode.type === "ArrayInitialization") {
     const n = CAstNode as ArrayInitialization;
@@ -122,7 +127,7 @@ export default function visit(
       type: "LocalArray",
       name: convertVarNameToScopedVarName(
         n.name,
-        enclosingFunc.scopes.length - 1
+        enclosingFunc.scopes.length - 1,
       ),
       size: n.size, // size in number of elements
       bpOffset: enclosingFunc.bpOffset,
@@ -141,14 +146,14 @@ export default function visit(
             n.name,
             i,
             getVariableSize(n.variableType),
-            enclosingFunc
+            enclosingFunc,
           ),
           value: evaluateExpression(wasmRoot, n.elements[i], enclosingFunc),
           varType: variableTypeToWasmType[n.variableType],
           numOfBytes: getVariableSize(n.variableType),
         },
         enclosingFunc,
-        enclosingBody
+        enclosingBody,
       );
     }
   } else if (CAstNode.type === "VariableDeclaration") {
@@ -160,7 +165,7 @@ export default function visit(
       type: "LocalVariable",
       name: convertVarNameToScopedVarName(
         n.name,
-        enclosingFunc.scopes.length - 1
+        enclosingFunc.scopes.length - 1,
       ),
       size: variableSize,
       bpOffset: enclosingFunc.bpOffset,
@@ -176,7 +181,7 @@ export default function visit(
       type: "LocalArray",
       name: convertVarNameToScopedVarName(
         n.name,
-        enclosingFunc.scopes.length - 1
+        enclosingFunc.scopes.length - 1,
       ),
       size: n.size, // size in number of elements
       bpOffset: enclosingFunc.bpOffset,
@@ -190,7 +195,7 @@ export default function visit(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     addStatement(
       {
@@ -199,7 +204,7 @@ export default function visit(
         ...memoryAccessDetails,
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else if (CAstNode.type === "FunctionCallStatement") {
     const n = CAstNode as FunctionCallStatement;
@@ -213,15 +218,15 @@ export default function visit(
         name: n.name,
         stackFrameSetup: getFunctionCallStackFrameSetupStatements(
           wasmRoot.functions[n.name],
-          functionArgs
+          functionArgs,
         ),
         stackFrameTearDown: getFunctionStackFrameTeardownStatements(
           wasmRoot.functions[n.name],
-          false
+          false,
         ),
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else if (
     CAstNode.type === "PrefixExpression" ||
@@ -232,7 +237,7 @@ export default function visit(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     const localMemStore: WasmMemoryStore = {
       type: "MemoryStore",
@@ -258,7 +263,7 @@ export default function visit(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     const arithmeticExpr: WasmArithmeticExpression = {
       type: "ArithmeticExpression",
@@ -278,7 +283,7 @@ export default function visit(
         ...memoryAccessDetails,
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else if (CAstNode.type === "SelectStatement") {
     const n = CAstNode as SelectStatement;
@@ -289,7 +294,7 @@ export default function visit(
       condition: evaluateExpression(
         wasmRoot,
         n.ifBlock.condition,
-        enclosingFunc
+        enclosingFunc,
       ),
       actions,
       elseStatements: [],
@@ -303,7 +308,7 @@ export default function visit(
         condition: evaluateExpression(
           wasmRoot,
           elseIfBlock.condition,
-          enclosingFunc
+          enclosingFunc,
         ),
         actions,
         elseStatements: [],
@@ -335,7 +340,7 @@ export default function visit(
         body,
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else if (CAstNode.type === "WhileLoop") {
     const n = CAstNode as WhileLoop;
@@ -371,7 +376,7 @@ export default function visit(
         ],
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else if (CAstNode.type === "ForLoop") {
     const n = CAstNode as ForLoop;
@@ -412,7 +417,7 @@ export default function visit(
         ],
       },
       enclosingFunc,
-      enclosingBody
+      enclosingBody,
     );
   } else {
     console.assert(false, "Translator error: Unhandled AST node");

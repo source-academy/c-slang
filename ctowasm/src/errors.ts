@@ -4,7 +4,6 @@
 
 import { Position } from "~src/c-ast/types";
 
-
 /**
  * An error that occured in relation to the C source code during compilation.
  * Contains positional information for debugging purposes.
@@ -34,7 +33,7 @@ export class ProcessingError extends SourceCodeError {
 export class SemanticAnalysisError extends SourceCodeError {
   constructor(message: string, sourceCode: string, position: Position) {
     super(message, sourceCode, position);
-  } 
+  }
 }
 
 export class TranslationError extends Error {

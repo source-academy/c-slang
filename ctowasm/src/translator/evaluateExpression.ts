@@ -38,7 +38,7 @@ import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 function evaluateLeftToRightBinaryExpression(
   wasmRoot: WasmModule,
   node: ArithmeticExpression | ComparisonExpression,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ) {
   const rootNode: any = { type: node.type };
   // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
@@ -48,7 +48,7 @@ function evaluateLeftToRightBinaryExpression(
     currNode.rightExpr = evaluateExpression(
       wasmRoot,
       node.exprs[i].expr,
-      enclosingFunc
+      enclosingFunc,
     );
     currNode.leftExpr = { type: node.type };
     currNode = currNode.leftExpr;
@@ -57,12 +57,12 @@ function evaluateLeftToRightBinaryExpression(
   currNode.rightExpr = evaluateExpression(
     wasmRoot,
     node.exprs[0].expr,
-    enclosingFunc
+    enclosingFunc,
   );
   currNode.leftExpr = evaluateExpression(
     wasmRoot,
     node.firstExpr,
-    enclosingFunc
+    enclosingFunc,
   );
   return rootNode;
 }
@@ -78,7 +78,7 @@ function isConditionalExpression(node: Expression) {
 function evaluateConditionalExpression(
   wasmRoot: WasmModule,
   node: ConditionalExpression,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ) {
   const wasmNodeType =
     node.conditionType === "or" ? "OrExpression" : "AndExpression";
@@ -92,7 +92,7 @@ function evaluateConditionalExpression(
       currNode.rightExpr = evaluateExpression(
         wasmRoot,
         node.exprs[i],
-        enclosingFunc
+        enclosingFunc,
       );
     } else {
       currNode.rightExpr = {
@@ -108,7 +108,7 @@ function evaluateConditionalExpression(
     currNode.rightExpr = evaluateExpression(
       wasmRoot,
       node.exprs[1],
-      enclosingFunc
+      enclosingFunc,
     );
   } else {
     currNode.rightExpr = {
@@ -121,7 +121,7 @@ function evaluateConditionalExpression(
     currNode.leftExpr = evaluateExpression(
       wasmRoot,
       node.exprs[0],
-      enclosingFunc
+      enclosingFunc,
     );
   } else {
     currNode.leftExpr = {
@@ -138,7 +138,7 @@ function evaluateConditionalExpression(
 export default function evaluateExpression(
   wasmRoot: WasmModule,
   expr: Expression,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ): WasmExpression {
   if (expr.type === "Integer") {
     const n = expr as Integer;
@@ -157,11 +157,11 @@ export default function evaluateExpression(
       name: n.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         wasmRoot.functions[n.name],
-        functionArgs
+        functionArgs,
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
         wasmRoot.functions[n.name],
-        true
+        true,
       ),
     };
   } else if (expr.type === "VariableExpr" || expr.type === "ArrayElementExpr") {
@@ -169,7 +169,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n,
-      enclosingFunc
+      enclosingFunc,
     );
     return {
       type: "MemoryLoad",
@@ -186,7 +186,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
@@ -219,7 +219,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
@@ -254,7 +254,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     return {
       type: "MemoryLoad",
@@ -272,7 +272,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       n.variable,
-      enclosingFunc
+      enclosingFunc,
     );
     return {
       type: "MemoryLoad",
@@ -298,8 +298,8 @@ export default function evaluateExpression(
     console.assert(
       false,
       `WASM TRANSLATION ERROR: Unhandled C expression node\n${JSON.stringify(
-        expr
-      )}`
+        expr,
+      )}`,
     );
   }
 }

@@ -18,7 +18,7 @@ export const unaryOperatorToBinaryOperator: Record<string, BinaryOperator> = {
 export function addStatement(
   n: WasmStatement,
   enclosingFunc: WasmFunction,
-  enclosingBody?: WasmStatement[]
+  enclosingBody?: WasmStatement[],
 ) {
   if (typeof enclosingBody !== "undefined") {
     enclosingBody.push(n);

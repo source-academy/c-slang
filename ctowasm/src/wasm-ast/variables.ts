@@ -3,7 +3,12 @@
  */
 
 import { WasmType } from "~src/wasm-ast/types";
-import { WasmAstNode, WasmConst, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
+import {
+  WasmAstNode,
+  WasmConst,
+  WasmExpression,
+  WasmStatement,
+} from "~src/wasm-ast/core";
 
 export interface WasmVariable extends WasmAstNode {
   name: string;

@@ -102,7 +102,7 @@ function generateArgString(exprs: WasmExpression[]) {
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
 function generateStatementsList(
-  statements: (WasmStatement | WasmExpression)[]
+  statements: (WasmStatement | WasmExpression)[],
 ) {
   return statements
     .map((s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression))
@@ -141,11 +141,11 @@ function getBinaryInstruction(operator: BinaryOperator | ComparisonOperator) {
 }
 
 function getPreStatementsStr(
-  preStatements?: (WasmStatement | WasmExpression)[]
+  preStatements?: (WasmStatement | WasmExpression)[],
 ) {
   const s = preStatements
     ? preStatements.map(
-        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
+        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression),
       )
     : [];
   return s.length > 0 ? " " + s.join(" ") : "";
@@ -158,7 +158,7 @@ function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const e = expr as WasmFunctionCall;
     return `(call $${e.name} ${generateStatementsList(
-      e.stackFrameSetup
+      e.stackFrameSetup,
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
@@ -176,7 +176,7 @@ function generateExprStr(expr: WasmExpression): string {
     const e = expr as WasmArithmeticExpression | WasmComparisonExpression;
     //TODO: support different op types other than i32
     return `(${getBinaryInstruction(e.operator)} ${generateExprStr(
-      e.leftExpr
+      e.leftExpr,
     )} ${generateExprStr(e.rightExpr)})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
@@ -191,12 +191,12 @@ function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "AndExpression") {
     const e = expr as WasmAndExpression;
     return `(i32.and ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr
+      e.rightExpr,
     )})`;
   } else if (expr.type === "OrExpression") {
     const e = expr as WasmOrExpression;
     return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr
+      e.rightExpr,
     )})`;
   } else if (expr.type === "MemorySize") {
     return "(memory.size)";
@@ -204,7 +204,7 @@ function generateExprStr(expr: WasmExpression): string {
     const n = expr as WasmMemoryLoad;
     return `(${getWasmMemoryLoadInstruction(
       n.varType,
-      n.numOfBytes
+      n.numOfBytes,
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(expr.addr)})`;
   } else if (expr.type === "MemoryStore") {
     return generateStatementStr(expr);
@@ -212,8 +212,8 @@ function generateExprStr(expr: WasmExpression): string {
     console.assert(
       false,
       `WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion\n${JSON.stringify(
-        expr
-      )}`
+        expr,
+      )}`,
     );
   }
 }
@@ -225,17 +225,17 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
   if (statement.type === "GlobalSet") {
     const n = statement as WasmGlobalSet;
     return `(global.set $${n.name}${getPreStatementsStr(
-      n.preStatements
+      n.preStatements,
     )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "LocalSet") {
     const n = statement as WasmLocalSet;
     return `(local.set $${n.name}${getPreStatementsStr(
-      n.preStatements
+      n.preStatements,
     )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "FunctionCallStatement") {
     const n = statement as WasmFunctionCallStatement;
     return `(call $${n.name} ${generateStatementsList(
-      n.stackFrameSetup
+      n.stackFrameSetup,
     )}) ${generateStatementsList(n.stackFrameTearDown)}`;
   } else if (
     statement.type === "GlobalGet" ||
@@ -285,9 +285,9 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     const n = statement as WasmMemoryStore;
     return `(${getWasmMemoryStoreInstruction(
       n.varType,
-      n.numOfBytes
+      n.numOfBytes,
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(
-      n.addr
+      n.addr,
     )} ${generateExprStr(n.value)})`;
   } else if (statement.type === "RegularFunctionCall") {
     const n = statement as WasmRegularFunctionCall;
@@ -303,7 +303,7 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
 export function generateWAT(
   module: WasmModule,
   baseIndentation: number = 0,
-  testMode?: boolean
+  testMode?: boolean,
 ) {
   let watStr = generateLine("(module", baseIndentation);
 
@@ -312,13 +312,13 @@ export function generateWAT(
   if (testMode) {
     watStr += generateLine(
       '(import "console" "log" (func $log (param i32)))',
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
   // add the memory import
   watStr += generateLine(
     `(import "js" "mem" (memory ${module.memorySize}))`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add the imported functions
@@ -338,7 +338,7 @@ export function generateWAT(
           ? ` (result ${importedFunction.return})`
           : ""
       }))`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -350,7 +350,7 @@ export function generateWAT(
       }) ${
         global.initializerValue ? generateExprStr(global.initializerValue) : ""
       })`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -366,7 +366,7 @@ export function generateWAT(
         `(data (i32.const ${
           globalVariable.memoryAddr
         }) "${convertVariableToByteStr(globalVariable)}")`,
-        baseIndentation + 1
+        baseIndentation + 1,
       );
   }
 
@@ -376,7 +376,7 @@ export function generateWAT(
     for (const statement of func.body) {
       watStr += generateLine(
         generateStatementStr(statement),
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

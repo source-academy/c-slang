@@ -13,7 +13,12 @@ import { BASE_POINTER, PARAM_PREFIX } from "~src/translator/memoryUtil";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmConst, WasmModule, WasmExpression } from "~src/wasm-ast/core";
 import { WasmFunction } from "~src/wasm-ast/functions";
-import { WasmLocalVariable, WasmLocalArray, MemoryVariableByteSize, WasmDataSegmentArray } from "~src/wasm-ast/memory";
+import {
+  WasmLocalVariable,
+  WasmLocalArray,
+  MemoryVariableByteSize,
+  WasmDataSegmentArray,
+} from "~src/wasm-ast/memory";
 
 export const variableTypeToWasmType: Record<VariableType, WasmType> = {
   int: "i32",
@@ -57,7 +62,7 @@ export function convertVarNameToScopedVarName(name: string, block: number) {
  */
 export function getWasmVariableName(
   originalVariableName: string,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ) {
   for (let i = enclosingFunc.scopes.length - 1; i >= 0; --i) {
     if (enclosingFunc.scopes[i].has(originalVariableName)) {
@@ -80,7 +85,7 @@ export function getWasmVariableName(
 export function getVariableAddr(
   wasmRoot: WasmModule,
   variableName: string,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ): WasmExpression {
   const wasmVariableName = getWasmVariableName(variableName, enclosingFunc);
   if (
@@ -128,7 +133,7 @@ export function getArrayElementAddr(
   arrayName: string,
   elementIndex: Expression,
   elementSize: number,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
@@ -164,7 +169,7 @@ interface MemoryAccessDetails {
 export function getMemoryAccessDetails(
   wasmRoot: WasmModule,
   expr: VariableExpr | ArrayElementExpr,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ): MemoryAccessDetails {
   const wasmVarName = getWasmVariableName(expr.name, enclosingFunc);
   let variable;
@@ -186,7 +191,7 @@ export function getMemoryAccessDetails(
       )
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
+        "getMemoryAccessDetails error: memory access variable does not match.",
       );
     }
     return {
@@ -199,7 +204,7 @@ export function getMemoryAccessDetails(
       !(variable.type === "LocalArray" || variable.type === "DataSegmentArray")
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
+        "getMemoryAccessDetails error: memory access variable does not match.",
       );
     }
     const v = variable as WasmDataSegmentArray | WasmLocalArray;
@@ -209,7 +214,7 @@ export function getMemoryAccessDetails(
         expr.name,
         expr.index,
         v.elementSize,
-        enclosingFunc
+        enclosingFunc,
       ),
       numOfBytes: v.elementSize as MemoryVariableByteSize, // the size of one element of //TODO: need to change when have more types
       varType: v.varType,
@@ -217,7 +222,7 @@ export function getMemoryAccessDetails(
   } else {
     console.assert(
       false,
-      "Translator error: getMemoryAccessDetails failed - no matching expression type"
+      "Translator error: getMemoryAccessDetails failed - no matching expression type",
     );
   }
 }
@@ -230,7 +235,7 @@ export function getArrayConstantIndexElementAddr(
   arrayName: string,
   elementIndex: number,
   elementSize: number,
-  enclosingFunc: WasmFunction
+  enclosingFunc: WasmFunction,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",

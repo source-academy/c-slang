@@ -23,7 +23,7 @@ import { CSymbolCreatorNodes, Scope } from "~src/semanticAnalyser/types";
 export function checkForErrors(
   sourceCode: string,
   ast: CAstRoot,
-  specialFunctions: string[] = []
+  specialFunctions: string[] = [],
 ) {
   const specialFunctionsSet = new Set(specialFunctions);
   /**
@@ -101,7 +101,7 @@ export function checkForErrors(
         sourceCode,
         node,
         currentScope,
-        specialFunctionsSet
+        specialFunctionsSet,
       );
     } else if (node.type === "ForLoop") {
       // new scope just for for loop initialization
@@ -139,7 +139,7 @@ function createNewScope(parentScope: Scope | null): Scope {
 function createSymbolEntry(
   node: CSymbolCreatorNodes,
   scope: Scope,
-  isDefined = false
+  isDefined = false,
 ) {
   if (
     node.type === "FunctionDeclaration" ||

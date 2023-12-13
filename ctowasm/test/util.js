@@ -20,7 +20,7 @@ const TEMP_DIRECTORY = path.resolve(__dirname, "temp");
 const getExpectedCodeFilePath = (subset, fileName) => {
   return path.resolve(
     __dirname,
-    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`
+    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`,
   );
 };
 
@@ -32,9 +32,9 @@ export async function compileAndRunFile({ subset, testType, testFileName }) {
       __dirname,
       `samples/subset${subset.toString()}/${
         testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`
+      }/${testFileName}.c`,
     ),
-    "utf-8"
+    "utf-8",
   );
 
   await compileAndRun(input);
@@ -43,16 +43,16 @@ export async function compileAndRunFile({ subset, testType, testFileName }) {
 export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
   const watFilePath = path.resolve(
     TEMP_DIRECTORY,
-    `subset${subset.toString()}/wat/${testFileName}.wat`
+    `subset${subset.toString()}/wat/${testFileName}.wat`,
   );
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
       `samples/subset${subset.toString()}/${
         testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`
+      }/${testFileName}.c`,
     ),
-    "utf-8"
+    "utf-8",
   );
 
   const output = compileToWat(input);
@@ -84,18 +84,20 @@ export async function testFileCompilationSuccess(subset, testFileName) {
     ) {
       const expected = fs.readFileSync(
         getExpectedCodeFilePath(subset, testFileName),
-        "utf-8"
+        "utf-8",
       );
       if (expected === output) {
         return COMPILATION_SUCCESS;
       } else {
         return `WAT DOES NOT MATCH EXPECTED:\nexpected file: ${getExpectedCodeFilePath(
           subset,
-          testFileName
-        )}\nactual file: ${path.resolve(
-          TEMP_DIRECTORY,
-          `subset${subset.toString()}/wat/${testFileName}.wat`
-        ).toString()}`;
+          testFileName,
+        )}\nactual file: ${path
+          .resolve(
+            TEMP_DIRECTORY,
+            `subset${subset.toString()}/wat/${testFileName}.wat`,
+          )
+          .toString()}`;
       }
     } else {
       // Test 2: checks that the file is runnable, and outputs the correct values

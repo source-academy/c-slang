@@ -37,7 +37,7 @@ export function checkForRedeclaration(
     | FunctionDefinition
     | ArrayDeclaration
     | ArrayInitialization,
-  scope: Scope
+  scope: Scope,
 ) {
   if (node.name in scope.symbols) {
     if (scope.parentScope !== null) {
@@ -45,7 +45,7 @@ export function checkForRedeclaration(
       throw new SemanticAnalysisError(
         `Redeclaration error: ${node.name} redeclared in same scope`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
 
@@ -68,7 +68,7 @@ export function checkForRedeclaration(
           scope.symbols[node.name].type
         }'`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
 
@@ -87,7 +87,7 @@ export function checkForRedeclaration(
           (scope.symbols[node.name] as VariableSymbol).variableType
         }'`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
 
@@ -111,7 +111,7 @@ export function checkForRedeclaration(
           scope.symbols[node.name] as FunctionSymbol
         ).params.join(", ")})'`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
 
@@ -132,7 +132,7 @@ export function checkForRedeclaration(
           (scope.symbols[node.name] as ArraySymbol).variableType
         }[${(scope.symbols[node.name] as ArraySymbol).arraySize}]'`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
   }
@@ -144,13 +144,13 @@ export function checkForRedeclaration(
 export function checkForRedefinition(
   sourceCode: string,
   node: FunctionDefinition | Initialization | ArrayInitialization,
-  scope: Scope
+  scope: Scope,
 ) {
   if (node.name in scope.symbols && scope.symbols[node.name].isDefined) {
     throw new SemanticAnalysisError(
       `Redefinition error: Symbol '${name} redefined in scope'`,
       sourceCode,
-      node.position
+      node.position,
     );
   }
 }
@@ -162,7 +162,7 @@ export function checkForRedefinition(
 export function checkForVariableDeclaration(
   sourceCode: string,
   node: VariableExpr,
-  scope: Scope
+  scope: Scope,
 ) {
   let curr = scope;
   while (curr != null) {
@@ -173,7 +173,7 @@ export function checkForVariableDeclaration(
       throw new SemanticAnalysisError(
         `${node.name} is a ${curr.symbols[node.name].type}, not a variable`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
     curr = curr.parentScope;
@@ -181,14 +181,14 @@ export function checkForVariableDeclaration(
   throw new SemanticAnalysisError(
     `Undeclared variable: '${node.name}' undeclared before use`,
     sourceCode,
-    node.position
+    node.position,
   );
 }
 
 export function checkForArrayDeclaration(
   sourceCode: string,
   node: ArrayElementExpr,
-  scope: Scope
+  scope: Scope,
 ) {
   let curr = scope;
   while (curr != null) {
@@ -199,7 +199,7 @@ export function checkForArrayDeclaration(
         throw new SemanticAnalysisError(
           `${node.name} is not an array type`,
           sourceCode,
-          node.position
+          node.position,
         );
       }
     }
@@ -208,7 +208,7 @@ export function checkForArrayDeclaration(
   throw new SemanticAnalysisError(
     `Undeclared array: '${node.name}' undeclared before use`,
     sourceCode,
-    node.position
+    node.position,
   );
 }
 
@@ -219,7 +219,7 @@ export function checkForFunctionDeclaration(
   sourceCode: string,
   node: FunctionCall | FunctionCallStatement,
   scope: Scope,
-  specialFunctions: Set<string>
+  specialFunctions: Set<string>,
 ) {
   if (specialFunctions.has(node.name)) {
     // one of the special pre-built functions
@@ -234,7 +234,7 @@ export function checkForFunctionDeclaration(
         throw new SemanticAnalysisError(
           `${node.name} is not a function parameter`,
           sourceCode,
-          node.position
+          node.position,
         );
       }
     }
@@ -243,13 +243,13 @@ export function checkForFunctionDeclaration(
   throw new SemanticAnalysisError(
     `Undeclared function: '${node.name}' undeclared before use`,
     sourceCode,
-    node.position
+    node.position,
   );
 }
 
 export function checkForFunctionParameterRedeclaration(
   sourceCode: string,
-  node: FunctionDeclaration | FunctionDefinition
+  node: FunctionDeclaration | FunctionDefinition,
 ) {
   const params = new Set<string>();
   node.parameters.forEach((p) => {
@@ -257,7 +257,7 @@ export function checkForFunctionParameterRedeclaration(
       throw new SemanticAnalysisError(
         `Redeclaration error: function parameter ${p.name} redeclared`,
         sourceCode,
-        node.position
+        node.position,
       );
     }
     params.add(p.name);

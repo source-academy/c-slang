@@ -1,10 +1,41 @@
-import { WasmSelectStatement, WasmLoop, WasmBranchIf, WasmBranch, WasmBlock } from "~src/wasm-ast/control";
-import { WasmFunction, WasmFunctionCallStatement, WasmReturnStatement, WasmRegularFunctionCall, WasmFunctionCall } from "~src/wasm-ast/functions";
-import { WasmDataSegmentVariable, WasmDataSegmentArray, WasmMemoryStore, WasmMemoryGrow, WasmMemoryLoad, WasmMemorySize } from "~src/wasm-ast/memory";
+import {
+  WasmSelectStatement,
+  WasmLoop,
+  WasmBranchIf,
+  WasmBranch,
+  WasmBlock,
+} from "~src/wasm-ast/control";
+import {
+  WasmFunction,
+  WasmFunctionCallStatement,
+  WasmReturnStatement,
+  WasmRegularFunctionCall,
+  WasmFunctionCall,
+} from "~src/wasm-ast/functions";
+import {
+  WasmDataSegmentVariable,
+  WasmDataSegmentArray,
+  WasmMemoryStore,
+  WasmMemoryGrow,
+  WasmMemoryLoad,
+  WasmMemorySize,
+} from "~src/wasm-ast/memory";
 import { WasmFunctionImport } from "~src/wasm-ast/misc";
-import { WasmArithmeticExpression, WasmBooleanExpression, WasmAndExpression, WasmOrExpression, WasmComparisonExpression } from "~src/wasm-ast/operations";
+import {
+  WasmArithmeticExpression,
+  WasmBooleanExpression,
+  WasmAndExpression,
+  WasmOrExpression,
+  WasmComparisonExpression,
+} from "~src/wasm-ast/operations";
 import { WasmType } from "~src/wasm-ast/types";
-import { WasmGlobalSet, WasmLocalSet, WasmLocalGet, WasmGlobalGet, WasmGlobalVariable } from "~src/wasm-ast/variables";
+import {
+  WasmGlobalSet,
+  WasmLocalSet,
+  WasmLocalGet,
+  WasmGlobalGet,
+  WasmGlobalVariable,
+} from "~src/wasm-ast/variables";
 
 /**
  * Main file containing all the core wasm AST node definitions.
@@ -64,7 +95,4 @@ export type WasmExpression =
   | WasmOrExpression
   | WasmComparisonExpression
   | WasmMemoryLoad
-  | WasmMemorySize
-
-
-
+  | WasmMemorySize;

@@ -11,7 +11,7 @@ import { ProcessingError } from "~src/errors";
 export function evaluateBinaryOperation(
   a: number,
   operator: BinaryOperator,
-  b: number
+  b: number,
 ) {
   switch (operator) {
     case "+":
@@ -32,14 +32,14 @@ export function evaluateBinaryOperation(
  */
 export function evaluateConstantArithmeticExpression(
   sourceCode: string,
-  arithmeticExpr: ArithmeticExpression
+  arithmeticExpr: ArithmeticExpression,
 ) {
   const arithmeticExpression = arithmeticExpr as ArithmeticExpression;
   if (arithmeticExpression.firstExpr.type !== "Integer") {
     throw new ProcessingError(
       "Error: Intializer element of global variable is not constant",
       sourceCode,
-      arithmeticExpr.position
+      arithmeticExpr.position,
     );
   }
   let val = (arithmeticExpression.firstExpr as Integer).value;
@@ -49,13 +49,13 @@ export function evaluateConstantArithmeticExpression(
       throw new ProcessingError(
         "Error: Intializer element of global variable is not constant",
         sourceCode,
-        arithmeticExpr.position
+        arithmeticExpr.position,
       );
     }
     val = evaluateBinaryOperation(
       val,
       operand.operator,
-      (operand.expr as Integer).value
+      (operand.expr as Integer).value,
     );
   }
   return {

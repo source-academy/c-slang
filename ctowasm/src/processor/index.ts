@@ -35,7 +35,7 @@ export default function process(sourceCode: string, ast: CAstRoot) {
 function visit(
   sourceCode: string,
   node: any,
-  enclosingFunc?: FunctionDefinition
+  enclosingFunc?: FunctionDefinition,
 ) {
   if (
     !(
@@ -55,7 +55,7 @@ function visit(
     // size of parameters can be calculated immediately
     n.sizeOfParameters = n.parameters.reduce(
       (sum, curr) => sum + getVariableSize(curr.variableType),
-      0
+      0,
     );
     n.sizeOfReturn = n.returnType ? getVariableSize(n.returnType) : 0;
 
@@ -84,7 +84,7 @@ function visit(
       if (n.value.type === "ArithmeticExpression") {
         n.value = evaluateConstantArithmeticExpression(
           sourceCode,
-          n.value as ArithmeticExpression
+          n.value as ArithmeticExpression,
         );
       }
     }
@@ -101,8 +101,8 @@ function visit(
           evaluatedElements.push(
             evaluateConstantArithmeticExpression(
               sourceCode,
-              element as ArithmeticExpression
-            )
+              element as ArithmeticExpression,
+            ),
           );
         } else if (element.type === "Integer") {
           // element is already an integer
@@ -111,7 +111,7 @@ function visit(
           throw new ProcessingError(
             "Intializer element of global variable is not constant",
             sourceCode,
-            node.position
+            node.position,
           );
         }
       }

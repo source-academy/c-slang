@@ -3,7 +3,6 @@
  */
 
 import { WasmType } from "~src/wasm-ast/types";
-import { WasmVariable } from "~src/wasm-ast/variables";
 import {
   WasmAstNode,
   WasmExpression,
@@ -78,4 +77,3 @@ export interface WasmDataSegmentArray extends WasmMemoryVariable {
   memoryAddr: number;
   initializerList?: WasmConst[];
 }
-

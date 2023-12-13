@@ -37,7 +37,7 @@ import { WasmModule } from "~src/wasm-ast/core";
 function setPseudoRegisters(
   wasmRoot: WasmModule,
   stackPreallocate: number,
-  dataSegmentSize: number
+  dataSegmentSize: number,
 ) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
@@ -102,7 +102,7 @@ function setPseudoRegisters(
  */
 function getFunctionDefAndGlobalVarInfo(
   CAstRoot: CAstRoot,
-  wasmRoot: WasmModule
+  wasmRoot: WasmModule,
 ): number {
   /**
    * Increases the data segment offset by given amount; expands initial memory if insufficient memory.
@@ -168,7 +168,7 @@ function getFunctionDefAndGlobalVarInfo(
       };
       currDataSegmentPosition = incrementDataSegmentPosition(
         currDataSegmentPosition,
-        variableSize
+        variableSize,
       );
     } else if (child.type === "Initialization") {
       const n = child as Initialization;
@@ -183,7 +183,7 @@ function getFunctionDefAndGlobalVarInfo(
       };
       currDataSegmentPosition = incrementDataSegmentPosition(
         currDataSegmentPosition,
-        variableSize
+        variableSize,
       );
     } else if (child.type === "ArrayDeclaration") {
       const n = child as ArrayDeclaration;
@@ -200,7 +200,7 @@ function getFunctionDefAndGlobalVarInfo(
       };
       currDataSegmentPosition = incrementDataSegmentPosition(
         currDataSegmentPosition,
-        arraySize
+        arraySize,
       );
     } else if (child.type === "ArrayInitialization") {
       const n = child as ArrayInitialization;
@@ -215,12 +215,12 @@ function getFunctionDefAndGlobalVarInfo(
         elementSize,
         memoryAddr: currDataSegmentPosition,
         initializerList: n.elements.map((element) =>
-          convertLiteralToConst(element as Literal)
+          convertLiteralToConst(element as Literal),
         ),
       };
       currDataSegmentPosition = incrementDataSegmentPosition(
         currDataSegmentPosition,
-        arraySize
+        arraySize,
       );
     }
   }
@@ -232,7 +232,7 @@ function getFunctionDefAndGlobalVarInfo(
  */
 function addImportedFunctionsToModule(
   wasmRoot: WasmModule,
-  imports: Record<string, WasmImportedFunction>
+  imports: Record<string, WasmImportedFunction>,
 ) {
   // add all the imported functions to wasmRoot.functions
   for (const moduleImportName in imports) {
@@ -290,7 +290,7 @@ function addImportedFunctionsToModule(
 
 export default function translate(
   CAstRoot: CAstRoot,
-  imports: Record<string, WasmImportedFunction> = {}
+  imports: Record<string, WasmImportedFunction> = {},
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -307,7 +307,7 @@ export default function translate(
   setPseudoRegisters(
     wasmRoot,
     wasmRoot.functions["main"].sizeOfLocals,
-    dataSegmentSize
+    dataSegmentSize,
   );
 
   addImportedFunctionsToModule(wasmRoot, imports);

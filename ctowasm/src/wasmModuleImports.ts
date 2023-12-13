@@ -10,10 +10,12 @@ import {
 } from "~src/translator/memoryUtil";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmExpression } from "~src/wasm-ast/core";
-import { WasmFunctionBodyLine, WasmRegularFunctionCall } from "~src/wasm-ast/functions";
+import {
+  WasmFunctionBodyLine,
+  WasmRegularFunctionCall,
+} from "~src/wasm-ast/functions";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 import { WasmType } from "~src/wasm-ast/types";
-
 
 const defaultParentImportedObject = "imports";
 

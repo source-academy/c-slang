@@ -55,7 +55,7 @@ export function generate_WAT_AST(program: string) {
 export async function compileAndRun(program: string) {
   const { wasm, initialMemory } = await originalCompile(
     program,
-    wasmModuleImports
+    wasmModuleImports,
   );
   await runWasm(wasm, initialMemory);
 }

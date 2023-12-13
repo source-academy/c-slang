@@ -73,7 +73,7 @@ function getReg1SetNode(value: WasmExpression): WasmStatement {
 export function getPointerArithmeticNode(
   pointer: "sp" | "bp" | "hp",
   operator: "+" | "-",
-  operand: number
+  operand: number,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
@@ -93,7 +93,7 @@ export function getPointerArithmeticNode(
 
 function getPointerIncrementNode(
   pointer: "sp" | "bp" | "hp",
-  incVal: number
+  incVal: number,
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -104,7 +104,7 @@ function getPointerIncrementNode(
 
 function getPointerDecrementNode(
   pointer: "sp" | "bp" | "hp",
-  decVal: number
+  decVal: number,
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -119,7 +119,7 @@ function getPointerDecrementNode(
  */
 export function getFunctionStackFrameTeardownStatements(
   fn: WasmFunction,
-  useReturn?: boolean
+  useReturn?: boolean,
 ): (WasmStatement | WasmMemoryLoad)[] {
   const statements: (WasmStatement | WasmMemoryLoad)[] = [
     getStackPointerSetNode({
@@ -152,7 +152,7 @@ export function getFunctionStackFrameTeardownStatements(
 
   if (fn.returnVariable !== null) {
     statements.push(
-      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size)
+      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size),
     );
   }
 
@@ -163,7 +163,7 @@ export function getFunctionStackFrameTeardownStatements(
  * Converts a given variable to byte string, for storage in data segment.
  */
 export function convertVariableToByteStr(
-  variable: WasmDataSegmentArray | WasmDataSegmentVariable
+  variable: WasmDataSegmentArray | WasmDataSegmentVariable,
 ) {
   if (variable.type === "DataSegmentVariable") {
     return convertWasmNumberToByteStr(variable.initializerValue, variable.size);
@@ -203,7 +203,7 @@ export function convertWasmNumberToByteStr(num: WasmConst, size: number) {
  */
 export function getFunctionCallStackFrameSetupStatements(
   calledFunction: WasmFunction, // function that is being called
-  functionArgs: WasmExpression[] // arguments passed to this function call
+  functionArgs: WasmExpression[], // arguments passed to this function call
 ): WasmStatement[] {
   const statements: WasmStatement[] = [];
 
@@ -459,7 +459,7 @@ export function getFunctionCallStackFrameSetupStatements(
           variableType: "i32",
           value: calledFunction.returnVariable.size,
         },
-      })
+      }),
     );
   }
 
@@ -475,7 +475,7 @@ export function getFunctionCallStackFrameSetupStatements(
         variableType: "i32",
         value: WASM_ADDR_SIZE,
       },
-    })
+    }),
   );
 
   // push BP onto stack
@@ -502,7 +502,7 @@ export function getFunctionCallStackFrameSetupStatements(
         variableType: "i32",
         value: calledFunction.sizeOfLocals + calledFunction.sizeOfParams,
       },
-    })
+    }),
   );
 
   // set the values of all params
