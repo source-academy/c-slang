@@ -2,7 +2,6 @@
  * Exports a generate function for generating a WAT string from WAT AST.
  */
 import { convertVariableToByteStr } from "../translator/memoryUtil";
-
 import { WasmModule } from "~src/wasm-ast/core";
 import { generateExprStr } from "~src/wat-generator/expression";
 import { generateStatementStr } from "~src/wat-generator/statement";
@@ -15,8 +14,6 @@ export function generateWAT(
 ) {
   let watStr = generateLine("(module", baseIndentation);
 
-  // if in test mode, need to import the log function
-  // TODO: add logging of vars other than i32
   if (testMode) {
     watStr += generateLine(
       '(import "console" "log" (func $log (param i32)))',
@@ -50,8 +47,8 @@ export function generateWAT(
     );
   }
 
+  // add all the wasm global variable declarations
   for (const global of module.globalWasmVariables) {
-    // add all the global variables first
     watStr += generateLine(
       `(global $${global.name} (${global.isConst ? "" : "mut"} ${
         global.varType
@@ -62,6 +59,7 @@ export function generateWAT(
     );
   }
 
+  // add all the global variables (in linear memory) declarations
   for (const globalVariableName of Object.keys(module.globals)) {
     const globalVariable = module.globals[globalVariableName];
     if (
@@ -78,6 +76,7 @@ export function generateWAT(
       );
   }
 
+  // add all the function definitions
   for (const functionName of Object.keys(module.functions)) {
     const func = module.functions[functionName];
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);
