@@ -42,7 +42,7 @@ export function generateWAT(
         importedFunction.return !== null
           ? ` (result ${importedFunction.return})`
           : ""
-      }))`,
+      }))`, 
       baseIndentation + 1,
     );
   }
