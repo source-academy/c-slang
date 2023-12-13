@@ -79,10 +79,3 @@ export interface WasmDataSegmentArray extends WasmMemoryVariable {
   initializerList?: WasmConst[];
 }
 
-/**
- * Actual WASM globals variables.
- */
-export interface WasmGlobalVariable extends WasmVariable {
-  type: "GlobalVariable";
-  initializerValue?: WasmConst;
-}

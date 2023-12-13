@@ -39,7 +39,6 @@ import {
 import {
   WasmExpression,
   WasmStatement,
-  WasmExpressionWithPostStatements,
   WasmConst,
   WasmModule,
 } from "~src/wasm-ast/core";
@@ -161,13 +160,6 @@ function generateExprStr(expr: WasmExpression): string {
     return `(call $${e.name} ${generateStatementsList(
       e.stackFrameSetup
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
-  } else if (expr.type === "ExpressionWithPostStatements") {
-    const e = expr as WasmExpressionWithPostStatements;
-    return `${generateExprStr(e.expr)}${
-      e.postStatements.length > 0
-        ? " " + generateStatementsList(e.postStatements)
-        : ""
-    }`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
     return `(${e.variableType}.const ${e.value.toString()})`;

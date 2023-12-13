@@ -1,10 +1,10 @@
 import { WasmSelectStatement, WasmLoop, WasmBranchIf, WasmBranch, WasmBlock } from "~src/wasm-ast/control";
 import { WasmFunction, WasmFunctionCallStatement, WasmReturnStatement, WasmRegularFunctionCall, WasmFunctionCall } from "~src/wasm-ast/functions";
-import { WasmDataSegmentVariable, WasmDataSegmentArray, WasmGlobalVariable, WasmMemoryStore, WasmMemoryGrow, WasmMemoryLoad, WasmMemorySize } from "~src/wasm-ast/memory";
+import { WasmDataSegmentVariable, WasmDataSegmentArray, WasmMemoryStore, WasmMemoryGrow, WasmMemoryLoad, WasmMemorySize } from "~src/wasm-ast/memory";
 import { WasmFunctionImport } from "~src/wasm-ast/misc";
 import { WasmArithmeticExpression, WasmBooleanExpression, WasmAndExpression, WasmOrExpression, WasmComparisonExpression } from "~src/wasm-ast/operations";
 import { WasmType } from "~src/wasm-ast/types";
-import { WasmGlobalSet, WasmLocalSet, WasmLocalGet, WasmGlobalGet } from "~src/wasm-ast/variables";
+import { WasmGlobalSet, WasmLocalSet, WasmLocalGet, WasmGlobalGet, WasmGlobalVariable } from "~src/wasm-ast/variables";
 
 /**
  * Main file containing all the core wasm AST node definitions.
@@ -65,17 +65,6 @@ export type WasmExpression =
   | WasmComparisonExpression
   | WasmMemoryLoad
   | WasmMemorySize
-  | WasmExpressionWithPostStatements;
-
-
-
-// any expressions that have post staements to run immediately after the expression
-export interface WasmExpressionWithPostStatements extends WasmAstNode {
-  type: "ExpressionWithPostStatements";
-  expr: WasmExpression;
-  postStatements: (WasmStatement | WasmMemoryLoad)[];
-}
-
 
 
 

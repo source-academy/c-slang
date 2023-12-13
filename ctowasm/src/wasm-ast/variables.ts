@@ -3,12 +3,20 @@
  */
 
 import { WasmType } from "~src/wasm-ast/types";
-import { WasmAstNode, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
+import { WasmAstNode, WasmConst, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 
 export interface WasmVariable extends WasmAstNode {
   name: string;
   isConst?: boolean; // TODO: to support later on
   varType: WasmType;
+}
+
+/**
+ * Actual WASM globals variables.
+ */
+export interface WasmGlobalVariable extends WasmVariable {
+  type: "GlobalVariable";
+  initializerValue?: WasmConst;
 }
 
 export interface WasmGlobalSet extends WasmAstNode {
