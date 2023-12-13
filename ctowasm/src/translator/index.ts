@@ -2,32 +2,15 @@
  * Exports a translate function that takes a C AST and produces a webassembly AST
  */
 
-
 import {
   WASM_PAGE_SIZE,
   BASE_POINTER,
-  PARAM_PREFIX,
-  WASM_ADDR_SIZE,
   STACK_POINTER,
   HEAP_POINTER,
   REG_1,
   REG_2,
 } from "./memoryUtil";
 
-import {
-  WasmArithmeticExpression,
-  WasmConst,
-  WasmExpression,
-  WasmFunction,
-  WasmDataSegmentVariable,
-  WasmLocalVariable,
-  WasmMemoryLoad,
-  WasmMemoryStore,
-  WasmModule,
-  WasmSelectStatement,
-  WasmStatement,
-  WasmFunctionParameter,
-} from "../wasm-ast/wasm-nodes";
 import { getVariableSize } from "~src/common/utils";
 import visit from "~src/translator/visit";
 import {
@@ -41,7 +24,9 @@ import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDefinition } from "~src/c-ast/functions";
 import { Literal } from "~src/c-ast/literals";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
-import { CAstRoot } from "~src/c-ast/root";
+import { CAstRoot } from "~src/c-ast/core";
+import { WasmFunctionParameter } from "~src/wasm-ast/memory";
+import { WasmModule } from "~src/wasm-ast/core";
 
 /**
  * Creates the global wasm variables that act as psuedo-registers.

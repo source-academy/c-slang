@@ -1,7 +1,7 @@
 /**
  * Contains the defintions for all function related nodes.
  */
-import { CNode, Block, Expression } from "~src/c-ast/root";
+import { CNode, Block, Expression } from "~src/c-ast/core";
 import { VariableDeclaration } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
 

@@ -2,7 +2,7 @@
  * Definitions for nodes relating to simple variables (simple types, not arrays or pointer).
  */
 
-import { Expression, CNode } from "~src/c-ast/root";
+import { Expression, CNode } from "~src/c-ast/core";
 import { VariableType } from "~src/common/types";
 
 export interface VariableDeclaration extends CNode {

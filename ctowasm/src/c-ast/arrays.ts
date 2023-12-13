@@ -2,7 +2,7 @@
  * Defintions of AST nodes to support array features.
  */
 
-import { CNode, Expression } from "~src/c-ast/root";
+import { CNode, Expression } from "~src/c-ast/core";
 import { VariableType } from "~src/common/types";
 
 export interface ArrayDeclaration extends CNode {

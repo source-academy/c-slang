@@ -1,3 +1,7 @@
+/**
+ * Definitions of core C AST nodes.
+ */
+
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import {
   FunctionDefinition,

@@ -2,7 +2,7 @@
  * Definitions of AST nodes for assignments.
  */
 
-import { CNode, Expression } from "~src/c-ast/root";
+import { CNode, Expression } from "~src/c-ast/core";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { VariableExpr } from "~src/c-ast/variable";
 

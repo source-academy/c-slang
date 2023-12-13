@@ -15,9 +15,8 @@ import {
 } from "~src/c-ast/boolean";
 import { FunctionCall } from "~src/c-ast/functions";
 import { Integer } from "~src/c-ast/literals";
-import { Expression } from "~src/c-ast/root";
+import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
-import { getVariableSize } from "~src/common/utils";
 import {
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,
@@ -25,18 +24,11 @@ import {
 import { unaryOperatorToBinaryOperator } from "~src/translator/util";
 import {
   convertLiteralToConst,
-  variableTypeToWasmType,
-  getVariableAddr,
-  getArrayElementAddr,
   getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
-import {
-  WasmFunction,
-  WasmExpression,
-  WasmMemoryLoad,
-  WasmMemoryStore,
-  WasmModule,
-} from "~src/wasm-ast/wasm-nodes";
+import { WasmFunction } from "~src/wasm-ast/functions";
+import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
+import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 
 /**
  * Function to evaluate a binary expression node, evaluating and building wasm nodes

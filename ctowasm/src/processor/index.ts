@@ -6,44 +6,13 @@
 
 import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "../errors";
-import { CAstRoot } from "~src/c-ast/root";
-import {
-  ArithmeticExpression,
-  CompoundAssignmentExpression,
-} from "~src/c-ast/arithmetic";
-import {
-  ArrayDeclaration,
-  ArrayInitialization,
-  ArrayElementExpr,
-} from "~src/c-ast/arrays";
-import { Assignment, AssignmentExpression } from "~src/c-ast/assignment";
-import {
-  ConditionalExpression,
-  ComparisonExpression,
-  ComparisonSubExpression,
-} from "~src/c-ast/boolean";
-import {
-  FunctionDefinition,
-  FunctionDeclaration,
-  FunctionCall,
-  FunctionCallStatement,
-  ReturnStatement,
-} from "~src/c-ast/functions";
-import { Integer } from "~src/c-ast/literals";
-import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
-import {
-  Initialization,
-  VariableDeclaration,
-  VariableExpr,
-} from "~src/c-ast/variable";
-import { SelectStatement, ConditionalBlock } from "~src/c-ast/select";
-import {
-  checkForRedeclaration,
-  checkForFunctionDeclaration,
-  checkForVariableDeclaration,
-  checkForArrayDeclaration,
-  checkForFunctionParameterRedeclaration,
-} from "~src/semanticAnalyser/checks";
+import { CAstRoot } from "~src/c-ast/core";
+import { ArithmeticExpression } from "~src/c-ast/arithmetic";
+import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
+
+import { FunctionDefinition } from "~src/c-ast/functions";
+import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
+
 import { evaluateConstantArithmeticExpression } from "~src/processor/util";
 
 /**
@@ -58,7 +27,7 @@ export default function process(sourceCode: string, ast: CAstRoot) {
 }
 
 /**
- * Visitor function for traversing the C AST to process C AST. 
+ * Visitor function for traversing the C AST to process C AST.
  * Will call visit on all the fields of the current node being traversed.
  * @param ast
  * @param sourceCode
@@ -68,7 +37,12 @@ function visit(
   node: any,
   enclosingFunc?: FunctionDefinition
 ) {
-  if (!(Array.isArray(node) || (typeof node === 'object' && node !== null && "type" in node))) {
+  if (
+    !(
+      Array.isArray(node) ||
+      (typeof node === "object" && node !== null && "type" in node)
+    )
+  ) {
     // ignore objects that are not AST nodes OR not an array of nodes
     return;
   }
@@ -143,7 +117,7 @@ function visit(
       }
       n.elements = evaluatedElements;
     }
-  } 
+  }
 
   // visit each child of this node
   for (const k of Object.keys(node)) {

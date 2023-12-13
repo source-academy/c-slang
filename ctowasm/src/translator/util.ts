@@ -3,8 +3,9 @@
  */
 
 import { BinaryOperator } from "~src/common/constants";
+import { WasmFunction } from "~src/wasm-ast/functions";
 import { WasmType } from "~src/wasm-ast/types";
-import { WasmStatement, WasmFunction } from "~src/wasm-ast/wasm-nodes";
+import { WasmStatement } from "~src/wasm-ast/core";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator

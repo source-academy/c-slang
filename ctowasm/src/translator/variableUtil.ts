@@ -4,24 +4,16 @@
 
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { Literal } from "~src/c-ast/literals";
-import { Expression } from "~src/c-ast/root";
+import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
-import { getVariableSize } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import evaluateExpression from "~src/translator/evaluateExpression";
 import { BASE_POINTER, PARAM_PREFIX } from "~src/translator/memoryUtil";
 import { WasmType } from "~src/wasm-ast/types";
-import {
-  WasmFunction,
-  WasmExpression,
-  WasmLocalVariable,
-  WasmLocalArray,
-  WasmConst,
-  WasmModule,
-  MemoryVariableByteSize,
-  WasmDataSegmentArray,
-} from "~src/wasm-ast/wasm-nodes";
+import { WasmConst, WasmModule, WasmExpression } from "~src/wasm-ast/core";
+import { WasmFunction } from "~src/wasm-ast/functions";
+import { WasmLocalVariable, WasmLocalArray, MemoryVariableByteSize, WasmDataSegmentArray } from "~src/wasm-ast/memory";
 
 export const variableTypeToWasmType: Record<VariableType, WasmType> = {
   int: "i32",

@@ -1,4 +1,4 @@
-import { Block, Expression, CNode, Statement } from "~src/c-ast/root";
+import { Block, Expression, CNode, Statement } from "~src/c-ast/core";
 
 /**
  * Contain definition for AST node relating to loops in C.

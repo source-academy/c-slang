@@ -11,7 +11,7 @@ import { ArrayInitialization, ArrayDeclaration } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
 import { ReturnStatement, FunctionCallStatement } from "~src/c-ast/functions";
 import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
-import { CNode, Block } from "~src/c-ast/root";
+import { CNode, Block } from "~src/c-ast/core";
 import { SelectStatement } from "~src/c-ast/select";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
@@ -34,17 +34,11 @@ import {
   getVariableAddr,
   getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
-import {
-  WasmModule,
-  WasmFunction,
-  WasmStatement,
-  MemoryVariableByteSize,
-  WasmLocalVariable,
-  WasmLocalArray,
-  WasmMemoryStore,
-  WasmArithmeticExpression,
-  WasmSelectStatement,
-} from "~src/wasm-ast/wasm-nodes";
+import { WasmSelectStatement } from "~src/wasm-ast/control";
+import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
+import { WasmFunction } from "~src/wasm-ast/functions";
+import { MemoryVariableByteSize, WasmLocalVariable, WasmLocalArray, WasmMemoryStore } from "~src/wasm-ast/memory";
+import { WasmArithmeticExpression } from "~src/wasm-ast/operations";
 
 /**
  * Function for visting the statements within a function body.
@@ -421,6 +415,6 @@ export default function visit(
       enclosingBody
     );
   } else {
-    console.assert(false, "Translator error: Unhandled AST node")
+    console.assert(false, "Translator error: Unhandled AST node");
   }
 }

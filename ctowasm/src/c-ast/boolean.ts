@@ -2,7 +2,7 @@
  * Definition of AST nodes for conditional constructs.
  */
 
-import { Expression, CNode } from "~src/c-ast/root";
+import { Expression, CNode } from "~src/c-ast/core";
 import { ComparisonOperator } from "~src/common/constants";
 
 export interface ConditionalExpression extends Expression {

@@ -1,20 +1,15 @@
+import { WasmFunction } from "~src/wasm-ast/functions";
+import {
+  WasmMemoryLoad,
+  MemoryVariableByteSize,
+  WasmDataSegmentArray,
+  WasmDataSegmentVariable,
+} from "~src/wasm-ast/memory";
+import { WasmExpression, WasmStatement, WasmConst } from "~src/wasm-ast/core";
+
 /**
  * Collection of constants and functions related to the memory model.
  */
-
-import {
-  MemoryVariableByteSize,
-  WasmConst,
-  WasmDataSegmentArray,
-  WasmDataSegmentVariable,
-  WasmExpression,
-  WasmFunction,
-  WasmMemoryLoad,
-  WasmStatement,
-} from "../wasm-ast/wasm-nodes";
-
-
-
 export const PARAM_PREFIX = "param_";
 export const WASM_PAGE_SIZE = 65536;
 export const WASM_ADDR_SIZE = 4; // number of bytes of a wasm address

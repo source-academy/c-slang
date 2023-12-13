@@ -4,11 +4,8 @@
 
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDeclaration, FunctionDefinition } from "~src/c-ast/functions";
-import { Block, CAstRoot, CNode } from "~src/c-ast/root";
-import {
-  Initialization,
-  VariableDeclaration,
-} from "~src/c-ast/variable";
+import { Block, CAstRoot, CNode } from "~src/c-ast/core";
+import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import {
   checkForArrayDeclaration,
   checkForFunctionDeclaration,
@@ -33,7 +30,12 @@ export function checkForErrors(
    * Visit function for traversing and analysing the AST.
    */
   function visit(node: any, currentScope: Scope, pre?: CNode) {
-    if (!(Array.isArray(node) || (typeof node === 'object' && node !== null && "type" in node))) {
+    if (
+      !(
+        Array.isArray(node) ||
+        (typeof node === "object" && node !== null && "type" in node)
+      )
+    ) {
       // ignore objects that are not AST nodes
       return;
     }

@@ -13,7 +13,7 @@ import {
   FunctionCallStatement,
   FunctionDeclaration,
 } from "~src/c-ast/functions";
-import { Declaration } from "~src/c-ast/root";
+import { Declaration } from "~src/c-ast/core";
 import { Initialization, VariableExpr } from "~src/c-ast/variable";
 import { SemanticAnalysisError } from "~src/errors";
 import {
@@ -62,9 +62,11 @@ export function checkForRedeclaration(
     ) {
       // check for redeclaration
       throw new SemanticAnalysisError(
-        `Redeclaration error: '${node.name}' redeclared as different kind of symbol: '${
-          node.type
-        }' instead of '${scope.symbols[node.name].type}'`,
+        `Redeclaration error: '${
+          node.name
+        }' redeclared as different kind of symbol: '${node.type}' instead of '${
+          scope.symbols[node.name].type
+        }'`,
         sourceCode,
         node.position
       );
@@ -77,7 +79,9 @@ export function checkForRedeclaration(
         node.variableType
     ) {
       throw new SemanticAnalysisError(
-        `Redeclaration error: Variable '${node.name}' redeclared with conflicting type: '${
+        `Redeclaration error: Variable '${
+          node.name
+        }' redeclared with conflicting type: '${
           node.variableType
         }' instead of '${
           (scope.symbols[node.name] as VariableSymbol).variableType
@@ -97,9 +101,11 @@ export function checkForRedeclaration(
           (scope.symbols[node.name] as FunctionSymbol).params.toString())
     ) {
       throw new SemanticAnalysisError(
-        `Redeclaration Error: Function '${node.name}' redeclared with conflicting type: '${
-          node.returnType
-        } ${node.name}(${node.parameters.join(", ")})' instead of '${
+        `Redeclaration Error: Function '${
+          node.name
+        }' redeclared with conflicting type: '${node.returnType} ${
+          node.name
+        }(${node.parameters.join(", ")})' instead of '${
           (scope.symbols[node.name] as FunctionSymbol).returnType
         } ${node.name}(${(
           scope.symbols[node.name] as FunctionSymbol
@@ -118,9 +124,11 @@ export function checkForRedeclaration(
         node.size !== (scope.symbols[node.name] as ArraySymbol).arraySize)
     ) {
       throw new SemanticAnalysisError(
-        `Redeclaration error: Array '${node.name}' redeclared with conflicting type: '${
-          node.variableType
-        }[${node.size}]' instead of '${
+        `Redeclaration error: Array '${
+          node.name
+        }' redeclared with conflicting type: '${node.variableType}[${
+          node.size
+        }]' instead of '${
           (scope.symbols[node.name] as ArraySymbol).variableType
         }[${(scope.symbols[node.name] as ArraySymbol).arraySize}]'`,
         sourceCode,
@@ -252,6 +260,6 @@ export function checkForFunctionParameterRedeclaration(
         node.position
       );
     }
-    params.add(p.name)
+    params.add(p.name);
   });
 }

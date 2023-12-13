@@ -2,7 +2,7 @@
  * Contains the definitions for AST nodes relating to arithmetic.
  */
 
-import { Expression, CNode } from "~src/c-ast/root";
+import { Expression, CNode } from "~src/c-ast/core";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { VariableExpr } from "~src/c-ast/variable";
 import { BinaryOperator, UnaryOperator } from "~src/common/constants";

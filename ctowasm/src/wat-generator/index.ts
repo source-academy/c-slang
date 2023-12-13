@@ -3,37 +3,46 @@
  */
 import { WasmType } from "~src/wasm-ast/types";
 import { convertVariableToByteStr } from "../translator/memoryUtil";
+
+import { BinaryOperator, ComparisonOperator } from "~src/common/constants";
 import {
-  WasmAndExpression,
-  WasmArithmeticExpression,
+  WasmSelectStatement,
+  WasmLoop,
   WasmBlock,
-  WasmBooleanExpression,
   WasmBranch,
   WasmBranchIf,
-  WasmComparisonExpression,
-  WasmConst,
-  WasmExpression,
-  WasmExpressionWithPostStatements,
-  WasmFunctionBodyLine,
+} from "~src/wasm-ast/control";
+import {
   WasmFunctionCall,
+  WasmFunctionBodyLine,
   WasmFunctionCallStatement,
+  WasmRegularFunctionCall,
+} from "~src/wasm-ast/functions";
+import {
+  WasmMemoryLoad,
+  WasmMemoryGrow,
+  WasmMemoryStore,
+} from "~src/wasm-ast/memory";
+import {
+  WasmArithmeticExpression,
+  WasmComparisonExpression,
+  WasmBooleanExpression,
+  WasmAndExpression,
+  WasmOrExpression,
+} from "~src/wasm-ast/operations";
+import {
+  WasmLocalGet,
   WasmGlobalGet,
   WasmGlobalSet,
-  WasmLocalGet,
   WasmLocalSet,
-  WasmLocalTee,
-  WasmLog,
-  WasmLoop,
-  WasmMemoryGrow,
-  WasmMemoryLoad,
-  WasmMemoryStore,
-  WasmModule,
-  WasmOrExpression,
-  WasmRegularFunctionCall,
-  WasmSelectStatement,
+} from "~src/wasm-ast/variables";
+import {
+  WasmExpression,
   WasmStatement,
-} from "../wasm-ast/wasm-nodes";
-import { BinaryOperator, ComparisonOperator } from "~src/common/constants";
+  WasmExpressionWithPostStatements,
+  WasmConst,
+  WasmModule,
+} from "~src/wasm-ast/core";
 
 /**
  * Function that returns a line in wat file with given level of identation & ending with newline.
@@ -197,9 +206,6 @@ function generateExprStr(expr: WasmExpression): string {
     return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
       e.rightExpr
     )})`;
-  } else if (expr.type === "LocalTee") {
-    const n = expr as WasmLocalTee;
-    return `(local.tee $${n.name} ${generateExprStr(n.value)})`;
   } else if (expr.type === "MemorySize") {
     return "(memory.size)";
   } else if (expr.type === "MemoryLoad") {
@@ -291,9 +297,6 @@ function generateStatementStr(statement: WasmFunctionBodyLine): string {
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(
       n.addr
     )} ${generateExprStr(n.value)})`;
-  } else if (statement.type === "Log") {
-    const n = statement as WasmLog;
-    return `(call $log ${generateExprStr(n.value)})`;
   } else if (statement.type === "RegularFunctionCall") {
     const n = statement as WasmRegularFunctionCall;
     return `(call $${n.name}${
