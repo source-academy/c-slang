@@ -203,8 +203,6 @@ function_return_type
 identifier
 	= $([a-z_]i[a-z0-9_]i*)
     
-
- 
 // separator, must be at least whitespace or some comments
 _ "separator"
   = single_line_comment
@@ -234,10 +232,14 @@ multi_line_comment
 //=========== Constants =============
 
 constant
-	= i:integer_constant { return generateNode("IntegerConstant", {value: Number(i)}) }
+	= integer_constant 
+  / character_constant
     
 integer_constant
-	= $[0-9]+
+	= num:[0-9]+ { return generateNode("IntegerConstant", { value: Number(num)} ) }
+
+character_constant
+  = "'" value:c_char "'" {return generateNode("CharacterConstant", { value }); } // value should already be a number
 
 //=========== Characters ============
 
@@ -247,16 +249,26 @@ source_c_set
   / extended_c_char
 // 
 c_char
-  = [a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i
+  = char:[a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i { return char.charCodeAt(0); }
   / extended_c_char
   / escape_sequence
 
 // Characters not required to be in the basic character set, but should be supported.
 extended_c_char
-  = [@]
+  = char:[@] { return char.charCodeAt(0); }
 
 escape_sequence
   = simple_escape_sequence
   
 simple_escape_sequence 
-  = "\'" / "\"" / "\?" / "\\" / "\a" / "\b" / "\f" / "\n" / "\t" / "\v"
+  = "\\\'"  { return 39; } 
+  / "\\\""  { return 34; }
+  / "\\?"   { return 63; }
+  / "\\\\"  { return 92; }
+  / "\\a"   { return 7; }
+  / "\\b"   { return 8; }
+  / "\\f"   { return 12; }
+  / "\\n"   { return 10; }
+  / "\\t"   { return 9; }
+  / "\\v"   { return 11; }
+  / "\\0"   { return 0; }
