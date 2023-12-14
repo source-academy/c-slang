@@ -97,7 +97,7 @@ variable_declaration
   / variableType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType, name }); }
 
 array_declaration
-  = variableType:type _+ name:identifier _* "[" _* size:integer _*"]" { return generateNode("ArrayDeclaration", { variableType, name, size: parseInt(size) }); }  // match on array first as it is a more specific expression 
+  = variableType:type _+ name:identifier _* "[" _* size:integer_constant _*"]" { return generateNode("ArrayDeclaration", { variableType, name, size: parseInt(size) }); }  // match on array first as it is a more specific expression 
 
 function_declaration
   = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
@@ -113,7 +113,7 @@ initialization
 	/ type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 array_initialization
-  = variableType:type _+ name:identifier _* "[" _* size:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: parseInt(size), elements }); }  
+  = variableType:type _+ name:identifier _* "[" _* size:integer_constant _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: parseInt(size), elements }); }  
   / variableType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: elements.length, elements }); }  
 
 list_initializer
@@ -170,7 +170,7 @@ term
   = prefix_expression
   / postfix_expression // must come before variable term as this is more specific
   / "(" @expression ")"
-	/ literal
+	/ constant
   / function_call
   / variable_term
 
@@ -192,6 +192,7 @@ postfix_expression
 
 type 
 	= $"int"
+  / $"char"
 
 function_return_type
   = type
@@ -202,11 +203,7 @@ function_return_type
 identifier
 	= $([a-z_]i[a-z0-9_]i*)
     
-literal
-	= i:integer { return generateNode("Integer", {value: Number(i)}) }
-    
-integer
-	= $[0-9]+
+
  
 // separator, must be at least whitespace or some comments
 _ "separator"
@@ -229,11 +226,37 @@ single_line_comment
 
 // for use at end of program. There a single-line-comment need not end with newline
 single_line_comment_body
-  = "//" (!"\n" c_char)* 
+  = "//" (!"\n" source_c_set)* 
 
 multi_line_comment
-  = "/*" (!"*/" c_char)* "*/"
+  = "/*" (!"*/" source_c_set)* "*/"
 
-// all the characters im the c char set
+//=========== Constants =============
+
+constant
+	= i:integer_constant { return generateNode("IntegerConstant", {value: Number(i)}) }
+    
+integer_constant
+	= $[0-9]+
+
+//=========== Characters ============
+
+// All the possible C characters that can be in a source file
+source_c_set
+  = [a-z0-9!"#%&\'()*+,-./: ;<=>?\[\\\]^_{|}~ \n\t\v\f]i
+  / extended_c_char
+// 
 c_char
-  = [a-z0-9 \t\n\v\f\r\`\~\@\!\$\#\^\*\%\&\(\)\[\]\{\}\<\>\+\=\_\-\|\/\\\;\:\'\“\,\.\?]i
+  = [a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i
+  / extended_c_char
+  / escape_sequence
+
+// Characters not required to be in the basic character set, but should be supported.
+extended_c_char
+  = [@]
+
+escape_sequence
+  = simple_escape_sequence
+  
+simple_escape_sequence 
+  = "\'" / "\"" / "\?" / "\\" / "\a" / "\b" / "\f" / "\n" / "\t" / "\v"

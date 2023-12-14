@@ -102,7 +102,7 @@ function visit(
               element as ArithmeticExpression,
             ),
           );
-        } else if (element.type === "Integer") {
+        } else if (element.type === "IntegerConstant") {
           // element is already an integer
           evaluatedElements.push(element);
         } else {

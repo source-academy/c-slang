@@ -31,15 +31,15 @@ const argv = yargs(hideBin(process.argv))
   .command("compile-to-wat", "Compile the given file to WAT")
   .command(
     "generate-c-ast",
-    "Generate the initial C AST from parsing as a JSON file for visualisation",
+    "Generate the initial C AST from parsing as a JSON file for visualisation"
   )
   .command(
     "generate-processed-c-ast",
-    "Generate the processed C AST as a JSON file for visualisation",
+    "Generate the processed C AST as a JSON file for visualisation"
   )
   .command(
     "generate-wat-ast",
-    "Generate the WAT AST as a JSON file for visualisation",
+    "Generate the WAT AST as a JSON file for visualisation"
   )
   .demandCommand(2).argv;
 
@@ -57,43 +57,43 @@ const input = fs.readFileSync(argv._[1], "utf-8");
 let outputFile;
 let output;
 
-if (argv._[0] === "compile-run") {
-  await compileAndRun(input);
-} else {
-  switch (argv._[0]) {
-    case "compile":
-      outputFile = argv.o
-        ? path.resolve(argv.o)
-        : path.resolve("output/a.wasm");
-      output = await compile(input);
-      break;
-    case "compile-to-wat":
-      outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
-      output = compileToWat(input);
-      break;
-    case "generate-c-ast":
-      outputFile = argv.o
-        ? path.resolve(argv.o)
-        : path.resolve("output/c-ast.json");
-      output = generate_C_AST(input);
-      break;
-    case "generate-processed-c-ast":
-      outputFile = argv.o
-        ? path.resolve(argv.o)
-        : path.resolve("output/c-processed-ast.json");
-      output = generate_processed_C_AST(input);
-      break;
-    case "generate-wat-ast":
-      outputFile = argv.o
-        ? path.resolve(argv.o)
-        : path.resolve("output/wat-ast.json");
-      output = generate_WAT_AST(input);
-      break;
-  }
-  // create the output directory if output file path provided
-  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
-
-  fs.writeFileSync(outputFile, output);
-
-  console.log(`Output saved to ${outputFile}`);
+switch (argv._[0]) {
+  case "compile":
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wasm");
+    output = await compile(input);
+    break;
+  case "compile-to-wat":
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
+    output = compileToWat(input);
+    break;
+  case "compile-run":
+    // save WAT before running
+    outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
+    output = compileToWat(input);
+    await compileAndRun(input);
+    break;
+  case "generate-c-ast":
+    outputFile = argv.o
+      ? path.resolve(argv.o)
+      : path.resolve("output/c-ast.json");
+    output = generate_C_AST(input);
+    break;
+  case "generate-processed-c-ast":
+    outputFile = argv.o
+      ? path.resolve(argv.o)
+      : path.resolve("output/c-processed-ast.json");
+    output = generate_processed_C_AST(input);
+    break;
+  case "generate-wat-ast":
+    outputFile = argv.o
+      ? path.resolve(argv.o)
+      : path.resolve("output/wat-ast.json");
+    output = generate_WAT_AST(input);
+    break;
 }
+// create the output directory if output file path provided
+fs.mkdirSync(path.dirname(outputFile), { recursive: true });
+
+fs.writeFileSync(outputFile, output);
+
+console.log(`Output saved to ${outputFile}`);

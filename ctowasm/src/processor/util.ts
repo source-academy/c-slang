@@ -3,7 +3,7 @@
  */
 
 import { ArithmeticExpression } from "~src/c-ast/arithmetic";
-import { Integer } from "~src/c-ast/literals";
+import { IntegerConstant } from "~src/c-ast/constants";
 import { BinaryOperator } from "~src/common/constants";
 import { ProcessingError } from "~src/errors";
 
@@ -11,7 +11,7 @@ import { ProcessingError } from "~src/errors";
 export function evaluateBinaryOperation(
   a: number,
   operator: BinaryOperator,
-  b: number,
+  b: number
 ) {
   switch (operator) {
     case "+":
@@ -32,35 +32,35 @@ export function evaluateBinaryOperation(
  */
 export function evaluateConstantArithmeticExpression(
   sourceCode: string,
-  arithmeticExpr: ArithmeticExpression,
+  arithmeticExpr: ArithmeticExpression
 ) {
   const arithmeticExpression = arithmeticExpr as ArithmeticExpression;
-  if (arithmeticExpression.firstExpr.type !== "Integer") {
+  if (arithmeticExpression.firstExpr.type !== "IntegerConstant") {
     throw new ProcessingError(
       "Error: Intializer element of global variable is not constant",
       sourceCode,
-      arithmeticExpr.position,
+      arithmeticExpr.position
     );
   }
-  let val = (arithmeticExpression.firstExpr as Integer).value;
+  let val = (arithmeticExpression.firstExpr as IntegerConstant).value;
   //evaluate the constant arithmetic expression
   for (const operand of arithmeticExpression.exprs) {
-    if (operand.expr.type !== "Integer") {
+    if (operand.expr.type !== "IntegerConstant") {
       throw new ProcessingError(
         "Error: Intializer element of global variable is not constant",
         sourceCode,
-        arithmeticExpr.position,
+        arithmeticExpr.position
       );
     }
     val = evaluateBinaryOperation(
       val,
       operand.operator,
-      (operand.expr as Integer).value,
+      (operand.expr as IntegerConstant).value
     );
   }
   return {
-    type: "Integer",
+    type: "IntegerConstant",
     variableType: "int", // TODO: change when support more vartypes
     value: val,
-  } as Integer;
+  } as IntegerConstant;
 }
