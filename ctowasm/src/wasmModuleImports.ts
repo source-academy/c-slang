@@ -9,11 +9,8 @@ import {
   getPointerArithmeticNode,
 } from "~src/translator/memoryUtil";
 import { wasmTypeToSize } from "~src/translator/util";
-import { WasmExpression } from "~src/wasm-ast/core";
-import {
-  WasmFunctionBodyLine,
-  WasmRegularFunctionCall,
-} from "~src/wasm-ast/functions";
+import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
+import { WasmRegularFunctionCall } from "~src/wasm-ast/functions";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 import { WasmType } from "~src/wasm-ast/types";
 
@@ -27,7 +24,7 @@ export interface WasmImportedFunction {
   name: string; // function name
   params: WasmType[];
   return: WasmType | null;
-  body: WasmFunctionBodyLine[]; // all the lines of body of this modified function
+  body: WasmStatement[]; // all the lines of body of this modified function
 }
 
 /**

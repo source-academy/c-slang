@@ -1,5 +1,5 @@
 /**
- * Semantic Analyser pipeline module that performs basic semantic checks.
+ * Semantic Analyser module that performs checks for semantic errors in C program.
  */
 
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";

@@ -20,5 +20,5 @@ export interface WhileLoop extends IterationStatement {
 export interface ForLoop extends IterationStatement {
   type: "ForLoop";
   initialization: Statement;
-  update: Expression;
+  update: Statement;
 }

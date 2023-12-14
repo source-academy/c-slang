@@ -2,11 +2,18 @@
  * Definitions of core C AST nodes.
  */
 
+import {
+  CompoundAssignment,
+  PostfixExpression,
+  PrefixExpression,
+} from "~src/c-ast/arithmetic";
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
+import { Assignment } from "~src/c-ast/assignment";
 import {
   FunctionDefinition,
   ReturnStatement,
   FunctionDeclaration,
+  FunctionCallStatement,
 } from "~src/c-ast/functions";
 import { IterationStatement } from "~src/c-ast/loops";
 import { SelectStatement } from "~src/c-ast/select";
@@ -24,6 +31,7 @@ export interface CNode {
  */
 export interface Expression extends CNode {
   variableType: VariableType; // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
+  isExpr: true; // handy field to easily tell if a node is an expression. Set by parser. This makes it easy to distinguish and filter out expressions during translation. TODO: see if better way to achieve this
 }
 
 export type Declaration = VariableDeclaration | FunctionDeclaration;
@@ -32,7 +40,12 @@ export type Statement =
   | Declaration
   | Initialization
   | ArrayDeclaration
-  | ArrayInitialization;
+  | ArrayInitialization
+  | Assignment
+  | FunctionCallStatement
+  | PrefixExpression
+  | PostfixExpression
+  | CompoundAssignment;
 
 // Root represents the starting node of the AST
 export interface CAstRoot extends CNode {
@@ -40,7 +53,7 @@ export interface CAstRoot extends CNode {
   children: (Statement | FunctionDefinition)[];
 }
 
-type BlockItem =
+export type BlockItem =
   | Statement
   | Block
   | ReturnStatement

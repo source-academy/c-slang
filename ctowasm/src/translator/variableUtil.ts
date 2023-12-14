@@ -9,12 +9,11 @@ import { VariableExpr } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
 import { TranslationError } from "~src/errors";
 import evaluateExpression from "~src/translator/evaluateExpression";
-import { BASE_POINTER, PARAM_PREFIX } from "~src/translator/memoryUtil";
+import { BASE_POINTER } from "~src/translator/memoryUtil";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmConst, WasmModule, WasmExpression } from "~src/wasm-ast/core";
-import { WasmFunction } from "~src/wasm-ast/functions";
+import { SymbolTable } from "~src/wasm-ast/functions";
 import {
-  WasmLocalVariable,
   WasmLocalArray,
   MemoryVariableByteSize,
   WasmDataSegmentArray,
@@ -41,41 +40,22 @@ export function convertLiteralToConst(literal: Literal): WasmConst {
 }
 
 /**
- * Returns the given function parameter name prefixed with "param_".
+ * Retrieves information on variable from given function's symbol table, or from globals in wasmRoot if not found.
  */
-export function generateParamName(name: string) {
-  return PARAM_PREFIX + name;
-}
-
-/**
- * Converts a given variable name to a scoped variable name (meaning that scope information is included in the name itself).
- * This is to make up for wasm not having block scope. Thus we can have multiple vars of the same name (in C) in the same function
- * as long as they are in different blocks since their names in wat will be different.
- */
-export function convertVarNameToScopedVarName(name: string, block: number) {
-  return `${name}_${block.toString()}`;
-}
-
-/**
- * Finds out in which scope a variable that is being assigned to or used in an expression belongs in,
- * and generates the name of that variable accordingly.
- */
-export function getWasmVariableName(
-  originalVariableName: string,
-  enclosingFunc: WasmFunction,
+export function retrieveVariableFromSymbolTable(
+  symbolTable: SymbolTable,
+  variableName: string,
 ) {
-  for (let i = enclosingFunc.scopes.length - 1; i >= 0; --i) {
-    if (enclosingFunc.scopes[i].has(originalVariableName)) {
-      return convertVarNameToScopedVarName(originalVariableName, i);
-    }
-  }
-  // check if variable is function parameter
-  if (generateParamName(originalVariableName) in enclosingFunc.params) {
-    return generateParamName(originalVariableName);
-  }
+  let curr = symbolTable;
 
-  // if reach this point, variable must be a global variable
-  return originalVariableName;
+  while (curr !== null) {
+    if (variableName in curr.variables) {
+      return curr.variables[variableName];
+    }
+    curr = curr.parentTable;
+  }
+  // should not happen
+  throw new TranslationError("Translation error: Symbol not found");
 }
 
 /**
@@ -83,23 +63,22 @@ export function getWasmVariableName(
  * depending on whether it is a local or global variable.
  */
 export function getVariableAddr(
-  wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   variableName: string,
-  enclosingFunc: WasmFunction,
 ): WasmExpression {
-  const wasmVariableName = getWasmVariableName(variableName, enclosingFunc);
+  const variable = retrieveVariableFromSymbolTable(symbolTable, variableName);
   if (
-    wasmVariableName in enclosingFunc.params ||
-    wasmVariableName in enclosingFunc.locals
+    variable.type === "DataSegmentArray" ||
+    variable.type === "DataSegmentVariable"
   ) {
+    // this is a global variable
+    return {
+      type: "Const",
+      variableType: "i32",
+      value: variable.offset,
+    };
+  } else {
     // local variable
-    let variable: WasmLocalVariable | WasmLocalArray;
-    if (wasmVariableName in enclosingFunc.params) {
-      variable = enclosingFunc.params[wasmVariableName];
-    } else {
-      variable = enclosingFunc.locals[wasmVariableName];
-    }
-
     return {
       type: "ArithmeticExpression",
       operator: "-",
@@ -110,17 +89,9 @@ export function getVariableAddr(
       rightExpr: {
         type: "Const",
         variableType: "i32",
-        value: variable.bpOffset,
+        value: variable.offset,
       },
       varType: "i32",
-    };
-  } else {
-    // global variable
-    const variable = wasmRoot.globals[wasmVariableName];
-    return {
-      type: "Const",
-      variableType: "i32",
-      value: variable.memoryAddr,
     };
   }
 }
@@ -130,19 +101,19 @@ export function getVariableAddr(
  */
 export function getArrayElementAddr(
   wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   arrayName: string,
   elementIndex: Expression,
   elementSize: number,
-  enclosingFunc: WasmFunction,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
     operator: "+",
-    leftExpr: getVariableAddr(wasmRoot, arrayName, enclosingFunc),
+    leftExpr: getVariableAddr(symbolTable, arrayName),
     rightExpr: {
       type: "ArithmeticExpression",
       operator: "*",
-      leftExpr: evaluateExpression(wasmRoot, elementIndex, enclosingFunc),
+      leftExpr: evaluateExpression(wasmRoot, symbolTable, elementIndex),
       rightExpr: {
         type: "Const",
         variableType: "i32",
@@ -168,26 +139,16 @@ interface MemoryAccessDetails {
  */
 export function getMemoryAccessDetails(
   wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   expr: VariableExpr | ArrayElementExpr,
-  enclosingFunc: WasmFunction,
 ): MemoryAccessDetails {
-  const wasmVarName = getWasmVariableName(expr.name, enclosingFunc);
-  let variable;
-  if (wasmVarName in enclosingFunc.params) {
-    variable = enclosingFunc.params[wasmVarName];
-  } else if (wasmVarName in enclosingFunc.locals) {
-    // the memory access could be
-    variable = enclosingFunc.locals[wasmVarName];
-  } else {
-    variable = wasmRoot.globals[wasmVarName];
-  }
+  const variable = retrieveVariableFromSymbolTable(symbolTable, expr.name);
 
   if (expr.type === "VariableExpr") {
     if (
       !(
         variable.type === "LocalVariable" ||
-        variable.type === "DataSegmentVariable" ||
-        variable.type === "FunctionParameter"
+        variable.type === "DataSegmentVariable"
       )
     ) {
       throw new TranslationError(
@@ -195,7 +156,7 @@ export function getMemoryAccessDetails(
       );
     }
     return {
-      addr: getVariableAddr(wasmRoot, expr.name, enclosingFunc),
+      addr: getVariableAddr(symbolTable, expr.name),
       numOfBytes: variable.size as MemoryVariableByteSize, //TODO: change in future
       varType: variable.varType,
     };
@@ -211,10 +172,10 @@ export function getMemoryAccessDetails(
     return {
       addr: getArrayElementAddr(
         wasmRoot,
+        symbolTable,
         expr.name,
         expr.index,
         v.elementSize,
-        enclosingFunc,
       ),
       numOfBytes: v.elementSize as MemoryVariableByteSize, // the size of one element of //TODO: need to change when have more types
       varType: v.varType,
@@ -231,16 +192,15 @@ export function getMemoryAccessDetails(
  * Returns the ast nodes that equal to the address to use for memory instructions for a array variable given a constant number as index.
  */
 export function getArrayConstantIndexElementAddr(
-  wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   arrayName: string,
   elementIndex: number,
   elementSize: number,
-  enclosingFunc: WasmFunction,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
     operator: "+",
-    leftExpr: getVariableAddr(wasmRoot, arrayName, enclosingFunc),
+    leftExpr: getVariableAddr(symbolTable, arrayName),
     rightExpr: {
       type: "Const",
       variableType: "i32",

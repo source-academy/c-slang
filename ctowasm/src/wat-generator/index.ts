@@ -1,5 +1,5 @@
 /**
- * Exports a generate function for generating a WAT string from WAT AST.
+ * WAT Generator module for generating a WAT string from WAT AST.
  */
 import { convertVariableToByteStr } from "../translator/memoryUtil";
 import { WasmModule } from "~src/wasm-ast/core";
@@ -42,7 +42,7 @@ export function generateWAT(
         importedFunction.return !== null
           ? ` (result ${importedFunction.return})`
           : ""
-      }))`, 
+      }))`,
       baseIndentation + 1,
     );
   }
@@ -69,9 +69,9 @@ export function generateWAT(
         typeof globalVariable.initializerList !== "undefined")
     )
       watStr += generateLine(
-        `(data (i32.const ${
-          globalVariable.memoryAddr
-        }) "${convertVariableToByteStr(globalVariable)}")`,
+        `(data (i32.const ${globalVariable.offset}) "${convertVariableToByteStr(
+          globalVariable,
+        )}")`,
         baseIndentation + 1,
       );
   }

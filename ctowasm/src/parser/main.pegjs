@@ -36,10 +36,10 @@ function_definition
 	= returnType:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _* ")" _* body:block _* ";"* { return generateNode("FunctionDefinition", { returnType, name, parameters, body }); }
     
 block
-	= "{" _* s:block_item_list _* "}" { return generateNode("Block", {children: s}); }
+	= "{" _* children:block_item_list _* "}" { return generateNode("Block", { children }); }
     
 block_item_list
-  = block_item |.., _*|
+  = items:block_item|.., _*| { return items.filter(item => item !== null ); } // filter out empty statements
 
 block_item
   = _* @return_statement _* statement_end // need to put return statement first, as it may be confused with keywords 
@@ -54,11 +54,11 @@ statement
   / @compound_assignment 
   / @assignment
   / fn:function_call  { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
-  / @expression // match on expression last so it does not interfere with other things like assignment
-  / _*  // empty statement
+  / expr:expression  { return {...expr, isExpr: true}; } // match on expression last so it does not interfere with other things like assignment
+  / _* { return null }  // empty statement
 
 iteration_statement
-  = "do" _* body:block _* "while" _* "(" _* condition:expression _* ")" { return generateNode("DoWhileLoop", { condition, body }); }
+  = "do" _* body:block _* "while" _* "(" _* condition:expression _* ")" _* statement_end { return generateNode("DoWhileLoop", { condition, body }); } // dowhile loops need to end with a ';'
   / "while" _* "(" _* condition:expression _* ")" _* body:block { return generateNode("WhileLoop", { condition, body }); }
   / "for" _* "(" _* initialization:(statement)? _* ";" _* condition:expression? _* ";" _* update:expression? _* ")" _* body:block { return generateNode("ForLoop", { initialization, condition, update, body }); }
 

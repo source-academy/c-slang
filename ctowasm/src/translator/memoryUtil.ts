@@ -506,8 +506,8 @@ export function getFunctionCallStackFrameSetupStatements(
   );
 
   // set the values of all params
-  for (const paramName of Object.keys(calledFunction.params)) {
-    const param = calledFunction.params[paramName];
+  for (const paramIndex in calledFunction.params) {
+    const param = calledFunction.params[paramIndex];
     statements.push({
       type: "MemoryStore",
       addr: {
@@ -518,10 +518,10 @@ export function getFunctionCallStackFrameSetupStatements(
         rightExpr: {
           type: "Const",
           variableType: "i32",
-          value: param.bpOffset,
+          value: param.offset,
         },
       },
-      value: functionArgs[param.paramIndex],
+      value: functionArgs[paramIndex],
       varType: "i32",
       numOfBytes: WASM_ADDR_SIZE,
     });

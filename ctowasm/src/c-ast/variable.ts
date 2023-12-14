@@ -22,5 +22,4 @@ export interface Initialization extends CNode {
 export interface VariableExpr extends Expression {
   type: "VariableExpr";
   name: string; //name of the variable
-  variableType: VariableType;
 }

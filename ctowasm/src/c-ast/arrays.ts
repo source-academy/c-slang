@@ -1,7 +1,6 @@
 /**
  * Defintions of AST nodes to support array features.
  */
-
 import { CNode, Expression } from "~src/c-ast/core";
 import { VariableType } from "~src/common/types";
 
@@ -21,6 +20,5 @@ export interface ArrayInitialization extends ArrayDeclaration {
 export interface ArrayElementExpr extends Expression {
   type: "ArrayElementExpr";
   name: string; // name of the array
-  variableType: VariableType;
   index: Expression;
 }

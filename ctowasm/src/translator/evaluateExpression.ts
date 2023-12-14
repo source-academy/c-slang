@@ -26,7 +26,7 @@ import {
   convertLiteralToConst,
   getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
-import { WasmFunction } from "~src/wasm-ast/functions";
+import { SymbolTable } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 
@@ -37,8 +37,8 @@ import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
  */
 function evaluateLeftToRightBinaryExpression(
   wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   node: ArithmeticExpression | ComparisonExpression,
-  enclosingFunc: WasmFunction,
 ) {
   const rootNode: any = { type: node.type };
   // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
@@ -47,8 +47,8 @@ function evaluateLeftToRightBinaryExpression(
     currNode.operator = node.exprs[i].operator;
     currNode.rightExpr = evaluateExpression(
       wasmRoot,
+      symbolTable,
       node.exprs[i].expr,
-      enclosingFunc,
     );
     currNode.leftExpr = { type: node.type };
     currNode = currNode.leftExpr;
@@ -56,14 +56,10 @@ function evaluateLeftToRightBinaryExpression(
   currNode.operator = node.exprs[0].operator;
   currNode.rightExpr = evaluateExpression(
     wasmRoot,
+    symbolTable,
     node.exprs[0].expr,
-    enclosingFunc,
   );
-  currNode.leftExpr = evaluateExpression(
-    wasmRoot,
-    node.firstExpr,
-    enclosingFunc,
-  );
+  currNode.leftExpr = evaluateExpression(wasmRoot, symbolTable, node.firstExpr);
   return rootNode;
 }
 
@@ -77,8 +73,8 @@ function isConditionalExpression(node: Expression) {
  */
 function evaluateConditionalExpression(
   wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   node: ConditionalExpression,
-  enclosingFunc: WasmFunction,
 ) {
   const wasmNodeType =
     node.conditionType === "or" ? "OrExpression" : "AndExpression";
@@ -91,13 +87,13 @@ function evaluateConditionalExpression(
       // no need to wrap inside a BooleanExpression if it was already a conditional expression
       currNode.rightExpr = evaluateExpression(
         wasmRoot,
+        symbolTable,
         node.exprs[i],
-        enclosingFunc,
       );
     } else {
       currNode.rightExpr = {
         type: "BooleanExpression",
-        expr: evaluateExpression(wasmRoot, node.exprs[i], enclosingFunc),
+        expr: evaluateExpression(wasmRoot, symbolTable, node.exprs[i]),
       };
     }
     currNode.leftExpr = { type: wasmNodeType };
@@ -107,26 +103,26 @@ function evaluateConditionalExpression(
     // no need to wrap inside a BooleanExpression if it was already a conditional expression
     currNode.rightExpr = evaluateExpression(
       wasmRoot,
+      symbolTable,
       node.exprs[1],
-      enclosingFunc,
     );
   } else {
     currNode.rightExpr = {
       type: "BooleanExpression",
-      expr: evaluateExpression(wasmRoot, node.exprs[1], enclosingFunc),
+      expr: evaluateExpression(wasmRoot, symbolTable, node.exprs[1]),
     };
   }
 
   if (isConditionalExpression(node.exprs[0])) {
     currNode.leftExpr = evaluateExpression(
       wasmRoot,
+      symbolTable,
       node.exprs[0],
-      enclosingFunc,
     );
   } else {
     currNode.leftExpr = {
       type: "BooleanExpression",
-      expr: evaluateExpression(wasmRoot, node.exprs[0], enclosingFunc),
+      expr: evaluateExpression(wasmRoot, symbolTable, node.exprs[0]),
     };
   }
   return rootNode;
@@ -137,8 +133,8 @@ function evaluateConditionalExpression(
  */
 export default function evaluateExpression(
   wasmRoot: WasmModule,
+  symbolTable: SymbolTable,
   expr: Expression,
-  enclosingFunc: WasmFunction,
 ): WasmExpression {
   if (expr.type === "Integer") {
     const n = expr as Integer;
@@ -150,7 +146,7 @@ export default function evaluateExpression(
     // evaluate all the expressions used as arguments
     const functionArgs = [];
     for (const arg of n.args) {
-      functionArgs.push(evaluateExpression(wasmRoot, arg, enclosingFunc));
+      functionArgs.push(evaluateExpression(wasmRoot, symbolTable, arg));
     }
     return {
       type: "FunctionCall",
@@ -168,8 +164,8 @@ export default function evaluateExpression(
     const n = expr as VariableExpr | ArrayElementExpr;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
+      symbolTable,
       n,
-      enclosingFunc,
     );
     return {
       type: "MemoryLoad",
@@ -180,13 +176,13 @@ export default function evaluateExpression(
     expr.type === "ComparisonExpression"
   ) {
     const n = expr as ArithmeticExpression | ComparisonExpression;
-    return evaluateLeftToRightBinaryExpression(wasmRoot, n, enclosingFunc);
+    return evaluateLeftToRightBinaryExpression(wasmRoot, symbolTable, n);
   } else if (expr.type === "PrefixExpression") {
     const n: PrefixExpression = expr as PrefixExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
+      symbolTable,
       n.variable,
-      enclosingFunc,
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
@@ -218,8 +214,8 @@ export default function evaluateExpression(
     const n: PostfixExpression = expr as PostfixExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
+      symbolTable,
       n.variable,
-      enclosingFunc,
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
@@ -248,20 +244,20 @@ export default function evaluateExpression(
     return wasmNode;
   } else if (expr.type === "ConditionalExpression") {
     const n = expr as ConditionalExpression;
-    return evaluateConditionalExpression(wasmRoot, n, enclosingFunc);
+    return evaluateConditionalExpression(wasmRoot, symbolTable, n);
   } else if (expr.type === "AssignmentExpression") {
     const n = expr as AssignmentExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
+      symbolTable,
       n.variable,
-      enclosingFunc,
     );
     return {
       type: "MemoryLoad",
       preStatements: [
         {
           type: "MemoryStore",
-          value: evaluateExpression(wasmRoot, n.value, enclosingFunc),
+          value: evaluateExpression(wasmRoot, symbolTable, n.value),
           ...memoryAccessDetails,
         },
       ],
@@ -271,8 +267,8 @@ export default function evaluateExpression(
     const n = expr as CompoundAssignmentExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
+      symbolTable,
       n.variable,
-      enclosingFunc,
     );
     return {
       type: "MemoryLoad",
@@ -286,7 +282,7 @@ export default function evaluateExpression(
               type: "MemoryLoad",
               ...memoryAccessDetails,
             },
-            rightExpr: evaluateExpression(wasmRoot, n.value, enclosingFunc),
+            rightExpr: evaluateExpression(wasmRoot, symbolTable, n.value),
             varType: memoryAccessDetails.varType,
           },
           ...memoryAccessDetails,

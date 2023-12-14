@@ -1,31 +1,36 @@
-import {
-  WasmFunctionParameter,
-  WasmLocalVariable,
-  WasmLocalArray,
-  WasmMemoryVariable,
-  WasmMemoryLoad,
-} from "~src/wasm-ast/memory";
-import { WasmScopes } from "~src/wasm-ast/types";
-import { WasmStatement, WasmExpression, WasmAstNode } from "~src/wasm-ast/core";
-
 /**
  * Definitions of nodes to do with functions.
  */
+
+import {
+  WasmLocalVariable,
+  WasmMemoryVariable,
+  WasmMemoryLoad,
+  WasmReturnVariable,
+} from "~src/wasm-ast/memory";
+import { WasmStatement, WasmExpression, WasmAstNode } from "~src/wasm-ast/core";
+
 export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
+/**
+ * Some type definitions for non-node objects.
+ */
+
+// Nested Symbol Table
+// global scope -> function parameter scope -> function body scope -> block scope (if available)
+export interface SymbolTable {
+  parentTable: SymbolTable | null;
+  currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
+  variables: Record<string, WasmMemoryVariable>;
+}
 
 export interface WasmFunction extends WasmAstNode {
   type: "Function";
   name: string;
-  params: Record<string, WasmFunctionParameter>;
-  locals: Record<string, WasmLocalVariable | WasmLocalArray>;
-  returnVariable: WasmMemoryVariable | null; // the return of this function, null if it does not return anything
+  params: WasmLocalVariable[]; // ordered array of local variables which correspond to function parameters
+  returnVariable: WasmReturnVariable | null; // the return of this function, null if it does not return anything
   sizeOfLocals: number;
   sizeOfParams: number;
-  loopCount: number; // count of the loops in this function. used for giving unique label names to loops
-  blockCount: number; // same as loopCount, but for WasmBlocks
-  scopes: WasmScopes;
-  body: WasmFunctionBodyLine[];
-  bpOffset: number; // current offset from base pointer, initially 0
+  body: WasmStatement[];
 }
 
 export interface WasmFunctionCall extends WasmAstNode {
