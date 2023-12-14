@@ -23,9 +23,8 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   });
   const moduleImports = {
     print_int: (addr: number) => {
-      const byteArr = new Uint8Array(memory.buffer, addr, 4); // view of the 1 integer in memory
-      const intArr = new Int32Array(byteArr);
-      print(intArr[0].toString());
+      const byteArr = new DataView(memory.buffer, addr, 4); // view of the 1 integer in memory
+      print(byteArr.getInt32(0, true).toString());
     },
     print_char: (addr: number) => {
       const intArr = new Int8Array(memory.buffer, addr, 1); // view of the 1 integer in memory
