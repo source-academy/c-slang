@@ -236,7 +236,7 @@ constant
   / character_constant
     
 integer_constant
-	= num:[0-9]+ { return generateNode("IntegerConstant", { value: Number(num.join("")) } ); }
+	= value:$[0-9]+ { return generateNode("IntegerConstant", { value: Number(value) } ); }
 
 character_constant
   = "'" value:c_char "'" {return generateNode("CharacterConstant", { value }); } // value should already be a number
