@@ -97,7 +97,7 @@ variable_declaration
   / variableType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType, name }); }
 
 array_declaration
-  = variableType:type _+ name:identifier _* "[" _* size:integer_constant _*"]" { return generateNode("ArrayDeclaration", { variableType, name, size: parseInt(size) }); }  // match on array first as it is a more specific expression 
+  = variableType:type _+ name:identifier _* "[" _* size:integer _*"]" { return generateNode("ArrayDeclaration", { variableType, name, size }); }  // match on array first as it is a more specific expression 
 
 function_declaration
   = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
@@ -113,7 +113,7 @@ initialization
 	/ type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 array_initialization
-  = variableType:type _+ name:identifier _* "[" _* size:integer_constant _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: parseInt(size), elements }); }  
+  = variableType:type _+ name:identifier _* "[" _* size:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: parseInt(size), elements }); }  
   / variableType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, size: elements.length, elements }); }  
 
 list_initializer
@@ -190,34 +190,12 @@ postfix_expression
   = variable:variable_term "--" { return generateNode("PostfixExpression", { operator: "--", variable: variable }); } 
   / variable:variable_term "++" { return generateNode("PostfixExpression", { operator: "++", variable: variable }); }
 
-type 
-	= $"int"
-  / $"char"
 
 function_return_type
   = type
   / "void" { return null; }
 
-// identifiers must not start with a digit
-// can only contain letters, digits or underscore
-identifier
-	= $([a-z_]i[a-z0-9_]i*)
-    
-// separator, must be at least whitespace or some comments
-_ "separator"
-  = single_line_comment
-  / multi_line_comment
-	/ whitespace
 
-whitespace
-	= [ \t\n]
-  
-// any continous space character that is not a newline
-spaces
-  = [ \t]*
-
-statement_end
-  = ";"+
 
 single_line_comment
 	= single_line_comment_body "\n" // this rule must be first as it is more specific
@@ -236,7 +214,7 @@ constant
   / character_constant
     
 integer_constant
-	= value:$[0-9]+ { return generateNode("IntegerConstant", { value: Number(value) } ); }
+	= value:integer { return generateNode("IntegerConstant", { value } ); }
 
 character_constant
   = "'" value:c_char "'" {return generateNode("CharacterConstant", { value }); } // value should already be a number
@@ -272,3 +250,33 @@ simple_escape_sequence
   / "\\t"   { return 9; }
   / "\\v"   { return 11; }
   / "\\0"   { return 0; }
+
+// =========== Misc ================
+
+type 
+	= $"int"
+  / $"char"
+
+// identifiers must not start with a digit
+// can only contain letters, digits or underscore
+identifier
+	= $([a-z_]i[a-z0-9_]i*)
+    
+// separator, must be at least whitespace or some comments
+_ "separator"
+  = single_line_comment
+  / multi_line_comment
+	/ whitespace
+
+whitespace
+	= [ \t\n]
+  
+// any continous space character that is not a newline
+spaces
+  = [ \t]*
+
+statement_end
+  = ";"+
+
+integer
+  = value:$[0-9]+ { return parseInt(value); }
