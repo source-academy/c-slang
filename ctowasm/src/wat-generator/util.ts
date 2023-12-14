@@ -40,7 +40,7 @@ export function getWasmMemoryLoadInstruction(
   ) {
     return `${varType}.load`;
   }
-  return `${varType}.load${numOfBytes.toString()}_s`;
+  return `${varType}.load${(numOfBytes * 8).toString()}_s`;
 }
 
 export function getWasmMemoryStoreInstruction(
@@ -53,7 +53,7 @@ export function getWasmMemoryStoreInstruction(
   ) {
     return `${varType}.store`;
   }
-  return `${varType}.store${numOfBytes.toString()}`;
+  return `${varType}.store${(numOfBytes * 8).toString()}`;
 }
 
 /**

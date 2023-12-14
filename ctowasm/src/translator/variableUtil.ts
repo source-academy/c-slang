@@ -25,11 +25,14 @@ export const variableTypeToWasmType: Record<VariableType, WasmType> = {
 };
 
 /**
- * Converts a given Literal to a WasmConst
+ * Converts a constant to a Wasm const.
  */
-export function convertLiteralToConst(literal: Constant): WasmConst {
+export function convertConstantToWasmConst(literal: Constant): WasmConst {
   let type: WasmType;
-  if (literal.type === "IntegerConstant") {
+  if (
+    literal.type === "IntegerConstant" ||
+    literal.type === "CharacterConstant"
+  ) {
     type = "i32";
   }
   return {

@@ -5,7 +5,7 @@
 import { Expression } from "~src/c-ast/core";
 
 // For now constants are only ints TODO: need to handle other type + do overflow underflow checks of nubmers later
-export type Constant = IntegerConstant;
+export type Constant = IntegerConstant | CharacterConstant;
 
 export interface IntegerConstant extends Expression {
   type: "IntegerConstant";

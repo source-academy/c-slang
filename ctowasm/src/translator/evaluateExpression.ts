@@ -14,7 +14,7 @@ import {
   ConditionalExpression,
 } from "~src/c-ast/boolean";
 import { FunctionCall } from "~src/c-ast/functions";
-import { IntegerConstant } from "~src/c-ast/constants";
+import { CharacterConstant, IntegerConstant } from "~src/c-ast/constants";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import {
@@ -23,7 +23,7 @@ import {
 } from "~src/translator/memoryUtil";
 import { unaryOperatorToBinaryOperator } from "~src/translator/util";
 import {
-  convertLiteralToConst,
+  convertConstantToWasmConst,
   getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
 import { SymbolTable } from "~src/wasm-ast/functions";
@@ -136,9 +136,9 @@ export default function evaluateExpression(
   symbolTable: SymbolTable,
   expr: Expression
 ): WasmExpression {
-  if (expr.type === "IntegerConstant") {
-    const n = expr as IntegerConstant;
-    return convertLiteralToConst(n);
+  if (expr.type === "IntegerConstant" || expr.type === "CharacterConstant") {
+    const n = expr as IntegerConstant | CharacterConstant;
+    return convertConstantToWasmConst(n);
   } else if (expr.type === "FunctionCall") {
     const n = expr as FunctionCall;
     // load the return from its region in memory

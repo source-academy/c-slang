@@ -16,7 +16,7 @@ import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
 import {
   variableTypeToWasmType,
-  convertLiteralToConst,
+  convertConstantToWasmConst,
 } from "~src/translator/variableUtil";
 import {
   WasmDataSegmentArray,
@@ -58,7 +58,7 @@ export default function translate(
         varType: variableTypeToWasmType[n.variableType],
         initializerValue:
           n.type === "Initialization"
-            ? convertLiteralToConst(n.value as Constant)
+            ? convertConstantToWasmConst(n.value as Constant)
             : undefined,
       };
       addToSymbolTable(rootSymbolTable, globalVariable);
@@ -81,7 +81,7 @@ export default function translate(
         initializerList:
           n.type === "ArrayInitialization"
             ? (n as ArrayInitialization).elements.map((element) =>
-                convertLiteralToConst(element as Constant)
+                convertConstantToWasmConst(element as Constant)
               )
             : undefined,
       };

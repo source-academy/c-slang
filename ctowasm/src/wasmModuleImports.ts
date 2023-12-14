@@ -83,7 +83,7 @@ const wasmModuleImports: Record<
   string,
   WasmOriginalImportedFunction | WasmModifiedImportedFunction
 > = {
-  // print_int must be modified so we translate calls with ints as value into calls to imported print_int as val
+  // prints an integer (4 bytes and smaller)
   print_int: {
     type: "modified",
     parentImportedObject: defaultParentImportedObject,
@@ -97,6 +97,37 @@ const wasmModuleImports: Record<
       {
         type: "RegularFunctionCall",
         name: getImportedFunctionName("print_int"),
+        // call print_int with address of the int to be printed - its in the stack frame
+        args: [
+          {
+            type: "ArithmeticExpression",
+            operator: "-",
+            leftExpr: basePointerGetNode,
+            rightExpr: {
+              type: "Const",
+              variableType: "i32",
+              value: WASM_ADDR_SIZE,
+            },
+            varType: "i32",
+          },
+        ],
+      },
+    ],
+  },
+  // prints a char as a character
+  print_char: {
+    type: "modified",
+    parentImportedObject: defaultParentImportedObject,
+    importedName: getImportedFunctionName("print_char"),
+    name: "print_char",
+    params: ["i32"], // i32 here is a the address of the char to print
+    return: null,
+    modifiedParams: ["i32"],
+    modifiedReturn: null,
+    body: [
+      {
+        type: "RegularFunctionCall",
+        name: getImportedFunctionName("print_char"),
         // call print_int with address of the int to be printed - its in the stack frame
         args: [
           {
