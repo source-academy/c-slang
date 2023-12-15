@@ -14,7 +14,7 @@ import {
   ConditionalExpression,
 } from "~src/c-ast/boolean";
 import { FunctionCall } from "~src/c-ast/functions";
-import { CharacterConstant, IntegerConstant } from "~src/c-ast/constants";
+import { IntegerConstant } from "~src/c-ast/constants";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import {
@@ -136,8 +136,8 @@ export default function evaluateExpression(
   symbolTable: SymbolTable,
   expr: Expression
 ): WasmExpression {
-  if (expr.type === "IntegerConstant" || expr.type === "CharacterConstant") {
-    const n = expr as IntegerConstant | CharacterConstant;
+  if (expr.type === "IntegerConstant") {
+    const n = expr as IntegerConstant;
     return convertConstantToWasmConst(n);
   } else if (expr.type === "FunctionCall") {
     const n = expr as FunctionCall;
@@ -199,7 +199,7 @@ export default function evaluateExpression(
             },
             rightExpr: {
               type: "Const",
-              variableType: "i32",
+              wasmVariableType: "i32",
               value: 1,
             },
             varType: "i32",
@@ -228,7 +228,7 @@ export default function evaluateExpression(
         },
         rightExpr: {
           type: "Const",
-          variableType: "i32",
+          wasmVariableType: "i32",
           value: 1,
         },
         varType: "i32",

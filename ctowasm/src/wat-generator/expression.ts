@@ -28,7 +28,7 @@ export function generateExprStr(expr: WasmExpression): string {
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
-    return `(${e.variableType}.const ${e.value.toString()})`;
+    return `(${e.wasmVariableType}.const ${e.value.toString()})`;
   } else if (expr.type === "LocalGet") {
     const e = expr as WasmLocalGet;
     return `(local.get $${e.name}${getPreStatementsStr(e.preStatements)})`;

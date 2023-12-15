@@ -46,8 +46,8 @@ export interface WasmAstNode {
 
 export interface WasmConst extends WasmAstNode {
   type: "Const";
-  variableType: WasmType;
   value: number;
+  wasmVariableType: WasmType;
 }
 
 export interface WasmModule extends WasmAstNode {

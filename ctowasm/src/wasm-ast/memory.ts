@@ -10,7 +10,7 @@ import {
   WasmConst,
 } from "~src/wasm-ast/core";
 
-export type MemoryVariableByteSize = 1 | 4 | 8;
+export type MemoryVariableByteSize = 1 | 2 |  4 | 8;
 
 export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
@@ -59,6 +59,7 @@ export interface WasmMemoryVariable extends WasmAstNode {
 
 export interface WasmLocalVariable extends WasmMemoryVariable {
   type: "LocalVariable" | "LocalArray";
+  size: MemoryVariableByteSize // a simple variable should be one of the memory sizes
 }
 
 /**
@@ -69,13 +70,14 @@ interface WasmArrayNode {
   arraySize: number; // number of elements of the array
 }
 
-export interface WasmLocalArray extends WasmLocalVariable, WasmArrayNode {}
+export interface WasmLocalArray extends WasmMemoryVariable, WasmArrayNode {}
 
 /**
  * Global variables will be in the 'data' segment of memory.
  */
 export interface WasmDataSegmentVariable extends WasmMemoryVariable {
   type: "DataSegmentVariable";
+  size: MemoryVariableByteSize;
   initializerValue?: WasmConst; // initial value to set this global value to
 }
 

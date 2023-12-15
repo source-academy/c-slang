@@ -15,7 +15,7 @@ import {
   REG_2,
 } from "~src/translator/memoryUtil";
 
-import { WasmLocalVariable, WasmMemoryVariable } from "~src/wasm-ast/memory";
+import { MemoryVariableByteSize, WasmLocalVariable, WasmMemoryVariable } from "~src/wasm-ast/memory";
 import { WasmImportedFunction } from "~src/wasmModuleImports";
 
 /**
@@ -27,7 +27,7 @@ export const unaryOperatorToBinaryOperator: Record<string, BinaryOperator> = {
 };
 
 // Maps wasm type to number of bytes it uses
-export const wasmTypeToSize: Record<WasmType, number> = {
+export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
   i32: 4,
   i64: 8,
   f32: 4,
@@ -43,7 +43,7 @@ export const wasmTypeToSize: Record<WasmType, number> = {
 export function setPseudoRegisters(
   wasmRoot: WasmModule,
   stackPreallocate: number,
-  dataSegmentSize: number,
+  dataSegmentSize: number
 ) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
@@ -51,7 +51,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: wasmRoot.memorySize * WASM_PAGE_SIZE - stackPreallocate,
     },
   });
@@ -62,7 +62,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: wasmRoot.memorySize * WASM_PAGE_SIZE, // BP starts at the memory boundary
     },
   });
@@ -74,7 +74,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: Math.ceil(dataSegmentSize / 4) * 4, // align to 4 byte boundary
     },
   });
@@ -85,7 +85,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: 0,
     },
   });
@@ -96,7 +96,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: 0,
     },
   });
@@ -109,7 +109,7 @@ export function setPseudoRegisters(
  */
 export function createSymbolTable(
   parentTable?: SymbolTable | null,
-  resetOffset: boolean = false,
+  resetOffset: boolean = false
 ): SymbolTable {
   if (parentTable === null || typeof parentTable === "undefined") {
     // create a new root symbol table
@@ -131,7 +131,7 @@ export function createSymbolTable(
  */
 export function addToSymbolTable(
   symbolTable: SymbolTable,
-  variable: WasmMemoryVariable,
+  variable: WasmMemoryVariable
 ) {
   symbolTable.variables[variable.name] = variable;
   symbolTable.currOffset.value += variable.size;
@@ -158,7 +158,7 @@ export function getUniqueBlockLabelGenerator() {
  */
 export function addImportedFunctionsToModule(
   wasmRoot: WasmModule,
-  imports: Record<string, WasmImportedFunction>,
+  imports: Record<string, WasmImportedFunction>
 ) {
   // add all the imported functions to wasmRoot.functions
   for (const moduleImportName in imports) {

@@ -58,7 +58,7 @@ function getOriginalFunctionCallNodes(func: WasmOriginalImportedFunction) {
       type: "MemoryLoad",
       addr: getPointerArithmeticNode(BASE_POINTER, "-", bpOffset),
       varType: param,
-      numOfBytes: wasmTypeToSize[param] as MemoryVariableByteSize,
+      numOfBytes: wasmTypeToSize[param],
     });
   }
   const functionCall: WasmRegularFunctionCall = {
@@ -72,7 +72,7 @@ function getOriginalFunctionCallNodes(func: WasmOriginalImportedFunction) {
       addr: getPointerArithmeticNode(BASE_POINTER, "+", WASM_ADDR_SIZE),
       value: functionCall,
       varType: func.return,
-      numOfBytes: wasmTypeToSize[func.return] as MemoryVariableByteSize, // TODO: change when implement structs
+      numOfBytes: wasmTypeToSize[func.return], // TODO: change when implement structs
     };
   } else {
     return functionCall;
@@ -105,7 +105,7 @@ const wasmModuleImports: Record<
             leftExpr: basePointerGetNode,
             rightExpr: {
               type: "Const",
-              variableType: "i32",
+              wasmVariableType: "i32",
               value: WASM_ADDR_SIZE,
             },
             varType: "i32",
@@ -136,7 +136,7 @@ const wasmModuleImports: Record<
             leftExpr: basePointerGetNode,
             rightExpr: {
               type: "Const",
-              variableType: "i32",
+              wasmVariableType: "i32",
               value: WASM_ADDR_SIZE,
             },
             varType: "i32",

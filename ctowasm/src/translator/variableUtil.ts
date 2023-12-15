@@ -3,7 +3,6 @@
  */
 
 import { ArrayElementExpr } from "~src/c-ast/arrays";
-import { Constant } from "~src/c-ast/constants";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
@@ -17,28 +16,30 @@ import {
   WasmLocalArray,
   MemoryVariableByteSize,
   WasmDataSegmentArray,
+  WasmLocalVariable,
+  WasmDataSegmentVariable,
 } from "~src/wasm-ast/memory";
+import { Constant } from "~src/c-ast/constants";
+import { wasmTypeToSize } from "~src/translator/util";
 
+/**
+ * Mapping of C variable types to the its va
+ */
 export const variableTypeToWasmType: Record<VariableType, WasmType> = {
-  int: "i32",
   char: "i32",
+  short: "i32",
+  int: "i32",
+  long: "i64",
 };
 
 /**
  * Converts a constant to a Wasm const.
  */
-export function convertConstantToWasmConst(literal: Constant): WasmConst {
-  let type: WasmType;
-  if (
-    literal.type === "IntegerConstant" ||
-    literal.type === "CharacterConstant"
-  ) {
-    type = "i32";
-  }
+export function convertConstantToWasmConst(constant: Constant): WasmConst {
   return {
     type: "Const",
-    variableType: type,
-    value: literal.value,
+    wasmVariableType: variableTypeToWasmType[constant.variableType],
+    value: constant.value,
   };
 }
 
@@ -77,7 +78,7 @@ export function getVariableAddr(
     // this is a global variable
     return {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: variable.offset,
     };
   } else {
@@ -91,7 +92,7 @@ export function getVariableAddr(
       },
       rightExpr: {
         type: "Const",
-        variableType: "i32",
+        wasmVariableType: "i32",
         value: variable.offset,
       },
       varType: "i32",
@@ -119,7 +120,7 @@ export function getArrayElementAddr(
       leftExpr: evaluateExpression(wasmRoot, symbolTable, elementIndex),
       rightExpr: {
         type: "Const",
-        variableType: "i32",
+        wasmVariableType: "i32",
         value: elementSize,
       },
       varType: "i32",
@@ -158,9 +159,10 @@ export function getMemoryAccessDetails(
         "getMemoryAccessDetails error: memory access variable does not match."
       );
     }
+    const v = variable as WasmLocalVariable | WasmDataSegmentVariable;
     return {
       addr: getVariableAddr(symbolTable, expr.name),
-      numOfBytes: variable.size as MemoryVariableByteSize, //TODO: change in future
+      numOfBytes: v.size,
       varType: variable.varType,
     };
   } else if (expr.type === "ArrayElementExpr") {
@@ -180,7 +182,7 @@ export function getMemoryAccessDetails(
         expr.index,
         v.elementSize
       ),
-      numOfBytes: v.elementSize as MemoryVariableByteSize, // the size of one element of //TODO: need to change when have more types
+      numOfBytes: wasmTypeToSize[v.varType], // the size of one element of //TODO: need to change when have more types
       varType: v.varType,
     };
   } else {
@@ -206,7 +208,7 @@ export function getArrayConstantIndexElementAddr(
     leftExpr: getVariableAddr(symbolTable, arrayName),
     rightExpr: {
       type: "Const",
-      variableType: "i32",
+      wasmVariableType: "i32",
       value: elementIndex * elementSize,
     },
     varType: "i32",

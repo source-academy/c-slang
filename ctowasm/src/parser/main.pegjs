@@ -170,7 +170,7 @@ term
   = prefix_expression
   / postfix_expression // must come before variable term as this is more specific
   / "(" @expression ")"
-	/ constant
+	/ c:constant { return { ...c, isConstant: true }; }
   / function_call
   / variable_term
 
@@ -210,14 +210,14 @@ multi_line_comment
 //=========== Constants =============
 
 constant
-	= integer_constant 
+	= integer_constant
   / character_constant
     
 integer_constant
 	= value:integer { return generateNode("IntegerConstant", { value } ); }
 
 character_constant
-  = "'" value:c_char "'" {return generateNode("CharacterConstant", { value }); } // value should already be a number
+  = "'" value:c_char "'" {return generateNode("IntegerConstant", { value }); } // value should already be a number
 
 //=========== Characters ============
 
@@ -256,6 +256,14 @@ simple_escape_sequence
 type 
 	= $"int"
   / $"char"
+  / long_type { return "long"; }
+
+// long can be matched by multiple type keywords - all 8 bytes long in this compiler
+long_type
+  = "long long int"
+  / "long long" 
+  / "long int" 
+  / "long"
 
 // identifiers must not start with a digit
 // can only contain letters, digits or underscore

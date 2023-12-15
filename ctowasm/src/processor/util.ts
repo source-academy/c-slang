@@ -3,8 +3,10 @@
  */
 
 import { ArithmeticExpression } from "~src/c-ast/arithmetic";
-import { IntegerConstant } from "~src/c-ast/constants";
+import { Constant, IntegerConstant } from "~src/c-ast/constants";
 import { BinaryOperator } from "~src/common/constants";
+import { IntegerType, VariableType } from "~src/common/types";
+import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
 
 // Evaluates the value of a <operator> b
@@ -63,4 +65,55 @@ export function evaluateConstantArithmeticExpression(
     variableType: "int", // TODO: change when support more vartypes
     value: val,
   } as IntegerConstant;
+}
+
+/**
+ * Returns the maximum value of a signed int type.
+ */
+function getMaxValueOfSignedIntType(val: IntegerType) {
+  return Math.pow(2, getVariableSize(val) * 8 - 1);
+}
+
+function getMinValueOfSignedIntType(val: IntegerType) {
+  return -Math.pow(2, getVariableSize(val) * 8 - 1) - 1;
+}
+
+/**
+ * Returns the type of a constant (like a literal number "123") as per 6.4.4.1 of C17 standard.
+ * TODO: add unsigned ints.
+ */
+export function getVariableTypeOfConstant(constant: Constant): VariableType {
+  if (constant.type === "FloatConstant") {
+    // TODO: implement when floating types added
+  }
+
+
+  const c = constant as IntegerConstant;
+  if (c.isUnsigned) {
+    // TODO: implement when unsigned types are added
+  }
+
+  // signed integers only
+  if (constant.value < 0) {
+    // negative ints
+    if (constant.value >= getMinValueOfSignedIntType("int")) {
+      return "int";
+    } else if (constant.value >= getMinValueOfSignedIntType("long")) {
+      return "long";
+    } else {
+      // integer is too negative
+      // TODO: possibly inform user with warning here
+      return "long";
+    }
+  }
+
+  if (constant.value <= getMaxValueOfSignedIntType("int")) {
+    return "int";
+  } else if (constant.value <= getMaxValueOfSignedIntType("long")) {
+    return "long";
+  } else {
+    // integer is too large
+    // TODO: possibly inform user with warning here
+    return "long";
+  }
 }

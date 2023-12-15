@@ -3,18 +3,21 @@
  */
 
 import { Expression } from "~src/c-ast/core";
+import { IntegerType, VariableType } from "~src/common/types";
 
-// For now constants are only ints TODO: need to handle other type + do overflow underflow checks of nubmers later
-export type Constant = IntegerConstant | CharacterConstant;
-
-export interface IntegerConstant extends Expression {
-  type: "IntegerConstant";
-  variableType: "int";
+export interface Constant extends Expression {
+  type: "IntegerConstant" | "FloatConstant"
   value: number;
+  isConstant: true; // convenience flag
+  variableType: VariableType; // to be determined during processing stage. PARSER DOES NOT FILL THIS.
 }
 
-export interface CharacterConstant extends Expression {
-  type: "CharacterConstant";
-  variableType: "char";
-  value: number;
+export interface IntegerConstant extends Constant {
+  type: "IntegerConstant";
+  variableType: IntegerType;
+  isUnsigned?: boolean; // default should be undefined/false
+}
+
+export interface FloatConstant extends Constant {
+  type: "FloatConstant";
 }
