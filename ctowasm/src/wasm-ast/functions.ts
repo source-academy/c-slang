@@ -33,7 +33,7 @@ export interface WasmFunction extends WasmAstNode {
   body: WasmStatement[];
 }
 
-export interface WasmFunctionCall extends WasmAstNode {
+export interface WasmFunctionCall extends WasmExpression {
   type: "FunctionCall";
   name: string;
   stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
@@ -43,7 +43,7 @@ export interface WasmFunctionCall extends WasmAstNode {
 /**
  * Node to represent a function call that is a typical wasm function call - not participating in the logic of the memory model.
  */
-export interface WasmRegularFunctionCall extends WasmAstNode {
+export interface WasmRegularFunctionCall extends WasmExpression {
   type: "RegularFunctionCall";
   name: string;
   args: WasmExpression[];

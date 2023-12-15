@@ -71,7 +71,7 @@ export function generateExprStr(expr: WasmExpression): string {
     return `(${getWasmMemoryLoadInstruction(
       n.varType,
       n.numOfBytes,
-    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(expr.addr)})`;
+    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.addr)})`;
   } else if (expr.type === "MemoryStore") {
     return generateStatementStr(expr);
   } else {

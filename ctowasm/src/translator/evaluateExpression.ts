@@ -41,7 +41,7 @@ function evaluateLeftToRightBinaryExpression(
   node: ArithmeticExpression | ComparisonExpression,
 ) {
   const rootNode: any = { type: node.type };
-  // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
+  // the last expression in expression series will be considered right expression (we do this to ensure left-to-right evaluation )
   let currNode = rootNode;
   for (let i = node.exprs.length - 1; i > 0; --i) {
     currNode.operator = node.exprs[i].operator;

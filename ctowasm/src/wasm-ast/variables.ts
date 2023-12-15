@@ -38,13 +38,13 @@ export interface WasmLocalSet extends WasmAstNode {
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
-export interface WasmLocalGet extends WasmAstNode {
+export interface WasmLocalGet extends WasmExpression {
   type: "LocalGet";
   name: string;
   preStatements?: (WasmStatement | WasmExpression)[];
 }
 
-export interface WasmGlobalGet extends WasmAstNode {
+export interface WasmGlobalGet extends WasmExpression {
   type: "GlobalGet";
   name: string;
   preStatements?: (WasmStatement | WasmExpression)[];

@@ -12,7 +12,7 @@ import {
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 
-export interface WasmMemoryLoad extends WasmAstNode {
+export interface WasmMemoryLoad extends WasmExpression {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
   varType: WasmType; // wasm var type for the store instruction
@@ -34,7 +34,7 @@ export interface WasmMemoryGrow extends WasmAstNode {
   pagesToGrowBy: WasmExpression;
 }
 
-export interface WasmMemorySize extends WasmAstNode {
+export interface WasmMemorySize extends WasmExpression {
   type: "MemorySize";
 }
 
