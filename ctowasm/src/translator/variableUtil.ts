@@ -48,7 +48,7 @@ export function convertConstantToWasmConst(constant: Constant): WasmConst {
  */
 export function retrieveVariableFromSymbolTable(
   symbolTable: SymbolTable,
-  variableName: string
+  variableName: string,
 ) {
   let curr = symbolTable;
 
@@ -68,7 +68,7 @@ export function retrieveVariableFromSymbolTable(
  */
 export function getVariableAddr(
   symbolTable: SymbolTable,
-  variableName: string
+  variableName: string,
 ): WasmExpression {
   const variable = retrieveVariableFromSymbolTable(symbolTable, variableName);
   if (
@@ -108,7 +108,7 @@ export function getArrayElementAddr(
   symbolTable: SymbolTable,
   arrayName: string,
   elementIndex: Expression,
-  elementSize: number
+  elementSize: number,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
@@ -144,7 +144,7 @@ interface MemoryAccessDetails {
 export function getMemoryAccessDetails(
   wasmRoot: WasmModule,
   symbolTable: SymbolTable,
-  expr: VariableExpr | ArrayElementExpr
+  expr: VariableExpr | ArrayElementExpr,
 ): MemoryAccessDetails {
   const variable = retrieveVariableFromSymbolTable(symbolTable, expr.name);
 
@@ -156,7 +156,7 @@ export function getMemoryAccessDetails(
       )
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
+        "getMemoryAccessDetails error: memory access variable does not match.",
       );
     }
     const v = variable as WasmLocalVariable | WasmDataSegmentVariable;
@@ -170,7 +170,7 @@ export function getMemoryAccessDetails(
       !(variable.type === "LocalArray" || variable.type === "DataSegmentArray")
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
+        "getMemoryAccessDetails error: memory access variable does not match.",
       );
     }
     const v = variable as WasmDataSegmentArray | WasmLocalArray;
@@ -180,7 +180,7 @@ export function getMemoryAccessDetails(
         symbolTable,
         expr.name,
         expr.index,
-        v.elementSize
+        v.elementSize,
       ),
       numOfBytes: wasmTypeToSize[v.varType], // the size of one element of //TODO: need to change when have more types
       varType: v.varType,
@@ -188,7 +188,7 @@ export function getMemoryAccessDetails(
   } else {
     console.assert(
       false,
-      "Translator error: getMemoryAccessDetails failed - no matching expression type"
+      "Translator error: getMemoryAccessDetails failed - no matching expression type",
     );
   }
 }
@@ -200,7 +200,7 @@ export function getArrayConstantIndexElementAddr(
   symbolTable: SymbolTable,
   arrayName: string,
   elementIndex: number,
-  elementSize: number
+  elementSize: number,
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",

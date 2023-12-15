@@ -31,15 +31,15 @@ const argv = yargs(hideBin(process.argv))
   .command("compile-to-wat", "Compile the given file to WAT")
   .command(
     "generate-c-ast",
-    "Generate the initial C AST from parsing as a JSON file for visualisation"
+    "Generate the initial C AST from parsing as a JSON file for visualisation",
   )
   .command(
     "generate-processed-c-ast",
-    "Generate the processed C AST as a JSON file for visualisation"
+    "Generate the processed C AST as a JSON file for visualisation",
   )
   .command(
     "generate-wat-ast",
-    "Generate the WAT AST as a JSON file for visualisation"
+    "Generate the WAT AST as a JSON file for visualisation",
   )
   .demandCommand(2).argv;
 

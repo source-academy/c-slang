@@ -11,7 +11,6 @@ import {
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { WasmRegularFunctionCall } from "~src/wasm-ast/functions";
-import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 import { WasmType } from "~src/wasm-ast/types";
 
 const defaultParentImportedObject = "imports";

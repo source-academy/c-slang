@@ -11,7 +11,10 @@ import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDefinition } from "~src/c-ast/functions";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 
-import { evaluateConstantArithmeticExpression, getVariableTypeOfConstant } from "~src/processor/util";
+import {
+  evaluateConstantArithmeticExpression,
+  getVariableTypeOfConstant,
+} from "~src/processor/util";
 import { Constant } from "~src/c-ast/constants";
 
 /**

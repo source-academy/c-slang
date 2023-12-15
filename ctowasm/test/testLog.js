@@ -284,9 +284,9 @@ const testLog = {
     char_1: {
       title: "Char type - global and local initialization 1",
       expectedCode: false,
-      expectedValues: [10, 'a', 20, 'b']
-    }
-  }
+      expectedValues: [10, "a", 20, "b"],
+    },
+  },
 };
 
 export default testLog;

@@ -29,7 +29,7 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
     print_char: (addr: number) => {
       const intArr = new Int8Array(memory.buffer, addr, 1); // view of the 1 integer in memory
       print(String.fromCharCode(intArr[0]));
-    }
+    },
   };
   await WebAssembly.instantiate(wasm, {
     imports: moduleImports,
