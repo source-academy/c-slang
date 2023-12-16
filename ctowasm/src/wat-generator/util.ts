@@ -2,7 +2,7 @@
  * Utility functions for WAT generation.
  */
 
-import { BinaryOperator, ComparisonOperator } from "~src/common/constants";
+import { ArithmeticOperator, RelationalOperator } from "~src/common/constants";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { WasmType } from "~src/wasm-ast/types";
 import { generateExprStr } from "~src/wat-generator/expression";
@@ -32,7 +32,7 @@ export function generateBlock(block: string, indentation: number) {
  */
 export function getWasmMemoryLoadInstruction(
   varType: WasmType,
-  numOfBytes: number,
+  numOfBytes: number
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -45,7 +45,7 @@ export function getWasmMemoryLoadInstruction(
 
 export function getWasmMemoryStoreInstruction(
   varType: WasmType,
-  numOfBytes: number,
+  numOfBytes: number
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -73,7 +73,7 @@ export function generateArgString(exprs: WasmExpression[]) {
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
 export function generateStatementsList(
-  statements: (WasmStatement | WasmExpression)[],
+  statements: (WasmStatement | WasmExpression)[]
 ) {
   return statements
     .map((s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression))
@@ -85,7 +85,7 @@ export function generateStatementsList(
  * TODO: add support for other types and unsigned/signed ints.
  */
 export function getBinaryInstruction(
-  operator: BinaryOperator | ComparisonOperator,
+  operator: ArithmeticOperator | RelationalOperator
 ) {
   switch (operator) {
     case "+":
@@ -114,11 +114,11 @@ export function getBinaryInstruction(
 }
 
 export function getPreStatementsStr(
-  preStatements?: (WasmStatement | WasmExpression)[],
+  preStatements?: (WasmStatement | WasmExpression)[]
 ) {
   const s = preStatements
     ? preStatements.map(
-        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression),
+        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
       )
     : [];
   return s.length > 0 ? " " + s.join(" ") : "";

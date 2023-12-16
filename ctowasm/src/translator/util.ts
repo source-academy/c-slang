@@ -2,7 +2,7 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { BinaryOperator } from "~src/common/constants";
+import { ArithmeticOperator } from "~src/common/constants";
 import { SymbolTable } from "~src/wasm-ast/functions";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmModule } from "~src/wasm-ast/core";
@@ -25,10 +25,11 @@ import { WasmImportedFunction } from "~src/wasmModuleImports";
 /**
  * Converts a given unary opeartor to its corresponding binary operator
  */
-export const unaryOperatorToBinaryOperator: Record<string, BinaryOperator> = {
-  "++": "+",
-  "--": "-",
-};
+export const unaryOperatorToBinaryOperator: Record<string, ArithmeticOperator> =
+  {
+    "++": "+",
+    "--": "-",
+  };
 
 // Maps wasm type to number of bytes it uses
 export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
@@ -47,7 +48,7 @@ export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
 export function setPseudoRegisters(
   wasmRoot: WasmModule,
   stackPreallocate: number,
-  dataSegmentSize: number,
+  dataSegmentSize: number
 ) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
@@ -113,7 +114,7 @@ export function setPseudoRegisters(
  */
 export function createSymbolTable(
   parentTable?: SymbolTable | null,
-  resetOffset: boolean = false,
+  resetOffset: boolean = false
 ): SymbolTable {
   if (parentTable === null || typeof parentTable === "undefined") {
     // create a new root symbol table
@@ -135,7 +136,7 @@ export function createSymbolTable(
  */
 export function addToSymbolTable(
   symbolTable: SymbolTable,
-  variable: WasmMemoryVariable,
+  variable: WasmMemoryVariable
 ) {
   symbolTable.variables[variable.name] = variable;
   symbolTable.currOffset.value += variable.size;
@@ -162,7 +163,7 @@ export function getUniqueBlockLabelGenerator() {
  */
 export function addImportedFunctionsToModule(
   wasmRoot: WasmModule,
-  imports: Record<string, WasmImportedFunction>,
+  imports: Record<string, WasmImportedFunction>
 ) {
   // add all the imported functions to wasmRoot.functions
   for (const moduleImportName in imports) {

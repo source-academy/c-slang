@@ -18,6 +18,30 @@
   const C_Keywords = new Set([
     "auto", "float", "break", "short", "switch", "void", "const", "if", "else", "for", "long", "signed", "typedef", "int", "continue", "volatile", "enum", "while", "rigester", "static", "union", "case", "sizeof", "goto", "extern", "double", "return", "struct ", "unsigned", "char", "do", "default"
   ])
+
+  /**
+   * Builds and returns a tree of operations which involves the 2 operaands (left and right expressions), and a operator 
+   * @param firstExpr first expression in the operation expression e.g. "2" in "2 + 3 + 4"
+   * @param exprsWithOperatorArr an array of arrays of size 2 which contain an operator in first index and the expr in 2nd index. e.g: [["+", 3], ["+", 4]]
+   */
+  function createBinaryExpressionNode(firstExpr, exprsWithOperatorArr) {
+    let currNode = firstExpr;
+    for (let i = 0; i < exprsWithOperatorArr.length - 1; ++i) {
+      // create a new operation node
+      currNode = {
+        type: "BinaryOperationNode",
+        leftExpr: currNode,
+        rightExpr: exprsWithOperatorArr[i][1],
+        operator: exprsWithOperatorArr[i][0]
+      }
+    }
+    return {
+      type: "BinaryOperationNode",
+      leftExpr: currNode,
+      rightExpr: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][1],
+      operator: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][0]
+    }
+  }
 }
 
 program = arr:translation_unit  { return generateNode("Root", {children: arr}); }
@@ -128,31 +152,31 @@ compound_assignment_expression
 expression
   = assignment_expression 
   / compound_assignment_expression
-  / conditional_expression // start trying to match on conditional expression since && and || have lowest precedence
+  / logical_expression // start trying to match on conditional expression since && and || have lowest precedence
 
 assignment_expression
   = variable:variable_term _* "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
 
-conditional_expression 
-  = or_conditional_expression
-  / and_conditional_expression
+logical_expression 
+  = or_logical_expression
+  / and_logical_expression
 
-or_conditional_expression
-  = left:and_conditional_expression tail:(_+ "||" _+ @and_conditional_expression)+ { return generateNode("ConditionalExpression", { conditionType: "or", exprs: [left, ...tail] }); }
+or_logical_expression
+  = firstExpr:and_logical_expression tail:(_+ @"||" _+ @and_logical_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
 
-and_conditional_expression
-  = left:comparison_expression tail:(_+ "&&" _+ @comparison_expression)+ { return generateNode("ConditionalExpression", { conditionType: "and", exprs: [left, ...tail] }); }
-  / comparison_expression
+and_logical_expression
+  = firstExpr:relational_expression tail:(_+ @"&&" _+ @relational_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  / relational_expression
 
-comparison_expression
-  = equality_comparison_expression
-  / relative_comparison_expression
+relational_expression
+  = equality_relational_expression
+  / relative_relational_expression
 
-equality_comparison_expression
-  = firstExpr:relative_comparison_expression _* tail:(_* @("!="/"==") _* @relative_comparison_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
+equality_relational_expression
+  = firstExpr:relative_relational_expression _* tail:(_* @("!="/"==") _* @relative_relational_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
 
-relative_comparison_expression
-  = firstExpr:arithmetic_expression _* tail:(_* @("<="/">="/"<"/">") _* @arithmetic_expression)+ { return generateNode("ComparisonExpression", { firstExpr, exprs: tail.map(arr => ({ type: "ComparisonSubExpression", operator: arr[0], expr: arr[1] })) }); }
+relative_relational_expression
+  = firstExpr:arithmetic_expression _* tail:(_* @("<="/">="/"<"/">") _* @arithmetic_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
   / arithmetic_expression
 
 arithmetic_expression
@@ -160,10 +184,10 @@ arithmetic_expression
   / multiply_divide_expression
 
 add_subtract_expression
-  = left:multiply_divide_expression tail:(_+ @[+\-] _+ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) } )}
+  = firstExpr:multiply_divide_expression tail:(_+ @[+\-] _+ @multiply_divide_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
   
 multiply_divide_expression
-  = left:term tail:(_+ @[%/*] _+ @multiply_divide_expression)+ { return generateNode("ArithmeticExpression", { firstExpr: left, exprs: tail.map(arr => ({ type: "ArithmeticSubExpression", operator: arr[0], expr: arr[1] })) }); }
+  = firstExpr:term tail:(_+ @[%/*] _+ @multiply_divide_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
   / term
 
 term

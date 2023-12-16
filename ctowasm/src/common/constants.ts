@@ -1,3 +1,4 @@
-export type ComparisonOperator = "<" | "<=" | "!=" | "==" | ">=" | ">";
-export type UnaryOperator = "++" | "--";
-export type BinaryOperator = "+" | "-" | "/" | "*" | "%";
+/**
+ * A collection of constant objects and values.
+ */
+

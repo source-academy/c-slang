@@ -5,6 +5,7 @@
 import { CNode, Expression } from "~src/c-ast/core";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { VariableExpr } from "~src/c-ast/variable";
+import { ArithmeticOperator } from "~src/common/types";
 
 // A variable assignment
 export interface Assignment extends CNode {
@@ -18,6 +19,20 @@ export interface Assignment extends CNode {
  */
 export interface AssignmentExpression extends Expression {
   type: "AssignmentExpression";
+  variable: VariableExpr | ArrayElementExpr;
+  value: Expression;
+}
+
+export interface CompoundAssignment extends CNode {
+  type: "CompoundAssignment";
+  operator: ArithmeticOperator;
+  variable: VariableExpr | ArrayElementExpr;
+  value: Expression;
+}
+
+export interface CompoundAssignmentExpression extends Expression {
+  type: "CompoundAssignmentExpression";
+  operator: ArithmeticOperator;
   variable: VariableExpr | ArrayElementExpr;
   value: Expression;
 }

@@ -2,13 +2,13 @@
  * Definitions of wasm AST nodes to do with operations (arithmetic, boolean etc).
  */
 
-import { BinaryOperator, ComparisonOperator } from "~src/common/constants";
+import { ArithmeticOperator, RelationalOperator } from "~src/common/constants";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
 
 export interface WasmArithmeticExpression extends WasmAstNode {
   type: "ArithmeticExpression";
-  operator: BinaryOperator;
+  operator: ArithmeticOperator;
   leftExpr: WasmExpression;
   rightExpr: WasmExpression;
   varType: WasmType; // the type of the variables that the arithmetic expression is running
@@ -41,7 +41,7 @@ export interface WasmOrExpression extends WasmAstNode {
 
 export interface WasmComparisonExpression extends WasmAstNode {
   type: "ComparisonExpression";
-  operator: ComparisonOperator;
+  operator: RelationalOperator;
   leftExpr: WasmExpression;
   rightExpr: WasmExpression;
 }

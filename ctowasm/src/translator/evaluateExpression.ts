@@ -6,13 +6,10 @@ import {
   PrefixExpression,
   PostfixExpression,
   CompoundAssignmentExpression,
-} from "~src/c-ast/arithmetic";
+} from "~src/c-ast/unaryExpression";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
-import {
-  ComparisonExpression,
-  ConditionalExpression,
-} from "~src/c-ast/boolean";
+import { RelationalExpression, LogicalExpression } from "~src/c-ast/boolean";
 import { FunctionCall } from "~src/c-ast/functions";
 import { IntegerConstant } from "~src/c-ast/constants";
 import { Expression } from "~src/c-ast/core";
@@ -38,7 +35,7 @@ import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 function evaluateLeftToRightBinaryExpression(
   wasmRoot: WasmModule,
   symbolTable: SymbolTable,
-  node: ArithmeticExpression | ComparisonExpression,
+  node: ArithmeticExpression | RelationalExpression
 ) {
   const rootNode: any = { type: node.type };
   // the last expression in expression series will be considered right expression (we do this to ensure left-to-rigth evaluation )
@@ -48,7 +45,7 @@ function evaluateLeftToRightBinaryExpression(
     currNode.rightExpr = evaluateExpression(
       wasmRoot,
       symbolTable,
-      node.exprs[i].expr,
+      node.exprs[i].expr
     );
     currNode.leftExpr = { type: node.type };
     currNode = currNode.leftExpr;
@@ -57,7 +54,7 @@ function evaluateLeftToRightBinaryExpression(
   currNode.rightExpr = evaluateExpression(
     wasmRoot,
     symbolTable,
-    node.exprs[0].expr,
+    node.exprs[0].expr
   );
   currNode.leftExpr = evaluateExpression(wasmRoot, symbolTable, node.firstExpr);
   return rootNode;
@@ -74,7 +71,7 @@ function isConditionalExpression(node: Expression) {
 function evaluateConditionalExpression(
   wasmRoot: WasmModule,
   symbolTable: SymbolTable,
-  node: ConditionalExpression,
+  node: LogicalExpression
 ) {
   const wasmNodeType =
     node.conditionType === "or" ? "OrExpression" : "AndExpression";
@@ -88,7 +85,7 @@ function evaluateConditionalExpression(
       currNode.rightExpr = evaluateExpression(
         wasmRoot,
         symbolTable,
-        node.exprs[i],
+        node.exprs[i]
       );
     } else {
       currNode.rightExpr = {
@@ -104,7 +101,7 @@ function evaluateConditionalExpression(
     currNode.rightExpr = evaluateExpression(
       wasmRoot,
       symbolTable,
-      node.exprs[1],
+      node.exprs[1]
     );
   } else {
     currNode.rightExpr = {
@@ -117,7 +114,7 @@ function evaluateConditionalExpression(
     currNode.leftExpr = evaluateExpression(
       wasmRoot,
       symbolTable,
-      node.exprs[0],
+      node.exprs[0]
     );
   } else {
     currNode.leftExpr = {
@@ -134,7 +131,7 @@ function evaluateConditionalExpression(
 export default function evaluateExpression(
   wasmRoot: WasmModule,
   symbolTable: SymbolTable,
-  expr: Expression,
+  expr: Expression
 ): WasmExpression {
   if (expr.type === "IntegerConstant") {
     const n = expr as IntegerConstant;
@@ -153,11 +150,11 @@ export default function evaluateExpression(
       name: n.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         wasmRoot.functions[n.name],
-        functionArgs,
+        functionArgs
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
         wasmRoot.functions[n.name],
-        true,
+        true
       ),
     };
   } else if (expr.type === "VariableExpr" || expr.type === "ArrayElementExpr") {
@@ -165,7 +162,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n,
+      n
     );
     return {
       type: "MemoryLoad",
@@ -175,14 +172,14 @@ export default function evaluateExpression(
     expr.type === "ArithmeticExpression" ||
     expr.type === "ComparisonExpression"
   ) {
-    const n = expr as ArithmeticExpression | ComparisonExpression;
+    const n = expr as ArithmeticExpression | RelationalExpression;
     return evaluateLeftToRightBinaryExpression(wasmRoot, symbolTable, n);
   } else if (expr.type === "PrefixExpression") {
     const n: PrefixExpression = expr as PrefixExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
@@ -215,7 +212,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
@@ -243,14 +240,14 @@ export default function evaluateExpression(
     };
     return wasmNode;
   } else if (expr.type === "ConditionalExpression") {
-    const n = expr as ConditionalExpression;
+    const n = expr as LogicalExpression;
     return evaluateConditionalExpression(wasmRoot, symbolTable, n);
   } else if (expr.type === "AssignmentExpression") {
     const n = expr as AssignmentExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     return {
       type: "MemoryLoad",
@@ -268,7 +265,7 @@ export default function evaluateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     return {
       type: "MemoryLoad",
@@ -294,8 +291,8 @@ export default function evaluateExpression(
     console.assert(
       false,
       `WASM TRANSLATION ERROR: Unhandled C expression node\n${JSON.stringify(
-        expr,
-      )}`,
+        expr
+      )}`
     );
   }
 }

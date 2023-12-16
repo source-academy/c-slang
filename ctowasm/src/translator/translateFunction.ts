@@ -6,7 +6,7 @@ import {
   PrefixExpression,
   PostfixExpression,
   CompoundAssignment,
-} from "~src/c-ast/arithmetic";
+} from "~src/c-ast/unaryExpression";
 import { ArrayInitialization } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
 import {
@@ -58,7 +58,7 @@ import { TranslationError } from "~src/errors";
 export default function translateFunction(
   wasmRoot: WasmModule,
   Cfunction: FunctionDefinition,
-  rootSymbolTable: SymbolTable,
+  rootSymbolTable: SymbolTable
 ) {
   const symbolTable = createSymbolTable(rootSymbolTable, true); // reset the offset counter to start symbol table offset fresh for each new function
 
@@ -109,13 +109,13 @@ export default function translateFunction(
   function visit(
     symbolTable: SymbolTable,
     node: BlockItem,
-    statementBody: WasmStatement[],
+    statementBody: WasmStatement[]
   ) {
     if (node.type === "Block") {
       const n = node as Block;
       const newSymbolTable = createSymbolTable(symbolTable);
       n.children.forEach((child) =>
-        visit(newSymbolTable, child, statementBody),
+        visit(newSymbolTable, child, statementBody)
       );
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement;
@@ -180,7 +180,7 @@ export default function translateFunction(
               symbolTable,
               n.name,
               i,
-              getVariableSize(n.variableType),
+              getVariableSize(n.variableType)
             ),
             value: evaluateExpression(wasmRoot, symbolTable, n.elements[i]),
             varType: variableTypeToWasmType[n.variableType],
@@ -193,7 +193,7 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable,
+        n.variable
       );
       statementBody.push({
         type: "MemoryStore",
@@ -211,11 +211,11 @@ export default function translateFunction(
         name: n.name,
         stackFrameSetup: getFunctionCallStackFrameSetupStatements(
           wasmRoot.functions[n.name],
-          functionArgs,
+          functionArgs
         ),
         stackFrameTearDown: getFunctionStackFrameTeardownStatements(
           wasmRoot.functions[n.name],
-          false,
+          false
         ),
       });
     } else if (
@@ -227,7 +227,7 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable,
+        n.variable
       );
       statementBody.push({
         type: "MemoryStore",
@@ -252,7 +252,7 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable,
+        n.variable
       );
       const arithmeticExpr: WasmArithmeticExpression = {
         type: "ArithmeticExpression",
@@ -279,7 +279,7 @@ export default function translateFunction(
         condition: evaluateExpression(
           wasmRoot,
           symbolTable,
-          n.ifBlock.condition,
+          n.ifBlock.condition
         ),
         actions,
         elseStatements: [],
@@ -293,7 +293,7 @@ export default function translateFunction(
           condition: evaluateExpression(
             wasmRoot,
             symbolTable,
-            elseIfBlock.condition,
+            elseIfBlock.condition
           ),
           actions,
           elseStatements: [],
@@ -400,7 +400,7 @@ export default function translateFunction(
       // explictly ignore expressions as they do not affect final code at runtime
     } else {
       throw new TranslationError(
-        `Translator error: Unhandled AST node: ${node}`,
+        `Translator error: Unhandled AST node: ${node}`
       );
     }
   }

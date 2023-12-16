@@ -3,12 +3,11 @@
  */
 
 import {
-  CompoundAssignment,
   PostfixExpression,
   PrefixExpression,
-} from "~src/c-ast/arithmetic";
+} from "~src/c-ast/unaryExpression";
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
-import { Assignment } from "~src/c-ast/assignment";
+import { Assignment, CompoundAssignment } from "~src/c-ast/assignment";
 import {
   FunctionDefinition,
   ReturnStatement,
