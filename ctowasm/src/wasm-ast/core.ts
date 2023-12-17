@@ -38,11 +38,7 @@ export interface WasmAstNode {
   type: string;
 }
 
-export interface WasmConst extends WasmAstNode {
-  type: "Const";
-  value: number;
-  wasmVariableType: WasmType;
-}
+
 
 export interface WasmModule extends WasmAstNode {
   type: "Module";
@@ -76,14 +72,15 @@ export type WasmStatement =
  */
 export type WasmExprStatement = WasmLocalSet | WasmGlobalSet | WasmMemoryStore;
 
-// A wasm expression is an instruction meant to be used in a situation that involves the pushing of a value onto virtual wasm stack.
-export type WasmExpression =
-  | WasmFunctionCall
-  | WasmConst
-  | WasmLocalGet
-  | WasmGlobalGet
-  | WasmExprStatement
-  | WasmMemoryLoad
-  | WasmMemorySize
-  | WasmBinaryExpression
-  | WasmBooleanExpression;
+
+/**
+ * Expressions are Wasm instructions that push a variable to the virtual wasm stack for use in a statement.
+ */
+export interface WasmExpression extends WasmAstNode {
+  wasmVariableType: WasmType // the type of this expression
+}
+
+export interface WasmConst extends WasmExpression {
+  type: "Const";
+  value: number;
+}

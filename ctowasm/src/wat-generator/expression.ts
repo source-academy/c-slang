@@ -70,8 +70,8 @@ export function generateExprStr(expr: WasmExpression): string {
     const n = expr as WasmMemoryLoad;
     return `(${getWasmMemoryLoadInstruction(
       n.varType,
-      n.numOfBytes
-    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(expr.addr)})`;
+      n.numOfBytes,
+    )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.addr)})`;
   } else if (expr.type === "MemoryStore") {
     return generateStatementStr(expr);
   } else {
