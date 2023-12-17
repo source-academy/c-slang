@@ -1,140 +1,57 @@
 /**
- * Definitions of various utility functions used for processing the C AST.
+ * Definitions of various utility functions.
  */
 
-import { ArithmeticExpression } from "~src/c-ast/unaryExpression";
-import { Constant, IntegerConstant } from "~src/c-ast/constants";
-import { ArithmeticOperator } from "~src/common/constants";
-import { IntegerType, VariableType } from "~src/common/types";
+import { Block } from "~src/c-ast/core";
+import { FunctionDefinition } from "~src/c-ast/functions";
+import { ForLoop } from "~src/c-ast/loops";
+import { SymbolTable } from "~src/c-ast/types";
 import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
-import { BinaryExpression } from "~src/c-ast/binaryExpression";
+import { visit } from "~src/processor/visit";
 
-// Evaluates the value of a <operator> b
-export function evaluateBinaryOperation(
-  a: number,
-  operator: ArithmeticOperator,
-  b: number
-) {
-  switch (operator) {
-    case "+":
-      return a + b;
-    case "-":
-      return a - b;
-    case "*":
-      return a * b;
-    case "/":
-      return a / b;
-    case "%":
-      return a % b;
-  }
-}
+type ScopeCreatingNodes = FunctionDefinition | ForLoop | Block;
 
 /**
- * Evaluates a constant arithmetic expression.
+ * Specially handles functions that involve creation of a new scope - which means a new symbol table.
  */
-export function evaluateConstantBinaryExpression(
+export function handleScopeCreatingNodes(
   sourceCode: string,
-  arithmeticExpr: ArithmeticExpression
+  node: ScopeCreatingNodes,
+  symbolTable: SymbolTable,
+  enclosingFunc?: FunctionDefinition
 ) {
-  const arithmeticExpression = arithmeticExpr as ArithmeticExpression;
-  if (arithmeticExpression.firstExpr.type !== "IntegerConstant") {
-    throw new ProcessingError(
-      "Error: Intializer element of global variable is not constant",
-      sourceCode,
-      arithmeticExpr.position
+  if (node.type === "FunctionDefinition") {
+    const n = node as FunctionDefinition;
+    // set the fields for tracking sizes as 0 - they will be incremented as more nodes are visited.
+    n.sizeOfLocals = 0;
+    // size of parameters can be calculated immediately
+    n.sizeOfParameters = n.parameters.reduce(
+      (sum, curr) => sum + getVariableSize(curr.variableType),
+      0
     );
-  }
-  let val = (arithmeticExpression.firstExpr as IntegerConstant).value;
-  //evaluate the constant arithmetic expression
-  for (const operand of arithmeticExpression.exprs) {
-    if (operand.expr.type !== "IntegerConstant") {
-      throw new ProcessingError(
-        "Error: Intializer element of global variable is not constant",
-        sourceCode,
-        arithmeticExpr.position
-      );
-    }
-    val = evaluateBinaryOperation(
-      val,
-      operand.operator,
-      (operand.expr as IntegerConstant).value
-    );
-  }
-  return {
-    type: "IntegerConstant",
-    variableType: "int", // TODO: change when support more vartypes
-    value: val,
-  } as IntegerConstant;
-}
+    n.sizeOfReturn = n.returnType ? getVariableSize(n.returnType) : 0;
 
-/**
- * Returns the maximum value of a signed int type.
- */
-function getMaxValueOfSignedIntType(val: IntegerType) {
-  return Math.pow(2, getVariableSize(val) * 8 - 1);
-}
+    symbolTable.addEntry(n);
 
-function getMinValueOfSignedIntType(val: IntegerType) {
-  return -Math.pow(2, getVariableSize(val) * 8 - 1) - 1;
-}
+    // visit params
+    const paramSymbolTable = new SymbolTable(symbolTable);
+    visit(sourceCode, n.body, paramSymbolTable);
 
-/**
- * Sets the variableType of a constant (like a literal number "123") as per 6.4.4.1 of C17 standard.
- * TODO: add unsigned ints.
- */
-export function setVariableTypeOfConstant(constant: Constant): VariableType {
-  if (constant.type === "FloatConstant") {
-    // TODO: implement when floating types added
-    return
-  }
-
-  const c = constant as IntegerConstant;
-  if (c.isUnsigned) {
-    // TODO: implement when unsigned types are added
-    return
-  }
-
-  // signed integers only
-  if (constant.value < 0) {
-    // negative ints
-    if (constant.value >= getMinValueOfSignedIntType("int")) {
-      constant.variableType = "int";
-    } else if (constant.value >= getMinValueOfSignedIntType("long")) {
-      constant.variableType = "long";
-    } else {
-      // integer is too negative
-      // TODO: possibly inform user with warning here
-      constant.variableType = "long";
-    }
+    // visit body
+    const bodySymbolTable = new SymbolTable(paramSymbolTable);
+    visit(sourceCode, n.body, bodySymbolTable, enclosingFunc);
+  } else if (node.type === "Block") {
+    const n = node as Block;
+    n.children.forEach(child => visit(sourceCode, child, new SymbolTable(symbolTable), enclosingFunc))
+  } else if (node.type === "ForLoop") {
+    // for loops have a specific scope for the for loop bracketed statements e.g. "(int i = 0; i < 10; i++)"
+    const n = node as ForLoop;
+    const forLoopSymbolTable = new SymbolTable(symbolTable);
+    visit(sourceCode, n.initialization, forLoopSymbolTable, enclosingFunc);
+    visit(sourceCode, n.condition, forLoopSymbolTable, enclosingFunc);
+    visit(sourceCode, n.update, forLoopSymbolTable, enclosingFunc);
   } else {
-    if (constant.value <= getMaxValueOfSignedIntType("int")) {
-      constant.variableType = "int";
-    } else if (constant.value <= getMaxValueOfSignedIntType("long")) {
-      constant.variableType = "long";
-    } else {
-      // integer is too large
-      // TODO: possibly inform user with warning here
-      constant.variableType = "long";
-    }
-  }
- 
-}
-
-/**
- * Sets the variableType field of a binary expression node, assuming its leftExpr and rightExpr fields already have their own variableType fields.
- * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
- * TODO: add unsigned behaviour later.
- */
-export function setVariableTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
-) {
-  if (
-    getVariableSize(binaryExpression.rightExpr.variableType) >
-    getVariableSize(binaryExpression.leftExpr.variableType)
-  ) {
-    binaryExpression.variableType = binaryExpression.rightExpr.variableType;
-  } else {
-    binaryExpression.variableType = binaryExpression.leftExpr.variableType;
+    throw new ProcessingError(`Processor Error: Unhandled scope creating node.`)
   }
 }

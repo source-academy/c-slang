@@ -28,6 +28,7 @@ export interface FunctionCall extends Expression {
   type: "FunctionCall";
   name: string;
   args: Expression[];
+  symbolTableId: number // id of entry in symbol table - to be filled during processing
 }
 
 /**
@@ -37,6 +38,7 @@ export interface FunctionCallStatement extends CNode {
   type: "FunctionCallStatement";
   name: string;
   args: Expression[];
+  symbolTableId: number // id of entry in symbol table - to be filled during processing
 }
 
 export interface ReturnStatement extends CNode {

@@ -23,4 +23,5 @@ export interface VariableExpr extends Expression {
   type: "VariableExpr";
   name: string; //name of the variable
   variableType: VariableType;
+  symbolTableId: number // id of entry in symbol table - to be filled during processing
 }

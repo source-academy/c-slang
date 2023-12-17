@@ -1,3 +1,4 @@
+import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import {
   WasmSelectStatement,
   WasmLoop,
@@ -20,14 +21,7 @@ import {
   WasmMemoryLoad,
   WasmMemorySize,
 } from "~src/wasm-ast/memory";
-import { WasmFunctionImport } from "~src/wasm-ast/misc";
-import {
-  WasmArithmeticExpression,
-  WasmBooleanExpression,
-  WasmAndExpression,
-  WasmOrExpression,
-  WasmComparisonExpression,
-} from "~src/wasm-ast/operations";
+import { WasmBooleanExpression, WasmFunctionImport } from "~src/wasm-ast/misc";
 import { WasmType } from "~src/wasm-ast/types";
 import {
   WasmGlobalSet,
@@ -88,11 +82,8 @@ export type WasmExpression =
   | WasmConst
   | WasmLocalGet
   | WasmGlobalGet
-  | WasmArithmeticExpression
   | WasmExprStatement
-  | WasmBooleanExpression
-  | WasmAndExpression
-  | WasmOrExpression
-  | WasmComparisonExpression
   | WasmMemoryLoad
-  | WasmMemorySize;
+  | WasmMemorySize
+  | WasmBinaryExpression
+  | WasmBooleanExpression;

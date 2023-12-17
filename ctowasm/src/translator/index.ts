@@ -26,7 +26,7 @@ import translateFunction from "~src/translator/translateFunction";
 
 export default function translate(
   CAstRoot: CAstRoot,
-  imports: Record<string, WasmImportedFunction> = {},
+  imports: Record<string, WasmImportedFunction> = {}
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -72,8 +72,8 @@ export default function translate(
       const globalArray: WasmDataSegmentArray = {
         type: "DataSegmentArray",
         name: n.name,
-        size: n.size * elementSize,
-        arraySize: n.size,
+        size: n.numElements * elementSize,
+        arraySize: n.numElements,
         //TODO: setting vartype for structs will require some kind of array of vartype loads
         varType: variableTypeToWasmType[n.variableType],
         elementSize: elementSize,
@@ -81,7 +81,7 @@ export default function translate(
         initializerList:
           n.type === "ArrayInitialization"
             ? (n as ArrayInitialization).elements.map((element) =>
-                convertConstantToWasmConst(element as Constant),
+                convertConstantToWasmConst(element as Constant)
               )
             : undefined,
       };
@@ -93,7 +93,7 @@ export default function translate(
   setPseudoRegisters(
     wasmRoot,
     wasmRoot.functions["main"].sizeOfLocals,
-    rootSymbolTable.currOffset.value,
+    rootSymbolTable.currOffset.value
   );
 
   return wasmRoot;

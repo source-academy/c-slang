@@ -9,8 +9,13 @@ import { Position } from "~src/c-ast/types";
  * Contains positional information for debugging purposes.
  */
 export class SourceCodeError extends Error {
-  constructor(message: string, sourceCode: string, position: Position) {
+  constructor(message: string, sourceCode?: string, position?: Position) {
     super();
+
+    if (!sourceCode || !position) {
+      this.message = message;
+    }
+
     this.message = `\n${message}\n${position.start.line} | `;
     let currLine = position.start.line;
     for (let i = position.start.offset; i < position.end.offset; ++i) {
@@ -25,13 +30,13 @@ export class SourceCodeError extends Error {
 }
 
 export class ProcessingError extends SourceCodeError {
-  constructor(message: string, sourceCode: string, position: Position) {
+  constructor(message: string, sourceCode?: string, position?: Position) {
     super(message, sourceCode, position);
   }
 }
 
 export class SemanticAnalysisError extends SourceCodeError {
-  constructor(message: string, sourceCode: string, position: Position) {
+  constructor(message: string, sourceCode?: string, position?: Position) {
     super(message, sourceCode, position);
   }
 }

@@ -17,8 +17,8 @@ export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
 
 // Nested Symbol Table
 // global scope -> function parameter scope -> function body scope -> block scope (if available)
-export interface SymbolTable {
-  parentTable: SymbolTable | null;
+export interface WasmSymbolTable {
+  parentTable: WasmSymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
   variables: Record<string, WasmMemoryVariable>;
 }

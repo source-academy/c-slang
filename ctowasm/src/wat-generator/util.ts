@@ -2,7 +2,9 @@
  * Utility functions for WAT generation.
  */
 
-import { ArithmeticOperator, RelationalOperator } from "~src/common/constants";
+import { BinaryOperator, VariableType } from "~src/common/types";
+import { isSignedIntegerType, isUnsignedIntegerType } from "~src/common/utils";
+import { variableTypeToWasmType } from "~src/translator/variableUtil";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { WasmType } from "~src/wasm-ast/types";
 import { generateExprStr } from "~src/wat-generator/expression";
@@ -78,39 +80,6 @@ export function generateStatementsList(
   return statements
     .map((s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression))
     .join(" ");
-}
-
-/**
- * Returns the correct WAT binary instruction, given a binary operator.
- * TODO: add support for other types and unsigned/signed ints.
- */
-export function getBinaryInstruction(
-  operator: ArithmeticOperator | RelationalOperator
-) {
-  switch (operator) {
-    case "+":
-      return "i32.add";
-    case "-":
-      return "i32.sub";
-    case "*":
-      return "i32.mul";
-    case "/":
-      return "i32.div_s";
-    case "%":
-      return "i32.rem_s";
-    case "<":
-      return "i32.lt_s";
-    case "<=":
-      return "i32.le_s";
-    case "!=":
-      return "i32.ne";
-    case "==":
-      return "i32.eq";
-    case ">=":
-      return "i32.ge_s";
-    case ">":
-      return "i32.gt_s";
-  }
 }
 
 export function getPreStatementsStr(

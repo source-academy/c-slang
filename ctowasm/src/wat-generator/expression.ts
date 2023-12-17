@@ -7,13 +7,13 @@ import {
   WasmBooleanExpression,
   WasmAndExpression,
   WasmOrExpression,
-} from "~src/wasm-ast/operations";
+} from "~src/wasm-ast/binaryExpression";
 import { WasmLocalGet, WasmGlobalGet } from "~src/wasm-ast/variables";
 import { generateStatementStr } from "~src/wat-generator/statement";
 import {
   generateStatementsList,
   getPreStatementsStr,
-  getBinaryInstruction,
+  getBinaryExpressionInstruction,
   getWasmMemoryLoadInstruction,
 } from "~src/wat-generator/util";
 
@@ -24,7 +24,7 @@ export function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const e = expr as WasmFunctionCall;
     return `(call $${e.name} ${generateStatementsList(
-      e.stackFrameSetup,
+      e.stackFrameSetup
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
@@ -41,8 +41,8 @@ export function generateExprStr(expr: WasmExpression): string {
   ) {
     const e = expr as WasmArithmeticExpression | WasmComparisonExpression;
     //TODO: support different op types other than i32
-    return `(${getBinaryInstruction(e.operator)} ${generateExprStr(
-      e.leftExpr,
+    return `(${getBinaryExpressionInstruction(e.operator)} ${generateExprStr(
+      e.leftExpr
     )} ${generateExprStr(e.rightExpr)})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
@@ -57,12 +57,12 @@ export function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "AndExpression") {
     const e = expr as WasmAndExpression;
     return `(i32.and ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
+      e.rightExpr
     )})`;
   } else if (expr.type === "OrExpression") {
     const e = expr as WasmOrExpression;
     return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
+      e.rightExpr
     )})`;
   } else if (expr.type === "MemorySize") {
     return "(memory.size)";
@@ -70,7 +70,7 @@ export function generateExprStr(expr: WasmExpression): string {
     const n = expr as WasmMemoryLoad;
     return `(${getWasmMemoryLoadInstruction(
       n.varType,
-      n.numOfBytes,
+      n.numOfBytes
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(expr.addr)})`;
   } else if (expr.type === "MemoryStore") {
     return generateStatementStr(expr);
@@ -78,8 +78,8 @@ export function generateExprStr(expr: WasmExpression): string {
     console.assert(
       false,
       `WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion\n${JSON.stringify(
-        expr,
-      )}`,
+        expr
+      )}`
     );
   }
 }

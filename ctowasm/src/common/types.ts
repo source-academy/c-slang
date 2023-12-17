@@ -10,4 +10,6 @@ export type BinaryOperator = RelationalOperator | ArithmeticOperator | LogicalOp
 export type UnaryOperator = "++" | "--";
 
 export type VariableType = IntegerType;
-export type IntegerType = "char" | "short" | "int" | "long";
+export type IntegerType = SignedIntegerType | UnsignedIntegerType;
+export type UnsignedIntegerType = "unsigned char" | "unsigned short" | "unsigned int" | "unsigned long";
+export type SignedIntegerType = "signed char" | "signed short" | "signed int" | "signed long";

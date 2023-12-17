@@ -16,7 +16,7 @@ import {
 } from "~src/c-ast/functions";
 import { IterationStatement } from "~src/c-ast/loops";
 import { SelectStatement } from "~src/c-ast/select";
-import { Position } from "~src/c-ast/types";
+import { Position, SymbolTable } from "~src/c-ast/types";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
 
@@ -46,12 +46,6 @@ export type Statement =
   | PostfixExpression
   | CompoundAssignment;
 
-// Root represents the starting node of the AST
-export interface CAstRoot extends CNode {
-  type: "Root";
-  children: (Statement | FunctionDefinition)[];
-}
-
 export type BlockItem =
   | Statement
   | Block
@@ -62,4 +56,11 @@ export type BlockItem =
 export interface Block extends CNode {
   type: "Block";
   children: BlockItem[];
+}
+
+// Root represents the starting node of the AST
+export interface CAstRoot extends CNode {
+  type: "Root";
+  children: (Statement | FunctionDefinition)[];
+  symbolTable: SymbolTable;
 }

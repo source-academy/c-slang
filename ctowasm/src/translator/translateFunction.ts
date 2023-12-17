@@ -19,7 +19,7 @@ import { Block, BlockItem } from "~src/c-ast/core";
 import { SelectStatement } from "~src/c-ast/select";
 import { Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
-import evaluateExpression from "~src/translator/evaluateExpression";
+import translateExpression from "~src/translator/translateExpression";
 import {
   BASE_POINTER,
   WASM_ADDR_SIZE,
@@ -32,7 +32,7 @@ import {
   createSymbolTable,
   getUniqueBlockLabelGenerator,
   getUniqueLoopLabelGenerator,
-  unaryOperatorToBinaryOperator,
+  unaryOperatorToInstruction,
   wasmTypeToSize,
 } from "~src/translator/util";
 import {
@@ -43,9 +43,9 @@ import {
 } from "~src/translator/variableUtil";
 import { WasmSelectStatement } from "~src/wasm-ast/control";
 import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
-import { SymbolTable, WasmFunction } from "~src/wasm-ast/functions";
+import { WasmSymbolTable, WasmFunction } from "~src/wasm-ast/functions";
 import { WasmLocalVariable, WasmLocalArray } from "~src/wasm-ast/memory";
-import { WasmArithmeticExpression } from "~src/wasm-ast/operations";
+import { WasmArithmeticExpression } from "~src/wasm-ast/binaryExpression";
 import { TranslationError } from "~src/errors";
 
 /**
@@ -58,7 +58,7 @@ import { TranslationError } from "~src/errors";
 export default function translateFunction(
   wasmRoot: WasmModule,
   Cfunction: FunctionDefinition,
-  rootSymbolTable: SymbolTable
+  rootSymbolTable: WasmSymbolTable
 ) {
   const symbolTable = createSymbolTable(rootSymbolTable, true); // reset the offset counter to start symbol table offset fresh for each new function
 
@@ -107,7 +107,7 @@ export default function translateFunction(
    * @param statementBody the array to add the translated statement to.
    */
   function visit(
-    symbolTable: SymbolTable,
+    symbolTable: WasmSymbolTable,
     node: BlockItem,
     statementBody: WasmStatement[]
   ) {
@@ -123,7 +123,7 @@ export default function translateFunction(
         statementBody.push({
           type: "MemoryStore",
           addr: getPointerArithmeticNode(BASE_POINTER, "+", WASM_ADDR_SIZE),
-          value: evaluateExpression(wasmRoot, symbolTable, n.value),
+          value: translateExpression(wasmRoot, symbolTable, n.value),
           varType: enclosingFunc.returnVariable.varType,
           numOfBytes: wasmTypeToSize[enclosingFunc.returnVariable.varType], // TODO: change when implement structs
         });
@@ -150,7 +150,7 @@ export default function translateFunction(
         statementBody.push({
           type: "MemoryStore",
           addr: getVariableAddr(symbolTable, v.name),
-          value: evaluateExpression(wasmRoot, symbolTable, node.value),
+          value: translateExpression(wasmRoot, symbolTable, node.value),
           varType: variableTypeToWasmType[n.variableType],
           numOfBytes: getVariableSize(n.variableType),
         });
@@ -163,17 +163,17 @@ export default function translateFunction(
       const elementSize = getVariableSize(n.variableType);
       const array: WasmLocalArray = {
         type: "LocalArray",
-        arraySize: n.size,
+        arraySize: n.numElements,
         name: n.name,
-        size: n.size * elementSize,
-        offset: symbolTable.currOffset.value + n.size * elementSize,
+        size: n.numElements * elementSize,
+        offset: symbolTable.currOffset.value + n.numElements * elementSize,
         varType: variableTypeToWasmType[n.variableType],
         elementSize,
       };
       addToSymbolTable(symbolTable, array);
 
       if (node.type === "ArrayInitialization") {
-        for (let i = 0; i < n.size; ++i) {
+        for (let i = 0; i < n.numElements; ++i) {
           statementBody.push({
             type: "MemoryStore",
             addr: getArrayConstantIndexElementAddr(
@@ -182,7 +182,7 @@ export default function translateFunction(
               i,
               getVariableSize(n.variableType)
             ),
-            value: evaluateExpression(wasmRoot, symbolTable, n.elements[i]),
+            value: translateExpression(wasmRoot, symbolTable, n.elements[i]),
             varType: variableTypeToWasmType[n.variableType],
             numOfBytes: getVariableSize(n.variableType),
           });
@@ -197,14 +197,14 @@ export default function translateFunction(
       );
       statementBody.push({
         type: "MemoryStore",
-        value: evaluateExpression(wasmRoot, symbolTable, n.value),
+        value: translateExpression(wasmRoot, symbolTable, n.value),
         ...memoryAccessDetails,
       });
     } else if (node.type === "FunctionCallStatement") {
       const n = node as FunctionCallStatement;
       const functionArgs = [];
       for (const arg of n.args) {
-        functionArgs.push(evaluateExpression(wasmRoot, symbolTable, arg));
+        functionArgs.push(translateExpression(wasmRoot, symbolTable, arg));
       }
       statementBody.push({
         type: "FunctionCallStatement",
@@ -233,7 +233,7 @@ export default function translateFunction(
         type: "MemoryStore",
         value: {
           type: "ArithmeticExpression",
-          operator: unaryOperatorToBinaryOperator[n.operator],
+          operator: unaryOperatorToInstruction[n.operator],
           leftExpr: {
             type: "MemoryLoad",
             ...memoryAccessDetails,
@@ -262,7 +262,7 @@ export default function translateFunction(
           type: "MemoryLoad",
           ...memoryAccessDetails,
         },
-        rightExpr: evaluateExpression(wasmRoot, symbolTable, n.value),
+        rightExpr: translateExpression(wasmRoot, symbolTable, n.value),
       };
       // parameter assignment or assignment to local scope variable
       statementBody.push({
@@ -276,7 +276,7 @@ export default function translateFunction(
       visit(symbolTable, n.ifBlock.block, actions); // visit all the actions inside the if block
       const rootSelectNode: WasmSelectStatement = {
         type: "SelectStatement",
-        condition: evaluateExpression(
+        condition: translateExpression(
           wasmRoot,
           symbolTable,
           n.ifBlock.condition
@@ -290,7 +290,7 @@ export default function translateFunction(
         visit(symbolTable, elseIfBlock.block, actions);
         const elseIfNode: WasmSelectStatement = {
           type: "SelectStatement",
-          condition: evaluateExpression(
+          condition: translateExpression(
             wasmRoot,
             symbolTable,
             elseIfBlock.condition
@@ -316,7 +316,7 @@ export default function translateFunction(
       body.push({
         type: "BranchIf",
         label: loopLabel,
-        condition: evaluateExpression(wasmRoot, symbolTable, n.condition),
+        condition: translateExpression(wasmRoot, symbolTable, n.condition),
       });
       statementBody.push({
         type: "Loop",
@@ -335,7 +335,7 @@ export default function translateFunction(
         condition: {
           type: "BooleanExpression",
           isNegated: true,
-          expr: evaluateExpression(wasmRoot, symbolTable, n.condition),
+          expr: translateExpression(wasmRoot, symbolTable, n.condition),
         },
       });
       visit(symbolTable, n.body, body); // visit all the statements in the body of the while loop
@@ -369,7 +369,11 @@ export default function translateFunction(
         condition: {
           type: "BooleanExpression",
           isNegated: true,
-          expr: evaluateExpression(wasmRoot, conditionSymbolTable, n.condition),
+          expr: translateExpression(
+            wasmRoot,
+            conditionSymbolTable,
+            n.condition
+          ),
         },
       });
       visit(conditionSymbolTable, n.body, body); // visit all the statements in the body of the for loop

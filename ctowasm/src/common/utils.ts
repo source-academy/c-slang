@@ -9,10 +9,14 @@ import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
  * Definitions of the sizes in bytes of the supported C variables types.
  */
 const variableSizes: Record<VariableType, MemoryVariableByteSize> = {
-  char: 1,
-  short: 2,
-  int: 4,
-  long: 8,
+  ["unsigned char"]: 1,
+  ["signed char"]: 1,
+  ["unsigned short"]: 2,
+  ["signed short"]: 2,
+  ["unsigned int"]: 4,
+  ["signed int"]: 4,
+  ["unsigned long"]: 8,
+  ["signed long"]: 8,
 };
 
 /**
@@ -20,4 +24,26 @@ const variableSizes: Record<VariableType, MemoryVariableByteSize> = {
  */
 export function getVariableSize(varType: VariableType): MemoryVariableByteSize {
   return variableSizes[varType];
+}
+
+export function isSignedIntegerType(variableType: VariableType) {
+  return (
+    variableType === "signed char" ||
+    variableType === "signed short" ||
+    variableType === "signed int" ||
+    variableType === "signed long"
+  );
+}
+
+export function isUnsignedIntegerType(variableType: VariableType) {
+  return (
+    variableType === "unsigned char" ||
+    variableType === "unsigned short" ||
+    variableType === "unsigned int" ||
+    variableType === "unsigned long"
+  );
+}
+
+export function isIntegerType(variabeType: VariableType) {
+  return isUnsignedIntegerType(variabeType) || isSignedIntegerType(variabeType);
 }

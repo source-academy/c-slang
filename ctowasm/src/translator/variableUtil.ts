@@ -7,11 +7,11 @@ import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
 import { TranslationError } from "~src/errors";
-import evaluateExpression from "~src/translator/evaluateExpression";
+import translateExpression from "~src/translator/translateExpression";
 import { BASE_POINTER } from "~src/translator/memoryUtil";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmConst, WasmModule, WasmExpression } from "~src/wasm-ast/core";
-import { SymbolTable } from "~src/wasm-ast/functions";
+import { WasmSymbolTable } from "~src/wasm-ast/functions";
 import {
   WasmLocalArray,
   MemoryVariableByteSize,
@@ -21,15 +21,26 @@ import {
 } from "~src/wasm-ast/memory";
 import { Constant } from "~src/c-ast/constants";
 import { wasmTypeToSize } from "~src/translator/util";
+import {
+  Assignment,
+  AssignmentExpression,
+  CompoundAssignment,
+  CompoundAssignmentExpression,
+} from "~src/c-ast/assignment";
+import { isUnsignedIntegerType } from "~src/common/utils";
 
 /**
- * Mapping of C variable types to the its va
+ * Mapping of C variable types to the Wasm variable type used to perform operations on it.
  */
 export const variableTypeToWasmType: Record<VariableType, WasmType> = {
-  char: "i32",
-  short: "i32",
-  int: "i32",
-  long: "i64",
+  ["unsigned char"]: "i32",
+  ["signed char"]: "i32",
+  ["unsigned short"]: "i32",
+  ["signed short"]: "i32",
+  ["unsigned int"]: "i32",
+  ["signed int"]: "i32",
+  ["unsigned long"]: "i64",
+  ["signed long"]: "i64",
 };
 
 /**
@@ -47,8 +58,8 @@ export function convertConstantToWasmConst(constant: Constant): WasmConst {
  * Retrieves information on variable from given function's symbol table, or from globals in wasmRoot if not found.
  */
 export function retrieveVariableFromSymbolTable(
-  symbolTable: SymbolTable,
-  variableName: string,
+  symbolTable: WasmSymbolTable,
+  variableName: string
 ) {
   let curr = symbolTable;
 
@@ -67,8 +78,8 @@ export function retrieveVariableFromSymbolTable(
  * depending on whether it is a local or global variable.
  */
 export function getVariableAddr(
-  symbolTable: SymbolTable,
-  variableName: string,
+  symbolTable: WasmSymbolTable,
+  variableName: string
 ): WasmExpression {
   const variable = retrieveVariableFromSymbolTable(symbolTable, variableName);
   if (
@@ -105,10 +116,10 @@ export function getVariableAddr(
  */
 export function getArrayElementAddr(
   wasmRoot: WasmModule,
-  symbolTable: SymbolTable,
+  symbolTable: WasmSymbolTable,
   arrayName: string,
   elementIndex: Expression,
-  elementSize: number,
+  elementSize: number
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
@@ -117,7 +128,7 @@ export function getArrayElementAddr(
     rightExpr: {
       type: "ArithmeticExpression",
       operator: "*",
-      leftExpr: evaluateExpression(wasmRoot, symbolTable, elementIndex),
+      leftExpr: translateExpression(wasmRoot, symbolTable, elementIndex),
       rightExpr: {
         type: "Const",
         wasmVariableType: "i32",
@@ -143,8 +154,8 @@ interface MemoryAccessDetails {
  */
 export function getMemoryAccessDetails(
   wasmRoot: WasmModule,
-  symbolTable: SymbolTable,
-  expr: VariableExpr | ArrayElementExpr,
+  symbolTable: WasmSymbolTable,
+  expr: VariableExpr | ArrayElementExpr
 ): MemoryAccessDetails {
   const variable = retrieveVariableFromSymbolTable(symbolTable, expr.name);
 
@@ -156,7 +167,7 @@ export function getMemoryAccessDetails(
       )
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match.",
+        "getMemoryAccessDetails error: memory access variable does not match."
       );
     }
     const v = variable as WasmLocalVariable | WasmDataSegmentVariable;
@@ -170,7 +181,7 @@ export function getMemoryAccessDetails(
       !(variable.type === "LocalArray" || variable.type === "DataSegmentArray")
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match.",
+        "getMemoryAccessDetails error: memory access variable does not match."
       );
     }
     const v = variable as WasmDataSegmentArray | WasmLocalArray;
@@ -180,7 +191,7 @@ export function getMemoryAccessDetails(
         symbolTable,
         expr.name,
         expr.index,
-        v.elementSize,
+        v.elementSize
       ),
       numOfBytes: wasmTypeToSize[v.varType], // the size of one element of //TODO: need to change when have more types
       varType: v.varType,
@@ -188,7 +199,7 @@ export function getMemoryAccessDetails(
   } else {
     console.assert(
       false,
-      "Translator error: getMemoryAccessDetails failed - no matching expression type",
+      "Translator error: getMemoryAccessDetails failed - no matching expression type"
     );
   }
 }
@@ -197,10 +208,10 @@ export function getMemoryAccessDetails(
  * Returns the ast nodes that equal to the address to use for memory instructions for a array variable given a constant number as index.
  */
 export function getArrayConstantIndexElementAddr(
-  symbolTable: SymbolTable,
+  symbolTable: WasmSymbolTable,
   arrayName: string,
   elementIndex: number,
-  elementSize: number,
+  elementSize: number
 ): WasmExpression {
   return {
     type: "ArithmeticExpression",
@@ -213,4 +224,27 @@ export function getArrayConstantIndexElementAddr(
     },
     varType: "i32",
   };
+}
+
+function needIntegerPromotion(vt1: VariableType, vt2: VariableType) {
+  if (vt1 === "") {
+
+  }
+}
+
+
+/**
+ * Get the WAT AST nodes that correspond to assigning an expression to a variable.
+ * Adds any wrapper nodes resposible for truncating/extending values to match variable type.
+ */
+export function getAssignmentNodes(
+  assignmentNode:
+    | Assignment
+    | AssignmentExpression
+    | CompoundAssignment
+    | CompoundAssignmentExpression
+) {
+  if (isUnsignedIntegerType(assignmentNode.variable.variableType)) {
+    if 
+  }
 }

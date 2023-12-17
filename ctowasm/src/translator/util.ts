@@ -3,7 +3,7 @@
  */
 
 import { ArithmeticOperator } from "~src/common/constants";
-import { SymbolTable } from "~src/wasm-ast/functions";
+import { WasmSymbolTable } from "~src/wasm-ast/functions";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmModule } from "~src/wasm-ast/core";
 import {
@@ -21,15 +21,15 @@ import {
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
 import { WasmImportedFunction } from "~src/wasmModuleImports";
+import { UnaryOperator } from "~src/common/types";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator
  */
-export const unaryOperatorToBinaryOperator: Record<string, ArithmeticOperator> =
-  {
-    "++": "+",
-    "--": "-",
-  };
+export const unaryOperatorToInstruction: Record<UnaryOperator, string> = {
+  "++": "add",
+  "--": "sub",
+};
 
 // Maps wasm type to number of bytes it uses
 export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
@@ -113,9 +113,9 @@ export function setPseudoRegisters(
  * @param resetOffset reset the offset counter for the new table, default false which uses parent tables offset
  */
 export function createSymbolTable(
-  parentTable?: SymbolTable | null,
+  parentTable?: WasmSymbolTable | null,
   resetOffset: boolean = false
-): SymbolTable {
+): WasmSymbolTable {
   if (parentTable === null || typeof parentTable === "undefined") {
     // create a new root symbol table
     return {
@@ -135,7 +135,7 @@ export function createSymbolTable(
  * Add a variable to the symbol table of the current scope.
  */
 export function addToSymbolTable(
-  symbolTable: SymbolTable,
+  symbolTable: WasmSymbolTable,
   variable: WasmMemoryVariable
 ) {
   symbolTable.variables[variable.name] = variable;

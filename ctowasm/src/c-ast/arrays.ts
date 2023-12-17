@@ -8,7 +8,7 @@ export interface ArrayDeclaration extends CNode {
   type: "ArrayDeclaration" | "ArrayInitialization";
   name: string;
   variableType: VariableType;
-  size: number;
+  numElements: number;
 }
 
 export interface ArrayInitialization extends ArrayDeclaration {
@@ -21,4 +21,5 @@ export interface ArrayElementExpr extends Expression {
   type: "ArrayElementExpr";
   name: string; // name of the array
   index: Expression;
+  symbolTableId: number;
 }
