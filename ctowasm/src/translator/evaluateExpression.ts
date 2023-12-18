@@ -1,32 +1,20 @@
 /**
  * Defines functions for evaluating C AST expression nodes and converting them to corresponding WAT AST nodes.
  */
-import {
-  ArithmeticExpression,
-  PrefixExpression,
-  PostfixExpression,
-  CompoundAssignmentExpression,
-} from "~src/c-ast/arithmetic";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
-import {
-  ComparisonExpression,
-  ConditionalExpression,
-} from "~src/c-ast/boolean";
+
 import { FunctionCall } from "~src/c-ast/functions";
-import { IntegerConstant } from "~src/c-ast/constants";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import {
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,
 } from "~src/translator/memoryUtil";
-import { unaryOperatorToBinaryOperator } from "~src/translator/util";
 import {
   convertConstantToWasmConst,
   getMemoryAccessDetails,
 } from "~src/translator/variableUtil";
-import { SymbolTable } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 

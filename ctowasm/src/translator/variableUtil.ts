@@ -27,7 +27,8 @@ import {
   CompoundAssignment,
   CompoundAssignmentExpression,
 } from "~src/c-ast/assignment";
-import { isUnsignedIntegerType } from "~src/common/utils";
+import { isSignedIntegerType, isUnsignedIntegerType } from "~src/common/utils";
+import { NumericConversionInstruction } from "~src/wasm-ast/misc";
 
 /**
  * Mapping of C variable types to the Wasm variable type used to perform operations on it.
@@ -226,9 +227,92 @@ export function getArrayConstantIndexElementAddr(
   };
 }
 
-function needIntegerPromotion(vt1: VariableType, vt2: VariableType) {
-  if (vt1 === "") {
-
+/**
+ * Retrieves the numeric conversion instruction needed to convert WasmType "from" to "to".
+ * Some operations require knowledge of the sign of the original C "from" variable to get the right instruction.
+ */
+function getNeededNumericConversionInstruction(from: WasmType, to: WasmType, intSignage?: "unsigned" | "signed"): NumericConversionInstruction {
+  if (from === "i32" && to === "i64") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from i32 to i64")
+    } else if (intSignage === "signed") {
+      return "i64.extend_i32_s";
+    } else {
+      return "i64.extend_i32_u";
+    }
+  } else if (from === "i64" && to === "i32") {
+    return "i32.wrap_i64";
+  } else if (from === "f32" && to === "f64") {
+    return "f64.promote_f32";
+  } else if (from === "f64" && to === "f32") {
+    return "f32.demote_f64";
+  } else if (from === "i32" && to === "f32") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from i32 to f32")
+    } else if (intSignage === "signed") {
+      return "f32.convert_i32_s";
+    } else {
+      return "f32.convert_i32_u"
+    }
+  } else if (from === "i64" && to === "f32") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from i64 to f32")
+    } else if (intSignage === "signed") {
+      return "f32.convert_i64_s";
+    } else {
+      return "f32.convert_i64_u";
+    }
+  } else if (from === "i32" && to === "f64") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from i32 to f64")
+    } else if (intSignage === "signed") {
+      return "f64.convert_i32_s";
+    } else {
+      return "f64.convert_i32_u";
+    } 
+  } else if (from === "i64" && to === "f64") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from i64 to f64")
+    } else if (intSignage === "signed") {
+      return "f64.convert_i64_s";
+    } else {
+      return "f64.convert_i64_u";
+    } 
+  } else if (from === "f32" && to === "i32") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from f32 to i32")
+    } else if (intSignage === "signed") {
+      return "i32.trunc_f32_s";
+    } else {
+      return "i32.trunc_f32_u";
+    } 
+  } else if (from === "f64" && to === "i32") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from f64 to i32")
+    } else if (intSignage === "signed") {
+      return "i32.trunc_f64_s";
+    } else {
+      return "i32.trunc_f64_u";
+    } 
+  } else if (from === "f32" && to === "i64") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from f32 to i64")
+    } else if (intSignage === "signed") {
+      return "i64.trunc_f32_s";
+    } else {
+      return "i64.trunc_f32_u";
+    } 
+  } else if (from === "f64" && to === "i64") {
+    if (typeof intSignage === "undefined") {
+      throw new TranslationError("Translation Error: Missing sign information for numeric conversion from f64 to i64")
+    } else if (intSignage === "signed") {
+      return "i64.trunc_f64_s";
+    } else {
+      return "i64.trunc_f64_u";
+    } 
+  } else {
+    // should not happen
+    throw new TranslationError("Translation Error: Unhandled numeric conversion between wasm types")
   }
 }
 
@@ -244,7 +328,7 @@ export function getAssignmentNodes(
     | CompoundAssignment
     | CompoundAssignmentExpression
 ) {
-  if (isUnsignedIntegerType(assignmentNode.variable.variableType)) {
-    if 
+  if (isUnsignedIntegerType(assignmentNode.variable.variableType) && isSignedIntegerType(assignmentNode.)) {
+    
   }
 }

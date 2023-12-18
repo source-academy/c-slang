@@ -15,7 +15,7 @@ export interface WasmFunctionImport extends WasmAstNode {
 /**
  * Base class for nodes that are meant to wrap other expressions to perform some simple operation on the results of the wrapped expression.
  */
-export interface WasmWrapperNode {
+export interface WasmWrapperNode extends WasmExpression {
   expr: WasmExpression;
 }
 
@@ -27,9 +27,9 @@ export interface WasmBooleanExpression extends WasmWrapperNode {
   isNegated?: boolean;
 }
 
-type ExtendIntInstructions = "i64.extend_i32.u" | "i64.extend_i32_u";
+type ExtendIntInstructions = "i64.extend_i32_s" | "i64.extend_i32_u";
 type WrapIntInstructions = "i32.wrap_i64";
-type PromoteFloatInstructions = "f64.promote_f32" | "f32.demote_f64";
+type PromoteFloatInstructions = "f64.promote_f32";
 type DemoteFloatInstructions = "f32.demote_f64";
 type ConvertIntToFloatInstructions =
   | "f32.convert_i32_s"
@@ -50,7 +50,7 @@ type TruncateFloatToIntInstructions =
   | "i64.trunc_f64_s"
   | "i64.trunc_f64_u";
 
-type NumericConversionInstruction =
+export type NumericConversionInstruction =
   | ExtendIntInstructions
   | WrapIntInstructions
   | PromoteFloatInstructions
