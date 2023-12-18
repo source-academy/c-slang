@@ -7,7 +7,7 @@ import {
   PrefixExpression,
 } from "~src/c-ast/unaryExpression";
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
-import { Assignment, CompoundAssignment } from "~src/c-ast/assignment";
+import { Assignment } from "~src/c-ast/assignment";
 import {
   FunctionDefinition,
   ReturnStatement,
@@ -44,7 +44,6 @@ export type Statement =
   | FunctionCallStatement
   | PrefixExpression
   | PostfixExpression
-  | CompoundAssignment;
 
 export type BlockItem =
   | Statement

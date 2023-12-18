@@ -22,17 +22,3 @@ export interface AssignmentExpression extends Expression {
   variable: VariableExpr | ArrayElementExpr;
   value: Expression;
 }
-
-export interface CompoundAssignment extends CNode {
-  type: "CompoundAssignment";
-  operator: ArithmeticOperator;
-  variable: VariableExpr | ArrayElementExpr;
-  value: Expression;
-}
-
-export interface CompoundAssignmentExpression extends Expression {
-  type: "CompoundAssignmentExpression";
-  operator: ArithmeticOperator;
-  variable: VariableExpr | ArrayElementExpr;
-  value: Expression;
-}

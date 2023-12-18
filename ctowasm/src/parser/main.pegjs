@@ -144,11 +144,10 @@ list_initializer
   = "{" _* @expression|.., _* "," _* | _* "}"
 
 compound_assignment
-  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("CompoundAssignment", { variable, operator, value }); }
+  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("Assignment", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 
 compound_assignment_expression
-  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("CompoundAssignmentExpression", { operator, variable, value }); } 
-
+  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 expression
   = assignment_expression 
   / compound_assignment_expression
