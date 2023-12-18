@@ -1,16 +1,7 @@
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
-
-/**
- * Definitions of wasm AST nodes that do not fall under other categories.
- */
-export interface WasmFunctionImport extends WasmAstNode {
-  type: "FunctionImport";
-  importPath: string[]; // the path to this imported function e.g. ["console", "log"]
-  name: string; // name of this function within the wasm module. May not match the last index of import path!
-  params: WasmType[];
-  return: WasmType | null;
-}
+import { WasmLocalVariable } from "~src/wasm-ast/memory";
+import { VariableType } from "~src/common/types";
 
 /**
  * Base class for nodes that are meant to wrap other expressions to perform some simple operation on the results of the wrapped expression.
@@ -24,6 +15,7 @@ export interface WasmWrapperNode extends WasmExpression {
  */
 export interface WasmBooleanExpression extends WasmWrapperNode {
   type: "BooleanExpression";
+  wasmVariableType: "i32";
   isNegated?: boolean;
 }
 

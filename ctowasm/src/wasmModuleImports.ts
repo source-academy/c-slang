@@ -2,6 +2,7 @@
  *  Definitions of all special functions imported to every wasm program
  */
 
+import { VariableType } from "~src/common/types";
 import {
   BASE_POINTER,
   WASM_ADDR_SIZE,
@@ -19,16 +20,16 @@ const defaultParentImportedObject = "imports";
 export interface WasmImportedFunction {
   type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
   parentImportedObject: string; // parent imported object
-  importedName: string; // name that the function is imported as. Should be "${name}_o"
   name: string; // function name
-  params: WasmType[];
-  return: WasmType | null;
-  body: WasmStatement[]; // all the lines of body of this modified function
+  //importedName: string; // name that the function is imported as. Should be "${name}_o"  TODO: remove later
+  params: VariableType[]; // C types of parameters for the function
+  return: VariableType | null;
 }
 
 /**
  * Add a prefix to the original imported function name, so that the modified function
  * will be called when the function without the prefix is called.
+ * TODO: should not be needed anymore. remove later
  */
 function getImportedFunctionName(funcName: string) {
   return funcName + "_o";
@@ -42,107 +43,36 @@ export interface WasmModifiedImportedFunction extends WasmImportedFunction {
   type: "modified";
   modifiedParams: WasmType[]; // adjusted params of actual function
   modifiedReturn: WasmType | null;
-}
-
-/**
- * Return the WAT AST nodes responsible for calling the imported function (that is used as is), storing the return if needed.
- */
-function getOriginalFunctionCallNodes(func: WasmOriginalImportedFunction) {
-  const funcArgs: WasmExpression[] = [];
-  let bpOffset = 0;
-  // get the wasm expressions for loading from memory relative to BP for each arg
-  for (const param of func.params) {
-    bpOffset += wasmTypeToSize[param];
-    funcArgs.push({
-      type: "MemoryLoad",
-      addr: getPointerArithmeticNode(BASE_POINTER, "-", bpOffset),
-      varType: param,
-      numOfBytes: wasmTypeToSize[param],
-    });
-  }
-  const functionCall: WasmRegularFunctionCall = {
-    type: "RegularFunctionCall",
-    name: getImportedFunctionName(func.name),
-    args: funcArgs,
-  };
-  if (func.return !== null) {
-    return {
-      type: "MemoryStore",
-      addr: getPointerArithmeticNode(BASE_POINTER, "+", WASM_ADDR_SIZE),
-      value: functionCall,
-      varType: func.return,
-      numOfBytes: wasmTypeToSize[func.return], // TODO: change when implement structs
-    };
-  } else {
-    return functionCall;
-  }
+  body: WasmStatement[]; // all the lines of body of this modified function
 }
 
 const wasmModuleImports: Record<
   string,
   WasmOriginalImportedFunction | WasmModifiedImportedFunction
 > = {
-  // prints an integer (4 bytes and smaller)
+  // prints a signed int (4 bytes and smaller)
   print_int: {
-    type: "modified",
+    type: "original",
     parentImportedObject: defaultParentImportedObject,
-    importedName: getImportedFunctionName("print_int"),
     name: "print_int",
-    params: ["i32"], // i32 here is a the address of the int to print
+    params: ["signed int"], // i32 here is a the address of the int to print
     return: null,
-    modifiedParams: ["i32"],
-    modifiedReturn: null,
-    body: [
-      {
-        type: "RegularFunctionCall",
-        name: getImportedFunctionName("print_int"),
-        // call print_int with address of the int to be printed - its in the stack frame
-        args: [
-          {
-            type: "ArithmeticExpression",
-            operator: "-",
-            leftExpr: basePointerGetNode,
-            rightExpr: {
-              type: "Const",
-              wasmVariableType: "i32",
-              value: WASM_ADDR_SIZE,
-            },
-            varType: "i32",
-          },
-        ],
-      },
-    ],
   },
-  // prints a char as a character
-  print_char: {
-    type: "modified",
+  // prints an unsigned int (4 bytes and smaller)
+  print_int_unsigned: {
+    type: "original",
     parentImportedObject: defaultParentImportedObject,
-    importedName: getImportedFunctionName("print_char"),
-    name: "print_char",
-    params: ["i32"], // i32 here is a the address of the char to print
+    name: "print_int_unsigned",
+    params: ["unsigned int"], // i32 here is a the address of the int to print
     return: null,
-    modifiedParams: ["i32"],
-    modifiedReturn: null,
-    body: [
-      {
-        type: "RegularFunctionCall",
-        name: getImportedFunctionName("print_char"),
-        // call print_int with address of the int to be printed - its in the stack frame
-        args: [
-          {
-            type: "ArithmeticExpression",
-            operator: "-",
-            leftExpr: basePointerGetNode,
-            rightExpr: {
-              type: "Const",
-              wasmVariableType: "i32",
-              value: WASM_ADDR_SIZE,
-            },
-            varType: "i32",
-          },
-        ],
-      },
-    ],
+  },
+  // prints a char (signed) as a character
+  print_char: {
+    type: "original",
+    parentImportedObject: defaultParentImportedObject,
+    name: "print_char",
+    params: ["signed char"], // i32 here is a the address of the char to print
+    return: null,
   },
 };
 

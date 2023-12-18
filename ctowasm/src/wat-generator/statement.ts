@@ -9,6 +9,7 @@ import {
   WasmFunctionBodyLine,
   WasmFunctionCallStatement,
   WasmRegularFunctionCall,
+  WasmRegularFunctionCallStatement,
 } from "~src/wasm-ast/functions";
 import { WasmMemoryGrow, WasmMemoryStore } from "~src/wasm-ast/memory";
 import { WasmGlobalSet, WasmLocalSet } from "~src/wasm-ast/variables";
@@ -17,6 +18,7 @@ import {
   getPreStatementsStr,
   generateStatementsList,
   getWasmMemoryStoreInstruction,
+  generateArgString,
 } from "~src/wat-generator/util";
 
 /**
@@ -38,6 +40,9 @@ export function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return `(call $${n.name} ${generateStatementsList(
       n.stackFrameSetup,
     )}) ${generateStatementsList(n.stackFrameTearDown)}`;
+  } else if (statement.type === "RegularFunctionCallStatement") {
+    const n = statement as WasmRegularFunctionCallStatement;
+    return `(call $${n.name} ${generateArgString(n.args)})`
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||
@@ -46,7 +51,7 @@ export function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return generateExprStr(statement);
   } else if (statement.type === "SelectStatement") {
     const n = statement as WasmSelectStatement;
-    return `(if ${generateExprStr(statement.condition)} (then ${n.actions
+    return `(if ${generateExprStr(n.condition)} (then ${n.actions
       .map((action) => generateStatementStr(action))
       .join(" ")})${
       n.elseStatements.length > 0
@@ -85,7 +90,7 @@ export function generateStatementStr(statement: WasmFunctionBodyLine): string {
   } else if (statement.type === "MemoryStore") {
     const n = statement as WasmMemoryStore;
     return `(${getWasmMemoryStoreInstruction(
-      n.varType,
+      n.wasmVariableType,
       n.numOfBytes,
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(
       n.addr,

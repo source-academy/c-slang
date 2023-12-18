@@ -9,13 +9,13 @@ import {
   WasmStatement,
   WasmConst,
 } from "~src/wasm-ast/core";
+import { VariableType } from "~src/common/types";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 
 export interface WasmMemoryLoad extends WasmExpression {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
-  varType: WasmType; // wasm var type for the store instruction
   numOfBytes: MemoryVariableByteSize; // number of bytes to load
   preStatements?: (WasmStatement | WasmExpression)[];
 }
@@ -24,7 +24,7 @@ export interface WasmMemoryStore extends WasmAstNode {
   type: "MemoryStore";
   addr: WasmExpression;
   value: WasmExpression;
-  varType: WasmType; // wasm var type for the store instruction
+  wasmVariableType: WasmType; // wasm var type for the store instruction
   numOfBytes: MemoryVariableByteSize; // number of bytes to store
   preStatements?: (WasmStatement | WasmExpression)[];
 }
@@ -53,7 +53,8 @@ export interface WasmReturnVariable extends WasmAstNode {
 export interface WasmMemoryVariable extends WasmAstNode {
   name: string;
   size: number; // size in bytes of this variable
-  varType: WasmType; // the wasm type to use when loading/storing this variable
+  cVarType: VariableType // the original C variable type
+  wasmVarType: WasmType; // the wasm type to use when loading/storing this variable
   offset: number; // offset from the start of the scope that this variable is in. This is address for globals, offset from BP for locals/params
 }
 

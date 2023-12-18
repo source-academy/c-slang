@@ -2,9 +2,6 @@
  * Utility functions for WAT generation.
  */
 
-import { BinaryOperator, VariableType } from "~src/common/types";
-import { isSignedIntegerType, isUnsignedIntegerType } from "~src/common/utils";
-import { variableTypeToWasmType } from "~src/translator/variableUtil";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { WasmType } from "~src/wasm-ast/types";
 import { generateExprStr } from "~src/wat-generator/expression";

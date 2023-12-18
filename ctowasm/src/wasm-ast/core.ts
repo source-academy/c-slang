@@ -12,6 +12,7 @@ import {
   WasmReturnStatement,
   WasmRegularFunctionCall,
   WasmFunctionCall,
+  WasmRegularFunctionCallStatement,
 } from "~src/wasm-ast/functions";
 import {
   WasmDataSegmentVariable,
@@ -21,7 +22,7 @@ import {
   WasmMemoryLoad,
   WasmMemorySize,
 } from "~src/wasm-ast/memory";
-import { WasmBooleanExpression, WasmFunctionImport } from "~src/wasm-ast/misc";
+import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import { WasmType } from "~src/wasm-ast/types";
 import {
   WasmGlobalSet,
@@ -30,6 +31,7 @@ import {
   WasmGlobalGet,
   WasmGlobalVariable,
 } from "~src/wasm-ast/variables";
+import { WasmImportedFunction } from "~src/wasmModuleImports";
 
 /**
  * Main file containing all the core wasm AST node definitions.
@@ -46,7 +48,7 @@ export interface WasmModule extends WasmAstNode {
   globalWasmVariables: WasmGlobalVariable[];
   functions: Record<string, WasmFunction>;
   memorySize: number; // number of pages of memory needed for this module
-  importedFunctions: WasmFunctionImport[];
+  importedFunctions: Record<string, WasmImportedFunction>;
 }
 
 // A wasm statement is an instruction meant to be used in a situation that does not involve a value being pushed on virtual wasm stack.
@@ -62,7 +64,7 @@ export type WasmStatement =
   | WasmBlock
   | WasmMemoryStore
   | WasmMemoryGrow
-  | WasmRegularFunctionCall;
+  | WasmRegularFunctionCallStatement;
 
 /**
  * A special type of statement that results in 1 value being put on the stack,

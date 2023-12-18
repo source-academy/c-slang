@@ -6,27 +6,35 @@ import {
   PostfixExpression,
 } from "~src/c-ast/unaryExpression";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
-import {
-  AssignmentExpression,
-  CompoundAssignmentExpression,
-} from "~src/c-ast/assignment";
+import { AssignmentExpression } from "~src/c-ast/assignment";
 import { FunctionCall } from "~src/c-ast/functions";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import {
+  WASM_ADDR_TYPE,
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,
 } from "~src/translator/memoryUtil";
 import { unaryOperatorToInstruction } from "~src/translator/util";
 import {
   convertConstantToWasmConst,
+  getAssignmentNodesValue,
   getMemoryAccessDetails,
+  variableTypeToWasmType,
 } from "~src/translator/variableUtil";
-import { WasmSymbolTable } from "~src/wasm-ast/functions";
+import {
+  WasmFunction,
+  WasmFunctionCall,
+  WasmRegularFunctionCall,
+  WasmSymbolTable,
+} from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
-import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
+import { WasmModule, WasmExpression, WasmConst } from "~src/wasm-ast/core";
 import { Constant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
+import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import translateBinaryExpression from "~src/translator/translateBinaryExpression";
+import translateFunctionCall from "~src/translator/translateFunctionCall";
 
 /**
  * Evaluates a given C expression and returns the corresponding WASM expression.
@@ -44,22 +52,9 @@ export default function translateExpression(
     // load the return from its region in memory
     // TODO: need to do multiple loads interspaced with stores to support structs later on
     // evaluate all the expressions used as arguments
-    const functionArgs = [];
-    for (const arg of n.args) {
-      functionArgs.push(translateExpression(wasmRoot, symbolTable, arg));
-    }
-    return {
-      type: "FunctionCall",
-      name: n.name,
-      stackFrameSetup: getFunctionCallStackFrameSetupStatements(
-        wasmRoot.functions[n.name],
-        functionArgs
-      ),
-      stackFrameTearDown: getFunctionStackFrameTeardownStatements(
-        wasmRoot.functions[n.name],
-        true
-      ),
-    };
+    return translateFunctionCall(wasmRoot, symbolTable, n) as
+      | WasmFunctionCall
+      | WasmRegularFunctionCall;
   } else if (expr.type === "VariableExpr" || expr.type === "ArrayElementExpr") {
     const n = expr as VariableExpr | ArrayElementExpr;
     const memoryAccessDetails = getMemoryAccessDetails(
@@ -69,10 +64,12 @@ export default function translateExpression(
     );
     return {
       type: "MemoryLoad",
+      wasmVariableType: memoryAccessDetails.wasmVariableType,
       ...memoryAccessDetails,
-    };
+    } as WasmMemoryLoad;
   } else if (expr.type === "BinaryExpression") {
     const n = expr as BinaryExpression;
+    return translateBinaryExpression(wasmRoot, symbolTable, n);
   } else if (expr.type === "PrefixExpression") {
     const n: PrefixExpression = expr as PrefixExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
@@ -82,23 +79,27 @@ export default function translateExpression(
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
+      wasmVariableType: memoryAccessDetails.wasmVariableType,
       preStatements: [
         {
           type: "MemoryStore",
-
+          wasmVariableType: memoryAccessDetails.wasmVariableType,
           value: {
             type: "BinaryExpression",
-            instruction: unaryOperatorToInstruction[n.operator],
+            instruction:
+              variableTypeToWasmType[n.variable.variableType] +
+              unaryOperatorToInstruction,
+            wasmVariableType: memoryAccessDetails.wasmVariableType,
             leftExpr: {
               type: "MemoryLoad",
               ...memoryAccessDetails,
-            },
+            } as WasmMemoryLoad,
             rightExpr: {
               type: "Const",
-              wasmVariableType: "i32",
+              wasmVariableType: WASM_ADDR_TYPE,
               value: 1,
-            },
-          },
+            } as WasmConst,
+          } as WasmBinaryExpression,
           ...memoryAccessDetails,
         },
       ],
@@ -116,7 +117,10 @@ export default function translateExpression(
       type: "MemoryStore",
       value: {
         type: "BinaryExpression",
-        instruction: unaryOperatorToInstruction[n.operator],
+        instruction:
+          variableTypeToWasmType[n.variable.variableType] +
+          unaryOperatorToInstruction,
+        wasmVariableType: memoryAccessDetails.wasmVariableType,
         leftExpr: {
           type: "MemoryLoad",
           ...memoryAccessDetails,
@@ -126,7 +130,7 @@ export default function translateExpression(
           wasmVariableType: "i32",
           value: 1,
         },
-      },
+      } as WasmBinaryExpression,
       preStatements: [
         {
           type: "MemoryLoad",
@@ -153,34 +157,7 @@ export default function translateExpression(
         },
       ],
       ...memoryAccessDetails,
-    };
-  } else if (expr.type === "CompoundAssignmentExpression") {
-    const n = expr as CompoundAssignmentExpression;
-    const memoryAccessDetails = getMemoryAccessDetails(
-      wasmRoot,
-      symbolTable,
-      n.variable
-    );
-    return {
-      type: "MemoryLoad",
-      preStatements: [
-        {
-          type: "MemoryStore",
-          value: {
-            type: "BinaryExpression",
-            instruction: ,
-            leftExpr: {
-              type: "MemoryLoad",
-              ...memoryAccessDetails,
-            },
-            rightExpr: translateExpression(wasmRoot, symbolTable, n.value),
-            varType: memoryAccessDetails.varType,
-          },
-          ...memoryAccessDetails,
-        },
-      ],
-      ...memoryAccessDetails,
-    };
+    } as WasmMemoryLoad;
   } else {
     console.assert(
       false,

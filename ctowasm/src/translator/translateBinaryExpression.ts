@@ -10,6 +10,7 @@ import { variableTypeToWasmType } from "~src/translator/variableUtil";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmModule } from "~src/wasm-ast/core";
 import { WasmSymbolTable } from "~src/wasm-ast/functions";
+import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 
 export default function translateBinaryExpression(
   wasmRoot: WasmModule,
@@ -24,16 +25,17 @@ export default function translateBinaryExpression(
       leftExpr: {
         type: "BooleanExpression",
         expr: translateExpression(wasmRoot, symbolTable, binaryExpr.leftExpr),
-      },
+      } as WasmBooleanExpression,
       rightExpr: {
         type: "BooleanExpression",
         expr: translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr),
-      },
+      } as WasmBooleanExpression,
       instruction: getBinaryExpressionInstruction(
         binaryExpr.operator,
         binaryExpr.variableType
       ),
-    };
+      wasmVariableType: "i32" // i32 since its just a boolean
+    } as WasmBinaryExpression;
   }
 
   return {
@@ -44,6 +46,7 @@ export default function translateBinaryExpression(
       binaryExpr.operator,
       binaryExpr.variableType
     ),
+    wasmVariableType: variableTypeToWasmType[binaryExpr.variableType],
   };
 }
 

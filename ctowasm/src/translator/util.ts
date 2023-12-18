@@ -2,7 +2,6 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { ArithmeticOperator } from "~src/common/constants";
 import { WasmSymbolTable } from "~src/wasm-ast/functions";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmModule } from "~src/wasm-ast/core";
@@ -21,15 +20,20 @@ import {
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
 import { WasmImportedFunction } from "~src/wasmModuleImports";
-import { UnaryOperator } from "~src/common/types";
+import { UnaryOperator, VariableType } from "~src/common/types";
+import { variableTypeToWasmType } from "~src/translator/variableUtil";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator
  */
-export const unaryOperatorToInstruction: Record<UnaryOperator, string> = {
-  "++": "add",
-  "--": "sub",
-};
+export function unaryOperatorToInstruction(
+  op: UnaryOperator,
+  variableType: VariableType
+) {
+  return `${variableTypeToWasmType[variableType]}.${
+    op === "++" ? "add" : "sub"
+  }`;
+}
 
 // Maps wasm type to number of bytes it uses
 export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
@@ -156,61 +160,4 @@ export function getUniqueLoopLabelGenerator() {
 export function getUniqueBlockLabelGenerator() {
   let curr = 0;
   return () => `block${curr++}`;
-}
-
-/**
- * Adds all the imported functions to the Wasm Module.
- */
-export function addImportedFunctionsToModule(
-  wasmRoot: WasmModule,
-  imports: Record<string, WasmImportedFunction>
-) {
-  // add all the imported functions to wasmRoot.functions
-  for (const moduleImportName in imports) {
-    const moduleImport = imports[moduleImportName];
-
-    // add the imported function to the list of imported functions in module
-    wasmRoot.importedFunctions.push({
-      type: "FunctionImport",
-      importPath: [moduleImport.parentImportedObject, moduleImport.name],
-      name: moduleImport.importedName,
-      params: moduleImport.params,
-      return: moduleImport.return,
-    });
-
-    // construct params
-    const params = [];
-    let offset = 0;
-    for (let i = 0; i < moduleImport.params.length; i++) {
-      const numberedParamName = `param_${i}`; // param name does not matter
-      const wasmParamType = moduleImport.params[i];
-      offset += wasmTypeToSize[wasmParamType];
-      const param: WasmLocalVariable = {
-        type: "LocalVariable",
-        name: numberedParamName,
-        size: wasmTypeToSize[wasmParamType],
-        varType: wasmParamType,
-        offset,
-      };
-      params.push(param);
-    }
-
-    wasmRoot.functions[moduleImportName] = {
-      type: "Function",
-      name: moduleImportName,
-      params,
-      returnVariable:
-        moduleImport.return !== null
-          ? {
-              type: "ReturnVariable",
-              name: "return_variable",
-              size: wasmTypeToSize[moduleImport.return],
-              varType: moduleImport.return,
-            }
-          : null,
-      sizeOfLocals: 0,
-      sizeOfParams: offset,
-      body: moduleImport.body,
-    };
-  }
 }

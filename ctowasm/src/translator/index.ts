@@ -2,7 +2,6 @@
  * Translator module which performs translation of C AST to WAT AST.
  */
 import {
-  addImportedFunctionsToModule,
   addToSymbolTable,
   createSymbolTable,
   setPseudoRegisters,
@@ -34,10 +33,8 @@ export default function translate(
     globalWasmVariables: [], // actual wasm globals
     functions: {},
     memorySize: 1,
-    importedFunctions: [],
+    importedFunctions: imports,
   };
-
-  addImportedFunctionsToModule(wasmRoot, imports);
 
   const rootSymbolTable = createSymbolTable(); // root symbol table; contains globals.
 
@@ -55,7 +52,8 @@ export default function translate(
         name: n.name,
         size: getVariableSize(n.variableType),
         offset: rootSymbolTable.currOffset.value,
-        varType: variableTypeToWasmType[n.variableType],
+        cVarType: n.variableType,
+        wasmVarType: variableTypeToWasmType[n.variableType],
         initializerValue:
           n.type === "Initialization"
             ? convertConstantToWasmConst(n.value as Constant)
@@ -75,7 +73,8 @@ export default function translate(
         size: n.numElements * elementSize,
         arraySize: n.numElements,
         //TODO: setting vartype for structs will require some kind of array of vartype loads
-        varType: variableTypeToWasmType[n.variableType],
+        cVarType: n.variableType,
+        wasmVarType: variableTypeToWasmType[n.variableType],
         elementSize: elementSize,
         offset: rootSymbolTable.currOffset.value,
         initializerList:

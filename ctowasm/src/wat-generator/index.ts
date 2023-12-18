@@ -10,29 +10,22 @@ import { generateLine } from "~src/wat-generator/util";
 export function generateWAT(
   module: WasmModule,
   baseIndentation: number = 0,
-  testMode?: boolean,
 ) {
   let watStr = generateLine("(module", baseIndentation);
 
-  if (testMode) {
-    watStr += generateLine(
-      '(import "console" "log" (func $log (param i32)))',
-      baseIndentation + 1,
-    );
-  }
   // add the memory import
   watStr += generateLine(
     `(import "js" "mem" (memory ${module.memorySize}))`,
-    baseIndentation + 1,
+    baseIndentation + 1
   );
 
   // add the imported functions
-  for (const importedFunction of module.importedFunctions) {
+  for (const importedFunctionName of Object.keys(module.importedFunctions)) {
+    const importedFunction = module.importedFunctions[importedFunctionName];
     watStr += generateLine(
-      `(import ${
-        importedFunction.importPath.length > 0
-          ? importedFunction.importPath.map((str) => `"${str}"`).join(" ") + " "
-          : ""
+      `(import "${importedFunction.parentImportedObject}" "${
+        importedFunction.name
+      }"
       }(func $${importedFunction.name}${
         importedFunction.params.length > 0
           ? " " +
@@ -43,7 +36,7 @@ export function generateWAT(
           ? ` (result ${importedFunction.return})`
           : ""
       }))`,
-      baseIndentation + 1,
+      baseIndentation + 1
     );
   }
 
@@ -55,7 +48,7 @@ export function generateWAT(
       }) ${
         global.initializerValue ? generateExprStr(global.initializerValue) : ""
       })`,
-      baseIndentation + 1,
+      baseIndentation + 1
     );
   }
 
@@ -70,9 +63,9 @@ export function generateWAT(
     )
       watStr += generateLine(
         `(data (i32.const ${globalVariable.offset}) "${convertVariableToByteStr(
-          globalVariable,
+          globalVariable
         )}")`,
-        baseIndentation + 1,
+        baseIndentation + 1
       );
   }
 
@@ -83,7 +76,7 @@ export function generateWAT(
     for (const statement of func.body) {
       watStr += generateLine(
         generateStatementStr(statement),
-        baseIndentation + 2,
+        baseIndentation + 2
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

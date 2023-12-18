@@ -3,9 +3,14 @@ import {
   WasmMemoryLoad,
   WasmDataSegmentArray,
   WasmDataSegmentVariable,
+  WasmMemorySize,
 } from "~src/wasm-ast/memory";
 import { WasmExpression, WasmStatement, WasmConst } from "~src/wasm-ast/core";
 import { wasmTypeToSize } from "~src/translator/util";
+import { WasmGlobalGet } from "~src/wasm-ast/variables";
+import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { getBinaryExpressionInstruction } from "~src/translator/translateBinaryExpression";
+import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 
 /**
  * Collection of constants and functions related to the memory model.
@@ -13,6 +18,13 @@ import { wasmTypeToSize } from "~src/translator/util";
 export const PARAM_PREFIX = "param_";
 export const WASM_PAGE_SIZE = 65536;
 export const WASM_ADDR_SIZE = 4; // number of bytes of a wasm address
+export const WASM_ADDR_TYPE = "i32"; // the wasm type of addresses
+export const WASM_ADDR_ADD_INSTRUCTION = WASM_ADDR_TYPE + ".add"; // insruction to use when adding wasm address
+export const WASM_ADDR_SUB_INSTRUCTION = WASM_ADDR_TYPE + ".sub";
+export const WASM_ADDR_MUL_INSTRUCTION = WASM_ADDR_TYPE + ".mul";
+export const WASM_ADDR_DIV_INSTRUCTION = WASM_ADDR_TYPE + ".div_u";
+export const WASM_ADDR_LE_INSTRUCTION = WASM_ADDR_TYPE + ".le";
+export const WASM_ADDR_LT_INSTRUCTION = WASM_ADDR_TYPE + ".lt";
 // the names of stack and base pointer, which are global variables.
 export const STACK_POINTER = "sp"; // points to the topmost byte of the stack
 export const BASE_POINTER = "bp";
@@ -24,22 +36,26 @@ export const REG_2 = "r2";
 export const basePointerGetNode: WasmExpression = {
   type: "GlobalGet",
   name: BASE_POINTER,
-};
+  wasmVariableType: WASM_ADDR_TYPE,
+} as WasmGlobalGet;
 
 const stackPointerGetNode: WasmExpression = {
   type: "GlobalGet",
   name: STACK_POINTER,
-};
+  wasmVariableType: WASM_ADDR_TYPE,
+} as WasmGlobalGet;
 
 const heapPointerGetNode: WasmExpression = {
   type: "GlobalGet",
   name: HEAP_POINTER,
-};
+  wasmVariableType: WASM_ADDR_TYPE,
+} as WasmGlobalGet;
 
 const reg1GetNode: WasmExpression = {
   type: "GlobalGet",
   name: REG_1,
-};
+  wasmVariableType: WASM_ADDR_TYPE,
+} as WasmGlobalGet;
 
 // Returns the wasm ast node for setting base pointer to the value of an expression
 function getBasePointerSetNode(value: WasmExpression): WasmStatement {
@@ -73,27 +89,27 @@ function getReg1SetNode(value: WasmExpression): WasmStatement {
 export function getPointerArithmeticNode(
   pointer: "sp" | "bp" | "hp",
   operator: "+" | "-",
-  operand: number,
+  operand: number
 ): WasmExpression {
   return {
-    type: "ArithmeticExpression",
-    operator: operator,
-    varType: "i32",
+    type: "BinaryExpression",
+    instruction: operator === "+" ? WASM_ADDR_ADD_INSTRUCTION : WASM_ADDR_SUB_INSTRUCTION,
+    wasmVariableType: WASM_ADDR_TYPE,
     leftExpr: {
       type: "GlobalGet",
       name: pointer,
-    },
+    } as WasmGlobalGet,
     rightExpr: {
       type: "Const",
-      wasmVariableType: "i32",
+      wasmVariableType: WASM_ADDR_TYPE,
       value: operand,
     },
-  };
+  } as WasmBinaryExpression;
 }
 
 function getPointerIncrementNode(
   pointer: "sp" | "bp" | "hp",
-  incVal: number,
+  incVal: number
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -104,7 +120,7 @@ function getPointerIncrementNode(
 
 function getPointerDecrementNode(
   pointer: "sp" | "bp" | "hp",
-  decVal: number,
+  decVal: number
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -119,12 +135,13 @@ function getPointerDecrementNode(
  */
 export function getFunctionStackFrameTeardownStatements(
   fn: WasmFunction,
-  useReturn?: boolean,
+  useReturn?: boolean
 ): (WasmStatement | WasmMemoryLoad)[] {
   const statements: (WasmStatement | WasmMemoryLoad)[] = [
     getStackPointerSetNode({
-      type: "ArithmeticExpression",
-      operator: "+",
+      type: "BinaryExpression",
+      instruction: WASM_ADDR_ADD_INSTRUCTION,
+      wasmVariableType: WASM_ADDR_TYPE,
       varType: "i32",
       leftExpr: basePointerGetNode,
       rightExpr: {
@@ -132,13 +149,13 @@ export function getFunctionStackFrameTeardownStatements(
         wasmVariableType: "i32",
         value: WASM_ADDR_SIZE,
       },
-    }),
+    } as WasmBinaryExpression),
     getBasePointerSetNode({
       type: "MemoryLoad",
       addr: basePointerGetNode,
-      varType: "i32",
+      wasmVariableType: WASM_ADDR_TYPE,
       numOfBytes: WASM_ADDR_SIZE,
-    }),
+    } as WasmMemoryLoad),
   ];
 
   // TODO: needs to be changed when can return structs
@@ -146,14 +163,14 @@ export function getFunctionStackFrameTeardownStatements(
     statements.push({
       type: "MemoryLoad",
       addr: stackPointerGetNode,
-      varType: fn.returnVariable.varType,
+      wasmVariableType: fn.returnVariable.varType,
       numOfBytes: wasmTypeToSize[fn.returnVariable.varType],
     });
   }
 
   if (fn.returnVariable !== null) {
     statements.push(
-      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size),
+      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size)
     );
   }
 
@@ -164,7 +181,7 @@ export function getFunctionStackFrameTeardownStatements(
  * Converts a given variable to byte string, for storage in data segment.
  */
 export function convertVariableToByteStr(
-  variable: WasmDataSegmentArray | WasmDataSegmentVariable,
+  variable: WasmDataSegmentArray | WasmDataSegmentVariable
 ) {
   if (variable.type === "DataSegmentVariable") {
     return convertWasmNumberToByteStr(variable.initializerValue, variable.size);
@@ -204,7 +221,7 @@ export function convertWasmNumberToByteStr(num: WasmConst, size: number) {
  */
 export function getFunctionCallStackFrameSetupStatements(
   calledFunction: WasmFunction, // function that is being called
-  functionArgs: WasmExpression[], // arguments passed to this function call
+  functionArgs: WasmExpression[] // arguments passed to this function call
 ): WasmStatement[] {
   const statements: WasmStatement[] = [];
 
@@ -219,24 +236,27 @@ export function getFunctionCallStackFrameSetupStatements(
   statements.push({
     type: "SelectStatement",
     condition: {
-      type: "ComparisonExpression",
-      operator: "<=",
+      type: "BinaryExpression",
+      instruction: WASM_ADDR_LE_INSTRUCTION,
+      wasmVariableType: WASM_ADDR_TYPE,
       leftExpr: {
-        type: "ArithmeticExpression",
-        operator: "-",
+        type: "BinaryExpression",
+        instruction: WASM_ADDR_SUB_INSTRUCTION,
+        wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: {
           type: "GlobalGet",
           name: STACK_POINTER,
-        },
+          wasmVariableType: WASM_ADDR_TYPE,
+        } as WasmGlobalGet,
         rightExpr: {
           type: "Const",
           wasmVariableType: "i32",
           value: totalStackSpaceRequired,
-        },
+        } as WasmConst,
         varType: "i32",
       },
       rightExpr: heapPointerGetNode,
-    },
+    } as WasmBinaryExpression,
     actions: [
       // expand the memory since not enough space
       // save the last address of linear memory in REG_1
@@ -244,52 +264,56 @@ export function getFunctionCallStackFrameSetupStatements(
         type: "GlobalSet",
         name: REG_1,
         value: {
-          type: "ArithmeticExpression",
-          operator: "*",
+          type: "BinaryExpression",
+          instruction: WASM_ADDR_ADD_INSTRUCTION,
+          wasmVariableType: WASM_ADDR_TYPE,
           leftExpr: {
             type: "MemorySize",
-          },
+          } as WasmMemorySize,
           rightExpr: {
             type: "Const",
             wasmVariableType: "i32",
             value: WASM_PAGE_SIZE,
           },
           varType: "i32",
-        },
+        } as WasmBinaryExpression,
       },
       // save address of last item in memory to REG_2
       {
         type: "GlobalSet",
         name: REG_2,
         value: {
-          type: "ArithmeticExpression",
-          operator: "-",
+          type: "BinaryExpression",
+          instruction: WASM_ADDR_SUB_INSTRUCTION,
+          wasmVariableType: WASM_ADDR_TYPE,
           leftExpr: {
             type: "GlobalGet",
             name: REG_1,
-          },
+            wasmVariableType: WASM_ADDR_TYPE,
+          } as WasmGlobalGet,
           rightExpr: {
             type: "Const",
             value: 1,
-            wasmVariableType: "i32",
-          },
+            wasmVariableType: WASM_ADDR_TYPE,
+          } as WasmConst,
           varType: "i32",
-        },
+        } as WasmBinaryExpression,
       },
       // save the size of stack in REG_1
       {
         type: "GlobalSet",
         name: REG_1,
         value: {
-          type: "ArithmeticExpression",
-          operator: "-",
+          type: "BinaryExpression",
+          instruction: WASM_ADDR_SUB_INSTRUCTION,
+          wasmVariableType: WASM_ADDR_TYPE,
           leftExpr: {
             type: "GlobalGet",
             name: REG_1,
-          },
+          } as WasmGlobalGet,
           rightExpr: stackPointerGetNode,
           varType: "i32",
-        },
+        } as WasmBinaryExpression,
       },
       // expand the memory since not enough space
       {
@@ -298,60 +322,62 @@ export function getFunctionCallStackFrameSetupStatements(
           type: "Const",
           wasmVariableType: "i32",
           value: Math.ceil(totalStackSpaceRequired / WASM_PAGE_SIZE),
-        },
+        } as WasmConst,
       },
       // set stack pointer to target stack pointer adddress
 
       getStackPointerSetNode({
-        type: "ArithmeticExpression",
-        operator: "-",
+        type: "BinaryExpression",
+        instruction: WASM_ADDR_SUB_INSTRUCTION,
+        wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: {
-          type: "ArithmeticExpression",
-          operator: "*",
+          type: "BinaryExpression",
+          instruction: WASM_ADDR_MUL_INSTRUCTION,
+          wasmVariableType: WASM_ADDR_TYPE,
           leftExpr: {
             type: "MemorySize",
-          },
+          } as WasmMemorySize,
           rightExpr: {
             type: "Const",
-            wasmVariableType: "i32",
+            wasmVariableType: WASM_ADDR_TYPE,
             value: WASM_PAGE_SIZE,
-          },
-          varType: "i32",
+          } as WasmConst,
         },
         rightExpr: {
           type: "GlobalGet",
           name: REG_1,
-        },
+          wasmVariableType: WASM_ADDR_TYPE,
+        } as WasmGlobalGet,
         varType: "i32",
-      }),
+      } as WasmBinaryExpression),
 
       // set REG_1 to the last address of new memory
       {
         type: "GlobalSet",
         name: REG_1,
         value: {
-          type: "ArithmeticExpression",
-          operator: "-",
+          type: "BinaryExpression",
+          instruction: WASM_ADDR_SUB_INSTRUCTION,
+          wasmVariableType: WASM_ADDR_TYPE,
           leftExpr: {
-            type: "ArithmeticExpression",
-            operator: "*",
+            type: "BinaryExpression",
+            instruction: WASM_ADDR_MUL_INSTRUCTION,
+            wasmVariableType: WASM_ADDR_TYPE,
             leftExpr: {
               type: "MemorySize",
-            },
+            } as WasmMemorySize,
             rightExpr: {
               type: "Const",
-              wasmVariableType: "i32",
+              wasmVariableType: WASM_ADDR_TYPE,
               value: WASM_PAGE_SIZE,
-            },
-            varType: "i32",
+            } as WasmConst,
           },
           rightExpr: {
             type: "Const",
             value: 1,
             wasmVariableType: "i32",
           },
-          varType: "i32",
-        },
+        } as WasmBinaryExpression,
       },
       // copy the stack memory to the end, get REG_1 to below stack pointer
       {
@@ -368,15 +394,17 @@ export function getFunctionCallStackFrameSetupStatements(
                 condition: {
                   type: "BooleanExpression",
                   expr: {
-                    type: "ComparisonExpression",
-                    operator: "<",
+                    type: "BinaryExpression",
+                    instruction: WASM_ADDR_LT_INSTRUCTION,
+                    wasmVariableType: WASM_ADDR_TYPE,
                     leftExpr: {
                       type: "GlobalGet",
                       name: REG_1,
-                    },
+                    } as WasmGlobalGet,
                     rightExpr: stackPointerGetNode,
-                  },
-                },
+                  } as WasmBinaryExpression,
+                  wasmVariableType: "i32",
+                } as WasmBooleanExpression,
               },
               // load item addressed by REG_2 to addr of REG_1
               {
@@ -384,17 +412,17 @@ export function getFunctionCallStackFrameSetupStatements(
                 addr: {
                   type: "GlobalGet",
                   name: REG_1,
-                },
+                } as WasmGlobalGet,
                 value: {
                   type: "MemoryLoad",
                   addr: {
                     type: "GlobalGet",
                     name: REG_2,
-                  },
-                  varType: "i32",
+                  } as WasmGlobalGet,
+                  wasmVariableType: WASM_ADDR_TYPE,
                   numOfBytes: WASM_ADDR_SIZE,
-                },
-                varType: "i32",
+                } as WasmMemoryLoad,
+                wasmVariableType: WASM_ADDR_TYPE,
                 numOfBytes: WASM_ADDR_SIZE,
               },
               // decrement REG_1
@@ -402,38 +430,39 @@ export function getFunctionCallStackFrameSetupStatements(
                 type: "GlobalSet",
                 name: REG_1,
                 value: {
-                  type: "ArithmeticExpression",
-                  operator: "-",
+                  type: "BinaryExpression",
+                  instruction: WASM_ADDR_SUB_INSTRUCTION,
+                  wasmVariableType: WASM_ADDR_TYPE,
                   leftExpr: {
                     type: "GlobalGet",
                     name: REG_1,
-                  },
+                  } as WasmGlobalGet,
                   rightExpr: {
                     type: "Const",
                     value: 1,
-                    wasmVariableType: "i32",
-                  },
-                  varType: "i32",
-                },
+                    wasmVariableType: WASM_ADDR_TYPE,
+                  } as WasmConst,
+                } as WasmBinaryExpression,
               },
               // decrement REG_2
               {
                 type: "GlobalSet",
                 name: REG_2,
                 value: {
-                  type: "ArithmeticExpression",
-                  operator: "-",
+                  type: "BinaryExpression",
+                  instruction: WASM_ADDR_SUB_INSTRUCTION,
+                  wasmVariableType: WASM_ADDR_TYPE,
                   leftExpr: {
                     type: "GlobalGet",
                     name: REG_2,
-                  },
+                  } as WasmGlobalGet,
                   rightExpr: {
                     type: "Const",
                     value: 1,
-                    wasmVariableType: "i32",
-                  },
+                    wasmVariableType: WASM_ADDR_TYPE,
+                  } as WasmConst,
                   varType: "i32",
-                },
+                } as WasmBinaryExpression,
               },
               {
                 type: "Branch",
@@ -451,32 +480,32 @@ export function getFunctionCallStackFrameSetupStatements(
   if (calledFunction.returnVariable !== null) {
     statements.push(
       getStackPointerSetNode({
-        type: "ArithmeticExpression",
-        operator: "-",
-        varType: "i32",
+        type: "BinaryExpression",
+        instruction: WASM_ADDR_SUB_INSTRUCTION,
+        wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: stackPointerGetNode,
         rightExpr: {
           type: "Const",
-          wasmVariableType: "i32",
+          wasmVariableType: WASM_ADDR_TYPE,
           value: calledFunction.returnVariable.size,
         },
-      }),
+      } as WasmBinaryExpression)
     );
   }
 
   //allocate space for BP on stack
   statements.push(
     getStackPointerSetNode({
-      type: "ArithmeticExpression",
-      varType: "i32",
-      operator: "-",
+      type: "BinaryExpression",
+      instruction: WASM_ADDR_SUB_INSTRUCTION,
+      wasmVariableType: WASM_ADDR_TYPE,
       leftExpr: stackPointerGetNode,
       rightExpr: {
         type: "Const",
-        wasmVariableType: "i32",
+        wasmVariableType: WASM_ADDR_TYPE,
         value: WASM_ADDR_SIZE,
       },
-    }),
+    } as WasmBinaryExpression)
   );
 
   // push BP onto stack
@@ -484,7 +513,7 @@ export function getFunctionCallStackFrameSetupStatements(
     type: "MemoryStore",
     addr: stackPointerGetNode,
     value: basePointerGetNode,
-    varType: "i32",
+    wasmVariableType: WASM_ADDR_TYPE,
     numOfBytes: WASM_ADDR_SIZE,
   });
 
@@ -494,16 +523,16 @@ export function getFunctionCallStackFrameSetupStatements(
   // allocate space for params and locals
   statements.push(
     getStackPointerSetNode({
-      type: "ArithmeticExpression",
-      operator: "-",
-      varType: "i32",
+      type: "BinaryExpression",
+      instruction: WASM_ADDR_SUB_INSTRUCTION,
+      wasmVariableType: WASM_ADDR_TYPE,
       leftExpr: stackPointerGetNode,
       rightExpr: {
         type: "Const",
-        wasmVariableType: "i32",
+        wasmVariableType: WASM_ADDR_TYPE,
         value: calledFunction.sizeOfLocals + calledFunction.sizeOfParams,
       },
-    }),
+    } as WasmBinaryExpression)
   );
 
   // set the values of all params
@@ -512,18 +541,18 @@ export function getFunctionCallStackFrameSetupStatements(
     statements.push({
       type: "MemoryStore",
       addr: {
-        type: "ArithmeticExpression",
-        operator: "-",
-        varType: "i32",
+        type: "BinaryExpression",
+        instruction: WASM_ADDR_SUB_INSTRUCTION,
+        wasmVariableType: WASM_ADDR_TYPE, 
         leftExpr: reg1GetNode,
         rightExpr: {
           type: "Const",
           wasmVariableType: "i32",
           value: param.offset,
         },
-      },
+      } as WasmBinaryExpression,
       value: functionArgs[paramIndex],
-      varType: "i32",
+      wasmVariableType: WASM_ADDR_TYPE,
       numOfBytes: WASM_ADDR_SIZE,
     });
   }

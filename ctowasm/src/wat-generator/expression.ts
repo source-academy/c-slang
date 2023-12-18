@@ -1,19 +1,14 @@
+import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmExpression, WasmConst } from "~src/wasm-ast/core";
-import { WasmFunctionCall } from "~src/wasm-ast/functions";
+import { WasmFunctionCall, WasmRegularFunctionCall } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad } from "~src/wasm-ast/memory";
-import {
-  WasmArithmeticExpression,
-  WasmComparisonExpression,
-  WasmBooleanExpression,
-  WasmAndExpression,
-  WasmOrExpression,
-} from "~src/wasm-ast/binaryExpression";
+import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import { WasmLocalGet, WasmGlobalGet } from "~src/wasm-ast/variables";
 import { generateStatementStr } from "~src/wat-generator/statement";
 import {
+  generateArgString,
   generateStatementsList,
   getPreStatementsStr,
-  getBinaryExpressionInstruction,
   getWasmMemoryLoadInstruction,
 } from "~src/wat-generator/util";
 
@@ -26,6 +21,9 @@ export function generateExprStr(expr: WasmExpression): string {
     return `(call $${e.name} ${generateStatementsList(
       e.stackFrameSetup
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
+  } else if (expr.type === "RegularFunctionCall") {
+    const e = expr as WasmRegularFunctionCall;
+    return `(call $${e.name} ${generateArgString(e.args)})`
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
     return `(${e.wasmVariableType}.const ${e.value.toString()})`;
@@ -36,12 +34,11 @@ export function generateExprStr(expr: WasmExpression): string {
     const e = expr as WasmGlobalGet;
     return `(global.get $${e.name}${getPreStatementsStr(e.preStatements)})`;
   } else if (
-    expr.type === "ArithmeticExpression" ||
-    expr.type === "ComparisonExpression"
+    expr.type === "BinaryExpression" 
   ) {
-    const e = expr as WasmArithmeticExpression | WasmComparisonExpression;
+    const e = expr as WasmBinaryExpression
     //TODO: support different op types other than i32
-    return `(${getBinaryExpressionInstruction(e.operator)} ${generateExprStr(
+    return `(${e.instruction} ${generateExprStr(
       e.leftExpr
     )} ${generateExprStr(e.rightExpr)})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
@@ -54,22 +51,12 @@ export function generateExprStr(expr: WasmExpression): string {
     } else {
       return `(i32.ne (i32.const 0) ${generateExprStr(e.expr)})`;
     }
-  } else if (expr.type === "AndExpression") {
-    const e = expr as WasmAndExpression;
-    return `(i32.and ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr
-    )})`;
-  } else if (expr.type === "OrExpression") {
-    const e = expr as WasmOrExpression;
-    return `(i32.or ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr
-    )})`;
-  } else if (expr.type === "MemorySize") {
+  }else if (expr.type === "MemorySize") {
     return "(memory.size)";
   } else if (expr.type === "MemoryLoad") {
     const n = expr as WasmMemoryLoad;
     return `(${getWasmMemoryLoadInstruction(
-      n.varType,
+      n.wasmVariableType,
       n.numOfBytes,
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.addr)})`;
   } else if (expr.type === "MemoryStore") {
