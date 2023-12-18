@@ -6,6 +6,7 @@ import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDeclaration, FunctionDefinition } from "~src/c-ast/functions";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
+import { ProcessingError } from "~src/errors";
 
 /**
  * This file contains the typescript interfaces for each astNode.
@@ -109,8 +110,20 @@ export class SymbolTable {
     this.symbols[node.name] = symbolEntry;
   }
 
+  /**
+   * Look up the symbol starting from the lowest symbol table (most recent).
+   */
   getSymbolEntry(name: string): SymbolTableEntry {
-    return this.symbols[name];
+    let curr: SymbolTable = this;
+    while (curr !== null) {
+      if (name in curr.symbols) {
+        return curr.symbols[name];
+      }
+      curr = curr.parentTable;
+    }
+    throw new ProcessingError(
+      `Processing error: Symbol ${name} not found in symbol table`
+    );
   }
 }
 

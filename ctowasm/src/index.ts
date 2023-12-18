@@ -22,13 +22,19 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
     initial: initialMemory,
   });
   const moduleImports = {
-    print_int: (addr: number) => {
-      const byteArr = new DataView(memory.buffer, addr, 4); // view of the 1 integer in memory
-      print(byteArr.getInt32(0, true).toString());
+    print_int: (int: number) => {
+      // to print the correct int (4 bytes), need to handle signage
+      if (int > Math.pow(2, 32) - 1) {
+        // negative number
+        print((-int).toString())
+      } else {
+        print(int.toString())
+      }
+      print((int ).toString());
     },
-    print_char: (addr: number) => {
-      const intArr = new Int8Array(memory.buffer, addr, 1); // view of the 1 integer in memory
-      print(String.fromCharCode(intArr[0]));
+    print_char: (char: number) => {
+      // signed int overflow is undefined, no need to worry about handling that
+      print(String.fromCharCode(char));
     },
   };
   await WebAssembly.instantiate(wasm, {

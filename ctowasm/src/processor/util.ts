@@ -39,11 +39,11 @@ export function handleScopeCreatingNodes(
     visit(sourceCode, n.body, paramSymbolTable);
 
     // visit body
-    const bodySymbolTable = new SymbolTable(paramSymbolTable);
-    visit(sourceCode, n.body, bodySymbolTable, enclosingFunc);
+    visit(sourceCode, n.body, paramSymbolTable, enclosingFunc);
   } else if (node.type === "Block") {
     const n = node as Block;
-    n.children.forEach(child => visit(sourceCode, child, new SymbolTable(symbolTable), enclosingFunc))
+    const blockSymbolTable = new SymbolTable(symbolTable)
+    n.children.forEach(child => visit(sourceCode, child, blockSymbolTable, enclosingFunc))
   } else if (node.type === "ForLoop") {
     // for loops have a specific scope for the for loop bracketed statements e.g. "(int i = 0; i < 10; i++)"
     const n = node as ForLoop;

@@ -12,18 +12,14 @@ import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import {
   WASM_ADDR_TYPE,
-  getFunctionCallStackFrameSetupStatements,
-  getFunctionStackFrameTeardownStatements,
 } from "~src/translator/memoryUtil";
 import { unaryOperatorToInstruction } from "~src/translator/util";
 import {
   convertConstantToWasmConst,
-  getAssignmentNodesValue,
   getMemoryAccessDetails,
   variableTypeToWasmType,
 } from "~src/translator/variableUtil";
 import {
-  WasmFunction,
   WasmFunctionCall,
   WasmRegularFunctionCall,
   WasmSymbolTable,

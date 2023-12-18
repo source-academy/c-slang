@@ -342,7 +342,7 @@ function getNeededNumericConversionInstruction(
   } else {
     // should not happen
     throw new TranslationError(
-      "Translation Error: Unhandled numeric conversion between wasm types"
+      `Translation Error: Unhandled numeric conversion between wasm types: ${from} to ${to}`
     );
   }
 }

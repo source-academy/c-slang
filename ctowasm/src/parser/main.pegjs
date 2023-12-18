@@ -78,7 +78,7 @@ statement
   / @compound_assignment 
   / @assignment
   / fn:function_call  { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
-  / expr:expression  { return {...expr, isExpr: true}; } // match on expression last so it does not interfere with other things like assignment
+  / expression // match on expression last so it does not interfere with other things like assignment
   / _* { return null }  // empty statement
 
 iteration_statement
@@ -148,7 +148,10 @@ compound_assignment
 
 compound_assignment_expression
   = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
-expression
+
+expression = expr:expression_helper { return {...expr, isExpr: true }; } // helper rule to add "isExpr" to all expression nodes
+
+expression_helper
   = assignment_expression 
   / compound_assignment_expression
   / logical_expression // start trying to match on conditional expression since && and || have lowest precedence

@@ -12,8 +12,9 @@ export class SourceCodeError extends Error {
   constructor(message: string, sourceCode?: string, position?: Position) {
     super();
 
-    if (!sourceCode || !position) {
+    if (typeof sourceCode === "undefined" || typeof position === "undefined") {
       this.message = message;
+      return;
     }
 
     this.message = `\n${message}\n${position.start.line} | `;

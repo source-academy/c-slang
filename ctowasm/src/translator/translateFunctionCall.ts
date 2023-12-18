@@ -68,6 +68,7 @@ export default function translateFunctionCall(
         wasmRoot.functions[n.name],
         false
       ),
+      
     } as WasmFunctionCall | WasmFunctionCallStatement;
   }
 }
