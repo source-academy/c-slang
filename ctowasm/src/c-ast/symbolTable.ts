@@ -8,7 +8,6 @@ type SymbolType = "function" | "variable" | "array";
 
 interface SymbolTableEntry {
   type: SymbolType;
-  globalRecordId: number;
 }
 
 export interface FunctionSymbolEntry extends SymbolTableEntry {
@@ -31,14 +30,10 @@ export interface ArraySymbolEntry extends SymbolTableEntry {
 export class SymbolTable {
   parentTable: SymbolTable | null;
   symbols: Record<string, SymbolTableEntry>;
-  globalRecord: GlobalSymbolRecord; // a special record that is shared over all symbol tables. Every symbol table entry can be identified with a unique id
 
   constructor(parentTable?: SymbolTable | null) {
     this.parentTable = parentTable ? parentTable : null;
     this.symbols = {};
-    this.globalRecord = parentTable
-      ? parentTable.globalRecord
-      : new GlobalSymbolRecord();
   }
 
   addEntry(
@@ -51,11 +46,9 @@ export class SymbolTable {
       | FunctionDefinition
   ) {
     let symbolEntry;
-    const newId = this.globalRecord.getNextId();
     if (node.type === "VariableDeclaration" || node.type === "Initialization") {
       const newEntry: VariableSymbolEntry = {
         type: "variable",
-        globalRecordId: newId,
         variableType: node.variableType,
       };
       symbolEntry = newEntry;
@@ -65,7 +58,6 @@ export class SymbolTable {
     ) {
       const newEntry: ArraySymbolEntry = {
         type: "array",
-        globalRecordId: newId,
         variableType: node.variableType,
         numElements: node.numElements,
       };
@@ -76,7 +68,6 @@ export class SymbolTable {
     ) {
       const newEntry: FunctionSymbolEntry = {
         type: "function",
-        globalRecordId: newId,
         parameters: node.parameters.map((p) => p.variableType),
         returnType: node.returnType,
       };
@@ -88,7 +79,6 @@ export class SymbolTable {
       );
     }
 
-    this.globalRecord.addRecord(symbolEntry);
     this.symbols[node.name] = symbolEntry;
   }
 
@@ -106,22 +96,5 @@ export class SymbolTable {
     throw new ProcessingError(
       `Processing error: Symbol ${name} not found in symbol table`
     );
-  }
-}
-
-export class GlobalSymbolRecord {
-  count: number; // number of stored symbols
-  records: Record<number, SymbolTableEntry>;
-  constructor() {
-    this.count = 0;
-    this.records = {};
-  }
-
-  getNextId() {
-    return this.count;
-  }
-
-  addRecord(symbolTableEntry: SymbolTableEntry) {
-    this.records[this.count++] = symbolTableEntry;
   }
 }

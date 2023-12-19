@@ -235,14 +235,3 @@ export function setVariableTypeOfSymbolAccessExpression(
     node.variableType = s.variableType;
   }
 }
-
-/**
- * Sets the symbol table id of the symbol entry corresponding to a node being accessed.
- * This allows access to the correct symbol table entry regardless of how the symbol table entry object ref changes.
- */
-export function setSymbolTableIdOfSymbolAccess(
-  node: FunctionCall | VariableExpr | ArrayElementExpr | FunctionCallStatement,
-  symbolTable: SymbolTable,
-) {
-  node.symbolTableId = symbolTable.getSymbolEntry(node.name).globalRecordId;
-}
