@@ -18,8 +18,13 @@ import { ProcessingError } from "~src/errors";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { VariableExpr } from "~src/c-ast/variable";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
-import { FunctionCall, FunctionCallStatement } from "~src/c-ast/functions";
-import { ArraySymbolEntry, FunctionSymbolEntry, SymbolTable, VariableSymbolEntry } from "~src/c-ast/symbolTable";
+import { FunctionCall } from "~src/c-ast/functions";
+import {
+  ArraySymbolEntry,
+  FunctionSymbolEntry,
+  SymbolTable,
+  VariableSymbolEntry,
+} from "~src/c-ast/symbolTable";
 
 // Evaluates the value of a <operator> b
 export function evaluateBinaryExpression(

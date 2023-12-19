@@ -43,7 +43,7 @@ export class SymbolTable {
       | ArrayDeclaration
       | ArrayInitialization
       | FunctionDeclaration
-      | FunctionDefinition
+      | FunctionDefinition,
   ) {
     let symbolEntry;
     if (node.type === "VariableDeclaration" || node.type === "Initialization") {
@@ -75,7 +75,7 @@ export class SymbolTable {
     } else {
       console.assert(
         false,
-        "Processing Error: Unhandled node to add as symbol entry."
+        "Processing Error: Unhandled node to add as symbol entry.",
       );
     }
 
@@ -94,7 +94,7 @@ export class SymbolTable {
       curr = curr.parentTable;
     }
     throw new ProcessingError(
-      `Processing error: Symbol ${name} not found in symbol table`
+      `Processing error: Symbol ${name} not found in symbol table`,
     );
   }
 }
