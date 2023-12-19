@@ -10,9 +10,7 @@ import { AssignmentExpression } from "~src/c-ast/assignment";
 import { FunctionCall } from "~src/c-ast/functions";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
-import {
-  WASM_ADDR_TYPE,
-} from "~src/translator/memoryUtil";
+import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 import { unaryOperatorToInstruction } from "~src/translator/util";
 import {
   convertConstantToWasmConst,
@@ -82,9 +80,7 @@ export default function translateExpression(
           wasmVariableType: memoryAccessDetails.wasmVariableType,
           value: {
             type: "BinaryExpression",
-            instruction:
-              variableTypeToWasmType[n.variable.variableType] +
-              unaryOperatorToInstruction,
+            instruction: unaryOperatorToInstruction(n.operator, n.variable.variableType),
             wasmVariableType: memoryAccessDetails.wasmVariableType,
             leftExpr: {
               type: "MemoryLoad",
@@ -114,8 +110,7 @@ export default function translateExpression(
       value: {
         type: "BinaryExpression",
         instruction:
-          variableTypeToWasmType[n.variable.variableType] +
-          unaryOperatorToInstruction,
+          unaryOperatorToInstruction(n.operator, n.variable.variableType),
         wasmVariableType: memoryAccessDetails.wasmVariableType,
         leftExpr: {
           type: "MemoryLoad",

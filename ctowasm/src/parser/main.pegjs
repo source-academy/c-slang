@@ -29,14 +29,14 @@
     for (let i = 0; i < exprsWithOperatorArr.length - 1; ++i) {
       // create a new operation node
       currNode = {
-        type: "BinaryOperationNode",
+        type: "BinaryExpression",
         leftExpr: currNode,
         rightExpr: exprsWithOperatorArr[i][1],
         operator: exprsWithOperatorArr[i][0]
       }
     }
     return {
-      type: "BinaryOperationNode",
+      type: "BinaryExpression",
       leftExpr: currNode,
       rightExpr: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][1],
       operator: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][0]
@@ -149,9 +149,7 @@ compound_assignment
 compound_assignment_expression
   = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 
-expression = expr:expression_helper { return {...expr, isExpr: true }; } // helper rule to add "isExpr" to all expression nodes
-
-expression_helper
+expression
   = assignment_expression 
   / compound_assignment_expression
   / logical_expression // start trying to match on conditional expression since && and || have lowest precedence
@@ -164,10 +162,10 @@ logical_expression
   / and_logical_expression
 
 or_logical_expression
-  = firstExpr:and_logical_expression tail:(_+ @"||" _+ @and_logical_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:and_logical_expression tail:(_+ @"||" _+ @and_logical_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
 
 and_logical_expression
-  = firstExpr:relational_expression tail:(_+ @"&&" _+ @relational_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:relational_expression tail:(_+ @"&&" _+ @relational_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
   / relational_expression
 
 relational_expression
@@ -175,10 +173,10 @@ relational_expression
   / relative_relational_expression
 
 equality_relational_expression
-  = firstExpr:relative_relational_expression _* tail:(_* @("!="/"==") _* @relative_relational_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:relative_relational_expression _* tail:(_* @("!="/"==") _* @relative_relational_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
 
 relative_relational_expression
-  = firstExpr:arithmetic_expression _* tail:(_* @("<="/">="/"<"/">") _* @arithmetic_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:arithmetic_expression _* tail:(_* @("<="/">="/"<"/">") _* @arithmetic_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
   / arithmetic_expression
 
 arithmetic_expression
@@ -186,10 +184,10 @@ arithmetic_expression
   / multiply_divide_expression
 
 add_subtract_expression
-  = firstExpr:multiply_divide_expression tail:(_+ @[+\-] _+ @multiply_divide_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:multiply_divide_expression tail:(_+ @[+\-] _+ @multiply_divide_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
   
 multiply_divide_expression
-  = firstExpr:term tail:(_+ @[%/*] _+ @multiply_divide_expression)+ { createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:term tail:(_+ @[%/*] _+ @multiply_divide_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
   / term
 
 term

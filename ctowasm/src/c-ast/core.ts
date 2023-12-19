@@ -30,7 +30,25 @@ export interface CNode {
  */
 export interface Expression extends CNode {
   variableType: VariableType; // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
-  isExpr: true; // handy field to easily tell if a node is an expression. Set by parser. This makes it easy to distinguish and filter out expressions during translation. TODO: see if better way to achieve this
+}
+
+/**
+ * A collection of type names of expression nodes.
+ * Useful for traversal of AST to easily determine if a node is an expression.
+ */
+const expressionNodeTypes = new Set([
+  "ArrayElementExpr",
+  "AssignmentExpression",
+  "BinaryExpression",
+  "Constant",
+  "FunctionCall",
+  "PrefixExpression",
+  "PostfixExpression",
+  "VariableExpr",
+]);
+
+export function isExpression(node: CNode) {
+  return "type" in node && expressionNodeTypes.has(node.type);
 }
 
 export type Declaration = VariableDeclaration | FunctionDeclaration;
@@ -43,7 +61,7 @@ export type Statement =
   | Assignment
   | FunctionCallStatement
   | PrefixExpression
-  | PostfixExpression
+  | PostfixExpression;
 
 export type BlockItem =
   | Statement

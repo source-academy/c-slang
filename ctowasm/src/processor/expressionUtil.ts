@@ -28,7 +28,7 @@ import {
 } from "~src/c-ast/types";
 
 // Evaluates the value of a <operator> b
-export function evaluateBinaryOperation(
+export function evaluateBinaryExpression(
   a: number,
   operator: BinaryOperator,
   b: number
@@ -83,7 +83,7 @@ export function evaluateConstantBinaryExpression(
   }
 
   // need to perform the appropriate truncation on the value if necessary as per C standard
-  let value = evaluateBinaryOperation(
+  let value = evaluateBinaryExpression(
     evaluateConstantBinaryExpression(
       binaryExpr.leftExpr as BinaryExpression | Constant
     ).value,
@@ -100,7 +100,6 @@ export function evaluateConstantBinaryExpression(
     type: "Constant",
     variableType,
     value,
-    isExpr: true,
     position: binaryExpr.position,
   };
 }

@@ -14,7 +14,7 @@ import {
   FunctionDefinition,
 } from "~src/c-ast/functions";
 import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
-import { Block, BlockItem } from "~src/c-ast/core";
+import { Block, BlockItem, isExpression } from "~src/c-ast/core";
 import { SelectStatement } from "~src/c-ast/select";
 import { Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
@@ -43,7 +43,12 @@ import {
 } from "~src/translator/variableUtil";
 import { WasmSelectStatement } from "~src/wasm-ast/control";
 import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
-import { WasmSymbolTable, WasmFunction, WasmFunctionCallStatement, WasmRegularFunctionCallStatement } from "~src/wasm-ast/functions";
+import {
+  WasmSymbolTable,
+  WasmFunction,
+  WasmFunctionCallStatement,
+  WasmRegularFunctionCallStatement,
+} from "~src/wasm-ast/functions";
 import {
   WasmLocalVariable,
   WasmLocalArray,
@@ -224,7 +229,11 @@ export default function translateFunction(
         ...memoryAccessDetails,
       });
     } else if (node.type === "FunctionCallStatement") {
-      statementBody.push(translateFunctionCall(wasmRoot, symbolTable, node) as WasmFunctionCallStatement | WasmRegularFunctionCallStatement)
+      statementBody.push(
+        translateFunctionCall(wasmRoot, symbolTable, node) as
+          | WasmFunctionCallStatement
+          | WasmRegularFunctionCallStatement
+      );
     } else if (
       node.type === "PrefixExpression" ||
       node.type === "PostfixExpression"
@@ -242,8 +251,7 @@ export default function translateFunction(
         value: {
           type: "BinaryExpression",
           instruction:
-            variableTypeToWasmType[n.variable.variableType] +
-            unaryOperatorToInstruction,
+            unaryOperatorToInstruction(n.operator, n.variable.variableType),
           wasmVariableType: memoryAccessDetails.wasmVariableType,
           leftExpr: {
             type: "MemoryLoad",
@@ -384,11 +392,7 @@ export default function translateFunction(
           },
         ],
       });
-    } else if (
-      typeof node === "object" &&
-      "isExpr" in node &&
-      node.isExpr === true
-    ) {
+    } else if (isExpression(node)) {
       // explictly ignore expressions as they do not affect final code at runtime
     } else {
       throw new TranslationError(
