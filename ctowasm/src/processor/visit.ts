@@ -3,10 +3,13 @@
  */
 
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
+import { AssignmentExpression } from "~src/c-ast/assignment";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { Constant } from "~src/c-ast/constants";
+import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
 import { SymbolTable } from "~src/c-ast/types";
+import { PostfixExpression, PrefixExpression } from "~src/c-ast/unaryExpression";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
@@ -112,13 +115,32 @@ export function visit(
     setVariableTypeOfBinaryExpression(node as BinaryExpression);
     return;
   } else if (node.type === "FunctionCall") {
-    const n = node as FunctionCall
+    const n = node as FunctionCall;
     setVariableTypeOfSymbolAccessExpression(node, symbolTable);
-    n.args.forEach(arg => visit(sourceCode, arg, symbolTable, enclosingFunc))
+    n.args.forEach((arg) => visit(sourceCode, arg, symbolTable, enclosingFunc));
     return;
   } else if (node.type === "VariableExpr" || node.type === "ArrayElementExpr") {
     setVariableTypeOfSymbolAccessExpression(node, symbolTable);
     return;
+  } else if (node.type === "PrefixExpression" || node.type === "PostfixExpression") {
+    const n = node as PrefixExpression | PostfixExpression
+    visit(sourceCode, n.variable, symbolTable, enclosingFunc)
+    n.variableType = n.variable.variableType;
+    return;
+  } else if (node.type === "AssignmentExpression") {
+    const n = node as AssignmentExpression;
+    visit(sourceCode, n.variable, symbolTable, enclosingFunc);
+    visit(sourceCode, n.value, symbolTable, enclosingFunc);
+    n.variableType = n.variable.variableType;
+    return;
+  } else if (isExpression(node)) {
+    const n = node as Expression;
+    // sanity check - make sure no expressions are missed as each need their variableType field set.
+    throw new ProcessingError(
+      `Processing Error: Unhandled expression: ${JSON.stringify(n)}`,
+      sourceCode,
+      n.position
+    );
   }
 
   // for other nodes, just traverse all their fields
