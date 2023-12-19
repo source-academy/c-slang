@@ -5,7 +5,7 @@
 import { Block } from "~src/c-ast/core";
 import { FunctionDefinition } from "~src/c-ast/functions";
 import { ForLoop } from "~src/c-ast/loops";
-import { SymbolTable } from "~src/c-ast/types";
+import { SymbolTable } from "~src/c-ast/symbolTable";
 import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
 import { visit } from "~src/processor/visit";

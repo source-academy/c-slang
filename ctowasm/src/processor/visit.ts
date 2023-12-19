@@ -12,7 +12,7 @@ import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { Constant } from "~src/c-ast/constants";
 import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
-import { SymbolTable } from "~src/c-ast/types";
+import { SymbolTable } from "~src/c-ast/symbolTable";
 import {
   PostfixExpression,
   PrefixExpression,
