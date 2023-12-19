@@ -7,10 +7,7 @@ import { generateExprStr } from "~src/wat-generator/expression";
 import { generateStatementStr } from "~src/wat-generator/statement";
 import { generateLine } from "~src/wat-generator/util";
 
-export function generateWAT(
-  module: WasmModule,
-  baseIndentation: number = 0,
-) {
+export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
   let watStr = generateLine("(module", baseIndentation);
 
   // add the memory import
@@ -25,14 +22,13 @@ export function generateWAT(
     watStr += generateLine(
       `(import "${importedFunction.parentImportedObject}" "${
         importedFunction.name
-      }"
-      }(func $${importedFunction.name}${
-        importedFunction.params.length > 0
+      }" (func $${importedFunction.name}${
+        importedFunction.wasmParamTypes.length > 0
           ? " " +
-            importedFunction.params.map((param) => `(param ${param})`).join(" ")
+            importedFunction.wasmParamTypes.map((param) => `(param ${param})`).join(" ")
           : ""
       }${
-        importedFunction.return !== null
+        importedFunction.returnWasmType !== null
           ? ` (result ${importedFunction.return})`
           : ""
       }))`,

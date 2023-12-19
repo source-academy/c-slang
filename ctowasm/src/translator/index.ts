@@ -4,9 +4,10 @@
 import {
   addToSymbolTable,
   createSymbolTable,
+  processImportedFunctions,
   setPseudoRegisters,
 } from "~src/translator/util";
-import { WasmImportedFunction } from "~src/wasmModuleImports";
+import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmModule } from "~src/wasm-ast/core";
 import { CAstRoot } from "~src/c-ast/core";
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
@@ -25,7 +26,7 @@ import translateFunction from "~src/translator/translateFunction";
 
 export default function translate(
   CAstRoot: CAstRoot,
-  imports: Record<string, WasmImportedFunction> = {}
+  imports: Record<string, ImportedFunction> = {}
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -33,7 +34,7 @@ export default function translate(
     globalWasmVariables: [], // actual wasm globals
     functions: {},
     memorySize: 1,
-    importedFunctions: imports,
+    importedFunctions: processImportedFunctions(imports),
   };
 
   const rootSymbolTable = createSymbolTable(); // root symbol table; contains globals.

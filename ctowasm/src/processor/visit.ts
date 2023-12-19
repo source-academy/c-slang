@@ -34,7 +34,6 @@ export function visit(
     // ignore objects that are not AST nodes OR not an array of nodes
     return;
   }
-
   // Handle nodes that create new symboltables
   if (node.type === "FunctionDefinition" || node.type === "ForLoop" || node.type === "Block") {
     handleScopeCreatingNodes(sourceCode, node, symbolTable, enclosingFunc);
@@ -110,7 +109,6 @@ export function visit(
       );
     }
   }
-
   // visit each child of this node
   for (const k of Object.keys(node)) {
     visit(sourceCode, node[k], symbolTable, enclosingFunc);

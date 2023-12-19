@@ -9,6 +9,8 @@ import {
   WasmReturnVariable,
 } from "~src/wasm-ast/memory";
 import { WasmStatement, WasmExpression, WasmAstNode } from "~src/wasm-ast/core";
+import { ImportedFunction } from "~src/wasmModuleImports";
+import { WasmType } from "~src/wasm-ast/types";
 
 export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
 /**
@@ -67,4 +69,12 @@ export interface WasmRegularFunctionCallStatement extends WasmAstNode {
 
 export interface WasmReturnStatement {
   type: "ReturnStatement";
+}
+
+/**
+ * Wasm Imported function with some added information.
+ */
+export interface WasmImportedFunction extends ImportedFunction {
+  wasmParamTypes: WasmType[] // the params of the functions in wasm
+  returnWasmType: WasmType | null;
 }

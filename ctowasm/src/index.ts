@@ -30,8 +30,8 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
       } else {
         print(int.toString())
       }
-      print((int ).toString());
     },
+    print_int_unsigned: print,
     print_char: (char: number) => {
       // signed int overflow is undefined, no need to worry about handling that
       print(String.fromCharCode(char));

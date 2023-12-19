@@ -36,10 +36,10 @@ export function handleScopeCreatingNodes(
 
     // visit params
     const paramSymbolTable = new SymbolTable(symbolTable);
-    visit(sourceCode, n.body, paramSymbolTable);
+    visit(sourceCode, n.parameters, paramSymbolTable);
 
     // visit body
-    visit(sourceCode, n.body, paramSymbolTable, enclosingFunc);
+    visit(sourceCode, n.body, paramSymbolTable, n);
   } else if (node.type === "Block") {
     const n = node as Block;
     const blockSymbolTable = new SymbolTable(symbolTable)

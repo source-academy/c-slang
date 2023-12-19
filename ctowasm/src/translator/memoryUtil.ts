@@ -9,7 +9,6 @@ import { WasmExpression, WasmStatement, WasmConst } from "~src/wasm-ast/core";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmGlobalGet } from "~src/wasm-ast/variables";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
-import { getBinaryExpressionInstruction } from "~src/translator/translateBinaryExpression";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 
 /**
@@ -23,8 +22,8 @@ export const WASM_ADDR_ADD_INSTRUCTION = WASM_ADDR_TYPE + ".add"; // insruction 
 export const WASM_ADDR_SUB_INSTRUCTION = WASM_ADDR_TYPE + ".sub";
 export const WASM_ADDR_MUL_INSTRUCTION = WASM_ADDR_TYPE + ".mul";
 export const WASM_ADDR_DIV_INSTRUCTION = WASM_ADDR_TYPE + ".div_u";
-export const WASM_ADDR_LE_INSTRUCTION = WASM_ADDR_TYPE + ".le";
-export const WASM_ADDR_LT_INSTRUCTION = WASM_ADDR_TYPE + ".lt";
+export const WASM_ADDR_LE_INSTRUCTION = WASM_ADDR_TYPE + ".le_u";
+export const WASM_ADDR_LT_INSTRUCTION = WASM_ADDR_TYPE + ".lt_u";
 // the names of stack and base pointer, which are global variables.
 export const STACK_POINTER = "sp"; // points to the topmost byte of the stack
 export const BASE_POINTER = "bp";
@@ -265,7 +264,7 @@ export function getFunctionCallStackFrameSetupStatements(
         name: REG_1,
         value: {
           type: "BinaryExpression",
-          instruction: WASM_ADDR_ADD_INSTRUCTION,
+          instruction: WASM_ADDR_MUL_INSTRUCTION,
           wasmVariableType: WASM_ADDR_TYPE,
           leftExpr: {
             type: "MemorySize",

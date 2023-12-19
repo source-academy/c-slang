@@ -279,9 +279,9 @@ simple_escape_sequence
 // =========== Misc ================
 
 type 
-	= $"int"
-  / $"char"
-  / long_type { return "long"; }
+	= ("int" / "signed int") {return "signed int"; } 
+  / ("char" / "signed char") { return "signed char"; }
+  / (long_type / "signed " long_type) { return "signed long"; }
 
 // long can be matched by multiple type keywords - all 8 bytes long in this compiler
 long_type

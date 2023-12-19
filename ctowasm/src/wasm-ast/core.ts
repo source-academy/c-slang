@@ -1,4 +1,3 @@
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import {
   WasmSelectStatement,
   WasmLoop,
@@ -10,28 +9,21 @@ import {
   WasmFunction,
   WasmFunctionCallStatement,
   WasmReturnStatement,
-  WasmRegularFunctionCall,
-  WasmFunctionCall,
   WasmRegularFunctionCallStatement,
+  WasmImportedFunction,
 } from "~src/wasm-ast/functions";
 import {
   WasmDataSegmentVariable,
   WasmDataSegmentArray,
   WasmMemoryStore,
   WasmMemoryGrow,
-  WasmMemoryLoad,
-  WasmMemorySize,
 } from "~src/wasm-ast/memory";
-import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import { WasmType } from "~src/wasm-ast/types";
 import {
   WasmGlobalSet,
   WasmLocalSet,
-  WasmLocalGet,
-  WasmGlobalGet,
   WasmGlobalVariable,
 } from "~src/wasm-ast/variables";
-import { WasmImportedFunction } from "~src/wasmModuleImports";
 
 /**
  * Main file containing all the core wasm AST node definitions.
@@ -39,8 +31,6 @@ import { WasmImportedFunction } from "~src/wasmModuleImports";
 export interface WasmAstNode {
   type: string;
 }
-
-
 
 export interface WasmModule extends WasmAstNode {
   type: "Module";
@@ -74,12 +64,11 @@ export type WasmStatement =
  */
 export type WasmExprStatement = WasmLocalSet | WasmGlobalSet | WasmMemoryStore;
 
-
 /**
  * Expressions are Wasm instructions that push a variable to the virtual wasm stack for use in a statement.
  */
 export interface WasmExpression extends WasmAstNode {
-  wasmVariableType: WasmType // the type of this expression
+  wasmVariableType: WasmType; // the type of this expression
 }
 
 export interface WasmConst extends WasmExpression {

@@ -3,21 +3,14 @@
  */
 
 import { VariableType } from "~src/common/types";
-import {
-  BASE_POINTER,
-  WASM_ADDR_SIZE,
-  basePointerGetNode,
-  getPointerArithmeticNode,
-} from "~src/translator/memoryUtil";
-import { wasmTypeToSize } from "~src/translator/util";
-import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
-import { WasmRegularFunctionCall } from "~src/wasm-ast/functions";
+
+import { WasmStatement } from "~src/wasm-ast/core";
 import { WasmType } from "~src/wasm-ast/types";
 
 const defaultParentImportedObject = "imports";
 
 // Defines the signature of a wasm imported function
-export interface WasmImportedFunction {
+export interface ImportedFunction {
   type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
   parentImportedObject: string; // parent imported object
   name: string; // function name
@@ -35,11 +28,11 @@ function getImportedFunctionName(funcName: string) {
   return funcName + "_o";
 }
 
-export interface WasmOriginalImportedFunction extends WasmImportedFunction {
+export interface WasmOriginalImportedFunction extends ImportedFunction {
   type: "original";
 }
 
-export interface WasmModifiedImportedFunction extends WasmImportedFunction {
+export interface WasmModifiedImportedFunction extends ImportedFunction {
   type: "modified";
   modifiedParams: WasmType[]; // adjusted params of actual function
   modifiedReturn: WasmType | null;

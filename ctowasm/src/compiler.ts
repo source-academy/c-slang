@@ -5,9 +5,7 @@ import parser from "./parser/parser";
 import process from "./processor";
 import { generateWAT } from "./wat-generator";
 import { compileWatToWasm } from "./wat-to-wasm";
-import wasmModuleImports, {
-  WasmImportedFunction,
-} from "~src/wasmModuleImports";
+import wasmModuleImports, { ImportedFunction } from "~src/wasmModuleImports";
 import translate from "~src/translator";
 import { checkForErrors } from "~src/semanticAnalyser";
 
@@ -18,7 +16,7 @@ export interface CompilationResult {
 
 export async function compile(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, WasmImportedFunction>,
+  wasmModuleImports?: Record<string, ImportedFunction>
 ): Promise<CompilationResult> {
   const CAst = parser.parse(cSourceCode);
   checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
@@ -34,7 +32,7 @@ export async function compile(
 // TODO: this function does NOT include handling of memory
 export function compileToWat(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, WasmImportedFunction>,
+  wasmModuleImports?: Record<string, ImportedFunction>
 ) {
   const CAst = parser.parse(cSourceCode);
   checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
@@ -57,13 +55,13 @@ export function generate_processed_C_AST(cSourceCode: string) {
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, WasmImportedFunction>,
+  wasmModuleImports?: Record<string, ImportedFunction>
 ) {
   const CAst = parser.parse(cSourceCode);
   checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
   const wasmAst = translate(
     process(cSourceCode, parser.parse(cSourceCode)),
-    wasmModuleImports,
+    wasmModuleImports
   );
   return JSON.stringify(wasmAst);
 }

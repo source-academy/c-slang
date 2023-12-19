@@ -359,6 +359,15 @@ export function getAssignmentNodesValue(
 ): WasmExpression {
   const variableWasmType = variableTypeToWasmType[variableType]; // the wasm type of the variable being assigned to
   const valueWasmType = variableTypeToWasmType[valueType]; // the wasm type of the expression being assigned
+
+  // sanity checks
+  if (typeof variableWasmType === "undefined") {
+    throw new TranslationError(`Translation error: getAssignmentNodesValue: undefined variableWasmType: original type: ${variableType}`)
+  }
+  if (typeof valueWasmType === "undefined") {
+    throw new TranslationError(`Translation error: getAssignmentNodesValue: undefined valueWasmType: original type: ${valueType}`)
+  }
+
   if (variableWasmType === valueWasmType) {
     // same wasm type already. no need any numeric conversion, and C implicit conversion rules will be adhered to
     return translatedExpression;

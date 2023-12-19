@@ -2,7 +2,7 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { WasmSymbolTable } from "~src/wasm-ast/functions";
+import { WasmImportedFunction, WasmSymbolTable } from "~src/wasm-ast/functions";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmModule } from "~src/wasm-ast/core";
 import {
@@ -16,12 +16,11 @@ import {
 
 import {
   MemoryVariableByteSize,
-  WasmLocalVariable,
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
-import { WasmImportedFunction } from "~src/wasmModuleImports";
 import { UnaryOperator, VariableType } from "~src/common/types";
 import { variableTypeToWasmType } from "~src/translator/variableUtil";
+import { ImportedFunction } from "~src/wasmModuleImports";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator
@@ -160,4 +159,23 @@ export function getUniqueLoopLabelGenerator() {
 export function getUniqueBlockLabelGenerator() {
   let curr = 0;
   return () => `block${curr++}`;
+}
+
+export function processImportedFunctions(
+  importedFunctions: Record<string, ImportedFunction>
+): Record<string, WasmImportedFunction> {
+  const result: Record<string, WasmImportedFunction> = {};
+  for (const f of Object.keys(importedFunctions)) {
+    result[f] = {
+      ...importedFunctions[f],
+      wasmParamTypes: importedFunctions[f].params.map(
+        (p) => variableTypeToWasmType[p]
+      ),
+      returnWasmType:
+        importedFunctions[f].return !== null
+          ? variableTypeToWasmType[importedFunctions[f].return]
+          : null,
+    };
+  }
+  return result;
 }

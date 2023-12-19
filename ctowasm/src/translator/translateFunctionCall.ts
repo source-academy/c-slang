@@ -39,7 +39,7 @@ export default function translateFunctionCall(
     }
     return {
       type:
-        node.name === "FunctionCall"
+        node.type === "FunctionCall"
           ? "RegularFunctionCall"
           : "RegularFunctionCallStatement",
       name: n.name,
@@ -58,7 +58,7 @@ export default function translateFunctionCall(
       );
     }
     return {
-      type: node.name,
+      type: node.type,
       name: n.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         wasmRoot.functions[n.name],
@@ -66,7 +66,7 @@ export default function translateFunctionCall(
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
         wasmRoot.functions[n.name],
-        false
+        node.type === "FunctionCall" && wasmRoot.functions[n.name].returnVariable !== null ? true : false
       ),
       
     } as WasmFunctionCall | WasmFunctionCallStatement;
