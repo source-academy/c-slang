@@ -11,6 +11,7 @@ import translateExpression from "~src/translator/translateExpression";
 import {
   BASE_POINTER,
   WASM_ADDR_ADD_INSTRUCTION,
+  WASM_ADDR_CTYPE,
   WASM_ADDR_MUL_INSTRUCTION,
   WASM_ADDR_SUB_INSTRUCTION,
   WASM_ADDR_TYPE,
@@ -94,7 +95,7 @@ export function getVariableAddr(
     // this is a global variable
     return {
       type: "Const",
-      wasmVariableType: "i32",
+      wasmVariableType: WASM_ADDR_TYPE,
       value: variable.offset,
     } as WasmConst;
   } else {
@@ -110,7 +111,7 @@ export function getVariableAddr(
       },
       rightExpr: {
         type: "Const",
-        wasmVariableType: "i32",
+        wasmVariableType: WASM_ADDR_TYPE,
         value: variable.offset,
       },
       varType: "i32",
@@ -127,25 +128,29 @@ export function getArrayElementAddr(
   arrayName: string,
   elementIndex: Expression,
   elementSize: number
-): WasmBinaryExpression {
+) {
   return {
     type: "BinaryExpression",
     wasmVariableType: WASM_ADDR_TYPE,
     instruction: WASM_ADDR_ADD_INSTRUCTION,
     leftExpr: getVariableAddr(symbolTable, arrayName),
-    rightExpr: {
-      type: "BinaryExpression",
-      instruction: WASM_ADDR_MUL_INSTRUCTION,
-      wasmVariableType: WASM_ADDR_TYPE,
-      leftExpr: translateExpression(wasmRoot, symbolTable, elementIndex),
-      rightExpr: {
-        type: "Const",
-        wasmVariableType: "i32",
-        value: elementSize,
-      },
-      varType: "i32",
-    } as WasmBinaryExpression,
-  };
+    // may need a numeric wrapper on the expression used to index the array to make sure it is unsigned int
+    rightExpr: getAssignmentNodesValue(
+      elementIndex.variableType,
+      WASM_ADDR_CTYPE,
+      {
+        type: "BinaryExpression",
+        instruction: WASM_ADDR_MUL_INSTRUCTION,
+        wasmVariableType: WASM_ADDR_TYPE,
+        leftExpr: translateExpression(wasmRoot, symbolTable, elementIndex),
+        rightExpr: {
+          type: "Const",
+          wasmVariableType: WASM_ADDR_TYPE,
+          value: elementSize,
+        },
+      } as WasmBinaryExpression
+    ),
+  } as WasmBinaryExpression;
 }
 
 /**
@@ -166,7 +171,6 @@ export function getMemoryAccessDetails(
   expr: VariableExpr | ArrayElementExpr
 ): MemoryAccessDetails {
   const variable = retrieveVariableFromSymbolTable(symbolTable, expr.name);
-
   if (expr.type === "VariableExpr") {
     if (
       !(
@@ -193,7 +197,7 @@ export function getMemoryAccessDetails(
       );
     }
     const v = variable as WasmDataSegmentArray | WasmLocalArray;
-    return {
+    const t = {
       addr: getArrayElementAddr(
         wasmRoot,
         symbolTable,
@@ -204,6 +208,7 @@ export function getMemoryAccessDetails(
       numOfBytes: wasmTypeToSize[v.wasmVarType], // the size of one element of //TODO: need to change when have more types
       wasmVariableType: v.wasmVarType,
     };
+    return t;
   } else {
     console.assert(
       false,
@@ -362,10 +367,14 @@ export function getAssignmentNodesValue(
 
   // sanity checks
   if (typeof variableWasmType === "undefined") {
-    throw new TranslationError(`Translation error: getAssignmentNodesValue: undefined variableWasmType: original type: ${variableType}`)
+    throw new TranslationError(
+      `Translation error: getAssignmentNodesValue: undefined variableWasmType: original type: ${variableType}`
+    );
   }
   if (typeof valueWasmType === "undefined") {
-    throw new TranslationError(`Translation error: getAssignmentNodesValue: undefined valueWasmType: original type: ${valueType}`)
+    throw new TranslationError(
+      `Translation error: getAssignmentNodesValue: undefined valueWasmType: original type: ${valueType}`
+    );
   }
 
   if (variableWasmType === valueWasmType) {

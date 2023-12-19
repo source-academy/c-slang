@@ -18,6 +18,7 @@ export const PARAM_PREFIX = "param_";
 export const WASM_PAGE_SIZE = 65536;
 export const WASM_ADDR_SIZE = 4; // number of bytes of a wasm address
 export const WASM_ADDR_TYPE = "i32"; // the wasm type of addresses
+export const WASM_ADDR_CTYPE = "unsigned int" // the type of an address, in terms of C variable type
 export const WASM_ADDR_ADD_INSTRUCTION = WASM_ADDR_TYPE + ".add"; // insruction to use when adding wasm address
 export const WASM_ADDR_SUB_INSTRUCTION = WASM_ADDR_TYPE + ".sub";
 export const WASM_ADDR_MUL_INSTRUCTION = WASM_ADDR_TYPE + ".mul";
@@ -92,7 +93,8 @@ export function getPointerArithmeticNode(
 ): WasmExpression {
   return {
     type: "BinaryExpression",
-    instruction: operator === "+" ? WASM_ADDR_ADD_INSTRUCTION : WASM_ADDR_SUB_INSTRUCTION,
+    instruction:
+      operator === "+" ? WASM_ADDR_ADD_INSTRUCTION : WASM_ADDR_SUB_INSTRUCTION,
     wasmVariableType: WASM_ADDR_TYPE,
     leftExpr: {
       type: "GlobalGet",
@@ -542,7 +544,7 @@ export function getFunctionCallStackFrameSetupStatements(
       addr: {
         type: "BinaryExpression",
         instruction: WASM_ADDR_SUB_INSTRUCTION,
-        wasmVariableType: WASM_ADDR_TYPE, 
+        wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: reg1GetNode,
         rightExpr: {
           type: "Const",

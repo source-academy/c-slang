@@ -51,6 +51,7 @@ export function handleScopeCreatingNodes(
     visit(sourceCode, n.initialization, forLoopSymbolTable, enclosingFunc);
     visit(sourceCode, n.condition, forLoopSymbolTable, enclosingFunc);
     visit(sourceCode, n.update, forLoopSymbolTable, enclosingFunc);
+    visit(sourceCode, n.body, forLoopSymbolTable, enclosingFunc);
   } else {
     throw new ProcessingError(`Processor Error: Unhandled scope creating node.`)
   }

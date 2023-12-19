@@ -2,7 +2,7 @@
  * Definition of visitor function.
  */
 
-import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
+import { ArrayDeclaration, ArrayElementExpr, ArrayInitialization } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { Constant } from "~src/c-ast/constants";
@@ -119,9 +119,15 @@ export function visit(
     setVariableTypeOfSymbolAccessExpression(node, symbolTable);
     n.args.forEach((arg) => visit(sourceCode, arg, symbolTable, enclosingFunc));
     return;
-  } else if (node.type === "VariableExpr" || node.type === "ArrayElementExpr") {
+  } else if (node.type === "VariableExpr") {
     setVariableTypeOfSymbolAccessExpression(node, symbolTable);
     return;
+  } else if (node.type === "ArrayElementExpr") {
+    const n = node as ArrayElementExpr;
+    visit(sourceCode, n.index, symbolTable, enclosingFunc);
+    setVariableTypeOfSymbolAccessExpression(node, symbolTable);
+    n.variableType = n.index.variableType;
+    return; 
   } else if (node.type === "PrefixExpression" || node.type === "PostfixExpression") {
     const n = node as PrefixExpression | PostfixExpression
     visit(sourceCode, n.variable, symbolTable, enclosingFunc)
