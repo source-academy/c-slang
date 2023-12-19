@@ -14,18 +14,8 @@ export interface ImportedFunction {
   type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
   parentImportedObject: string; // parent imported object
   name: string; // function name
-  //importedName: string; // name that the function is imported as. Should be "${name}_o"  TODO: remove later
   params: VariableType[]; // C types of parameters for the function
   return: VariableType | null;
-}
-
-/**
- * Add a prefix to the original imported function name, so that the modified function
- * will be called when the function without the prefix is called.
- * TODO: should not be needed anymore. remove later
- */
-function getImportedFunctionName(funcName: string) {
-  return funcName + "_o";
 }
 
 export interface WasmOriginalImportedFunction extends ImportedFunction {
