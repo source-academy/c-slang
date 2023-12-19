@@ -53,7 +53,7 @@ export interface WasmReturnVariable extends WasmAstNode {
 export interface WasmMemoryVariable extends WasmAstNode {
   name: string;
   size: number; // size in bytes of this variable
-  cVarType: VariableType // the original C variable type
+  cVarType: VariableType; // the original C variable type
   wasmVarType: WasmType; // the wasm type to use when loading/storing this variable
   offset: number; // offset from the start of the scope that this variable is in. This is address for globals, offset from BP for locals/params
 }

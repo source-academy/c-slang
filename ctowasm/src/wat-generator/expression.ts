@@ -1,6 +1,9 @@
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmExpression, WasmConst } from "~src/wasm-ast/core";
-import { WasmFunctionCall, WasmRegularFunctionCall } from "~src/wasm-ast/functions";
+import {
+  WasmFunctionCall,
+  WasmRegularFunctionCall,
+} from "~src/wasm-ast/functions";
 import { WasmMemoryLoad } from "~src/wasm-ast/memory";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import { WasmLocalGet, WasmGlobalGet } from "~src/wasm-ast/variables";
@@ -19,11 +22,11 @@ export function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const e = expr as WasmFunctionCall;
     return `(call $${e.name} ${generateStatementsList(
-      e.stackFrameSetup
+      e.stackFrameSetup,
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
   } else if (expr.type === "RegularFunctionCall") {
     const e = expr as WasmRegularFunctionCall;
-    return `(call $${e.name} ${generateArgString(e.args)})`
+    return `(call $${e.name} ${generateArgString(e.args)})`;
   } else if (expr.type === "Const") {
     const e = expr as WasmConst;
     return `(${e.wasmVariableType}.const ${e.value.toString()})`;
@@ -33,14 +36,12 @@ export function generateExprStr(expr: WasmExpression): string {
   } else if (expr.type === "GlobalGet") {
     const e = expr as WasmGlobalGet;
     return `(global.get $${e.name}${getPreStatementsStr(e.preStatements)})`;
-  } else if (
-    expr.type === "BinaryExpression" 
-  ) {
-    const e = expr as WasmBinaryExpression
+  } else if (expr.type === "BinaryExpression") {
+    const e = expr as WasmBinaryExpression;
     //TODO: support different op types other than i32
-    return `(${e.instruction} ${generateExprStr(
-      e.leftExpr
-    )} ${generateExprStr(e.rightExpr)})`;
+    return `(${e.instruction} ${generateExprStr(e.leftExpr)} ${generateExprStr(
+      e.rightExpr,
+    )})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
   } else if (expr.type === "BooleanExpression") {
@@ -51,7 +52,7 @@ export function generateExprStr(expr: WasmExpression): string {
     } else {
       return `(i32.ne (i32.const 0) ${generateExprStr(e.expr)})`;
     }
-  }else if (expr.type === "MemorySize") {
+  } else if (expr.type === "MemorySize") {
     return "(memory.size)";
   } else if (expr.type === "MemoryLoad") {
     const n = expr as WasmMemoryLoad;
@@ -65,8 +66,8 @@ export function generateExprStr(expr: WasmExpression): string {
     console.assert(
       false,
       `WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion\n${JSON.stringify(
-        expr
-      )}`
+        expr,
+      )}`,
     );
   }
 }

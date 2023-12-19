@@ -19,7 +19,7 @@ export function handleScopeCreatingNodes(
   sourceCode: string,
   node: ScopeCreatingNodes,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition
+  enclosingFunc?: FunctionDefinition,
 ) {
   if (node.type === "FunctionDefinition") {
     const n = node as FunctionDefinition;
@@ -28,7 +28,7 @@ export function handleScopeCreatingNodes(
     // size of parameters can be calculated immediately
     n.sizeOfParameters = n.parameters.reduce(
       (sum, curr) => sum + getVariableSize(curr.variableType),
-      0
+      0,
     );
     n.sizeOfReturn = n.returnType ? getVariableSize(n.returnType) : 0;
 
@@ -42,8 +42,10 @@ export function handleScopeCreatingNodes(
     visit(sourceCode, n.body, paramSymbolTable, n);
   } else if (node.type === "Block") {
     const n = node as Block;
-    const blockSymbolTable = new SymbolTable(symbolTable)
-    n.children.forEach(child => visit(sourceCode, child, blockSymbolTable, enclosingFunc))
+    const blockSymbolTable = new SymbolTable(symbolTable);
+    n.children.forEach((child) =>
+      visit(sourceCode, child, blockSymbolTable, enclosingFunc),
+    );
   } else if (node.type === "ForLoop") {
     // for loops have a specific scope for the for loop bracketed statements e.g. "(int i = 0; i < 10; i++)"
     const n = node as ForLoop;
@@ -53,6 +55,8 @@ export function handleScopeCreatingNodes(
     visit(sourceCode, n.update, forLoopSymbolTable, enclosingFunc);
     visit(sourceCode, n.body, forLoopSymbolTable, enclosingFunc);
   } else {
-    throw new ProcessingError(`Processor Error: Unhandled scope creating node.`)
+    throw new ProcessingError(
+      `Processor Error: Unhandled scope creating node.`,
+    );
   }
 }

@@ -13,7 +13,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
   // add the memory import
   watStr += generateLine(
     `(import "js" "mem" (memory ${module.memorySize}))`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add the imported functions
@@ -25,14 +25,16 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
       }" (func $${importedFunction.name}${
         importedFunction.wasmParamTypes.length > 0
           ? " " +
-            importedFunction.wasmParamTypes.map((param) => `(param ${param})`).join(" ")
+            importedFunction.wasmParamTypes
+              .map((param) => `(param ${param})`)
+              .join(" ")
           : ""
       }${
         importedFunction.returnWasmType !== null
           ? ` (result ${importedFunction.return})`
           : ""
       }))`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -44,7 +46,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
       }) ${
         global.initializerValue ? generateExprStr(global.initializerValue) : ""
       })`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -59,9 +61,9 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
     )
       watStr += generateLine(
         `(data (i32.const ${globalVariable.offset}) "${convertVariableToByteStr(
-          globalVariable
+          globalVariable,
         )}")`,
-        baseIndentation + 1
+        baseIndentation + 1,
       );
   }
 
@@ -72,7 +74,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
     for (const statement of func.body) {
       watStr += generateLine(
         generateStatementStr(statement),
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

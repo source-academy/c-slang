@@ -2,14 +2,21 @@
  * Definition of visitor function.
  */
 
-import { ArrayDeclaration, ArrayElementExpr, ArrayInitialization } from "~src/c-ast/arrays";
+import {
+  ArrayDeclaration,
+  ArrayElementExpr,
+  ArrayInitialization,
+} from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { Constant } from "~src/c-ast/constants";
 import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
 import { SymbolTable } from "~src/c-ast/types";
-import { PostfixExpression, PrefixExpression } from "~src/c-ast/unaryExpression";
+import {
+  PostfixExpression,
+  PrefixExpression,
+} from "~src/c-ast/unaryExpression";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
@@ -31,7 +38,7 @@ export function visit(
   sourceCode: string,
   node: any,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition
+  enclosingFunc?: FunctionDefinition,
 ) {
   if (
     !(
@@ -78,7 +85,7 @@ export function visit(
       // this intialization is global. Needs to be a constant expression, which we can evaluate now
       if (n.value.type === "BinaryExpression" || n.value.type === "Constant") {
         n.value = evaluateConstantBinaryExpression(
-          n.value as BinaryExpression | Constant
+          n.value as BinaryExpression | Constant,
         );
       }
     }
@@ -90,7 +97,7 @@ export function visit(
       enclosingFunc.sizeOfLocals +=
         getVariableSize(n.variableType) * n.numElements;
       n.elements.forEach((e) =>
-        visit(sourceCode, e, symbolTable, enclosingFunc)
+        visit(sourceCode, e, symbolTable, enclosingFunc),
       );
     } else {
       // this intialization is global. Needs to be a constant expression (assumed), which we can evaluate now
@@ -98,8 +105,8 @@ export function visit(
       for (const element of n.elements) {
         evaluatedElements.push(
           evaluateConstantBinaryExpression(
-            element as BinaryExpression | Constant
-          )
+            element as BinaryExpression | Constant,
+          ),
         );
       }
       n.elements = evaluatedElements;
@@ -127,10 +134,13 @@ export function visit(
     visit(sourceCode, n.index, symbolTable, enclosingFunc);
     setVariableTypeOfSymbolAccessExpression(node, symbolTable);
     n.variableType = n.index.variableType;
-    return; 
-  } else if (node.type === "PrefixExpression" || node.type === "PostfixExpression") {
-    const n = node as PrefixExpression | PostfixExpression
-    visit(sourceCode, n.variable, symbolTable, enclosingFunc)
+    return;
+  } else if (
+    node.type === "PrefixExpression" ||
+    node.type === "PostfixExpression"
+  ) {
+    const n = node as PrefixExpression | PostfixExpression;
+    visit(sourceCode, n.variable, symbolTable, enclosingFunc);
     n.variableType = n.variable.variableType;
     return;
   } else if (node.type === "AssignmentExpression") {
@@ -145,7 +155,7 @@ export function visit(
     throw new ProcessingError(
       `Processing Error: Unhandled expression: ${JSON.stringify(n)}`,
       sourceCode,
-      n.position
+      n.position,
     );
   }
 

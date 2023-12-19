@@ -15,7 +15,6 @@ import { unaryOperatorToInstruction } from "~src/translator/util";
 import {
   convertConstantToWasmConst,
   getMemoryAccessDetails,
-  variableTypeToWasmType,
 } from "~src/translator/variableUtil";
 import {
   WasmFunctionCall,
@@ -36,7 +35,7 @@ import translateFunctionCall from "~src/translator/translateFunctionCall";
 export default function translateExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  expr: Expression
+  expr: Expression,
 ): WasmExpression {
   if (expr.type === "Constant") {
     const n = expr as Constant;
@@ -54,7 +53,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n
+      n,
     );
     return {
       type: "MemoryLoad",
@@ -69,7 +68,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable
+      n.variable,
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
@@ -80,7 +79,10 @@ export default function translateExpression(
           wasmVariableType: memoryAccessDetails.wasmVariableType,
           value: {
             type: "BinaryExpression",
-            instruction: unaryOperatorToInstruction(n.operator, n.variable.variableType),
+            instruction: unaryOperatorToInstruction(
+              n.operator,
+              n.variable.variableType,
+            ),
             wasmVariableType: memoryAccessDetails.wasmVariableType,
             leftExpr: {
               type: "MemoryLoad",
@@ -103,14 +105,16 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable
+      n.variable,
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
       value: {
         type: "BinaryExpression",
-        instruction:
-          unaryOperatorToInstruction(n.operator, n.variable.variableType),
+        instruction: unaryOperatorToInstruction(
+          n.operator,
+          n.variable.variableType,
+        ),
         wasmVariableType: memoryAccessDetails.wasmVariableType,
         leftExpr: {
           type: "MemoryLoad",
@@ -136,7 +140,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable
+      n.variable,
     );
     return {
       type: "MemoryLoad",
@@ -153,8 +157,8 @@ export default function translateExpression(
     console.assert(
       false,
       `WASM TRANSLATION ERROR: Unhandled C expression node\n${JSON.stringify(
-        expr
-      )}`
+        expr,
+      )}`,
     );
   }
 }

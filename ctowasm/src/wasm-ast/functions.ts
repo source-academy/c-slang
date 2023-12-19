@@ -75,6 +75,6 @@ export interface WasmReturnStatement {
  * Wasm Imported function with some added information.
  */
 export interface WasmImportedFunction extends ImportedFunction {
-  wasmParamTypes: WasmType[] // the params of the functions in wasm
+  wasmParamTypes: WasmType[]; // the params of the functions in wasm
   returnWasmType: WasmType | null;
 }

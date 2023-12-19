@@ -18,4 +18,3 @@ export interface PostfixExpression extends Expression {
   operator: UnaryOperator;
   variable: VariableExpr | ArrayElementExpr;
 }
-

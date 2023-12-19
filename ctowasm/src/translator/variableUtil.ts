@@ -65,7 +65,7 @@ export function convertConstantToWasmConst(constant: Constant): WasmConst {
  */
 export function retrieveVariableFromSymbolTable(
   symbolTable: WasmSymbolTable,
-  variableName: string
+  variableName: string,
 ) {
   let curr = symbolTable;
 
@@ -85,7 +85,7 @@ export function retrieveVariableFromSymbolTable(
  */
 export function getVariableAddr(
   symbolTable: WasmSymbolTable,
-  variableName: string
+  variableName: string,
 ): WasmExpression {
   const variable = retrieveVariableFromSymbolTable(symbolTable, variableName);
   if (
@@ -127,7 +127,7 @@ export function getArrayElementAddr(
   symbolTable: WasmSymbolTable,
   arrayName: string,
   elementIndex: Expression,
-  elementSize: number
+  elementSize: number,
 ) {
   return {
     type: "BinaryExpression",
@@ -148,7 +148,7 @@ export function getArrayElementAddr(
           wasmVariableType: WASM_ADDR_TYPE,
           value: elementSize,
         },
-      } as WasmBinaryExpression
+      } as WasmBinaryExpression,
     ),
   } as WasmBinaryExpression;
 }
@@ -168,7 +168,7 @@ interface MemoryAccessDetails {
 export function getMemoryAccessDetails(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  expr: VariableExpr | ArrayElementExpr
+  expr: VariableExpr | ArrayElementExpr,
 ): MemoryAccessDetails {
   const variable = retrieveVariableFromSymbolTable(symbolTable, expr.name);
   if (expr.type === "VariableExpr") {
@@ -179,7 +179,7 @@ export function getMemoryAccessDetails(
       )
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
+        "getMemoryAccessDetails error: memory access variable does not match.",
       );
     }
     const v = variable as WasmLocalVariable | WasmDataSegmentVariable;
@@ -193,7 +193,7 @@ export function getMemoryAccessDetails(
       !(variable.type === "LocalArray" || variable.type === "DataSegmentArray")
     ) {
       throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
+        "getMemoryAccessDetails error: memory access variable does not match.",
       );
     }
     const v = variable as WasmDataSegmentArray | WasmLocalArray;
@@ -203,7 +203,7 @@ export function getMemoryAccessDetails(
         symbolTable,
         expr.name,
         expr.index,
-        v.elementSize
+        v.elementSize,
       ),
       numOfBytes: wasmTypeToSize[v.wasmVarType], // the size of one element of //TODO: need to change when have more types
       wasmVariableType: v.wasmVarType,
@@ -212,7 +212,7 @@ export function getMemoryAccessDetails(
   } else {
     console.assert(
       false,
-      "Translator error: getMemoryAccessDetails failed - no matching expression type"
+      "Translator error: getMemoryAccessDetails failed - no matching expression type",
     );
   }
 }
@@ -224,7 +224,7 @@ export function getArrayConstantIndexElementAddr(
   symbolTable: WasmSymbolTable,
   arrayName: string,
   elementIndex: number,
-  elementSize: number
+  elementSize: number,
 ): WasmBinaryExpression {
   return {
     type: "BinaryExpression",
@@ -246,12 +246,12 @@ export function getArrayConstantIndexElementAddr(
 function getNeededNumericConversionInstruction(
   from: WasmType,
   to: WasmType,
-  intSignage?: "unsigned" | "signed"
+  intSignage?: "unsigned" | "signed",
 ): NumericConversionInstruction {
   if (from === "i32" && to === "i64") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from i32 to i64"
+        "Translation Error: Missing sign information for numeric conversion from i32 to i64",
       );
     } else if (intSignage === "signed") {
       return "i64.extend_i32_s";
@@ -267,7 +267,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i32" && to === "f32") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from i32 to f32"
+        "Translation Error: Missing sign information for numeric conversion from i32 to f32",
       );
     } else if (intSignage === "signed") {
       return "f32.convert_i32_s";
@@ -277,7 +277,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i64" && to === "f32") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from i64 to f32"
+        "Translation Error: Missing sign information for numeric conversion from i64 to f32",
       );
     } else if (intSignage === "signed") {
       return "f32.convert_i64_s";
@@ -287,7 +287,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i32" && to === "f64") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from i32 to f64"
+        "Translation Error: Missing sign information for numeric conversion from i32 to f64",
       );
     } else if (intSignage === "signed") {
       return "f64.convert_i32_s";
@@ -297,7 +297,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i64" && to === "f64") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from i64 to f64"
+        "Translation Error: Missing sign information for numeric conversion from i64 to f64",
       );
     } else if (intSignage === "signed") {
       return "f64.convert_i64_s";
@@ -307,7 +307,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f32" && to === "i32") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from f32 to i32"
+        "Translation Error: Missing sign information for numeric conversion from f32 to i32",
       );
     } else if (intSignage === "signed") {
       return "i32.trunc_f32_s";
@@ -317,7 +317,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f64" && to === "i32") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from f64 to i32"
+        "Translation Error: Missing sign information for numeric conversion from f64 to i32",
       );
     } else if (intSignage === "signed") {
       return "i32.trunc_f64_s";
@@ -327,7 +327,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f32" && to === "i64") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from f32 to i64"
+        "Translation Error: Missing sign information for numeric conversion from f32 to i64",
       );
     } else if (intSignage === "signed") {
       return "i64.trunc_f32_s";
@@ -337,7 +337,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f64" && to === "i64") {
     if (typeof intSignage === "undefined") {
       throw new TranslationError(
-        "Translation Error: Missing sign information for numeric conversion from f64 to i64"
+        "Translation Error: Missing sign information for numeric conversion from f64 to i64",
       );
     } else if (intSignage === "signed") {
       return "i64.trunc_f64_s";
@@ -347,7 +347,7 @@ function getNeededNumericConversionInstruction(
   } else {
     // should not happen
     throw new TranslationError(
-      `Translation Error: Unhandled numeric conversion between wasm types: ${from} to ${to}`
+      `Translation Error: Unhandled numeric conversion between wasm types: ${from} to ${to}`,
     );
   }
 }
@@ -360,7 +360,7 @@ function getNeededNumericConversionInstruction(
 export function getAssignmentNodesValue(
   variableType: VariableType, // the C variable type of variable being assigned to
   valueType: VariableType, // the C variable type of value being assigned
-  translatedExpression: WasmExpression // the translated expression being assiged to the variable
+  translatedExpression: WasmExpression, // the translated expression being assiged to the variable
 ): WasmExpression {
   const variableWasmType = variableTypeToWasmType[variableType]; // the wasm type of the variable being assigned to
   const valueWasmType = variableTypeToWasmType[valueType]; // the wasm type of the expression being assigned
@@ -368,12 +368,12 @@ export function getAssignmentNodesValue(
   // sanity checks
   if (typeof variableWasmType === "undefined") {
     throw new TranslationError(
-      `Translation error: getAssignmentNodesValue: undefined variableWasmType: original type: ${variableType}`
+      `Translation error: getAssignmentNodesValue: undefined variableWasmType: original type: ${variableType}`,
     );
   }
   if (typeof valueWasmType === "undefined") {
     throw new TranslationError(
-      `Translation error: getAssignmentNodesValue: undefined valueWasmType: original type: ${valueType}`
+      `Translation error: getAssignmentNodesValue: undefined valueWasmType: original type: ${valueType}`,
     );
   }
 
@@ -387,7 +387,7 @@ export function getAssignmentNodesValue(
       instruction: getNeededNumericConversionInstruction(
         valueWasmType,
         variableWasmType,
-        "unsigned"
+        "unsigned",
       ),
       wasmVariableType: variableTypeToWasmType[variableType],
     } as WasmNumericConversionWrapper;
@@ -397,7 +397,7 @@ export function getAssignmentNodesValue(
       instruction: getNeededNumericConversionInstruction(
         valueWasmType,
         variableWasmType,
-        "signed"
+        "signed",
       ),
       wasmVariableType: variableTypeToWasmType[variableType],
     } as WasmNumericConversionWrapper;
@@ -406,7 +406,7 @@ export function getAssignmentNodesValue(
       type: "NumericWrapper",
       instruction: getNeededNumericConversionInstruction(
         valueWasmType,
-        variableWasmType
+        variableWasmType,
       ),
       wasmVariableType: variableTypeToWasmType[variableType],
     } as WasmNumericConversionWrapper;

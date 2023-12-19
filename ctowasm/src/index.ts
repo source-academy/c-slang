@@ -26,9 +26,9 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
       // to print the correct int (4 bytes), need to handle signage
       if (int > Math.pow(2, 32) - 1) {
         // negative number
-        print((-int).toString())
+        print((-int).toString());
       } else {
-        print(int.toString())
+        print(int.toString());
       }
     },
     print_int_unsigned: print,

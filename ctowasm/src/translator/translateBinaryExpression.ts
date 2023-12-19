@@ -15,7 +15,7 @@ import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 export default function translateBinaryExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  binaryExpr: BinaryExpression
+  binaryExpr: BinaryExpression,
 ): WasmBinaryExpression {
   // special handling for && and || since wasm does not have native instructions for these operations
   if (binaryExpr.operator === "&&" || binaryExpr.operator === "||") {
@@ -32,9 +32,9 @@ export default function translateBinaryExpression(
       } as WasmBooleanExpression,
       instruction: getBinaryExpressionInstruction(
         binaryExpr.operator,
-        binaryExpr.variableType
+        binaryExpr.variableType,
       ),
-      wasmVariableType: "i32" // i32 since its just a boolean
+      wasmVariableType: "i32", // i32 since its just a boolean
     } as WasmBinaryExpression;
   }
 
@@ -44,7 +44,7 @@ export default function translateBinaryExpression(
     rightExpr: translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr),
     instruction: getBinaryExpressionInstruction(
       binaryExpr.operator,
-      binaryExpr.variableType
+      binaryExpr.variableType,
     ),
     wasmVariableType: variableTypeToWasmType[binaryExpr.variableType],
   };
@@ -78,7 +78,7 @@ function isOperationWithUnsignedSignedVariant(op: string) {
  */
 export function getBinaryExpressionInstruction(
   operator: BinaryOperator,
-  variableType: VariableType
+  variableType: VariableType,
 ) {
   const createBinaryInstruction = (op: string) => {
     const instruction = `${variableTypeToWasmType[variableType]}.${op}`;

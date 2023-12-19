@@ -21,7 +21,7 @@ import {
 export default function translateFunctionCall(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  node: FunctionCall | FunctionCallStatement
+  node: FunctionCall | FunctionCallStatement,
 ) {
   const n = node as FunctionCallStatement;
   if (n.name in wasmRoot.importedFunctions) {
@@ -33,8 +33,8 @@ export default function translateFunctionCall(
         getAssignmentNodesValue(
           functionBeingCalled.params[i],
           n.args[i].variableType,
-          translateExpression(wasmRoot, symbolTable, n.args[i])
-        )
+          translateExpression(wasmRoot, symbolTable, n.args[i]),
+        ),
       );
     }
     return {
@@ -53,8 +53,8 @@ export default function translateFunctionCall(
         getAssignmentNodesValue(
           functionBeingCalled.params[i].cVarType,
           n.args[i].variableType,
-          translateExpression(wasmRoot, symbolTable, n.args[i])
-        )
+          translateExpression(wasmRoot, symbolTable, n.args[i]),
+        ),
       );
     }
     return {
@@ -62,13 +62,15 @@ export default function translateFunctionCall(
       name: n.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         wasmRoot.functions[n.name],
-        functionArgs
+        functionArgs,
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
         wasmRoot.functions[n.name],
-        node.type === "FunctionCall" && wasmRoot.functions[n.name].returnVariable !== null ? true : false
+        node.type === "FunctionCall" &&
+          wasmRoot.functions[n.name].returnVariable !== null
+          ? true
+          : false,
       ),
-      
     } as WasmFunctionCall | WasmFunctionCallStatement;
   }
 }

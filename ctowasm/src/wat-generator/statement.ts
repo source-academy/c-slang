@@ -42,7 +42,7 @@ export function generateStatementStr(statement: WasmFunctionBodyLine): string {
     )}) ${generateStatementsList(n.stackFrameTearDown)}`;
   } else if (statement.type === "RegularFunctionCallStatement") {
     const n = statement as WasmRegularFunctionCallStatement;
-    return `(call $${n.name} ${generateArgString(n.args)})`
+    return `(call $${n.name} ${generateArgString(n.args)})`;
   } else if (
     statement.type === "GlobalGet" ||
     statement.type === "Const" ||

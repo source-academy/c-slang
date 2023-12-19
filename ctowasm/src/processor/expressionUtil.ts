@@ -5,7 +5,6 @@
 import { Constant } from "~src/c-ast/constants";
 import {
   BinaryOperator,
-  IntegerType,
   SignedIntegerType,
   UnsignedIntegerType,
   VariableType,
@@ -31,7 +30,7 @@ import {
 export function evaluateBinaryExpression(
   a: number,
   operator: BinaryOperator,
-  b: number
+  b: number,
 ) {
   switch (operator) {
     case "+":
@@ -67,7 +66,7 @@ export function evaluateBinaryExpression(
  * Evaluates a constant arithmetic expression.
  */
 export function evaluateConstantBinaryExpression(
-  binaryExpr: BinaryExpression | Constant
+  binaryExpr: BinaryExpression | Constant,
 ): Constant {
   if (binaryExpr.type === "Constant") {
     // alerady a constant
@@ -77,20 +76,20 @@ export function evaluateConstantBinaryExpression(
   if (binaryExpr.type !== "BinaryExpression") {
     throw new ProcessingError(
       `Processing Error: Unknown node being used as binary expression in evaluation of constant binary expressions: ${JSON.stringify(
-        binaryExpr
-      )}`
+        binaryExpr,
+      )}`,
     );
   }
 
   // need to perform the appropriate truncation on the value if necessary as per C standard
   let value = evaluateBinaryExpression(
     evaluateConstantBinaryExpression(
-      binaryExpr.leftExpr as BinaryExpression | Constant
+      binaryExpr.leftExpr as BinaryExpression | Constant,
     ).value,
     binaryExpr.operator,
     evaluateConstantBinaryExpression(
-      binaryExpr.rightExpr as BinaryExpression | Constant
-    ).value
+      binaryExpr.rightExpr as BinaryExpression | Constant,
+    ).value,
   );
 
   const variableType = determineVariableTypeOfBinaryExpression(binaryExpr);
@@ -113,7 +112,7 @@ export function evaluateConstantBinaryExpression(
  */
 function getAdjustedValueAccordingToVariableType(
   value: number,
-  variableType: VariableType
+  variableType: VariableType,
 ) {
   let newValue = value;
   if (
@@ -136,7 +135,8 @@ function getAdjustedValueAccordingToVariableType(
     newValue > getMaxValueOfUnsignedIntType(variableType as UnsignedIntegerType)
   ) {
     newValue =
-      newValue % getMaxValueOfUnsignedIntType(variableType as UnsignedIntegerType);
+      newValue %
+      getMaxValueOfUnsignedIntType(variableType as UnsignedIntegerType);
   }
 
   return newValue;
@@ -200,7 +200,7 @@ export function setVariableTypeOfConstant(constant: Constant): VariableType {
  * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
  */
 function determineVariableTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
+  binaryExpression: BinaryExpression,
 ): VariableType {
   if (
     getVariableSize(binaryExpression.rightExpr.variableType) >
@@ -218,7 +218,7 @@ function determineVariableTypeOfBinaryExpression(
  * TODO: add float handling later
  */
 export function setVariableTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
+  binaryExpression: BinaryExpression,
 ) {
   binaryExpression.variableType =
     determineVariableTypeOfBinaryExpression(binaryExpression);
@@ -229,7 +229,7 @@ export function setVariableTypeOfBinaryExpression(
  */
 export function setVariableTypeOfSymbolAccessExpression(
   node: FunctionCall | VariableExpr | ArrayElementExpr,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ) {
   const symbolEntry = symbolTable.getSymbolEntry(node.name);
   if (symbolEntry.type === "function") {
@@ -247,7 +247,7 @@ export function setVariableTypeOfSymbolAccessExpression(
  */
 export function setSymbolTableIdOfSymbolAccess(
   node: FunctionCall | VariableExpr | ArrayElementExpr | FunctionCallStatement,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ) {
   node.symbolTableId = symbolTable.getSymbolEntry(node.name).globalRecordId;
 }

@@ -8,11 +8,7 @@ import {
 } from "~src/c-ast/unaryExpression";
 import { ArrayInitialization } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
-import {
-  ReturnStatement,
-  FunctionCallStatement,
-  FunctionDefinition,
-} from "~src/c-ast/functions";
+import { ReturnStatement, FunctionDefinition } from "~src/c-ast/functions";
 import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
 import { Block, BlockItem, isExpression } from "~src/c-ast/core";
 import { SelectStatement } from "~src/c-ast/select";
@@ -22,8 +18,6 @@ import translateExpression from "~src/translator/translateExpression";
 import {
   BASE_POINTER,
   WASM_ADDR_SIZE,
-  getFunctionCallStackFrameSetupStatements,
-  getFunctionStackFrameTeardownStatements,
   getPointerArithmeticNode,
 } from "~src/translator/memoryUtil";
 import {
@@ -57,7 +51,6 @@ import {
 import { TranslationError } from "~src/errors";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
-import { getWasmMemoryStoreInstruction } from "~src/wat-generator/util";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 
 /**
@@ -70,7 +63,7 @@ import translateFunctionCall from "~src/translator/translateFunctionCall";
 export default function translateFunction(
   wasmRoot: WasmModule,
   Cfunction: FunctionDefinition,
-  rootSymbolTable: WasmSymbolTable
+  rootSymbolTable: WasmSymbolTable,
 ) {
   const symbolTable = createSymbolTable(rootSymbolTable, true); // reset the offset counter to start symbol table offset fresh for each new function
 
@@ -122,13 +115,13 @@ export default function translateFunction(
   function visit(
     symbolTable: WasmSymbolTable,
     node: BlockItem,
-    statementBody: WasmStatement[]
+    statementBody: WasmStatement[],
   ) {
     if (node.type === "Block") {
       const n = node as Block;
       const newSymbolTable = createSymbolTable(symbolTable);
       n.children.forEach((child) =>
-        visit(newSymbolTable, child, statementBody)
+        visit(newSymbolTable, child, statementBody),
       );
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement;
@@ -167,7 +160,7 @@ export default function translateFunction(
           value: getAssignmentNodesValue(
             n.variableType,
             node.value.variableType,
-            translateExpression(wasmRoot, symbolTable, node.value)
+            translateExpression(wasmRoot, symbolTable, node.value),
           ),
           wasmVariableType: variableTypeToWasmType[n.variableType],
           numOfBytes: getVariableSize(n.variableType),
@@ -199,12 +192,12 @@ export default function translateFunction(
               symbolTable,
               n.name,
               i,
-              getVariableSize(n.variableType)
+              getVariableSize(n.variableType),
             ),
             value: getAssignmentNodesValue(
               n.variableType,
               n.elements[i].variableType,
-              translateExpression(wasmRoot, symbolTable, n.elements[i])
+              translateExpression(wasmRoot, symbolTable, n.elements[i]),
             ),
             wasmVariableType: variableTypeToWasmType[n.variableType],
             numOfBytes: getVariableSize(n.variableType),
@@ -216,7 +209,7 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable
+        n.variable,
       );
       statementBody.push({
         type: "MemoryStore",
@@ -224,7 +217,7 @@ export default function translateFunction(
         value: getAssignmentNodesValue(
           n.variable.variableType,
           n.value.variableType,
-          translateExpression(wasmRoot, symbolTable, n.value)
+          translateExpression(wasmRoot, symbolTable, n.value),
         ),
         ...memoryAccessDetails,
       });
@@ -232,7 +225,7 @@ export default function translateFunction(
       statementBody.push(
         translateFunctionCall(wasmRoot, symbolTable, node) as
           | WasmFunctionCallStatement
-          | WasmRegularFunctionCallStatement
+          | WasmRegularFunctionCallStatement,
       );
     } else if (
       node.type === "PrefixExpression" ||
@@ -243,15 +236,17 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable
+        n.variable,
       );
       statementBody.push({
         type: "MemoryStore",
         wasmVariableType: memoryAccessDetails.wasmVariableType,
         value: {
           type: "BinaryExpression",
-          instruction:
-            unaryOperatorToInstruction(n.operator, n.variable.variableType),
+          instruction: unaryOperatorToInstruction(
+            n.operator,
+            n.variable.variableType,
+          ),
           wasmVariableType: memoryAccessDetails.wasmVariableType,
           leftExpr: {
             type: "MemoryLoad",
@@ -275,7 +270,7 @@ export default function translateFunction(
         condition: translateExpression(
           wasmRoot,
           symbolTable,
-          n.ifBlock.condition
+          n.ifBlock.condition,
         ),
         actions,
         elseStatements: [],
@@ -289,7 +284,7 @@ export default function translateFunction(
           condition: translateExpression(
             wasmRoot,
             symbolTable,
-            elseIfBlock.condition
+            elseIfBlock.condition,
           ),
           actions,
           elseStatements: [],
@@ -368,7 +363,7 @@ export default function translateFunction(
           expr: translateExpression(
             wasmRoot,
             conditionSymbolTable,
-            n.condition
+            n.condition,
           ),
         } as WasmBooleanExpression,
       });
@@ -396,7 +391,7 @@ export default function translateFunction(
       // explictly ignore expressions as they do not affect final code at runtime
     } else {
       throw new TranslationError(
-        `Translator error: Unhandled AST node: ${node}`
+        `Translator error: Unhandled AST node: ${node}`,
       );
     }
   }
