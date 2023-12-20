@@ -286,6 +286,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [10, "a", 20, "b"],
     },
+    signed_long_1: {
+      title: "Signed long type - global and local initialization 1",
+      expectedCode: false,
+      expectedValues: [-2147483646, 2147483648]
+    }
   },
 };
 

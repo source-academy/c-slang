@@ -6,37 +6,19 @@ import {
   generate_WAT_AST as originalGenerate_WAT_AST,
   generate_processed_C_AST,
 } from "./compiler";
+export { setPrintFunction } from "~src/wasmModuleImports";
 
 export { generate_C_AST, generate_processed_C_AST };
-
-// default print to stdout is to console.log
-let print = (str: string) => console.log(str);
-
-// set the print function to use for printing to stdout
-export function setPrintFunction(printFunc: (str: string) => void) {
-  print = printFunc;
-}
 
 export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   const memory = new WebAssembly.Memory({
     initial: initialMemory,
   });
-  const moduleImports = {
-    print_int: (int: number) => {
-      // to print the correct int (4 bytes), need to handle signage
-      if (int > Math.pow(2, 32) - 1) {
-        // negative number
-        print((-int).toString());
-      } else {
-        print(int.toString());
-      }
-    },
-    print_int_unsigned: print,
-    print_char: (char: number) => {
-      // signed int overflow is undefined, no need to worry about handling that
-      print(String.fromCharCode(char));
-    },
-  };
+  const moduleImports: Record<string, Function> = {};
+  Object.keys(wasmModuleImports).forEach(
+    (funcName) =>
+      (moduleImports[funcName] = wasmModuleImports[funcName].jsFunction)
+  );
   await WebAssembly.instantiate(wasm, {
     imports: moduleImports,
     js: { mem: memory },
@@ -65,7 +47,7 @@ export function generate_WAT_AST(program: string) {
 export async function compileAndRun(program: string) {
   const { wasm, initialMemory } = await originalCompile(
     program,
-    wasmModuleImports,
+    wasmModuleImports
   );
   await runWasm(wasm, initialMemory);
 }

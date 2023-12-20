@@ -22,7 +22,7 @@ import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
 import {
   evaluateConstantBinaryExpression,
-  setVariableTypeOfConstant,
+  processConstant,
   setVariableTypeOfBinaryExpression,
   setVariableTypeOfSymbolAccessExpression,
 } from "~src/processor/expressionUtil";
@@ -113,7 +113,7 @@ export function visit(
     }
     return;
   } else if (node.type === "Constant") {
-    setVariableTypeOfConstant(node as Constant);
+    processConstant(node as Constant);
     return;
   } else if (node.type === "BinaryExpression") {
     const n = node as BinaryExpression;

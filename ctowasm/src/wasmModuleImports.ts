@@ -16,22 +16,24 @@ export interface ImportedFunction {
   name: string; // function name
   params: VariableType[]; // C types of parameters for the function
   return: VariableType | null;
+  jsFunction: Function // the actual JS function that is called
 }
 
 export interface WasmOriginalImportedFunction extends ImportedFunction {
   type: "original";
 }
 
-export interface WasmModifiedImportedFunction extends ImportedFunction {
-  type: "modified";
-  modifiedParams: WasmType[]; // adjusted params of actual function
-  modifiedReturn: WasmType | null;
-  body: WasmStatement[]; // all the lines of body of this modified function
+// default print to stdout is to console.log
+let print = (str: string) => console.log(str);
+
+// set the print function to use for printing to stdout
+export function setPrintFunction(printFunc: (str: string) => void) {
+  print = printFunc;
 }
 
-const wasmModuleImports: Record<
+export const wasmModuleImports: Record<
   string,
-  WasmOriginalImportedFunction | WasmModifiedImportedFunction
+  WasmOriginalImportedFunction
 > = {
   // prints a signed int (4 bytes and smaller)
   print_int: {
@@ -40,6 +42,15 @@ const wasmModuleImports: Record<
     name: "print_int",
     params: ["signed int"], // i32 here is a the address of the int to print
     return: null,
+    jsFunction: (int: number) => {
+      // to print the correct int (4 bytes), need to handle signage
+      if (int > Math.pow(2, 32) - 1) {
+        // negative number
+        print((-int).toString());
+      } else {
+        print(int.toString());
+      }
+    },
   },
   // prints an unsigned int (4 bytes and smaller)
   print_int_unsigned: {
@@ -48,6 +59,7 @@ const wasmModuleImports: Record<
     name: "print_int_unsigned",
     params: ["unsigned int"], // i32 here is a the address of the int to print
     return: null,
+    jsFunction: print
   },
   // prints a char (signed) as a character
   print_char: {
@@ -56,6 +68,36 @@ const wasmModuleImports: Record<
     name: "print_char",
     params: ["signed char"], // i32 here is a the address of the char to print
     return: null,
+    jsFunction: (char: number) => {
+      // signed int overflow is undefined, no need to worry about handling that
+      print(String.fromCharCode(char));
+    },
+  },
+  // print a signed long type (8 bytes)
+  print_long: {
+    type: "original",
+    parentImportedObject: defaultParentImportedObject,
+    name: "print_long",
+    params: ["signed long"], // i32 here is a the address of the int to print
+    return: null,
+    jsFunction: (long: number) => {
+      // to prlong the correct long (4 bytes), need to handle signage
+      if (long > Math.pow(2, 64) - 1) {
+        // negative number
+        print((-long).toString());
+      } else {
+        print(long.toString());
+      }
+    }, 
+  },
+  // print an usigned long type (8 bytes)
+  print_long_unsigned: {
+    type: "original",
+    parentImportedObject: defaultParentImportedObject,
+    name: "print_long_unsigned",
+    params: ["unsigned long"], // i32 here is a the address of the int to print
+    return: null,
+    jsFunction: print
   },
 };
 

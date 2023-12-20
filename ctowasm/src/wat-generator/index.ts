@@ -1,11 +1,10 @@
 /**
  * WAT Generator module for generating a WAT string from WAT AST.
  */
-import { convertVariableToByteStr } from "../translator/memoryUtil";
 import { WasmModule } from "~src/wasm-ast/core";
 import { generateExprStr } from "~src/wat-generator/expression";
 import { generateStatementStr } from "~src/wat-generator/statement";
-import { generateLine } from "~src/wat-generator/util";
+import { convertVariableToByteStr, generateLine } from "~src/wat-generator/util";
 
 export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
   let watStr = generateLine("(module", baseIndentation);

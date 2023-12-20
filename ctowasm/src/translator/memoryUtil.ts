@@ -179,45 +179,6 @@ export function getFunctionStackFrameTeardownStatements(
 }
 
 /**
- * Converts a given variable to byte string, for storage in data segment.
- */
-export function convertVariableToByteStr(
-  variable: WasmDataSegmentArray | WasmDataSegmentVariable,
-) {
-  if (variable.type === "DataSegmentVariable") {
-    return convertWasmNumberToByteStr(variable.initializerValue, variable.size);
-  }
-  // DataSegmentArray
-  let finalStr = "";
-  variable.initializerList.forEach((element) => {
-    finalStr += convertWasmNumberToByteStr(element, variable.elementSize);
-  });
-  return finalStr;
-}
-
-/**
- * Converts a wasm number to a bytes str with a @size bytes
- */
-export function convertWasmNumberToByteStr(num: WasmConst, size: number) {
-  const hexString = num.value.toString(16);
-  const strSplit = hexString.split("");
-  if (hexString.length % 2 == 1) {
-    const lastDigit = strSplit[strSplit.length - 1];
-    strSplit[strSplit.length - 1] = "0";
-    strSplit.push(lastDigit);
-  }
-  let finalStr = "";
-  for (let i = strSplit.length - 1; i >= 0; i = i - 2) {
-    finalStr += "\\" + strSplit[i - 1] + strSplit[i];
-  }
-  const goalSize = size * 3;
-  while (finalStr.length < goalSize) {
-    finalStr += "\\00";
-  }
-  return finalStr;
-}
-
-/**
  * Returns the wasm nodes responsible for the pre function call setup.
  */
 export function getFunctionCallStackFrameSetupStatements(

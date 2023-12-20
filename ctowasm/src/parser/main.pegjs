@@ -236,8 +236,10 @@ constant
   / character_constant
     
 integer_constant
-  //TODO: add handling of unsigned and long constants
-	= value:integer { return generateNode("Constant", { value } ); }
+	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U") { return generateNode("Constant", { value, suffix: suffix.toLowerCase() }); } 
+  / value:integer { return generateNode("Constant", { value } ); }
+  / value:negative_integer { return generateNode("Constant", { value }); }
+
 
 character_constant
   = "'" value:c_char "'" {return generateNode("Constant", { value }); } // value should already be a number
@@ -277,9 +279,20 @@ simple_escape_sequence
 // =========== Misc ================
 
 type 
-	= ("int" / "signed int") {return "signed int"; } 
-  / ("char" / "signed char") { return "signed char"; }
+	= signed_integer
+  / unsigned_integer
+
+signed_integer 
+  = ("char" / "signed char") { return "signed char"; }
+  / ("short" / "signed short") { return "signed short"; }
+  / ("int" / "signed int") { return "signed int"; } 
   / (long_type / "signed " long_type) { return "signed long"; }
+
+unsigned_integer
+  = $"unsigned char"
+  / $"unsigned short"
+  / $"unsigned int"
+  / $"unsigned long"
 
 // long can be matched by multiple type keywords - all 8 bytes long in this compiler
 long_type
@@ -311,3 +324,6 @@ statement_end
 
 integer
   = value:$[0-9]+ { return parseInt(value); }
+
+negative_integer
+  = "-" value:$[0-9]+ { return -parseInt(value); }
