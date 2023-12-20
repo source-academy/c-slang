@@ -12,8 +12,7 @@ import {
   WasmDataSegmentVariable,
 } from "~src/wasm-ast/memory";
 import { WasmType } from "~src/wasm-ast/types";
-import { generateExprStr } from "~src/wat-generator/expression";
-import { generateStatementStr } from "~src/wat-generator/statement";
+import generateFunctionBodyWat from "~src/wat-generator/generateFunctionBodyWat";
 
 /**
  * Function that returns a line in wat file with given level of identation & ending with newline.
@@ -71,7 +70,7 @@ export function getWasmMemoryStoreInstruction(
 export function generateArgString(exprs: WasmExpression[]) {
   let argsStr = "";
   for (const arg of exprs) {
-    argsStr += generateExprStr(arg) + " ";
+    argsStr += generateFunctionBodyWat(arg) + " ";
   }
   return argsStr.trim();
 }
@@ -82,18 +81,14 @@ export function generateArgString(exprs: WasmExpression[]) {
 export function generateStatementsList(
   statements: (WasmStatement | WasmExpression)[]
 ) {
-  return statements
-    .map((s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression))
-    .join(" ");
+  return statements.map((s) => generateFunctionBodyWat(s)).join(" ");
 }
 
 export function getPreStatementsStr(
   preStatements?: (WasmStatement | WasmExpression)[]
 ) {
   const s = preStatements
-    ? preStatements.map(
-        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
-      )
+    ? preStatements.map((s) => generateFunctionBodyWat(s))
     : [];
   return s.length > 0 ? " " + s.join(" ") : "";
 }
