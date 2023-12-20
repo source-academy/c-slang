@@ -289,8 +289,13 @@ const testLog = {
     signed_long_1: {
       title: "Signed long type - global and local initialization 1",
       expectedCode: false,
-      expectedValues: [-2147483646, 2147483648]
-    }
+      expectedValues: [-2147483646, 2147483648],
+    },
+    unsigned_ints_1: {
+      title: "Test unsigned int types 1",
+      expectedCode: false,
+      expectedValues: ["a", 10, 20, 4294967286, -10, 100, 4294967296, 90],
+    },
   },
 };
 

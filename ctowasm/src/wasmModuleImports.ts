@@ -59,7 +59,7 @@ export const wasmModuleImports: Record<
     name: "print_int_unsigned",
     params: ["unsigned int"], // i32 here is a the address of the int to print
     return: null,
-    jsFunction: print
+    jsFunction: (val: number) => print(val.toString())
   },
   // prints a char (signed) as a character
   print_char: {
@@ -80,9 +80,9 @@ export const wasmModuleImports: Record<
     name: "print_long",
     params: ["signed long"], // i32 here is a the address of the int to print
     return: null,
-    jsFunction: (long: number) => {
+    jsFunction: (long: bigint) => {
       // to prlong the correct long (4 bytes), need to handle signage
-      if (long > Math.pow(2, 64) - 1) {
+      if (long > 2n ** 64n - 1n) {
         // negative number
         print((-long).toString());
       } else {
@@ -97,7 +97,7 @@ export const wasmModuleImports: Record<
     name: "print_long_unsigned",
     params: ["unsigned long"], // i32 here is a the address of the int to print
     return: null,
-    jsFunction: print
+    jsFunction: (val: bigint) => print(val.toString())
   },
 };
 

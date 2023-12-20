@@ -125,9 +125,7 @@ export function convertWasmNumberToByteStr(
   const hexString = val.toString(16);
   const strSplit = hexString.split("");
   if (hexString.length % 2 == 1) {
-    const lastDigit = strSplit[strSplit.length - 1];
-    strSplit[strSplit.length - 1] = "0";
-    strSplit.push(lastDigit);
+    strSplit.splice(0, 0, "0")
   }
   let finalStr = "";
   for (let i = strSplit.length - 1; i >= 0; i = i - 2) {

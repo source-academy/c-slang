@@ -102,9 +102,9 @@ export async function testFileCompilationSuccess(subset, testFileName) {
     } else {
       // Test 2: checks that the file is runnable, and outputs the correct values
       try {
-        const programVariableOutputtedInts = [];
+        const programOutput = [];
         // set printed ints from program using print_int to go to this array instead of console.log
-        setPrintFunction((val) => programVariableOutputtedInts.push(val));
+        setPrintFunction((val) => programOutput.push(val));
         try {
           // if there is a expectedValues for variables in the file, check that they are equal
           await compileAndRunFile({
@@ -119,7 +119,7 @@ export async function testFileCompilationSuccess(subset, testFileName) {
                   testFileName
                 ].expectedValues.toString()
               : [].toString();
-          const actualValues = programVariableOutputtedInts.toString();
+          const actualValues = programOutput.toString();
           if (expectedValues !== actualValues) {
             return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
           }
