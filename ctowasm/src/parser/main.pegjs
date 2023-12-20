@@ -121,7 +121,7 @@ variable_declaration
   / variableType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType, name }); }
 
 array_declaration
-  = variableType:type _+ name:identifier _* "[" _* numElements:integer _*"]" { return generateNode("ArrayDeclaration", { variableType, name, numElements }); }  // match on array first as it is a more specific expression 
+  = variableType:type _+ name:identifier _* "[" _* numElements:integer _*"]" { return generateNode("ArrayDeclaration", { variableType, name, numElements: parseInt(numElements) }); }  // match on array first as it is a more specific expression 
 
 function_declaration
   = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
@@ -137,7 +137,7 @@ initialization
 	/ type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
 
 array_initialization
-  = variableType:type _+ name:identifier _* "[" _* numElements:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, numElements, elements }); }  
+  = variableType:type _+ name:identifier _* "[" _* numElements:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, numElements: parseInt(numElements), elements }); }  
   / variableType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("ArrayInitialization", { variableType, name, numElements: elements.length, elements }); }  
 
 list_initializer
@@ -236,9 +236,8 @@ constant
   / character_constant
     
 integer_constant
-	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U") { return generateNode("Constant", { value, suffix: suffix.toLowerCase() }); } 
-  / value:integer { return generateNode("Constant", { value } ); }
-  / value:negative_integer { return generateNode("Constant", { value }); }
+	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U") { return generateNode("Constant", { value: BigInt(value), suffix: suffix.toLowerCase() }); } 
+  / value:integer { return generateNode("Constant", { value: BigInt(value) } ); }
 
 
 character_constant
@@ -323,7 +322,4 @@ statement_end
   = ";"+
 
 integer
-  = value:$[0-9]+ { return parseInt(value); }
-
-negative_integer
-  = "-" value:$[0-9]+ { return -parseInt(value); }
+  = signage:("-" / "") value:$[0-9]+ { return signage + value }

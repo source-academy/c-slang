@@ -10,7 +10,7 @@ type IntegerConstantSuffix = "u" | "l" | "ul"; // unsigned | long  NOTE: no need
 
 export interface Constant extends Expression {
   type: "Constant";
-  value: number;
+  value: bigint; // needs to be big int to support all possible values
   variableType: VariableType; // to be determined during processing stage. PARSER DOES NOT FILL THIS.
   suffix?: ConstantSuffix
 }

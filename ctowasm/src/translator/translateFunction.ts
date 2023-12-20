@@ -18,6 +18,7 @@ import translateExpression from "~src/translator/translateExpression";
 import {
   BASE_POINTER,
   WASM_ADDR_SIZE,
+  WASM_ADDR_TYPE,
   getPointerArithmeticNode,
 } from "~src/translator/memoryUtil";
 import {
@@ -36,7 +37,7 @@ import {
   getAssignmentNodesValue,
 } from "~src/translator/variableUtil";
 import { WasmSelectStatement } from "~src/wasm-ast/control";
-import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
+import { WasmIntegerConst, WasmModule, WasmStatement } from "~src/wasm-ast/core";
 import {
   WasmSymbolTable,
   WasmFunction,
@@ -254,10 +255,10 @@ export default function translateFunction(
             ...memoryAccessDetails,
           } as WasmMemoryLoad,
           rightExpr: {
-            type: "Const",
-            wasmVariableType: "i32",
-            value: 1,
-          },
+            type: "IntegerConst",
+            wasmVariableType: WASM_ADDR_TYPE,
+            value: 1n,
+          } as WasmIntegerConst,
         } as WasmBinaryExpression,
         ...memoryAccessDetails,
       });
@@ -391,7 +392,7 @@ export default function translateFunction(
       // explictly ignore expressions as they do not affect final code at runtime
     } else {
       throw new TranslationError(
-        `Translator error: Unhandled AST node: ${node}`,
+        `Unhandled AST node: ${node}`,
       );
     }
   }

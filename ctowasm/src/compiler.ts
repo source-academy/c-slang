@@ -8,6 +8,7 @@ import { compileWatToWasm } from "./wat-to-wasm";
 import wasmModuleImports, { ImportedFunction } from "~src/wasmModuleImports";
 import translate from "~src/translator";
 import { checkForErrors } from "~src/semanticAnalyser";
+import { toJson } from "~src/errors";
 
 export interface CompilationResult {
   wasm: Uint8Array;
@@ -43,14 +44,14 @@ export function compileToWat(
 
 export function generate_C_AST(cSourceCode: string) {
   const ast = parser.parse(cSourceCode);
-  return JSON.stringify(ast);
+  return toJson(ast);
 }
 
 export function generate_processed_C_AST(cSourceCode: string) {
   const CAst = parser.parse(cSourceCode);
   checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
   const ast = process(cSourceCode, CAst);
-  return JSON.stringify(ast);
+  return toJson(ast);
 }
 
 export function generate_WAT_AST(
@@ -63,5 +64,5 @@ export function generate_WAT_AST(
     process(cSourceCode, parser.parse(cSourceCode)),
     wasmModuleImports,
   );
-  return JSON.stringify(wasmAst);
+  return toJson(wasmAst);
 }

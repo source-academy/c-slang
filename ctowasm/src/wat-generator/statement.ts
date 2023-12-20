@@ -45,7 +45,7 @@ export function generateStatementStr(statement: WasmFunctionBodyLine): string {
     return `(call $${n.name} ${generateArgString(n.args)})`;
   } else if (
     statement.type === "GlobalGet" ||
-    statement.type === "Const" ||
+    statement.type === "IntegerConst" ||
     statement.type === "LocalGet"
   ) {
     return generateExprStr(statement);

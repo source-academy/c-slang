@@ -8,6 +8,7 @@
     "preserveConstEnums": true,
     "paths": {
       "~*": ["./*"]
-    }
+    },
+    "target": "ES2020"
   }
 }

@@ -43,7 +43,7 @@ export class SymbolTable {
       | ArrayDeclaration
       | ArrayInitialization
       | FunctionDeclaration
-      | FunctionDefinition,
+      | FunctionDefinition
   ) {
     let symbolEntry;
     if (node.type === "VariableDeclaration" || node.type === "Initialization") {
@@ -73,10 +73,7 @@ export class SymbolTable {
       };
       symbolEntry = newEntry;
     } else {
-      console.assert(
-        false,
-        "Processing Error: Unhandled node to add as symbol entry.",
-      );
+      throw new ProcessingError("Unhandled node to add as symbol entry.");
     }
 
     this.symbols[node.name] = symbolEntry;
@@ -93,8 +90,6 @@ export class SymbolTable {
       }
       curr = curr.parentTable;
     }
-    throw new ProcessingError(
-      `Processing error: Symbol ${name} not found in symbol table`,
-    );
+    throw new ProcessingError(`Symbol ${name} not found in symbol table`);
   }
 }

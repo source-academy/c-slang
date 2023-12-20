@@ -1,11 +1,10 @@
 import { WasmFunction } from "~src/wasm-ast/functions";
+import { WasmMemoryLoad, WasmMemorySize } from "~src/wasm-ast/memory";
 import {
-  WasmMemoryLoad,
-  WasmDataSegmentArray,
-  WasmDataSegmentVariable,
-  WasmMemorySize,
-} from "~src/wasm-ast/memory";
-import { WasmExpression, WasmStatement, WasmConst } from "~src/wasm-ast/core";
+  WasmExpression,
+  WasmStatement,
+  WasmIntegerConst,
+} from "~src/wasm-ast/core";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmGlobalGet } from "~src/wasm-ast/variables";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
@@ -89,7 +88,7 @@ function getReg1SetNode(value: WasmExpression): WasmStatement {
 export function getPointerArithmeticNode(
   pointer: "sp" | "bp" | "hp",
   operator: "+" | "-",
-  operand: number,
+  operand: number
 ): WasmExpression {
   return {
     type: "BinaryExpression",
@@ -101,16 +100,16 @@ export function getPointerArithmeticNode(
       name: pointer,
     } as WasmGlobalGet,
     rightExpr: {
-      type: "Const",
+      type: "IntegerConst",
       wasmVariableType: WASM_ADDR_TYPE,
-      value: operand,
-    },
+      value: BigInt(operand),
+    } as WasmIntegerConst,
   } as WasmBinaryExpression;
 }
 
 function getPointerIncrementNode(
   pointer: "sp" | "bp" | "hp",
-  incVal: number,
+  incVal: number
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -121,7 +120,7 @@ function getPointerIncrementNode(
 
 function getPointerDecrementNode(
   pointer: "sp" | "bp" | "hp",
-  decVal: number,
+  decVal: number
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -136,7 +135,7 @@ function getPointerDecrementNode(
  */
 export function getFunctionStackFrameTeardownStatements(
   fn: WasmFunction,
-  useReturn?: boolean,
+  useReturn?: boolean
 ): (WasmStatement | WasmMemoryLoad)[] {
   const statements: (WasmStatement | WasmMemoryLoad)[] = [
     getStackPointerSetNode({
@@ -146,10 +145,10 @@ export function getFunctionStackFrameTeardownStatements(
       varType: "i32",
       leftExpr: basePointerGetNode,
       rightExpr: {
-        type: "Const",
+        type: "IntegerConst",
         wasmVariableType: "i32",
-        value: WASM_ADDR_SIZE,
-      },
+        value: BigInt(WASM_ADDR_SIZE),
+      } as WasmIntegerConst,
     } as WasmBinaryExpression),
     getBasePointerSetNode({
       type: "MemoryLoad",
@@ -171,7 +170,7 @@ export function getFunctionStackFrameTeardownStatements(
 
   if (fn.returnVariable !== null) {
     statements.push(
-      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size),
+      getPointerIncrementNode(STACK_POINTER, fn.returnVariable.size)
     );
   }
 
@@ -183,7 +182,7 @@ export function getFunctionStackFrameTeardownStatements(
  */
 export function getFunctionCallStackFrameSetupStatements(
   calledFunction: WasmFunction, // function that is being called
-  functionArgs: WasmExpression[], // arguments passed to this function call
+  functionArgs: WasmExpression[] // arguments passed to this function call
 ): WasmStatement[] {
   const statements: WasmStatement[] = [];
 
@@ -211,10 +210,10 @@ export function getFunctionCallStackFrameSetupStatements(
           wasmVariableType: WASM_ADDR_TYPE,
         } as WasmGlobalGet,
         rightExpr: {
-          type: "Const",
+          type: "IntegerConst",
           wasmVariableType: "i32",
-          value: totalStackSpaceRequired,
-        } as WasmConst,
+          value: BigInt(totalStackSpaceRequired),
+        } as WasmIntegerConst,
         varType: "i32",
       },
       rightExpr: heapPointerGetNode,
@@ -233,10 +232,10 @@ export function getFunctionCallStackFrameSetupStatements(
             type: "MemorySize",
           } as WasmMemorySize,
           rightExpr: {
-            type: "Const",
-            wasmVariableType: "i32",
-            value: WASM_PAGE_SIZE,
-          },
+            type: "IntegerConst",
+            wasmVariableType: WASM_ADDR_TYPE,
+            value: BigInt(WASM_PAGE_SIZE),
+          } as WasmIntegerConst,
           varType: "i32",
         } as WasmBinaryExpression,
       },
@@ -254,10 +253,10 @@ export function getFunctionCallStackFrameSetupStatements(
             wasmVariableType: WASM_ADDR_TYPE,
           } as WasmGlobalGet,
           rightExpr: {
-            type: "Const",
-            value: 1,
+            type: "IntegerConst",
+            value: 1n,
             wasmVariableType: WASM_ADDR_TYPE,
-          } as WasmConst,
+          } as WasmIntegerConst,
           varType: "i32",
         } as WasmBinaryExpression,
       },
@@ -274,17 +273,16 @@ export function getFunctionCallStackFrameSetupStatements(
             name: REG_1,
           } as WasmGlobalGet,
           rightExpr: stackPointerGetNode,
-          varType: "i32",
         } as WasmBinaryExpression,
       },
       // expand the memory since not enough space
       {
         type: "MemoryGrow",
         pagesToGrowBy: {
-          type: "Const",
+          type: "IntegerConst",
           wasmVariableType: "i32",
-          value: Math.ceil(totalStackSpaceRequired / WASM_PAGE_SIZE),
-        } as WasmConst,
+          value: BigInt(Math.ceil(totalStackSpaceRequired / WASM_PAGE_SIZE)),
+        } as WasmIntegerConst,
       },
       // set stack pointer to target stack pointer adddress
 
@@ -300,10 +298,10 @@ export function getFunctionCallStackFrameSetupStatements(
             type: "MemorySize",
           } as WasmMemorySize,
           rightExpr: {
-            type: "Const",
+            type: "IntegerConst",
             wasmVariableType: WASM_ADDR_TYPE,
-            value: WASM_PAGE_SIZE,
-          } as WasmConst,
+            value: BigInt(WASM_PAGE_SIZE),
+          } as WasmIntegerConst,
         },
         rightExpr: {
           type: "GlobalGet",
@@ -329,13 +327,13 @@ export function getFunctionCallStackFrameSetupStatements(
               type: "MemorySize",
             } as WasmMemorySize,
             rightExpr: {
-              type: "Const",
+              type: "IntegerConst",
               wasmVariableType: WASM_ADDR_TYPE,
-              value: WASM_PAGE_SIZE,
-            } as WasmConst,
+              value: BigInt(WASM_PAGE_SIZE),
+            } as WasmIntegerConst,
           },
           rightExpr: {
-            type: "Const",
+            type: "IntegerConst",
             value: 1,
             wasmVariableType: "i32",
           },
@@ -400,10 +398,10 @@ export function getFunctionCallStackFrameSetupStatements(
                     name: REG_1,
                   } as WasmGlobalGet,
                   rightExpr: {
-                    type: "Const",
-                    value: 1,
+                    type: "IntegerConst",
+                    value: BigInt(1),
                     wasmVariableType: WASM_ADDR_TYPE,
-                  } as WasmConst,
+                  } as WasmIntegerConst,
                 } as WasmBinaryExpression,
               },
               // decrement REG_2
@@ -419,10 +417,10 @@ export function getFunctionCallStackFrameSetupStatements(
                     name: REG_2,
                   } as WasmGlobalGet,
                   rightExpr: {
-                    type: "Const",
-                    value: 1,
+                    type: "IntegerConst",
+                    value: 1n,
                     wasmVariableType: WASM_ADDR_TYPE,
-                  } as WasmConst,
+                  } as WasmIntegerConst,
                   varType: "i32",
                 } as WasmBinaryExpression,
               },
@@ -447,11 +445,11 @@ export function getFunctionCallStackFrameSetupStatements(
         wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: stackPointerGetNode,
         rightExpr: {
-          type: "Const",
+          type: "IntegerConst",
           wasmVariableType: WASM_ADDR_TYPE,
-          value: calledFunction.returnVariable.size,
-        },
-      } as WasmBinaryExpression),
+          value: BigInt(calledFunction.returnVariable.size),
+        } as WasmIntegerConst,
+      } as WasmBinaryExpression)
     );
   }
 
@@ -463,11 +461,11 @@ export function getFunctionCallStackFrameSetupStatements(
       wasmVariableType: WASM_ADDR_TYPE,
       leftExpr: stackPointerGetNode,
       rightExpr: {
-        type: "Const",
+        type: "IntegerConst",
         wasmVariableType: WASM_ADDR_TYPE,
-        value: WASM_ADDR_SIZE,
-      },
-    } as WasmBinaryExpression),
+        value: BigInt(WASM_ADDR_SIZE),
+      } as WasmIntegerConst,
+    } as WasmBinaryExpression)
   );
 
   // push BP onto stack
@@ -490,11 +488,11 @@ export function getFunctionCallStackFrameSetupStatements(
       wasmVariableType: WASM_ADDR_TYPE,
       leftExpr: stackPointerGetNode,
       rightExpr: {
-        type: "Const",
+        type: "IntegerConst",
         wasmVariableType: WASM_ADDR_TYPE,
-        value: calledFunction.sizeOfLocals + calledFunction.sizeOfParams,
-      },
-    } as WasmBinaryExpression),
+        value: BigInt(calledFunction.sizeOfLocals + calledFunction.sizeOfParams),
+      } as WasmIntegerConst,
+    } as WasmBinaryExpression)
   );
 
   // set the values of all params
@@ -508,10 +506,10 @@ export function getFunctionCallStackFrameSetupStatements(
         wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: reg1GetNode,
         rightExpr: {
-          type: "Const",
+          type: "IntegerConst",
           wasmVariableType: "i32",
-          value: param.offset,
-        },
+          value: BigInt(param.offset),
+        } as WasmIntegerConst,
       } as WasmBinaryExpression,
       value: functionArgs[paramIndex],
       wasmVariableType: WASM_ADDR_TYPE,

@@ -15,7 +15,7 @@ import {
   isSignedIntegerType,
   isUnsignedIntegerType,
 } from "~src/common/utils";
-import { ProcessingError } from "~src/errors";
+import { ProcessingError, toJson } from "~src/errors";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { VariableExpr } from "~src/c-ast/variable";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
@@ -29,10 +29,10 @@ import {
 
 // Evaluates the value of a <operator> b
 export function evaluateBinaryExpression(
-  a: number,
+  a: bigint,
   operator: BinaryOperator,
-  b: number
-) {
+  b: bigint
+): bigint {
   switch (operator) {
     case "+":
       return a + b;
@@ -45,21 +45,21 @@ export function evaluateBinaryExpression(
     case "%":
       return a % b;
     case "&&":
-      return a !== 0 && b !== 0 ? 1 : 0;
+      return a !== 0n && b !== 0n ? 1n : 0n;
     case "||":
-      return a !== 0 || b !== 0 ? 1 : 0;
+      return a !== 0n || b !== 0n ? 1n : 0n;
     case "<":
-      return a < b ? 1 : 0;
+      return a < b ? 1n : 0n;
     case "<=":
-      return a <= b ? 1 : 0;
+      return a <= b ? 1n : 0n;
     case "!=":
-      return a !== b ? 1 : 0;
+      return a !== b ? 1n : 0n;
     case "==":
-      return a === b ? 1 : 0;
+      return a === b ? 1n : 0n;
     case ">=":
-      return a >= b ? 1 : 0;
+      return a >= b ? 1n : 0n;
     case ">":
-      return a > b ? 1 : 0;
+      return a > b ? 1n : 0n;
   }
 }
 
@@ -76,7 +76,7 @@ export function evaluateConstantBinaryExpression(
 
   if (binaryExpr.type !== "BinaryExpression") {
     throw new ProcessingError(
-      `Processing Error: Unknown node being used as binary expression in evaluation of constant binary expressions: ${JSON.stringify(
+      `Unknown node being used as binary expression in evaluation of constant binary expressions: ${toJson(
         binaryExpr
       )}`
     );
@@ -94,7 +94,7 @@ export function evaluateConstantBinaryExpression(
   );
 
   const variableType = determineVariableTypeOfBinaryExpression(binaryExpr);
-  value = getAdjustedValueAccordingToVariableType(value, variableType);
+  value = getAdjustedIntValueAccordingToVariableType(value, variableType);
 
   return {
     type: "Constant",
@@ -107,23 +107,13 @@ export function evaluateConstantBinaryExpression(
 /**
  * Get the adjusted numeric value of a value according to its variable type, as per C standard.
  * Handles:
- * 1. Decimal removal for int types
- * 2. Wrap around for integer overflows
  *
  */
-function getAdjustedValueAccordingToVariableType(
-  value: number,
+function getAdjustedIntValueAccordingToVariableType(
+  value: bigint,
   variableType: VariableType
 ) {
   let newValue = value;
-  if (
-    isSignedIntegerType(variableType) ||
-    isUnsignedIntegerType(variableType)
-  ) {
-    // remove decimal
-    newValue = Math.floor(newValue);
-  }
-
   // handle integer overflows
   if (
     isSignedIntegerType(variableType) &&
@@ -146,16 +136,16 @@ function getAdjustedValueAccordingToVariableType(
 /**
  * Returns the maximum value of a signed int type.
  */
-function getMaxValueOfSignedIntType(val: SignedIntegerType) {
-  return Math.pow(2, getVariableSize(val) * 8 - 1) - 1;
+function getMaxValueOfSignedIntType(val: SignedIntegerType): bigint {
+  return 2n ** (BigInt(getVariableSize(val)) * 8n - 1n) - 1n;
 }
 
-function getMinValueOfSignedIntType(val: SignedIntegerType) {
-  return -Math.pow(2, getVariableSize(val) * 8 - 1);
+function getMinValueOfSignedIntType(val: SignedIntegerType): bigint {
+  return -(2n ** (BigInt(getVariableSize(val)) * 8n - 1n));
 }
 
-function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType) {
-  return Math.pow(2, getVariableSize(val) * 8) - 1;
+function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType): bigint {
+  return 2n ** (BigInt(getVariableSize(val)) * 8n) - 1n;
 }
 
 /**
@@ -163,16 +153,16 @@ function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType) {
  * This, according to the standard, is signed integer overflow which is undefined. Thus the logic here is specific to this compiler
  * implementation, and is made to function similarly to other compilers.
  */
-function capNegativeValue(value: number, integerType: IntegerType) {
-  const minNegativeValue = -Math.pow(2, getVariableSize(integerType) * 8 - 1);
+function capNegativeValue(value: bigint, integerType: IntegerType): bigint{
+  const minNegativeValue = -(2n ** (BigInt(getVariableSize(integerType)) * 8n)) - 1n;
   if (value >= minNegativeValue) {
     // no overflow
     return value;
   }
   const diff = minNegativeValue - value;
   return (
-    Math.pow(2, getVariableSize(integerType) * 8 - 1) -
-    (diff % Math.pow(2, getVariableSize(integerType) * 8))
+    2n ** (BigInt(getVariableSize(integerType)) * 8n - 1n) -
+    (diff % (2n ** BigInt(getVariableSize(integerType)) * 8n))
   );
 }
 
@@ -180,9 +170,9 @@ function capNegativeValue(value: number, integerType: IntegerType) {
  * Handles signed integer constant values which are too large. This in undefined behaviour as per standard, hence this handling is specific to this compiler, meant to mimic existing compilers.
  */
 function handlePositiveSignedIntegerOverflow(
-  value: number,
+  value: bigint,
   signedType: SignedIntegerType
-) {
+): bigint {
   const maxVal = getMaxValueOfSignedIntType(signedType);
   if (value <= maxVal) {
     // no overflow
@@ -191,8 +181,8 @@ function handlePositiveSignedIntegerOverflow(
   const diff = value - maxVal;
   return (
     getMinValueOfSignedIntType(signedType) +
-    ((diff % Math.pow(2, getVariableSize(signedType) * 8)) - 1)
-  );
+    ((diff % (2n ** (BigInt(getVariableSize(signedType)) * 8n))) - 1n));
+  
 }
 
 /**

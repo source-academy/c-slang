@@ -2,8 +2,15 @@
  * Utility functions for WAT generation.
  */
 
-import { WasmConst, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
-import { WasmDataSegmentArray, WasmDataSegmentVariable } from "~src/wasm-ast/memory";
+import {
+  WasmIntegerConst,
+  WasmExpression,
+  WasmStatement,
+} from "~src/wasm-ast/core";
+import {
+  WasmDataSegmentArray,
+  WasmDataSegmentVariable,
+} from "~src/wasm-ast/memory";
 import { WasmType } from "~src/wasm-ast/types";
 import { generateExprStr } from "~src/wat-generator/expression";
 import { generateStatementStr } from "~src/wat-generator/statement";
@@ -32,7 +39,7 @@ export function generateBlock(block: string, indentation: number) {
  */
 export function getWasmMemoryLoadInstruction(
   varType: WasmType,
-  numOfBytes: number,
+  numOfBytes: number
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -45,7 +52,7 @@ export function getWasmMemoryLoadInstruction(
 
 export function getWasmMemoryStoreInstruction(
   varType: WasmType,
-  numOfBytes: number,
+  numOfBytes: number
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -73,7 +80,7 @@ export function generateArgString(exprs: WasmExpression[]) {
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
 export function generateStatementsList(
-  statements: (WasmStatement | WasmExpression)[],
+  statements: (WasmStatement | WasmExpression)[]
 ) {
   return statements
     .map((s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression))
@@ -81,11 +88,11 @@ export function generateStatementsList(
 }
 
 export function getPreStatementsStr(
-  preStatements?: (WasmStatement | WasmExpression)[],
+  preStatements?: (WasmStatement | WasmExpression)[]
 ) {
   const s = preStatements
     ? preStatements.map(
-        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression),
+        (s) => generateStatementStr(s) ?? generateExprStr(s as WasmExpression)
       )
     : [];
   return s.length > 0 ? " " + s.join(" ") : "";
@@ -95,7 +102,7 @@ export function getPreStatementsStr(
  * Converts a given variable to byte string, for storage in data segment.
  */
 export function convertVariableToByteStr(
-  variable: WasmDataSegmentArray | WasmDataSegmentVariable,
+  variable: WasmDataSegmentArray | WasmDataSegmentVariable
 ) {
   if (variable.type === "DataSegmentVariable") {
     return convertWasmNumberToByteStr(variable.initializerValue, variable.size);
@@ -111,14 +118,15 @@ export function convertVariableToByteStr(
 /**
  * Converts a wasm number to a bytes str with @size bytes
  */
-export function convertWasmNumberToByteStr(num: WasmConst, size: number) {
+export function convertWasmNumberToByteStr(
+  num: WasmIntegerConst,
+  size: number
+) {
   let val = num.value;
-  console.log(val)
   if (val < 0) {
     // convert to 2's complement equivalent in terms of positive number
-    val = Math.pow(2, size * 8) + val;
+    val = 2n ** (BigInt(size) * 8n) + val;
   }
-  console.log(val)
   const hexString = val.toString(16);
   const strSplit = hexString.split("");
   if (hexString.length % 2 == 1) {

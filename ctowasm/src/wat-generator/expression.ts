@@ -1,5 +1,5 @@
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
-import { WasmExpression, WasmConst } from "~src/wasm-ast/core";
+import { WasmExpression, WasmIntegerConst } from "~src/wasm-ast/core";
 import {
   WasmFunctionCall,
   WasmRegularFunctionCall,
@@ -22,13 +22,13 @@ export function generateExprStr(expr: WasmExpression): string {
   if (expr.type === "FunctionCall") {
     const e = expr as WasmFunctionCall;
     return `(call $${e.name} ${generateStatementsList(
-      e.stackFrameSetup,
+      e.stackFrameSetup
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
   } else if (expr.type === "RegularFunctionCall") {
     const e = expr as WasmRegularFunctionCall;
     return `(call $${e.name} ${generateArgString(e.args)})`;
-  } else if (expr.type === "Const") {
-    const e = expr as WasmConst;
+  } else if (expr.type === "IntegerConst") {
+    const e = expr as WasmIntegerConst;
     return `(${e.wasmVariableType}.const ${e.value.toString()})`;
   } else if (expr.type === "LocalGet") {
     const e = expr as WasmLocalGet;
@@ -40,7 +40,7 @@ export function generateExprStr(expr: WasmExpression): string {
     const e = expr as WasmBinaryExpression;
     //TODO: support different op types other than i32
     return `(${e.instruction} ${generateExprStr(e.leftExpr)} ${generateExprStr(
-      e.rightExpr,
+      e.rightExpr
     )})`;
   } else if (expr.type === "LocalSet" || expr.type === "GlobalSet") {
     return generateStatementStr(expr);
@@ -58,7 +58,7 @@ export function generateExprStr(expr: WasmExpression): string {
     const n = expr as WasmMemoryLoad;
     return `(${getWasmMemoryLoadInstruction(
       n.wasmVariableType,
-      n.numOfBytes,
+      n.numOfBytes
     )}${getPreStatementsStr(n.preStatements)} ${generateExprStr(n.addr)})`;
   } else if (expr.type === "MemoryStore") {
     return generateStatementStr(expr);
@@ -66,8 +66,8 @@ export function generateExprStr(expr: WasmExpression): string {
     console.assert(
       false,
       `WAT GENERATOR ERROR: Unhandled case during WAT node to string conversion\n${JSON.stringify(
-        expr,
-      )}`,
+        expr
+      )}`
     );
   }
 }

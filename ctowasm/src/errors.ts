@@ -32,18 +32,44 @@ export class SourceCodeError extends Error {
 
 export class ProcessingError extends SourceCodeError {
   constructor(message: string, sourceCode?: string, position?: Position) {
-    super(message, sourceCode, position);
+    super(`Processing Error: ${message}`, sourceCode, position);
   }
 }
 
 export class SemanticAnalysisError extends SourceCodeError {
   constructor(message: string, sourceCode?: string, position?: Position) {
-    super(message, sourceCode, position);
+    super(`Semantic Analysis Error: ${message}`, sourceCode, position);
   }
 }
 
 export class TranslationError extends Error {
   constructor(message: string) {
-    super("TRANSLATION ERROR\n" + message);
+    super("Translation Error: " + message);
   }
+}
+
+export class WatGeneratorError extends Error {
+  constructor(message: string) {
+    super("WAT Generator Error: " + message);
+  }
+}
+
+/**
+ * Convert aribtrary object to json string. Needed to support bigints.
+ */
+export function toJson(obj: any) {
+  function recursionHelper(obj: any) {
+    if (typeof obj !== "object" && !Array.isArray(obj)) {
+      return;
+    }
+    for (const fieldName of Object.keys(obj)) {
+      if (typeof obj[fieldName] === "bigint") {
+        obj[fieldName] = obj[fieldName].toString(); // stringify bigints first
+      } else {
+        recursionHelper(obj[fieldName])
+      }
+    }
+  }
+  recursionHelper(obj);
+  return JSON.stringify(obj);
 }

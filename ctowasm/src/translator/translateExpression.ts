@@ -22,12 +22,17 @@ import {
   WasmSymbolTable,
 } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
-import { WasmModule, WasmExpression, WasmConst } from "~src/wasm-ast/core";
+import {
+  WasmModule,
+  WasmExpression,
+  WasmIntegerConst,
+} from "~src/wasm-ast/core";
 import { Constant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import translateBinaryExpression from "~src/translator/translateBinaryExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
+import { toJson } from "~src/errors";
 
 /**
  * Evaluates a given C expression and returns the corresponding WASM expression.
@@ -35,7 +40,7 @@ import translateFunctionCall from "~src/translator/translateFunctionCall";
 export default function translateExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  expr: Expression,
+  expr: Expression
 ): WasmExpression {
   if (expr.type === "Constant") {
     const n = expr as Constant;
@@ -53,7 +58,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n,
+      n
     );
     return {
       type: "MemoryLoad",
@@ -68,7 +73,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
@@ -81,7 +86,7 @@ export default function translateExpression(
             type: "BinaryExpression",
             instruction: unaryOperatorToInstruction(
               n.operator,
-              n.variable.variableType,
+              n.variable.variableType
             ),
             wasmVariableType: memoryAccessDetails.wasmVariableType,
             leftExpr: {
@@ -89,10 +94,10 @@ export default function translateExpression(
               ...memoryAccessDetails,
             } as WasmMemoryLoad,
             rightExpr: {
-              type: "Const",
+              type: "IntegerConst",
               wasmVariableType: WASM_ADDR_TYPE,
-              value: 1,
-            } as WasmConst,
+              value: 1n,
+            } as WasmIntegerConst,
           } as WasmBinaryExpression,
           ...memoryAccessDetails,
         },
@@ -105,7 +110,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
@@ -113,7 +118,7 @@ export default function translateExpression(
         type: "BinaryExpression",
         instruction: unaryOperatorToInstruction(
           n.operator,
-          n.variable.variableType,
+          n.variable.variableType
         ),
         wasmVariableType: memoryAccessDetails.wasmVariableType,
         leftExpr: {
@@ -121,10 +126,10 @@ export default function translateExpression(
           ...memoryAccessDetails,
         },
         rightExpr: {
-          type: "Const",
+          type: "IntegerConst",
           wasmVariableType: "i32",
-          value: 1,
-        },
+          value: 1n,
+        } as WasmIntegerConst,
       } as WasmBinaryExpression,
       preStatements: [
         {
@@ -140,7 +145,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     return {
       type: "MemoryLoad",
@@ -156,9 +161,9 @@ export default function translateExpression(
   } else {
     console.assert(
       false,
-      `WASM TRANSLATION ERROR: Unhandled C expression node\n${JSON.stringify(
-        expr,
-      )}`,
+      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(
+        expr
+      )}`
     );
   }
 }

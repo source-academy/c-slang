@@ -19,7 +19,7 @@ import {
 } from "~src/c-ast/unaryExpression";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
-import { ProcessingError } from "~src/errors";
+import { ProcessingError, toJson } from "~src/errors";
 import {
   evaluateConstantBinaryExpression,
   processConstant,
@@ -153,7 +153,7 @@ export function visit(
     const n = node as Expression;
     // sanity check - make sure no expressions are missed as each need their variableType field set.
     throw new ProcessingError(
-      `Processing Error: Unhandled expression: ${JSON.stringify(n)}`,
+      `Unhandled expression: ${toJson(n)}`,
       sourceCode,
       n.position,
     );
