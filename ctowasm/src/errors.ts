@@ -59,7 +59,7 @@ export class WatGeneratorError extends Error {
  */
 export function toJson(obj: any) {
   function recursionHelper(obj: any) {
-    if (typeof obj !== "object" && !Array.isArray(obj)) {
+    if (typeof obj !== "object" && !Array.isArray(obj) || obj === null) {
       return;
     }
     for (const fieldName of Object.keys(obj)) {

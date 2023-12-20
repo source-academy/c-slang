@@ -294,7 +294,7 @@ const testLog = {
     unsigned_ints_1: {
       title: "Test unsigned int types 1",
       expectedCode: false,
-      expectedValues: ["a", 10, 20, 4294967286, -10, 100, 4294967296, 90],
+      expectedValues: ["a", 10, 20, 4294967286, -10, 100, 4294967296, 18446744073709551606n ,-10, 90],
     },
   },
 };

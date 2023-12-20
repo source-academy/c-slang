@@ -16,7 +16,7 @@ export interface ImportedFunction {
   name: string; // function name
   params: VariableType[]; // C types of parameters for the function
   return: VariableType | null;
-  jsFunction: Function // the actual JS function that is called
+  jsFunction: Function; // the actual JS function that is called
 }
 
 export interface WasmOriginalImportedFunction extends ImportedFunction {
@@ -31,10 +31,7 @@ export function setPrintFunction(printFunc: (str: string) => void) {
   print = printFunc;
 }
 
-export const wasmModuleImports: Record<
-  string,
-  WasmOriginalImportedFunction
-> = {
+export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   // prints a signed int (4 bytes and smaller)
   print_int: {
     type: "original",
@@ -59,7 +56,14 @@ export const wasmModuleImports: Record<
     name: "print_int_unsigned",
     params: ["unsigned int"], // i32 here is a the address of the int to print
     return: null,
-    jsFunction: (val: number) => print(val.toString())
+    jsFunction: (val: number) => {
+      // need to intepret val as unsigned 4 byte int
+      if (val < 0) {
+        print((val + Math.pow(2, 32)).toString());
+      } else {
+        print(val.toString());
+      }
+    },
   },
   // prints a char (signed) as a character
   print_char: {
@@ -88,7 +92,7 @@ export const wasmModuleImports: Record<
       } else {
         print(long.toString());
       }
-    }, 
+    },
   },
   // print an usigned long type (8 bytes)
   print_long_unsigned: {
@@ -97,7 +101,14 @@ export const wasmModuleImports: Record<
     name: "print_long_unsigned",
     params: ["unsigned long"], // i32 here is a the address of the int to print
     return: null,
-    jsFunction: (val: bigint) => print(val.toString())
+    jsFunction: (val: bigint) => {
+      // need to intepret val as unsigned 8 byte unsigned int
+      if (val < 0) {
+        print((val + 2n ** 64n).toString());
+      } else {
+        print(val.toString());
+      }
+    },
   },
 };
 
