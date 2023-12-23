@@ -115,10 +115,10 @@ export function convertVariableToByteStr(
  */
 function convertWasmNumberToByteStr(num: WasmConst, variableType: VariableType) {
   if (num.type === "IntegerConst") {
-    convertIntegerToByteString(num.value, getVariableSize(variableType));
+    return convertIntegerToByteString(num.value, getVariableSize(variableType));
   } else {
     // need to get a float byte string
-    convertFloatToByteString(num.value, variableType as FloatVariableType);
+    return convertFloatToByteString(num.value, variableType as FloatVariableType);
   }
 }
 
