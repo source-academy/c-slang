@@ -25,14 +25,15 @@ import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
 import {
   WasmModule,
   WasmExpression,
-  WasmIntegerConst,
 } from "~src/wasm-ast/core";
-import { Constant } from "~src/c-ast/constants";
+import { Constant, IntegerConstant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import translateBinaryExpression from "~src/translator/translateBinaryExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 import { toJson } from "~src/errors";
+import { isConstant } from "~src/common/utils";
+import { WasmIntegerConst } from "~src/wasm-ast/consts";
 
 /**
  * Evaluates a given C expression and returns the corresponding WASM expression.
@@ -42,7 +43,7 @@ export default function translateExpression(
   symbolTable: WasmSymbolTable,
   expr: Expression
 ): WasmExpression {
-  if (expr.type === "Constant") {
+  if (isConstant(expr)) {
     const n = expr as Constant;
     return convertConstantToWasmConst(n);
   } else if (expr.type === "FunctionCall") {
@@ -161,9 +162,7 @@ export default function translateExpression(
   } else {
     console.assert(
       false,
-      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(
-        expr
-      )}`
+      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(expr)}`
     );
   }
 }

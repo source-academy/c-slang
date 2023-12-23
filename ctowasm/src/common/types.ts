@@ -12,8 +12,8 @@ export type BinaryOperator =
 
 export type UnaryOperator = "++" | "--";
 
-export type VariableType = IntegerType;
-export type IntegerType = SignedIntegerType | UnsignedIntegerType;
+export type VariableType = IntegerVariableType | FloatVariableType;
+export type IntegerVariableType = SignedIntegerType | UnsignedIntegerType;
 export type UnsignedIntegerType =
   | "unsigned char"
   | "unsigned short"
@@ -24,3 +24,5 @@ export type SignedIntegerType =
   | "signed short"
   | "signed int"
   | "signed long";
+
+export type FloatVariableType = "float" | "double";

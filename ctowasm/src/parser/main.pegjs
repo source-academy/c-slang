@@ -232,16 +232,19 @@ multi_line_comment
 //=========== Constants =============
 
 constant
-	= integer_constant
+	= floating_constant // must come first as floating and integer constant both can start with digit, but float more specific
+  / integer_constant
   / character_constant
     
-integer_constant
-	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U") { return generateNode("Constant", { value: BigInt(value), suffix: suffix.toLowerCase() }); } 
-  / value:integer { return generateNode("Constant", { value: BigInt(value) } ); }
+floating_constant
+  = value:decimal_floating_constant suffix:("f" / "F" / "l" / "L") { return generateNode("FloatConstant", { value: Number(value), suffix: suffix === "f" || suffix === "F" ? "f" : undefined }); }
 
+integer_constant
+	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U") { return generateNode("IntegerConstant", { value: BigInt(value), suffix: suffix.toLowerCase() }); } 
+  / value:integer { return generateNode("IntegerConstant", { value: BigInt(value) } ); }
 
 character_constant
-  = "'" value:c_char "'" {return generateNode("Constant", { value }); } // value should already be a number
+  = "'" value:c_char "'" {return generateNode("IntegerConstant", { value }); } // value should already be a number
 
 //=========== Characters ============
 
@@ -323,3 +326,16 @@ statement_end
 
 integer
   = signage:("-" / "") value:$[0-9]+ { return signage + value }
+
+// =============== Floating constant related rules ===============
+
+decimal_floating_constant
+  = fractional_constant
+  / scientific_notation_floating_constant
+
+scientific_notation_floating_constant
+  = $([0-9]+ ("E" / "e") ("+" / "-" / "") [0-9]+)
+
+fractional_constant
+  = $([0-9]* "." $[0-9]+)
+

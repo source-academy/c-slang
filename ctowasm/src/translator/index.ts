@@ -11,7 +11,7 @@ import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmModule } from "~src/wasm-ast/core";
 import { CAstRoot } from "~src/c-ast/core";
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
-import { Constant } from "~src/c-ast/constants";
+import { IntegerConstant } from "~src/c-ast/constants";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize } from "~src/common/utils";
 import {
@@ -26,7 +26,7 @@ import translateFunction from "~src/translator/translateFunction";
 
 export default function translate(
   CAstRoot: CAstRoot,
-  imports: Record<string, ImportedFunction> = {},
+  imports: Record<string, ImportedFunction> = {}
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -57,7 +57,7 @@ export default function translate(
         wasmVarType: variableTypeToWasmType[n.variableType],
         initializerValue:
           n.type === "Initialization"
-            ? convertConstantToWasmConst(n.value as Constant)
+            ? convertConstantToWasmConst(n.value as IntegerConstant)
             : undefined,
       };
       addToSymbolTable(rootSymbolTable, globalVariable);
@@ -81,7 +81,7 @@ export default function translate(
         initializerList:
           n.type === "ArrayInitialization"
             ? (n as ArrayInitialization).elements.map((element) =>
-                convertConstantToWasmConst(element as Constant),
+                convertConstantToWasmConst(element as IntegerConstant)
               )
             : undefined,
       };
@@ -93,7 +93,7 @@ export default function translate(
   setPseudoRegisters(
     wasmRoot,
     wasmRoot.functions["main"].sizeOfLocals,
-    rootSymbolTable.currOffset.value,
+    rootSymbolTable.currOffset.value
   );
 
   return wasmRoot;

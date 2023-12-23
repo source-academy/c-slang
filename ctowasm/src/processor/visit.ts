@@ -9,7 +9,7 @@ import {
 } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
-import { Constant } from "~src/c-ast/constants";
+import { Constant, IntegerConstant } from "~src/c-ast/constants";
 import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
 import { SymbolTable } from "~src/c-ast/symbolTable";
@@ -18,7 +18,7 @@ import {
   PrefixExpression,
 } from "~src/c-ast/unaryExpression";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
-import { getVariableSize } from "~src/common/utils";
+import { getVariableSize, isConstant } from "~src/common/utils";
 import { ProcessingError, toJson } from "~src/errors";
 import {
   evaluateConstantBinaryExpression,
@@ -38,7 +38,7 @@ export function visit(
   sourceCode: string,
   node: any,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition,
+  enclosingFunc?: FunctionDefinition
 ) {
   if (
     !(
@@ -83,9 +83,9 @@ export function visit(
       visit(sourceCode, n.value, symbolTable, enclosingFunc);
     } else {
       // this intialization is global. Needs to be a constant expression, which we can evaluate now
-      if (n.value.type === "BinaryExpression" || n.value.type === "Constant") {
+      if (n.value.type === "BinaryExpression" || isConstant(n.value)) {
         n.value = evaluateConstantBinaryExpression(
-          n.value as BinaryExpression | Constant,
+          n.value as BinaryExpression | Constant
         );
       }
     }
@@ -97,7 +97,7 @@ export function visit(
       enclosingFunc.sizeOfLocals +=
         getVariableSize(n.variableType) * n.numElements;
       n.elements.forEach((e) =>
-        visit(sourceCode, e, symbolTable, enclosingFunc),
+        visit(sourceCode, e, symbolTable, enclosingFunc)
       );
     } else {
       // this intialization is global. Needs to be a constant expression (assumed), which we can evaluate now
@@ -105,14 +105,14 @@ export function visit(
       for (const element of n.elements) {
         evaluatedElements.push(
           evaluateConstantBinaryExpression(
-            element as BinaryExpression | Constant,
-          ),
+            element as BinaryExpression | IntegerConstant
+          )
         );
       }
       n.elements = evaluatedElements;
     }
     return;
-  } else if (node.type === "Constant") {
+  } else if (isConstant(node)) {
     processConstant(node as Constant);
     return;
   } else if (node.type === "BinaryExpression") {
@@ -155,7 +155,7 @@ export function visit(
     throw new ProcessingError(
       `Unhandled expression: ${toJson(n)}`,
       sourceCode,
-      n.position,
+      n.position
     );
   }
 

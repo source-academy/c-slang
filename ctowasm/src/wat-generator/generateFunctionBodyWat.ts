@@ -1,5 +1,6 @@
 import { WatGeneratorError, toJson } from "~src/errors";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmConst } from "~src/wasm-ast/consts";
 import {
   WasmSelectStatement,
   WasmLoop,
@@ -7,7 +8,6 @@ import {
   WasmBranch,
   WasmBranchIf,
 } from "~src/wasm-ast/control";
-import { WasmIntegerConst } from "~src/wasm-ast/core";
 import {
   WasmFunctionBodyLine,
   WasmFunctionCall,
@@ -119,8 +119,8 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   } else if (node.type === "RegularFunctionCall") {
     const e = node as WasmRegularFunctionCall;
     return `(call $${e.name} ${generateArgString(e.args)})`;
-  } else if (node.type === "IntegerConst") {
-    const e = node as WasmIntegerConst;
+  } else if (node.type === "IntegerConst" || node.type === "FloatConst") {
+    const e = node as WasmConst;
     return `(${e.wasmVariableType}.const ${e.value.toString()})`;
   } else if (node.type === "LocalGet") {
     const e = node as WasmLocalGet;

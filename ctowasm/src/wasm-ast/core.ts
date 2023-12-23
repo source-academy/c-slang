@@ -71,12 +71,4 @@ export interface WasmExpression extends WasmAstNode {
   wasmVariableType: WasmType; // the type of this expression
 }
 
-export interface WasmIntegerConst extends WasmExpression {
-  type: "IntegerConst";
-  value: bigint;
-}
 
-export interface WasmFloatConst extends WasmExpression {
-  type: "FloatConst";
-  value: number;
-}

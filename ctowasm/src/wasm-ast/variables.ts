@@ -5,10 +5,10 @@
 import { WasmType } from "~src/wasm-ast/types";
 import {
   WasmAstNode,
-  WasmIntegerConst,
   WasmExpression,
   WasmStatement,
 } from "~src/wasm-ast/core";
+import { WasmConst } from "~src/wasm-ast/consts";
 
 export interface WasmVariable extends WasmAstNode {
   name: string;
@@ -21,7 +21,7 @@ export interface WasmVariable extends WasmAstNode {
  */
 export interface WasmGlobalVariable extends WasmVariable {
   type: "GlobalVariable";
-  initializerValue?: WasmIntegerConst;
+  initializerValue?: WasmConst;
 }
 
 export interface WasmGlobalSet extends WasmAstNode {

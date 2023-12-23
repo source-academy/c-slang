@@ -54,6 +54,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
   }
 
   // add all the global variables (in linear memory) declarations
+  // TODO: check out what to do when not initialized
   for (const globalVariableName of Object.keys(module.globals)) {
     const globalVariable = module.globals[globalVariableName];
     if (

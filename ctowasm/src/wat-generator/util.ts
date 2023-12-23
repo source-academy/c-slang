@@ -2,12 +2,12 @@
  * Utility functions for WAT generation.
  */
 
+import { FloatVariableType, IntegerVariableType, VariableType } from "~src/common/types";
+import { getVariableSize } from "~src/common/utils";
+import { WasmConst } from "~src/wasm-ast/consts";
+import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import {
-  WasmIntegerConst,
-  WasmExpression,
-  WasmStatement,
-} from "~src/wasm-ast/core";
-import {
+  MemoryVariableByteSize,
   WasmDataSegmentArray,
   WasmDataSegmentVariable,
 } from "~src/wasm-ast/memory";
@@ -100,12 +100,12 @@ export function convertVariableToByteStr(
   variable: WasmDataSegmentArray | WasmDataSegmentVariable
 ) {
   if (variable.type === "DataSegmentVariable") {
-    return convertWasmNumberToByteStr(variable.initializerValue, variable.size);
+    return convertWasmNumberToByteStr(variable.initializerValue, variable.cVarType);
   }
   // DataSegmentArray
   let finalStr = "";
   variable.initializerList.forEach((element) => {
-    finalStr += convertWasmNumberToByteStr(element, variable.elementSize);
+    finalStr += convertWasmNumberToByteStr(element, variable.cVarType);
   });
   return finalStr;
 }
@@ -113,27 +113,55 @@ export function convertVariableToByteStr(
 /**
  * Converts a wasm number to a bytes str with @size bytes
  */
-export function convertWasmNumberToByteStr(
-  num: WasmIntegerConst,
-  size: number
-) {
-  let val = num.value;
+function convertWasmNumberToByteStr(num: WasmConst, variableType: VariableType) {
+  if (num.type === "IntegerConst") {
+    convertIntegerToByteString(num.value, getVariableSize(variableType));
+  } else {
+    // need to get a float byte string
+    convertFloatToByteString(num.value, variableType as FloatVariableType);
+  }
+}
+
+function convertIntegerToByteString(val: bigint, numOfBytes: MemoryVariableByteSize) {
   if (val < 0) {
     // convert to 2's complement equivalent in terms of positive number
-    val = 2n ** (BigInt(size) * 8n) + val;
+    val = 2n ** (BigInt(numOfBytes) * 8n) + val;
   }
   const hexString = val.toString(16);
   const strSplit = hexString.split("");
   if (hexString.length % 2 == 1) {
-    strSplit.splice(0, 0, "0")
+    strSplit.splice(0, 0, "0");
   }
   let finalStr = "";
   for (let i = strSplit.length - 1; i >= 0; i = i - 2) {
     finalStr += "\\" + strSplit[i - 1] + strSplit[i];
   }
-  const goalSize = size * 3;
+  const goalSize = numOfBytes * 3;
   while (finalStr.length < goalSize) {
     finalStr += "\\00";
   }
   return finalStr;
+}
+
+function convertFloatToByteString(
+  val: number,
+  floatType: FloatVariableType
+) {
+  const buffer = new ArrayBuffer(getVariableSize(floatType));
+  let integerValue;
+  if (floatType === "float") {
+    const float32Arr = new Float32Array(buffer);
+    const uint32Arr= new Uint32Array(buffer);
+    float32Arr[0] = val;
+    integerValue = uint32Arr[0];
+  } else {
+    // 64 bit float
+    const float64Arr = new Float64Array(buffer);
+    const uint64Arr = new BigUint64Array(buffer);
+    float64Arr[0] = val;
+    integerValue = uint64Arr[0];
+  }
+  
+  // convert the integer view of the float variable to a byte string
+  return convertIntegerToByteString(BigInt(integerValue), getVariableSize(floatType));
 }

@@ -3,12 +3,12 @@ import { WasmMemoryLoad, WasmMemorySize } from "~src/wasm-ast/memory";
 import {
   WasmExpression,
   WasmStatement,
-  WasmIntegerConst,
 } from "~src/wasm-ast/core";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmGlobalGet } from "~src/wasm-ast/variables";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
+import { WasmIntegerConst } from "~src/wasm-ast/consts";
 
 /**
  * Collection of constants and functions related to the memory model.

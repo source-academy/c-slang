@@ -18,7 +18,6 @@ import {
 } from "~src/translator/memoryUtil";
 import { WasmType } from "~src/wasm-ast/types";
 import {
-  WasmIntegerConst,
   WasmModule,
   WasmExpression,
 } from "~src/wasm-ast/core";
@@ -38,6 +37,7 @@ import {
   WasmNumericConversionWrapper,
 } from "~src/wasm-ast/misc";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmConst, WasmIntegerConst } from "~src/wasm-ast/consts";
 
 /**
  * Mapping of C variable types to the Wasm variable type used to perform operations on it.
@@ -51,6 +51,8 @@ export const variableTypeToWasmType: Record<VariableType, WasmType> = {
   ["signed int"]: "i32",
   ["unsigned long"]: "i64",
   ["signed long"]: "i64",
+  ["float"]: "f32",
+  ["double"]: "f64"
 };
 
 /**
@@ -58,12 +60,21 @@ export const variableTypeToWasmType: Record<VariableType, WasmType> = {
  */
 export function convertConstantToWasmConst(
   constant: Constant
-): WasmIntegerConst {
-  return {
-    type: "IntegerConst",
-    wasmVariableType: variableTypeToWasmType[constant.variableType],
-    value: constant.value,
-  };
+): WasmConst {
+  if (constant.type === "IntegerConstant") {
+    return {
+      type: "IntegerConst",
+      wasmVariableType: variableTypeToWasmType[constant.variableType],
+      value: constant.value,
+    };
+  } else {
+    return {
+      type: "FloatConst",
+      wasmVariableType: variableTypeToWasmType[constant.variableType],
+      value: constant.value
+    }
+  }
+
 }
 
 /**

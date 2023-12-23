@@ -7,9 +7,9 @@ import {
   WasmAstNode,
   WasmExpression,
   WasmStatement,
-  WasmIntegerConst,
 } from "~src/wasm-ast/core";
 import { VariableType } from "~src/common/types";
+import { WasmConst, WasmIntegerConst } from "~src/wasm-ast/consts";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 
@@ -79,12 +79,12 @@ export interface WasmLocalArray extends WasmMemoryVariable, WasmArrayNode {}
 export interface WasmDataSegmentVariable extends WasmMemoryVariable {
   type: "DataSegmentVariable";
   size: MemoryVariableByteSize;
-  initializerValue?: WasmIntegerConst; // initial value to set this global value to
+  initializerValue?: WasmConst; // initial value to set this global value to
 }
 
 export interface WasmDataSegmentArray
   extends WasmMemoryVariable,
     WasmArrayNode {
   type: "DataSegmentArray";
-  initializerList?: WasmIntegerConst[];
+  initializerList?: WasmConst[];
 }

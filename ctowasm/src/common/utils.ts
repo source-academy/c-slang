@@ -2,6 +2,7 @@
  * Contains a set of common utility functions used across modules.
  */
 
+import { CNode } from "~src/c-ast/core";
 import { VariableType } from "~src/common/types";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 
@@ -17,6 +18,8 @@ const variableSizes: Record<VariableType, MemoryVariableByteSize> = {
   ["signed int"]: 4,
   ["unsigned long"]: 8,
   ["signed long"]: 8,
+  ["float"]: 4,
+  ["double"]: 8,
 };
 
 /**
@@ -44,6 +47,16 @@ export function isUnsignedIntegerType(variableType: VariableType) {
   );
 }
 
-export function isIntegerType(variabeType: VariableType) {
-  return isUnsignedIntegerType(variabeType) || isSignedIntegerType(variabeType);
+export function isFloatType(variableType: VariableType) {
+  return variableType === "float" || variableType === "double";
+}
+
+export function isIntegerType(variableType: VariableType) {
+  return (
+    isUnsignedIntegerType(variableType) || isSignedIntegerType(variableType)
+  );
+}
+
+export function isConstant(node: CNode) {
+  return node.type === "IntegerConstant" || node.type === "FloatConstant";
 }

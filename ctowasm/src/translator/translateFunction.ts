@@ -37,7 +37,7 @@ import {
   getAssignmentNodesValue,
 } from "~src/translator/variableUtil";
 import { WasmSelectStatement } from "~src/wasm-ast/control";
-import { WasmIntegerConst, WasmModule, WasmStatement } from "~src/wasm-ast/core";
+import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
 import {
   WasmSymbolTable,
   WasmFunction,
@@ -53,6 +53,7 @@ import { TranslationError } from "~src/errors";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
+import { WasmIntegerConst } from "~src/wasm-ast/consts";
 
 /**
  * Function for trnslating a C function to a wasm function.
