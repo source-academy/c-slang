@@ -1,6 +1,6 @@
 import { WatGeneratorError, toJson } from "~src/errors";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
-import { WasmConst } from "~src/wasm-ast/consts";
+import { WasmFloatConst, WasmIntegerConst } from "~src/wasm-ast/consts";
 import {
   WasmSelectStatement,
   WasmLoop,
@@ -20,7 +20,10 @@ import {
   WasmMemoryLoad,
   WasmMemoryStore,
 } from "~src/wasm-ast/memory";
-import { WasmBooleanExpression } from "~src/wasm-ast/misc";
+import {
+  WasmBooleanExpression,
+  WasmNumericConversionWrapper,
+} from "~src/wasm-ast/misc";
 import {
   WasmGlobalGet,
   WasmGlobalSet,
@@ -119,9 +122,17 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   } else if (node.type === "RegularFunctionCall") {
     const e = node as WasmRegularFunctionCall;
     return `(call $${e.name} ${generateArgString(e.args)})`;
-  } else if (node.type === "IntegerConst" || node.type === "FloatConst") {
-    const e = node as WasmConst;
+  } else if (node.type === "IntegerConst") {
+    const e = node as WasmIntegerConst;
     return `(${e.wasmVariableType}.const ${e.value.toString()})`;
+  } else if (node.type === "FloatConst") {
+    const e = node as WasmFloatConst;
+    let valueStr = e.value.toString();
+    if (e.value === Infinity) {
+      // special handling for infinity values
+      valueStr = "inf";
+    }
+    return `(${e.wasmVariableType}.const ${valueStr})`;
   } else if (node.type === "LocalGet") {
     const e = node as WasmLocalGet;
     return `(local.get $${e.name}${getPreStatementsStr(e.preStatements)})`;
@@ -131,9 +142,9 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   } else if (node.type === "BinaryExpression") {
     const e = node as WasmBinaryExpression;
     //TODO: support different op types other than i32
-    return `(${e.instruction} ${generateWat(
-      e.leftExpr
-    )} ${generateWat(e.rightExpr)})`;
+    return `(${e.instruction} ${generateWat(e.leftExpr)} ${generateWat(
+      e.rightExpr
+    )})`;
   } else if (node.type === "BooleanExpression") {
     const e = node as WasmBooleanExpression;
     // TODO: need to know type of the variable to set the correct instruction
@@ -149,11 +160,12 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
     return `(${getWasmMemoryLoadInstruction(
       n.wasmVariableType,
       n.numOfBytes
-    )}${getPreStatementsStr(n.preStatements)} ${generateWat(
-      n.addr
-    )})`;
+    )}${getPreStatementsStr(n.preStatements)} ${generateWat(n.addr)})`;
   } else if (node.type === "MemoryStore") {
     return generateWat(node);
+  } else if (node.type === "NumericWrapper") {
+    const n = node as WasmNumericConversionWrapper;
+    return `(${n.instruction} ${generateWat(n.expr)})`;
   } else {
     throw new WatGeneratorError(`Unhandled WAT AST node: ${toJson(node)}`);
   }

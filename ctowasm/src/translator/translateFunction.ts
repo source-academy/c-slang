@@ -34,7 +34,7 @@ import {
   getArrayConstantIndexElementAddr,
   getVariableAddr,
   getMemoryAccessDetails,
-  getAssignmentNodesValue,
+  getTypeConversionWrapper,
 } from "~src/translator/variableUtil";
 import { WasmSelectStatement } from "~src/wasm-ast/control";
 import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
@@ -65,7 +65,7 @@ import { WasmIntegerConst } from "~src/wasm-ast/consts";
 export default function translateFunction(
   wasmRoot: WasmModule,
   Cfunction: FunctionDefinition,
-  rootSymbolTable: WasmSymbolTable,
+  rootSymbolTable: WasmSymbolTable
 ) {
   const symbolTable = createSymbolTable(rootSymbolTable, true); // reset the offset counter to start symbol table offset fresh for each new function
 
@@ -117,13 +117,13 @@ export default function translateFunction(
   function visit(
     symbolTable: WasmSymbolTable,
     node: BlockItem,
-    statementBody: WasmStatement[],
+    statementBody: WasmStatement[]
   ) {
     if (node.type === "Block") {
       const n = node as Block;
       const newSymbolTable = createSymbolTable(symbolTable);
       n.children.forEach((child) =>
-        visit(newSymbolTable, child, statementBody),
+        visit(newSymbolTable, child, statementBody)
       );
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement;
@@ -159,10 +159,10 @@ export default function translateFunction(
         statementBody.push({
           type: "MemoryStore",
           addr: getVariableAddr(symbolTable, v.name),
-          value: getAssignmentNodesValue(
-            n.variableType,
+          value: getTypeConversionWrapper(
             node.value.variableType,
-            translateExpression(wasmRoot, symbolTable, node.value),
+            n.variableType,
+            translateExpression(wasmRoot, symbolTable, node.value)
           ),
           wasmVariableType: variableTypeToWasmType[n.variableType],
           numOfBytes: getVariableSize(n.variableType),
@@ -194,12 +194,12 @@ export default function translateFunction(
               symbolTable,
               n.name,
               i,
-              getVariableSize(n.variableType),
+              getVariableSize(n.variableType)
             ),
-            value: getAssignmentNodesValue(
-              n.variableType,
+            value: getTypeConversionWrapper(
               n.elements[i].variableType,
-              translateExpression(wasmRoot, symbolTable, n.elements[i]),
+              n.variableType,
+              translateExpression(wasmRoot, symbolTable, n.elements[i])
             ),
             wasmVariableType: variableTypeToWasmType[n.variableType],
             numOfBytes: getVariableSize(n.variableType),
@@ -211,15 +211,15 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable,
+        n.variable
       );
       statementBody.push({
         type: "MemoryStore",
         wasmVariableType: variableTypeToWasmType[n.variable.variableType],
-        value: getAssignmentNodesValue(
-          n.variable.variableType,
+        value: getTypeConversionWrapper(
           n.value.variableType,
-          translateExpression(wasmRoot, symbolTable, n.value),
+          n.variable.variableType,
+          translateExpression(wasmRoot, symbolTable, n.value)
         ),
         ...memoryAccessDetails,
       });
@@ -227,7 +227,7 @@ export default function translateFunction(
       statementBody.push(
         translateFunctionCall(wasmRoot, symbolTable, node) as
           | WasmFunctionCallStatement
-          | WasmRegularFunctionCallStatement,
+          | WasmRegularFunctionCallStatement
       );
     } else if (
       node.type === "PrefixExpression" ||
@@ -238,7 +238,7 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable,
+        n.variable
       );
       statementBody.push({
         type: "MemoryStore",
@@ -247,7 +247,7 @@ export default function translateFunction(
           type: "BinaryExpression",
           instruction: unaryOperatorToInstruction(
             n.operator,
-            n.variable.variableType,
+            n.variable.variableType
           ),
           wasmVariableType: memoryAccessDetails.wasmVariableType,
           leftExpr: {
@@ -272,7 +272,7 @@ export default function translateFunction(
         condition: translateExpression(
           wasmRoot,
           symbolTable,
-          n.ifBlock.condition,
+          n.ifBlock.condition
         ),
         actions,
         elseStatements: [],
@@ -286,7 +286,7 @@ export default function translateFunction(
           condition: translateExpression(
             wasmRoot,
             symbolTable,
-            elseIfBlock.condition,
+            elseIfBlock.condition
           ),
           actions,
           elseStatements: [],
@@ -365,7 +365,7 @@ export default function translateFunction(
           expr: translateExpression(
             wasmRoot,
             conditionSymbolTable,
-            n.condition,
+            n.condition
           ),
         } as WasmBooleanExpression,
       });
@@ -392,9 +392,7 @@ export default function translateFunction(
     } else if (isExpression(node)) {
       // explictly ignore expressions as they do not affect final code at runtime
     } else {
-      throw new TranslationError(
-        `Unhandled AST node: ${node}`,
-      );
+      throw new TranslationError(`Unhandled AST node: ${node}`);
     }
   }
 

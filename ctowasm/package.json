@@ -47,6 +47,7 @@
     "test": "yarn build && NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "dependencies": {
+    "bignumber.js": "^9.1.2",
     "peggy": "^3.0.2",
     "wabt": "^1.0.32"
   }

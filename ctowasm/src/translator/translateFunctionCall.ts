@@ -8,7 +8,7 @@ import {
   getFunctionStackFrameTeardownStatements,
 } from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
-import { getAssignmentNodesValue } from "~src/translator/variableUtil";
+import { getTypeConversionWrapper } from "~src/translator/variableUtil";
 import { WasmModule } from "~src/wasm-ast/core";
 import {
   WasmFunctionCall,
@@ -21,7 +21,7 @@ import {
 export default function translateFunctionCall(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  node: FunctionCall | FunctionCallStatement,
+  node: FunctionCall | FunctionCallStatement
 ) {
   const n = node as FunctionCallStatement;
   if (n.name in wasmRoot.importedFunctions) {
@@ -30,11 +30,11 @@ export default function translateFunctionCall(
     const functionArgs = [];
     for (let i = 0; i < n.args.length; ++i) {
       functionArgs.push(
-        getAssignmentNodesValue(
-          functionBeingCalled.params[i],
+        getTypeConversionWrapper(
           n.args[i].variableType,
-          translateExpression(wasmRoot, symbolTable, n.args[i]),
-        ),
+          functionBeingCalled.params[i],
+          translateExpression(wasmRoot, symbolTable, n.args[i])
+        )
       );
     }
     return {
@@ -50,11 +50,11 @@ export default function translateFunctionCall(
     const functionBeingCalled = wasmRoot.functions[n.name];
     for (let i = 0; i < n.args.length; ++i) {
       functionArgs.push(
-        getAssignmentNodesValue(
-          functionBeingCalled.params[i].cVarType,
+        getTypeConversionWrapper(
           n.args[i].variableType,
-          translateExpression(wasmRoot, symbolTable, n.args[i]),
-        ),
+          functionBeingCalled.params[i].cVarType,
+          translateExpression(wasmRoot, symbolTable, n.args[i])
+        )
       );
     }
     return {
@@ -62,14 +62,14 @@ export default function translateFunctionCall(
       name: n.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         wasmRoot.functions[n.name],
-        functionArgs,
+        functionArgs
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
         wasmRoot.functions[n.name],
         node.type === "FunctionCall" &&
           wasmRoot.functions[n.name].returnVariable !== null
           ? true
-          : false,
+          : false
       ),
     } as WasmFunctionCall | WasmFunctionCallStatement;
   }

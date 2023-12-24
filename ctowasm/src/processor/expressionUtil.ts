@@ -306,10 +306,10 @@ function setVariableTypeOfConstant(constant: Constant) {
   } else {
     // handle float constant
     if (constant.suffix === "f") {
-      return "float";
+      constant.variableType = "float";
     } else {
       // by default all float constants are doubles if "f"/"F" suffix is not specified
-      return "double";
+      constant.variableType = "double";
     }
   }
 }

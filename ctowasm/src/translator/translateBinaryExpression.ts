@@ -6,7 +6,10 @@ import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { BinaryOperator, VariableType } from "~src/common/types";
 import { isUnsignedIntegerType, isSignedIntegerType } from "~src/common/utils";
 import translateExpression from "~src/translator/translateExpression";
-import { variableTypeToWasmType } from "~src/translator/variableUtil";
+import {
+  getTypeConversionWrapper,
+  variableTypeToWasmType,
+} from "~src/translator/variableUtil";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
 import { WasmModule } from "~src/wasm-ast/core";
 import { WasmSymbolTable } from "~src/wasm-ast/functions";
@@ -40,8 +43,17 @@ export default function translateBinaryExpression(
 
   return {
     type: "BinaryExpression",
-    leftExpr: translateExpression(wasmRoot, symbolTable, binaryExpr.leftExpr),
-    rightExpr: translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr),
+    // perform implicit arithmetic type conversions
+    leftExpr: getTypeConversionWrapper(
+      binaryExpr.leftExpr.variableType,
+      binaryExpr.variableType,
+      translateExpression(wasmRoot, symbolTable, binaryExpr.leftExpr)
+    ),
+    rightExpr: getTypeConversionWrapper(
+      binaryExpr.rightExpr.variableType,
+      binaryExpr.variableType,
+      translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr)
+    ),
     instruction: getBinaryExpressionInstruction(
       binaryExpr.operator,
       binaryExpr.variableType
@@ -84,11 +96,11 @@ export function getBinaryExpressionInstruction(
     const instruction = `${variableTypeToWasmType[variableType]}.${op}`;
     if (isOperationWithUnsignedSignedVariant(op)) {
       // these instructions have unsigned vs signed variants for integers
-      if (isUnsignedIntegerType) {
+      if (isUnsignedIntegerType(variableType)) {
         return instruction + "_u";
       }
 
-      if (isSignedIntegerType) {
+      if (isSignedIntegerType(variableType)) {
         return instruction + "_s";
       }
 

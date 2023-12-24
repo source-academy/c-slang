@@ -237,11 +237,10 @@ constant
   / character_constant
     
 floating_constant
-  = value:decimal_floating_constant suffix:("f" / "F" / "l" / "L") { return generateNode("FloatConstant", { value: Number(value), suffix: suffix === "f" || suffix === "F" ? "f" : undefined }); }
+  = value:decimal_floating_constant suffix:("f" / "F" / "l" / "L" / "") { return generateNode("FloatConstant", { value: Number(value), suffix: suffix === "f" || suffix === "F" ? "f" : undefined }); }
 
 integer_constant
-	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U") { return generateNode("IntegerConstant", { value: BigInt(value), suffix: suffix.toLowerCase() }); } 
-  / value:integer { return generateNode("IntegerConstant", { value: BigInt(value) } ); }
+	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U" / "ll" / "LL" / "") { return generateNode("IntegerConstant", { value: BigInt(value), suffix: suffix.length > 0 ? (suffix.toLowerCase() === "ll" ? "l" : suffix.toLowerCase()) : undefined }); } 
 
 character_constant
   = "'" value:c_char "'" {return generateNode("IntegerConstant", { value }); } // value should already be a number
@@ -281,7 +280,8 @@ simple_escape_sequence
 // =========== Misc ================
 
 type 
-	= signed_integer
+	= float_type // check for float type first, due to "long double" needing to be checked before "long" by itself
+  / signed_integer
   / unsigned_integer
 
 signed_integer 
@@ -302,6 +302,10 @@ long_type
   / "long long" 
   / "long int" 
   / "long"
+
+float_type
+  = "float"
+  / ("double" / "long double") { return "double"; }
 
 // identifiers must not start with a digit
 // can only contain letters, digits or underscore
@@ -330,11 +334,12 @@ integer
 // =============== Floating constant related rules ===============
 
 decimal_floating_constant
-  = fractional_constant
-  / scientific_notation_floating_constant
+  = scientific_notation_floating_constant
+  / fractional_constant
 
 scientific_notation_floating_constant
-  = $([0-9]+ ("E" / "e") ("+" / "-" / "") [0-9]+)
+  = $(fractional_constant ("E" / "e") ("+" / "-" / "") [0-9]+)
+  / $([0-9]+ ("E" / "e") ("+" / "-" / "") [0-9]+)
 
 fractional_constant
   = $([0-9]* "." $[0-9]+)

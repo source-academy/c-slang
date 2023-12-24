@@ -5,6 +5,7 @@
 import { VariableType } from "~src/common/types";
 
 import { WasmStatement } from "~src/wasm-ast/core";
+import BigNumber from "bignumber.js";
 import { WasmType } from "~src/wasm-ast/types";
 
 const defaultParentImportedObject = "imports";
@@ -37,7 +38,7 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
     name: "print_int",
-    params: ["signed int"], // i32 here is a the address of the int to print
+    params: ["signed int"],
     return: null,
     jsFunction: (int: number) => {
       // to print the correct int (4 bytes), need to handle signage
@@ -54,7 +55,7 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
     name: "print_int_unsigned",
-    params: ["unsigned int"], // i32 here is a the address of the int to print
+    params: ["unsigned int"],
     return: null,
     jsFunction: (val: number) => {
       // need to intepret val as unsigned 4 byte int
@@ -70,7 +71,7 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
     name: "print_char",
-    params: ["signed char"], // i32 here is a the address of the char to print
+    params: ["signed char"],
     return: null,
     jsFunction: (char: number) => {
       // signed int overflow is undefined, no need to worry about handling that
@@ -82,7 +83,7 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
     name: "print_long",
-    params: ["signed long"], // i32 here is a the address of the int to print
+    params: ["signed long"],
     return: null,
     jsFunction: (long: bigint) => {
       // to prlong the correct long (4 bytes), need to handle signage
@@ -99,7 +100,7 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
     name: "print_long_unsigned",
-    params: ["unsigned long"], // i32 here is a the address of the int to print
+    params: ["unsigned long"],
     return: null,
     jsFunction: (val: bigint) => {
       // need to intepret val as unsigned 8 byte unsigned int
@@ -110,6 +111,43 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
       }
     },
   },
+  print_float: {
+    type: "original",
+    parentImportedObject: defaultParentImportedObject,
+    name: "print_float",
+    params: ["float"],
+    return: null,
+    jsFunction: printFloatCStyle,
+  },
+  print_double: {
+    type: "original",
+    parentImportedObject: defaultParentImportedObject,
+    name: "print_double",
+    params: ["double"],
+    return: null,
+    jsFunction: printFloatCStyle,
+  },
 };
+
+/**
+ * Function for printing float in the c style ("%f" format specifier) - 6 decimal places.
+ */
+function printFloatCStyle(float: number) {
+  if (float === Infinity) {
+    print("inf");
+    return;
+  }
+  /*
+  const buffer = new ArrayBuffer(8);
+  const arr = new Float64Array(buffer);
+  arr[0] = float
+  const arr2 = new Uint8Array(buffer);
+  let hexStr = "0x";
+  for (let i = 0; i < 8; ++i) {
+    hexStr += arr2[i].toString(16);
+  }*/
+  const bigNumber = new BigNumber("0x" + float.toString(16));
+  print(bigNumber.toFixed(6));
+}
 
 export default wasmModuleImports;
