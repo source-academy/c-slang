@@ -103,7 +103,7 @@ return_statement
   / "return" { return generateNode("ReturnStatement"); } // can also return nothing 
 
 assignment
-  = variable:variable_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }
+  = variable:lvalue_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }
 
 array_index_assignment
   = arrayElement:array_element_term _* "=" _* value:expression { return generateNode("ArrayIndexAssignment", { ...arrayElement, value }); }    
@@ -132,6 +132,10 @@ function_call
 function_argument_list
   = expression|.., _* "," _*|
 
+function_return_type
+  = type
+  / "void" { return null; }
+
 initialization
   = array_initialization // match on array first as it is a more specific expression
 	/ type:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: type, name: name, value: value }); }
@@ -144,80 +148,90 @@ list_initializer
   = "{" _* @expression|.., _* "," _* | _* "}"
 
 compound_assignment
-  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("Assignment", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
-
-compound_assignment_expression
-  = variable:variable_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
+  = variable:lvalue_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("Assignment", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 
 expression
   = assignment_expression 
   / compound_assignment_expression
-  / logical_expression // start trying to match on conditional expression since && and || have lowest precedence
+  / logical_or_expression // start trying to match on conditional expression since && and || have lowest precedence
 
 assignment_expression
-  = variable:variable_term _* "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
+  = variable:lvalue_term _* "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
 
-logical_expression 
-  = or_logical_expression
-  / and_logical_expression
+compound_assignment_expression
+  = variable:lvalue_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 
-or_logical_expression
-  = firstExpr:and_logical_expression tail:(_+ @"||" _+ @and_logical_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+// ======= Binary Expressions =======
 
-and_logical_expression
-  = firstExpr:relational_expression tail:(_+ @"&&" _+ @relational_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
-  / relational_expression
+// binary expressions are ordered by operator precedence (top is least precedence, bottom is highest precedence)
+logical_or_expression
+  = firstExpr:logical_and_expression tail:(_* @"||" _* @logical_and_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / logical_and_expression
 
-relational_expression
-  = equality_relational_expression
-  / relative_relational_expression
+logical_and_expression
+  = firstExpr:bitwise_or_expression tail:(_* @"&&" _* @bitwise_or_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / bitwise_or_expression
+
+bitwise_or_expression
+  = firstExpr:bitwise_xor_expression tail:(_* @("|") _* @bitwise_xor_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / bitwise_xor_expression
+
+bitwise_xor_expression 
+  = firstExpr:bitwise_and_expression tail:(_* @("^") _* @bitwise_and_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / bitwise_and_expression
+
+bitwise_and_expression 
+  = firstExpr:equality_relational_expression tail:(_* @("&") _* @equality_relational_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / equality_relational_expression
 
 equality_relational_expression
-  = firstExpr:relative_relational_expression _* tail:(_* @("!="/"==") _* @relative_relational_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  = firstExpr:relative_relational_expression tail:(_* @("!="/"==") _* @relative_relational_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / relative_relational_expression
 
 relative_relational_expression
-  = firstExpr:arithmetic_expression _* tail:(_* @("<="/">="/"<"/">") _* @arithmetic_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
-  / arithmetic_expression
+  = firstExpr:bitwise_shift_expression tail:(_* @("<="/">="/"<"/">") _* @bitwise_shift_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / bitwise_shift_expression
 
-arithmetic_expression
-  = add_subtract_expression // match on add and subtract first, to ensure multiply/divide precedence 
-  / multiply_divide_expression
+bitwise_shift_expression
+  = firstExpr:add_subtract_expression tail:(_* @("<<" / ">>") _* @add_subtract_expression)+ { return createBinaryExpressionNode(firstExpr, tail); } 
+  / add_subtract_expression
 
 add_subtract_expression
-  = firstExpr:multiply_divide_expression tail:(_+ @[+\-] _+ @multiply_divide_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
-  
+  = firstExpr:multiply_divide_expression tail:(_* @[+\-] _* @multiply_divide_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / multiply_divide_expression
+
 multiply_divide_expression
-  = firstExpr:term tail:(_+ @[%/*] _+ @multiply_divide_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
-  / term
+  = firstExpr:prefix_expression tail:(_* @[%/*] _* @prefix_expression)+ { return createBinaryExpressionNode(firstExpr, tail); }
+  / prefix_expression // as the last binary expression (highest precedence), this rule is needed
 
-term
-  = prefix_expression
-  / postfix_expression // must come before variable term as this is more specific
-  / "(" @expression ")"
-	/ constant
-  / function_call
-  / variable_term
+prefix_expression 
+  = prefix_unary_expression
+  / postfix_expression
 
-variable_term
+postfix_expression
+  = postfix_unary_expression
+  / function_call // function call is considerd a "postfix expression" in terms of precedence
+  / primary_expression
+
+prefix_unary_expression
+  = operator:("++" / "--") variable:lvalue_term { return generateNode("PrefixArithmeticExpression", { operator, variable }); }
+
+postfix_unary_expression
+  = variable:lvalue_term operator:("--" / "++") { return generateNode("PostfixArithmeticExpression", { operator, variable }); } 
+
+primary_expression
+  = lvalue_term 
+  / constant
+  / "(" _* @expression _* ")"
+
+// lvalue expressions
+lvalue_term
   = array_element_term
   / name:identifier { return generateNode("VariableExpr", { name }); } // for variables
 
 // array element used as an experssion. like a[2]
 array_element_term
   = name:identifier _* "[" _* index:expression _* "]" { return generateNode("ArrayElementExpr", { name, index }); } 
-
-prefix_expression
-  = "--" variable:variable_term { return generateNode("PrefixExpression", { operator: "--", variable: variable }); }
-  / "++" variable:variable_term { return generateNode("PrefixExpression", { operator: "++", variable: variable }); }
-
-postfix_expression
-  = variable:variable_term "--" { return generateNode("PostfixExpression", { operator: "--", variable: variable }); } 
-  / variable:variable_term "++" { return generateNode("PostfixExpression", { operator: "++", variable: variable }); }
-
-
-function_return_type
-  = type
-  / "void" { return null; }
 
 single_line_comment
 	= single_line_comment_body "\n" // this rule must be first as it is more specific

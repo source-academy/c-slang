@@ -345,6 +345,12 @@ function determineVariableTypeOfBinaryExpression(
   } else if (isFloatType(binaryExpression.rightExpr.variableType)) {
     return binaryExpression.rightExpr.variableType;
   } else {
+    // both types are integers
+    // special handling for bitwise shift, which does not follow usual arithmetic implicit conversion rules
+    if (binaryExpression.operator === "<<" || binaryExpression.operator === ">>") {
+      return binaryExpression.leftExpr.variableType;
+    }
+    
     if (
       getVariableSize(binaryExpression.rightExpr.variableType) >
       getVariableSize(binaryExpression.leftExpr.variableType)

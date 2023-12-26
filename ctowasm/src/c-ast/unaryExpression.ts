@@ -7,14 +7,14 @@ import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { VariableExpr } from "~src/c-ast/variable";
 import { UnaryOperator } from "~src/common/types";
 
-export interface PrefixExpression extends Expression {
-  type: "PrefixExpression";
+export interface PrefixArithmeticExpression extends Expression {
+  type: "PrefixArithmeticExpression";
   operator: UnaryOperator;
   variable: VariableExpr | ArrayElementExpr; // the variable being prefix operated on
 }
 
-export interface PostfixExpression extends Expression {
-  type: "PostfixExpression";
+export interface PostfixArithmeticExpression extends Expression {
+  type: "PostfixArithmeticExpression";
   operator: UnaryOperator;
   variable: VariableExpr | ArrayElementExpr;
 }

@@ -2,8 +2,8 @@
  * Defines functions for evaluating C AST expression nodes and converting them to corresponding WAT AST nodes.
  */
 import {
-  PrefixExpression,
-  PostfixExpression,
+  PrefixArithmeticExpression,
+  PostfixArithmeticExpression,
 } from "~src/c-ast/unaryExpression";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
@@ -22,10 +22,7 @@ import {
   WasmSymbolTable,
 } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
-import {
-  WasmModule,
-  WasmExpression,
-} from "~src/wasm-ast/core";
+import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 import { Constant, IntegerConstant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
@@ -69,8 +66,8 @@ export default function translateExpression(
   } else if (expr.type === "BinaryExpression") {
     const n = expr as BinaryExpression;
     return translateBinaryExpression(wasmRoot, symbolTable, n);
-  } else if (expr.type === "PrefixExpression") {
-    const n: PrefixExpression = expr as PrefixExpression;
+  } else if (expr.type === "PrefixArithmeticExpression") {
+    const n: PrefixArithmeticExpression = expr as PrefixArithmeticExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
@@ -106,8 +103,8 @@ export default function translateExpression(
       ...memoryAccessDetails,
     };
     return wasmNode;
-  } else if (expr.type === "PostfixExpression") {
-    const n: PostfixExpression = expr as PostfixExpression;
+  } else if (expr.type === "PostfixArithmeticExpression") {
+    const n: PostfixArithmeticExpression = expr as PostfixArithmeticExpression;
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,

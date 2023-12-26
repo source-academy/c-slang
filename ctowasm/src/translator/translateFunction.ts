@@ -3,8 +3,8 @@
  */
 
 import {
-  PrefixExpression,
-  PostfixExpression,
+  PrefixArithmeticExpression,
+  PostfixArithmeticExpression,
 } from "~src/c-ast/unaryExpression";
 import { ArrayInitialization } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
@@ -230,11 +230,13 @@ export default function translateFunction(
           | WasmRegularFunctionCallStatement
       );
     } else if (
-      node.type === "PrefixExpression" ||
-      node.type === "PostfixExpression"
+      node.type === "PrefixArithmeticExpression" ||
+      node.type === "PostfixArithmeticExpression"
     ) {
       // handle the case where a prefix or postfix expression is used as a statement, not an expression.
-      const n = node as PrefixExpression | PostfixExpression;
+      const n = node as
+        | PrefixArithmeticExpression
+        | PostfixArithmeticExpression;
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,

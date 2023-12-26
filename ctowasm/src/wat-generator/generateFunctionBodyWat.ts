@@ -141,7 +141,6 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
     return `(global.get $${e.name}${getPreStatementsStr(e.preStatements)})`;
   } else if (node.type === "BinaryExpression") {
     const e = node as WasmBinaryExpression;
-    //TODO: support different op types other than i32
     return `(${e.instruction} ${generateWat(e.leftExpr)} ${generateWat(
       e.rightExpr
     )})`;

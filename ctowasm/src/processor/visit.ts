@@ -14,8 +14,8 @@ import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
 import { SymbolTable } from "~src/c-ast/symbolTable";
 import {
-  PostfixExpression,
-  PrefixExpression,
+  PostfixArithmeticExpression,
+  PrefixArithmeticExpression,
 } from "~src/c-ast/unaryExpression";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize, isConstant } from "~src/common/utils";
@@ -136,10 +136,10 @@ export function visit(
     n.variableType = n.index.variableType;
     return;
   } else if (
-    node.type === "PrefixExpression" ||
-    node.type === "PostfixExpression"
+    node.type === "PrefixArithmeticExpression" ||
+    node.type === "PostfixArithmeticExpression"
   ) {
-    const n = node as PrefixExpression | PostfixExpression;
+    const n = node as PrefixArithmeticExpression | PostfixArithmeticExpression;
     visit(sourceCode, n.variable, symbolTable, enclosingFunc);
     n.variableType = n.variable.variableType;
     return;

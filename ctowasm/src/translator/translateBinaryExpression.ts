@@ -76,9 +76,14 @@ const binaryOperatorToInstructionMap: Record<BinaryOperator, string> = {
   ">": "gt",
   "&&": "and",
   "||": "or",
+  "&": "and",
+  "|": "or",
+  "<<": "shl",
+  ">>": "shr",
+  "^": "xor"
 };
 
-const signedUnsignedVariantOps = ["div", "rem", "lt", "le", "gt", "ge"];
+const signedUnsignedVariantOps = ["div", "rem", "lt", "le", "gt", "ge", "shr"];
 
 function isOperationWithUnsignedSignedVariant(op: string) {
   return signedUnsignedVariantOps.includes(op);

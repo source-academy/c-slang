@@ -4,11 +4,13 @@
 
 export type RelationalOperator = "<" | "<=" | "!=" | "==" | ">=" | ">";
 export type ArithmeticOperator = "+" | "-" | "/" | "*" | "%";
-export type LogicalOperator = "&&" | "||";
+export type LogicalBinaryOperator = "&&" | "||";
+export type BitwiseBinaryOperator = ">>" | "<<" | "&" | "|" | "^";
 export type BinaryOperator =
   | RelationalOperator
   | ArithmeticOperator
-  | LogicalOperator;
+  | LogicalBinaryOperator
+  | BitwiseBinaryOperator;
 
 export type UnaryOperator = "++" | "--";
 

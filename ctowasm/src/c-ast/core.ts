@@ -3,8 +3,8 @@
  */
 
 import {
-  PostfixExpression,
-  PrefixExpression,
+  PostfixArithmeticExpression,
+  PrefixArithmeticExpression,
 } from "~src/c-ast/unaryExpression";
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
@@ -44,8 +44,8 @@ const expressionNodeTypes = new Set([
   "IntegerConstant",
   "FloatConstant",
   "FunctionCall",
-  "PrefixExpression",
-  "PostfixExpression",
+  "PrefixArithmeticExpression",
+  "PostfixArithmeticExpression",
   "VariableExpr",
 ]);
 
@@ -62,8 +62,8 @@ export type Statement =
   | ArrayInitialization
   | Assignment
   | FunctionCallStatement
-  | PrefixExpression
-  | PostfixExpression;
+  | PrefixArithmeticExpression
+  | PostfixArithmeticExpression;
 
 export type BlockItem =
   | Statement
