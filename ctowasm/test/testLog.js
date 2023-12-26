@@ -371,6 +371,11 @@ const testLog = {
       titel: "bitwise and 1",
       expectedCode: false,
       expectedValues: [0, 8]
+    },
+    bitwise_or_1: {
+      titel: "bitwise or 1",
+      expectedCode: false,
+      expectedValues: [30, 11]
     }
   },
 };
