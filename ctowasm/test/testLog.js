@@ -367,6 +367,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [240, -1, 156, 8589934588],
     },
+    bitwise_and_1: {
+      titel: "bitwise and 1",
+      expectedCode: false,
+      expectedValues: [0, 8]
+    }
   },
 };
 
