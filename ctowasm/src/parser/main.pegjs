@@ -232,8 +232,7 @@ postfix_expression
 prefix_unary_expression
   = operator:("++" / "--") variable:lvalue_term { return generateNode("PrefixArithmeticExpression", { operator, variable }); }
   / "+" @expression //  "+" operator doesnt really do anything, just return expression
-  / "-" expression:expression { return createUnaryExpressionNode(expression, "-"); }
-  / "~" expression:expression { return createUnaryExpressionNode(expression, "~");  }
+  / op:("-" / "~" / "!") expression:expression { return createUnaryExpressionNode(expression, op); }
 
 postfix_unary_expression
   = variable:lvalue_term operator:("--" / "++") { return generateNode("PostfixArithmeticExpression", { operator, variable }); } 

@@ -368,14 +368,19 @@ const testLog = {
       expectedValues: [240, -1, 156, 8589934588],
     },
     bitwise_and_1: {
-      titel: "bitwise and 1",
+      title: "bitwise and 1",
       expectedCode: false,
       expectedValues: [0, 8],
     },
     bitwise_or_1: {
-      titel: "bitwise or 1",
+      title: "bitwise or 1",
       expectedCode: false,
       expectedValues: [30, 11],
+    },
+    bitwise_xor_1: {
+      title: "bitwise xor 1",
+      expectedCode: false,
+      expectedValues: [171817911, -1221345193, -6647, 1123130857],
     },
   },
 };

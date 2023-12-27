@@ -4,6 +4,7 @@
 
 import { UnaryExpression } from "~src/c-ast/unaryExpression";
 import { isFloatType, isIntegerType } from "~src/common/utils";
+import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import { getMaxIntConstant } from "~src/translator/util";
 import { variableTypeToWasmType } from "~src/translator/variableUtil";
@@ -22,7 +23,7 @@ export default function translateUnaryExpression(
   symbolTable: WasmSymbolTable,
   unaryExpr: UnaryExpression
 ): WasmExpression {
-  if (unaryExpr.operator === "~") {
+  if (unaryExpr.operator === "-") {
     if (isIntegerType(unaryExpr.variableType)) {
       const node: WasmBinaryExpression = {
         type: "BinaryExpression",
@@ -48,5 +49,12 @@ export default function translateUnaryExpression(
       isNegated: true
     }
     return node;
+  } else if (unaryExpr.operator === "~") {
+    if (!isIntegerType(unaryExpr.variableType)) {
+      // bitwise complement is undefined on non integral types
+      throw new TranslationError(`Wrong type argument to bitwise-complement - type used: ${unaryExpr.variableType}`)
+    }
+  } else {
+    throw new TranslationError(`translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`);
   }
 }

@@ -11,7 +11,7 @@ import {
   variableTypeToWasmType,
 } from "~src/translator/variableUtil";
 import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
-import { WasmModule } from "~src/wasm-ast/core";
+import { WasmExpression, WasmModule } from "~src/wasm-ast/core";
 import { WasmSymbolTable } from "~src/wasm-ast/functions";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 
@@ -59,7 +59,7 @@ export default function translateBinaryExpression(
       binaryExpr.variableType
     ),
     wasmVariableType: variableTypeToWasmType[binaryExpr.variableType],
-  };
+  } as WasmBinaryExpression;
 }
 
 const binaryOperatorToInstructionMap: Record<BinaryOperator, string> = {
