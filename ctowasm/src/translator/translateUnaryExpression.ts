@@ -8,6 +8,7 @@ import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import { getMaxIntConstant } from "~src/translator/util";
 import { variableTypeToWasmType } from "~src/translator/variableUtil";
+import { WasmIntegerConst } from "~src/wasm-ast/consts";
 import { WasmExpression, WasmModule } from "~src/wasm-ast/core";
 import { WasmBinaryExpression, WasmNegateFloatExpression } from "~src/wasm-ast/expressions";
 import { WasmSymbolTable } from "~src/wasm-ast/functions";
@@ -54,6 +55,19 @@ export default function translateUnaryExpression(
       // bitwise complement is undefined on non integral types
       throw new TranslationError(`Wrong type argument to bitwise-complement - type used: ${unaryExpr.variableType}`)
     }
+
+    const node: WasmBinaryExpression = {
+      type: "BinaryExpression",
+      leftExpr: {
+        type: "IntegerConst",
+        wasmVariableType: variableTypeToWasmType[unaryExpr.variableType],
+        value: -1n
+      } as WasmIntegerConst,
+      rightExpr: translateExpression(wasmRoot, symbolTable, unaryExpr.expression),
+      wasmVariableType: variableTypeToWasmType[unaryExpr.variableType],
+      instruction: `${variableTypeToWasmType[unaryExpr.variableType]}.xor`
+    }
+    return node;
   } else {
     throw new TranslationError(`translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`);
   }

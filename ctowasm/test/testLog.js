@@ -382,6 +382,17 @@ const testLog = {
       expectedCode: false,
       expectedValues: [171817911, -1221345193, -6647, 1123130857],
     },
+    bitwise_complement_1: {
+      title: "Bitwise complement 1",
+      expectedCode: false,
+      expectedValues: [
+        "-124",
+        "-215346",
+        "12311",
+        "4294967063",
+        "18446744073709116381",
+      ],
+    },
   },
 };
 
