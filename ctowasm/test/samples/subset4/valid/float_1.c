@@ -1,8 +1,8 @@
-float a = 1.1;
+float a = -1.1;
 float b = 1.1E10;
 float c = 1e20;
 double d = 120.9;
-double e = 4.5E40;
+double e = -4.5E40;
 
 int main() {
   float f = e;

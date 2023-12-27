@@ -16,6 +16,7 @@ import { SymbolTable } from "~src/c-ast/symbolTable";
 import {
   PostfixArithmeticExpression,
   PrefixArithmeticExpression,
+  UnaryExpression,
 } from "~src/c-ast/unaryExpression";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
 import { getVariableSize, isConstant } from "~src/common/utils";
@@ -149,6 +150,10 @@ export function visit(
     visit(sourceCode, n.value, symbolTable, enclosingFunc);
     n.variableType = n.variable.variableType;
     return;
+  } else if (node.type === "UnaryExpression") {
+    const n = node as UnaryExpression;
+    visit(sourceCode, n.expression, symbolTable, enclosingFunc);
+    n.variableType = n.expression.variableType;
   } else if (isExpression(node)) {
     const n = node as Expression;
     // sanity check - make sure no expressions are missed as each need their variableType field set.

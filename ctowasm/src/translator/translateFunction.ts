@@ -26,7 +26,7 @@ import {
   createSymbolTable,
   getUniqueBlockLabelGenerator,
   getUniqueLoopLabelGenerator,
-  unaryOperatorToInstruction,
+  arithmeticUnaryOperatorToInstruction,
   wasmTypeToSize,
 } from "~src/translator/util";
 import {
@@ -50,7 +50,7 @@ import {
   WasmMemoryLoad,
 } from "~src/wasm-ast/memory";
 import { TranslationError } from "~src/errors";
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
@@ -247,7 +247,7 @@ export default function translateFunction(
         wasmVariableType: memoryAccessDetails.wasmVariableType,
         value: {
           type: "BinaryExpression",
-          instruction: unaryOperatorToInstruction(
+          instruction: arithmeticUnaryOperatorToInstruction(
             n.operator,
             n.variable.variableType
           ),

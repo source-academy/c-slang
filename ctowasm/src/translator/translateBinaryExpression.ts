@@ -10,7 +10,7 @@ import {
   getTypeConversionWrapper,
   variableTypeToWasmType,
 } from "~src/translator/variableUtil";
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmModule } from "~src/wasm-ast/core";
 import { WasmSymbolTable } from "~src/wasm-ast/functions";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
@@ -80,7 +80,7 @@ const binaryOperatorToInstructionMap: Record<BinaryOperator, string> = {
   "|": "or",
   "<<": "shl",
   ">>": "shr",
-  "^": "xor"
+  "^": "xor",
 };
 
 const signedUnsignedVariantOps = ["div", "rem", "lt", "le", "gt", "ge", "shr"];

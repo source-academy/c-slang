@@ -311,13 +311,13 @@ const testLog = {
       title: "Test float and double initialization and arithmetic 1",
       expectedCode: false,
       expectedValues: [
-        "1.100000",
+        "-1.100000",
         "11000000512.000000",
         "100000002004087734272.000000",
         "120.900000",
-        "45000000000000003180425857343460263067648.000000",
-        "inf",
-        "45000000000000003180425857343460263067648.000000",
+        "-45000000000000003180425857343460263067648.000000",
+        "-inf",
+        "-45000000000000003180425857343460263067648.000000",
       ],
     },
     float_overflows_1: {
@@ -370,13 +370,13 @@ const testLog = {
     bitwise_and_1: {
       titel: "bitwise and 1",
       expectedCode: false,
-      expectedValues: [0, 8]
+      expectedValues: [0, 8],
     },
     bitwise_or_1: {
       titel: "bitwise or 1",
       expectedCode: false,
-      expectedValues: [30, 11]
-    }
+      expectedValues: [30, 11],
+    },
   },
 };
 

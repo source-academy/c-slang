@@ -4,6 +4,7 @@
 import {
   PrefixArithmeticExpression,
   PostfixArithmeticExpression,
+  UnaryExpression,
 } from "~src/c-ast/unaryExpression";
 import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
@@ -11,7 +12,7 @@ import { FunctionCall } from "~src/c-ast/functions";
 import { Expression } from "~src/c-ast/core";
 import { VariableExpr } from "~src/c-ast/variable";
 import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
-import { unaryOperatorToInstruction } from "~src/translator/util";
+import { arithmeticUnaryOperatorToInstruction } from "~src/translator/util";
 import {
   convertConstantToWasmConst,
   getMemoryAccessDetails,
@@ -23,14 +24,15 @@ import {
 } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
-import { Constant, IntegerConstant } from "~src/c-ast/constants";
+import { Constant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import translateBinaryExpression from "~src/translator/translateBinaryExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 import { toJson } from "~src/errors";
 import { isConstant } from "~src/common/utils";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
+import translateUnaryExpression from "~src/translator/translateUnaryExpression";
 
 /**
  * Evaluates a given C expression and returns the corresponding WASM expression.
@@ -82,7 +84,7 @@ export default function translateExpression(
           wasmVariableType: memoryAccessDetails.wasmVariableType,
           value: {
             type: "BinaryExpression",
-            instruction: unaryOperatorToInstruction(
+            instruction: arithmeticUnaryOperatorToInstruction(
               n.operator,
               n.variable.variableType
             ),
@@ -114,7 +116,7 @@ export default function translateExpression(
       type: "MemoryStore",
       value: {
         type: "BinaryExpression",
-        instruction: unaryOperatorToInstruction(
+        instruction: arithmeticUnaryOperatorToInstruction(
           n.operator,
           n.variable.variableType
         ),
@@ -138,6 +140,9 @@ export default function translateExpression(
       ...memoryAccessDetails,
     };
     return wasmNode;
+  } else if (expr.type === "UnaryExpression") {
+    const n = expr as UnaryExpression;
+    return translateUnaryExpression(wasmRoot, symbolTable, n);
   } else if (expr.type === "AssignmentExpression") {
     const n = expr as AssignmentExpression;
     const memoryAccessDetails = getMemoryAccessDetails(

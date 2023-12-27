@@ -1,12 +1,9 @@
 import { WasmFunction } from "~src/wasm-ast/functions";
 import { WasmMemoryLoad, WasmMemorySize } from "~src/wasm-ast/memory";
-import {
-  WasmExpression,
-  WasmStatement,
-} from "~src/wasm-ast/core";
+import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { wasmTypeToSize } from "~src/translator/util";
 import { WasmGlobalGet } from "~src/wasm-ast/variables";
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
 
@@ -490,7 +487,9 @@ export function getFunctionCallStackFrameSetupStatements(
       rightExpr: {
         type: "IntegerConst",
         wasmVariableType: WASM_ADDR_TYPE,
-        value: BigInt(calledFunction.sizeOfLocals + calledFunction.sizeOfParams),
+        value: BigInt(
+          calledFunction.sizeOfLocals + calledFunction.sizeOfParams
+        ),
       } as WasmIntegerConst,
     } as WasmBinaryExpression)
   );

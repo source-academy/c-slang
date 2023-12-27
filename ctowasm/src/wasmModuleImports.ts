@@ -136,17 +136,18 @@ function printFloatCStyle(float: number) {
   if (float === Infinity) {
     print("inf");
     return;
+  } else if (float === -Infinity) {
+    print("-inf");
+    return;
   }
-  /*
-  const buffer = new ArrayBuffer(8);
-  const arr = new Float64Array(buffer);
-  arr[0] = float
-  const arr2 = new Uint8Array(buffer);
-  let hexStr = "0x";
-  for (let i = 0; i < 8; ++i) {
-    hexStr += arr2[i].toString(16);
-  }*/
-  const bigNumber = new BigNumber("0x" + float.toString(16));
+  
+  let floatStr = float.toString(16);
+  if (floatStr[0] === "-") {
+    floatStr = "-0x" + floatStr.slice(1, floatStr.length)
+  } else {
+    floatStr = "0x" + floatStr
+  }
+  const bigNumber = new BigNumber(floatStr);
   print(bigNumber.toFixed(6));
 }
 

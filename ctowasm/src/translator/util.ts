@@ -18,15 +18,16 @@ import {
   MemoryVariableByteSize,
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
-import { UnaryOperator, VariableType } from "~src/common/types";
+import { ArithemeticUnaryOperator, UnaryOperator, VariableType } from "~src/common/types";
 import { variableTypeToWasmType } from "~src/translator/variableUtil";
 import { ImportedFunction } from "~src/wasmModuleImports";
+import { WasmIntegerConst } from "~src/wasm-ast/consts";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator
  */
-export function unaryOperatorToInstruction(
-  op: UnaryOperator,
+export function arithmeticUnaryOperatorToInstruction(
+  op: ArithemeticUnaryOperator,
   variableType: VariableType
 ) {
   return `${variableTypeToWasmType[variableType]}.${
@@ -178,4 +179,24 @@ export function processImportedFunctions(
     };
   }
   return result;
+}
+
+/**
+ * Returns a WasmIntegerConst node that contains maximum integer value for either i32 or i64 type.
+ * Used for negating integer types.
+ */
+export function getMaxIntConstant(intType: "i32" | "i64"): WasmIntegerConst {
+  if (intType === "i32") {
+    return {
+      type: "IntegerConst",
+      value: 4294967296n,
+      wasmVariableType: "i32",
+    };
+  } else {
+    return {
+      type: "IntegerConst",
+      value: 9223372036854775808n,
+      wasmVariableType: "i64",
+    };
+  }
 }

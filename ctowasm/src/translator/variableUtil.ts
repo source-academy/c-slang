@@ -33,7 +33,7 @@ import {
   NumericConversionInstruction,
   WasmNumericConversionWrapper,
 } from "~src/wasm-ast/misc";
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmConst, WasmIntegerConst } from "~src/wasm-ast/consts";
 
 /**

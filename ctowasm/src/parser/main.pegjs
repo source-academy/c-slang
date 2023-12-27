@@ -42,6 +42,22 @@
       operator: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][0]
     }
   }
+
+  function createUnaryExpressionNode(expr, operator) {
+    // special handling for negated constants, just negate the value of constant
+    if (operator === "-" && (expr.type === "IntegerConstant" || expr.type === "FloatConstant")) {
+      return {
+        ...expr,
+        value: -expr.value
+      }
+    }
+
+    return {
+      type: "UnaryExpression",
+      operator,
+      expression: expr
+    }
+  }
 }
 
 program = arr:translation_unit  { return generateNode("Root", {children: arr}); }
@@ -215,6 +231,9 @@ postfix_expression
 
 prefix_unary_expression
   = operator:("++" / "--") variable:lvalue_term { return generateNode("PrefixArithmeticExpression", { operator, variable }); }
+  / "+" @expression //  "+" operator doesnt really do anything, just return expression
+  / "-" expression:expression { return createUnaryExpressionNode(expression, "-"); }
+  / "~" expression:expression { return createUnaryExpressionNode(expression, "~");  }
 
 postfix_unary_expression
   = variable:lvalue_term operator:("--" / "++") { return generateNode("PostfixArithmeticExpression", { operator, variable }); } 
@@ -343,7 +362,7 @@ statement_end
   = ";"+
 
 integer
-  = signage:("-" / "") value:$[0-9]+ { return signage + value }
+  = $[0-9]+
 
 // =============== Floating constant related rules ===============
 

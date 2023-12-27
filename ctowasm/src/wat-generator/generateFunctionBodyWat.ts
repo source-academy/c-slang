@@ -1,5 +1,5 @@
 import { WatGeneratorError, toJson } from "~src/errors";
-import { WasmBinaryExpression } from "~src/wasm-ast/binaryExpression";
+import { WasmBinaryExpression, WasmNegateFloatExpression } from "~src/wasm-ast/expressions";
 import { WasmFloatConst, WasmIntegerConst } from "~src/wasm-ast/consts";
 import {
   WasmSelectStatement,
@@ -148,9 +148,9 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
     const e = node as WasmBooleanExpression;
     // TODO: need to know type of the variable to set the correct instruction
     if (e.isNegated) {
-      return `(i32.eqz ${generateWat(e.expr)})`;
+      return `(${e.expr.wasmVariableType}.eq (${e.expr.wasmVariableType}.const 0) ${generateWat(e.expr)})`;
     } else {
-      return `(i32.ne (i32.const 0) ${generateWat(e.expr)})`;
+      return `(${e.expr.wasmVariableType}.ne (${e.expr.wasmVariableType}.const 0) ${generateWat(e.expr)})`;
     }
   } else if (node.type === "MemorySize") {
     return "(memory.size)";
@@ -165,6 +165,9 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   } else if (node.type === "NumericWrapper") {
     const n = node as WasmNumericConversionWrapper;
     return `(${n.instruction} ${generateWat(n.expr)})`;
+  } else if (node.type === "NegateFloatExpression") {
+    const n = node as WasmNegateFloatExpression;
+    return `(${n.wasmVariableType}.neg ${n.expr})`
   } else {
     throw new WatGeneratorError(`Unhandled WAT AST node: ${toJson(node)}`);
   }
