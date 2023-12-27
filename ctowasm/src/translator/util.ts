@@ -18,7 +18,7 @@ import {
   MemoryVariableByteSize,
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
-import { ArithemeticUnaryOperator, UnaryOperator, VariableType } from "~src/common/types";
+import { ArithemeticUnaryOperator, VariableType } from "~src/common/types";
 import { variableTypeToWasmType } from "~src/translator/variableUtil";
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
@@ -28,7 +28,7 @@ import { WasmIntegerConst } from "~src/wasm-ast/consts";
  */
 export function arithmeticUnaryOperatorToInstruction(
   op: ArithemeticUnaryOperator,
-  variableType: VariableType
+  variableType: VariableType,
 ) {
   return `${variableTypeToWasmType[variableType]}.${
     op === "++" ? "add" : "sub"
@@ -52,7 +52,7 @@ export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
 export function setPseudoRegisters(
   wasmRoot: WasmModule,
   stackPreallocate: number,
-  dataSegmentSize: number
+  dataSegmentSize: number,
 ) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
@@ -118,7 +118,7 @@ export function setPseudoRegisters(
  */
 export function createSymbolTable(
   parentTable?: WasmSymbolTable | null,
-  resetOffset: boolean = false
+  resetOffset: boolean = false,
 ): WasmSymbolTable {
   if (parentTable === null || typeof parentTable === "undefined") {
     // create a new root symbol table
@@ -140,7 +140,7 @@ export function createSymbolTable(
  */
 export function addToSymbolTable(
   symbolTable: WasmSymbolTable,
-  variable: WasmMemoryVariable
+  variable: WasmMemoryVariable,
 ) {
   symbolTable.variables[variable.name] = variable;
   symbolTable.currOffset.value += variable.size;
@@ -163,14 +163,14 @@ export function getUniqueBlockLabelGenerator() {
 }
 
 export function processImportedFunctions(
-  importedFunctions: Record<string, ImportedFunction>
+  importedFunctions: Record<string, ImportedFunction>,
 ): Record<string, WasmImportedFunction> {
   const result: Record<string, WasmImportedFunction> = {};
   for (const f of Object.keys(importedFunctions)) {
     result[f] = {
       ...importedFunctions[f],
       wasmParamTypes: importedFunctions[f].params.map(
-        (p) => variableTypeToWasmType[p]
+        (p) => variableTypeToWasmType[p],
       ),
       returnWasmType:
         importedFunctions[f].return !== null

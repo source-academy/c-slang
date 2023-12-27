@@ -70,5 +70,3 @@ export type WasmExprStatement = WasmLocalSet | WasmGlobalSet | WasmMemoryStore;
 export interface WasmExpression extends WasmAstNode {
   wasmVariableType: WasmType; // the type of this expression
 }
-
-

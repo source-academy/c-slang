@@ -2,7 +2,7 @@
  * Utility functions for WAT generation.
  */
 
-import { FloatVariableType, IntegerVariableType, VariableType } from "~src/common/types";
+import { FloatVariableType, VariableType } from "~src/common/types";
 import { getVariableSize } from "~src/common/utils";
 import { WasmConst } from "~src/wasm-ast/consts";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
@@ -38,7 +38,7 @@ export function generateBlock(block: string, indentation: number) {
  */
 export function getWasmMemoryLoadInstruction(
   varType: WasmType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -51,7 +51,7 @@ export function getWasmMemoryLoadInstruction(
 
 export function getWasmMemoryStoreInstruction(
   varType: WasmType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -79,13 +79,13 @@ export function generateArgString(exprs: WasmExpression[]) {
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
 export function generateStatementsList(
-  statements: (WasmStatement | WasmExpression)[]
+  statements: (WasmStatement | WasmExpression)[],
 ) {
   return statements.map((s) => generateFunctionBodyWat(s)).join(" ");
 }
 
 export function getPreStatementsStr(
-  preStatements?: (WasmStatement | WasmExpression)[]
+  preStatements?: (WasmStatement | WasmExpression)[],
 ) {
   const s = preStatements
     ? preStatements.map((s) => generateFunctionBodyWat(s))
@@ -97,10 +97,13 @@ export function getPreStatementsStr(
  * Converts a given variable to byte string, for storage in data segment.
  */
 export function convertVariableToByteStr(
-  variable: WasmDataSegmentArray | WasmDataSegmentVariable
+  variable: WasmDataSegmentArray | WasmDataSegmentVariable,
 ) {
   if (variable.type === "DataSegmentVariable") {
-    return convertWasmNumberToByteStr(variable.initializerValue, variable.cVarType);
+    return convertWasmNumberToByteStr(
+      variable.initializerValue,
+      variable.cVarType,
+    );
   }
   // DataSegmentArray
   let finalStr = "";
@@ -113,16 +116,25 @@ export function convertVariableToByteStr(
 /**
  * Converts a wasm number to a bytes str with @size bytes
  */
-function convertWasmNumberToByteStr(num: WasmConst, variableType: VariableType) {
+function convertWasmNumberToByteStr(
+  num: WasmConst,
+  variableType: VariableType,
+) {
   if (num.type === "IntegerConst") {
     return convertIntegerToByteString(num.value, getVariableSize(variableType));
   } else {
     // need to get a float byte string
-    return convertFloatToByteString(num.value, variableType as FloatVariableType);
+    return convertFloatToByteString(
+      num.value,
+      variableType as FloatVariableType,
+    );
   }
 }
 
-function convertIntegerToByteString(val: bigint, numOfBytes: MemoryVariableByteSize) {
+function convertIntegerToByteString(
+  val: bigint,
+  numOfBytes: MemoryVariableByteSize,
+) {
   if (val < 0) {
     // convert to 2's complement equivalent in terms of positive number
     val = 2n ** (BigInt(numOfBytes) * 8n) + val;
@@ -143,15 +155,12 @@ function convertIntegerToByteString(val: bigint, numOfBytes: MemoryVariableByteS
   return finalStr;
 }
 
-function convertFloatToByteString(
-  val: number,
-  floatType: FloatVariableType
-) {
+function convertFloatToByteString(val: number, floatType: FloatVariableType) {
   const buffer = new ArrayBuffer(getVariableSize(floatType));
   let integerValue;
   if (floatType === "float") {
     const float32Arr = new Float32Array(buffer);
-    const uint32Arr= new Uint32Array(buffer);
+    const uint32Arr = new Uint32Array(buffer);
     float32Arr[0] = val;
     integerValue = uint32Arr[0];
   } else {
@@ -161,7 +170,10 @@ function convertFloatToByteString(
     float64Arr[0] = val;
     integerValue = uint64Arr[0];
   }
-  
+
   // convert the integer view of the float variable to a byte string
-  return convertIntegerToByteString(BigInt(integerValue), getVariableSize(floatType));
+  return convertIntegerToByteString(
+    BigInt(integerValue),
+    getVariableSize(floatType),
+  );
 }

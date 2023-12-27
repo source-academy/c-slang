@@ -10,7 +10,7 @@ const config: Config = {
   clearMocks: true,
   coverageProvider: "v8",
   moduleDirectories: ["node_modules", "build"],
-  testTimeout: 500
+  testTimeout: 500,
 };
 
 export default config;

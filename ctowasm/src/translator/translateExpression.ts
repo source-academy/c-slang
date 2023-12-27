@@ -40,7 +40,7 @@ import translateUnaryExpression from "~src/translator/translateUnaryExpression";
 export default function translateExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  expr: Expression
+  expr: Expression,
 ): WasmExpression {
   if (isConstant(expr)) {
     const n = expr as Constant;
@@ -58,7 +58,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n
+      n,
     );
     return {
       type: "MemoryLoad",
@@ -73,7 +73,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable
+      n.variable,
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
@@ -86,7 +86,7 @@ export default function translateExpression(
             type: "BinaryExpression",
             instruction: arithmeticUnaryOperatorToInstruction(
               n.operator,
-              n.variable.variableType
+              n.variable.variableType,
             ),
             wasmVariableType: memoryAccessDetails.wasmVariableType,
             leftExpr: {
@@ -110,7 +110,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable
+      n.variable,
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
@@ -118,7 +118,7 @@ export default function translateExpression(
         type: "BinaryExpression",
         instruction: arithmeticUnaryOperatorToInstruction(
           n.operator,
-          n.variable.variableType
+          n.variable.variableType,
         ),
         wasmVariableType: memoryAccessDetails.wasmVariableType,
         leftExpr: {
@@ -148,7 +148,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable
+      n.variable,
     );
     return {
       type: "MemoryLoad",
@@ -164,7 +164,7 @@ export default function translateExpression(
   } else {
     console.assert(
       false,
-      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(expr)}`
+      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(expr)}`,
     );
   }
 }

@@ -37,12 +37,12 @@ import {
 export function performBinaryOperation<T extends number | bigint>(
   a: T,
   operator: BinaryOperator,
-  b: T
+  b: T,
 ): T;
 export function performBinaryOperation(
   a: any,
   operator: BinaryOperator,
-  b: any
+  b: any,
 ) {
   switch (operator) {
     case "+":
@@ -78,7 +78,7 @@ export function performBinaryOperation(
  * Evaluates a constant arithmetic expression.
  */
 export function evaluateConstantBinaryExpression(
-  binaryExpr: BinaryExpression | Constant
+  binaryExpr: BinaryExpression | Constant,
 ): Constant {
   if (isConstant(binaryExpr)) {
     // alerady a constant
@@ -88,20 +88,20 @@ export function evaluateConstantBinaryExpression(
   if (binaryExpr.type !== "BinaryExpression") {
     throw new ProcessingError(
       `Unknown node being used as binary expression in evaluation of constant binary expressions: ${toJson(
-        binaryExpr
-      )}`
+        binaryExpr,
+      )}`,
     );
   }
 
   // need to perform the appropriate truncation on the value if necessary as per C standard
   let value = performBinaryOperation(
     evaluateConstantBinaryExpression(
-      binaryExpr.leftExpr as BinaryExpression | Constant
+      binaryExpr.leftExpr as BinaryExpression | Constant,
     ).value,
     binaryExpr.operator,
     evaluateConstantBinaryExpression(
-      binaryExpr.rightExpr as BinaryExpression | Constant
-    ).value
+      binaryExpr.rightExpr as BinaryExpression | Constant,
+    ).value,
   );
 
   const variableType = determineVariableTypeOfBinaryExpression(binaryExpr);
@@ -110,7 +110,7 @@ export function evaluateConstantBinaryExpression(
     // need to cap integer values correctly
     value = getAdjustedIntValueAccordingToVariableType(
       value as bigint,
-      variableType
+      variableType,
     );
 
     return {
@@ -135,7 +135,7 @@ export function evaluateConstantBinaryExpression(
  */
 function getAdjustedIntValueAccordingToVariableType(
   value: bigint,
-  variableType: VariableType
+  variableType: VariableType,
 ) {
   let newValue = value;
   // handle integer overflows
@@ -179,7 +179,7 @@ function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType): bigint {
  */
 function capNegativeValue(
   value: bigint,
-  integerType: IntegerVariableType
+  integerType: IntegerVariableType,
 ): bigint {
   const minNegativeValue =
     -(2n ** (BigInt(getVariableSize(integerType)) * 8n)) - 1n;
@@ -199,7 +199,7 @@ function capNegativeValue(
  */
 function handlePositiveSignedIntegerOverflow(
   value: bigint,
-  signedType: SignedIntegerType
+  signedType: SignedIntegerType,
 ): bigint {
   const maxVal = getMaxValueOfSignedIntType(signedType);
   if (value <= maxVal) {
@@ -225,12 +225,12 @@ function capIntegerValue(constant: IntegerConstant) {
       constant.value =
         constant.value %
         getMaxValueOfUnsignedIntType(
-          constant.variableType as UnsignedIntegerType
+          constant.variableType as UnsignedIntegerType,
         );
     } else {
       constant.value = handlePositiveSignedIntegerOverflow(
         constant.value,
-        constant.variableType as SignedIntegerType
+        constant.variableType as SignedIntegerType,
       );
     }
   } else if (constant.value < 0) {
@@ -324,7 +324,7 @@ export function processConstant(constant: Constant) {
  * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
  */
 function determineVariableTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
+  binaryExpression: BinaryExpression,
 ): VariableType {
   if (
     isFloatType(binaryExpression.leftExpr.variableType) &&
@@ -347,10 +347,13 @@ function determineVariableTypeOfBinaryExpression(
   } else {
     // both types are integers
     // special handling for bitwise shift, which does not follow usual arithmetic implicit conversion rules
-    if (binaryExpression.operator === "<<" || binaryExpression.operator === ">>") {
+    if (
+      binaryExpression.operator === "<<" ||
+      binaryExpression.operator === ">>"
+    ) {
       return binaryExpression.leftExpr.variableType;
     }
-    
+
     if (
       getVariableSize(binaryExpression.rightExpr.variableType) >
       getVariableSize(binaryExpression.leftExpr.variableType)
@@ -368,7 +371,7 @@ function determineVariableTypeOfBinaryExpression(
  * TODO: add float handling later
  */
 export function setVariableTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
+  binaryExpression: BinaryExpression,
 ) {
   binaryExpression.variableType =
     determineVariableTypeOfBinaryExpression(binaryExpression);
@@ -379,7 +382,7 @@ export function setVariableTypeOfBinaryExpression(
  */
 export function setVariableTypeOfSymbolAccessExpression(
   node: FunctionCall | VariableExpr | ArrayElementExpr,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ) {
   const symbolEntry = symbolTable.getSymbolEntry(node.name);
   if (symbolEntry.type === "function") {

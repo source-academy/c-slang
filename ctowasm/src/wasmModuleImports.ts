@@ -4,9 +4,7 @@
 
 import { VariableType } from "~src/common/types";
 
-import { WasmStatement } from "~src/wasm-ast/core";
 import BigNumber from "bignumber.js";
-import { WasmType } from "~src/wasm-ast/types";
 
 const defaultParentImportedObject = "imports";
 
@@ -17,6 +15,7 @@ export interface ImportedFunction {
   name: string; // function name
   params: VariableType[]; // C types of parameters for the function
   return: VariableType | null;
+  // eslint-disable-next-line
   jsFunction: Function; // the actual JS function that is called
 }
 
@@ -140,12 +139,12 @@ function printFloatCStyle(float: number) {
     print("-inf");
     return;
   }
-  
+
   let floatStr = float.toString(16);
   if (floatStr[0] === "-") {
-    floatStr = "-0x" + floatStr.slice(1, floatStr.length)
+    floatStr = "-0x" + floatStr.slice(1, floatStr.length);
   } else {
-    floatStr = "0x" + floatStr
+    floatStr = "0x" + floatStr;
   }
   const bigNumber = new BigNumber(floatStr);
   print(bigNumber.toFixed(6));

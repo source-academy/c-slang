@@ -59,14 +59,14 @@ export class WatGeneratorError extends Error {
  */
 export function toJson(obj: any) {
   function recursionHelper(obj: any) {
-    if (typeof obj !== "object" && !Array.isArray(obj) || obj === null) {
+    if ((typeof obj !== "object" && !Array.isArray(obj)) || obj === null) {
       return;
     }
     for (const fieldName of Object.keys(obj)) {
       if (typeof obj[fieldName] === "bigint") {
         obj[fieldName] = obj[fieldName].toString(); // stringify bigints first
       } else {
-        recursionHelper(obj[fieldName])
+        recursionHelper(obj[fieldName]);
       }
     }
   }

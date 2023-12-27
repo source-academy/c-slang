@@ -3,13 +3,9 @@
  */
 
 import { WasmType } from "~src/wasm-ast/types";
-import {
-  WasmAstNode,
-  WasmExpression,
-  WasmStatement,
-} from "~src/wasm-ast/core";
+import { WasmAstNode, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { VariableType } from "~src/common/types";
-import { WasmConst, WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WasmConst } from "~src/wasm-ast/consts";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 

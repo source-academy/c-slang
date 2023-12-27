@@ -43,7 +43,7 @@ export class SymbolTable {
       | ArrayDeclaration
       | ArrayInitialization
       | FunctionDeclaration
-      | FunctionDefinition
+      | FunctionDefinition,
   ) {
     let symbolEntry;
     if (node.type === "VariableDeclaration" || node.type === "Initialization") {

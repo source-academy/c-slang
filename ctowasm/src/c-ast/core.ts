@@ -47,7 +47,7 @@ const expressionNodeTypes = new Set([
   "PrefixArithmeticExpression",
   "PostfixArithmeticExpression",
   "VariableExpr",
-  "UnaryExpression"
+  "UnaryExpression",
 ]);
 
 export function isExpression(node: CNode) {

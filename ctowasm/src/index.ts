@@ -14,10 +14,11 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   const memory = new WebAssembly.Memory({
     initial: initialMemory,
   });
+  // eslint-disable-next-line
   const moduleImports: Record<string, Function> = {};
   Object.keys(wasmModuleImports).forEach(
     (funcName) =>
-      (moduleImports[funcName] = wasmModuleImports[funcName].jsFunction)
+      (moduleImports[funcName] = wasmModuleImports[funcName].jsFunction),
   );
   await WebAssembly.instantiate(wasm, {
     imports: moduleImports,
@@ -47,7 +48,7 @@ export function generate_WAT_AST(program: string) {
 export async function compileAndRun(program: string) {
   const { wasm, initialMemory } = await originalCompile(
     program,
-    wasmModuleImports
+    wasmModuleImports,
   );
   await runWasm(wasm, initialMemory);
 }

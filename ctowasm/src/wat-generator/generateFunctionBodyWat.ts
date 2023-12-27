@@ -1,5 +1,8 @@
 import { WatGeneratorError, toJson } from "~src/errors";
-import { WasmBinaryExpression, WasmNegateFloatExpression } from "~src/wasm-ast/expressions";
+import {
+  WasmBinaryExpression,
+  WasmNegateFloatExpression,
+} from "~src/wasm-ast/expressions";
 import { WasmFloatConst, WasmIntegerConst } from "~src/wasm-ast/consts";
 import {
   WasmSelectStatement,
@@ -45,17 +48,17 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   if (node.type === "GlobalSet") {
     const n = node as WasmGlobalSet;
     return `(global.set $${n.name}${getPreStatementsStr(
-      n.preStatements
+      n.preStatements,
     )} ${generateWat(n.value)})`;
   } else if (node.type === "LocalSet") {
     const n = node as WasmLocalSet;
     return `(local.set $${n.name}${getPreStatementsStr(
-      n.preStatements
+      n.preStatements,
     )} ${generateWat(n.value)})`;
   } else if (node.type === "FunctionCallStatement") {
     const n = node as WasmFunctionCallStatement;
     return `(call $${n.name} ${generateStatementsList(
-      n.stackFrameSetup
+      n.stackFrameSetup,
     )}) ${generateStatementsList(n.stackFrameTearDown)}`;
   } else if (node.type === "RegularFunctionCallStatement") {
     const n = node as WasmRegularFunctionCallStatement;
@@ -102,9 +105,9 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
     const n = node as WasmMemoryStore;
     return `(${getWasmMemoryStoreInstruction(
       n.wasmVariableType,
-      n.numOfBytes
+      n.numOfBytes,
     )}${getPreStatementsStr(n.preStatements)} ${generateWat(
-      n.addr
+      n.addr,
     )} ${generateWat(n.value)})`;
   } else if (node.type === "RegularFunctionCall") {
     const n = node as WasmRegularFunctionCall;
@@ -117,7 +120,7 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   if (node.type === "FunctionCall") {
     const e = node as WasmFunctionCall;
     return `(call $${e.name} ${generateStatementsList(
-      e.stackFrameSetup
+      e.stackFrameSetup,
     )}) ${generateStatementsList(e.stackFrameTearDown)}`;
   } else if (node.type === "RegularFunctionCall") {
     const e = node as WasmRegularFunctionCall;
@@ -142,15 +145,19 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
   } else if (node.type === "BinaryExpression") {
     const e = node as WasmBinaryExpression;
     return `(${e.instruction} ${generateWat(e.leftExpr)} ${generateWat(
-      e.rightExpr
+      e.rightExpr,
     )})`;
   } else if (node.type === "BooleanExpression") {
     const e = node as WasmBooleanExpression;
     // TODO: need to know type of the variable to set the correct instruction
     if (e.isNegated) {
-      return `(${e.expr.wasmVariableType}.eq (${e.expr.wasmVariableType}.const 0) ${generateWat(e.expr)})`;
+      return `(${e.expr.wasmVariableType}.eq (${
+        e.expr.wasmVariableType
+      }.const 0) ${generateWat(e.expr)})`;
     } else {
-      return `(${e.expr.wasmVariableType}.ne (${e.expr.wasmVariableType}.const 0) ${generateWat(e.expr)})`;
+      return `(${e.expr.wasmVariableType}.ne (${
+        e.expr.wasmVariableType
+      }.const 0) ${generateWat(e.expr)})`;
     }
   } else if (node.type === "MemorySize") {
     return "(memory.size)";
@@ -158,7 +165,7 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
     const n = node as WasmMemoryLoad;
     return `(${getWasmMemoryLoadInstruction(
       n.wasmVariableType,
-      n.numOfBytes
+      n.numOfBytes,
     )}${getPreStatementsStr(n.preStatements)} ${generateWat(n.addr)})`;
   } else if (node.type === "MemoryStore") {
     return generateWat(node);
@@ -167,7 +174,7 @@ export default function generateWat(node: WasmFunctionBodyLine): string {
     return `(${n.instruction} ${generateWat(n.expr)})`;
   } else if (node.type === "NegateFloatExpression") {
     const n = node as WasmNegateFloatExpression;
-    return `(${n.wasmVariableType}.neg ${n.expr})`
+    return `(${n.wasmVariableType}.neg ${n.expr})`;
   } else {
     throw new WatGeneratorError(`Unhandled WAT AST node: ${toJson(node)}`);
   }

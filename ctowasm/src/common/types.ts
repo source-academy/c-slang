@@ -12,7 +12,7 @@ export type BinaryOperator =
   | LogicalBinaryOperator
   | BitwiseBinaryOperator;
 
-export type ArithemeticUnaryOperator = "++"  | "--";
+export type ArithemeticUnaryOperator = "++" | "--";
 export type UnaryOperator = "!" | "~" | "-";
 
 export type VariableType = IntegerVariableType | FloatVariableType;

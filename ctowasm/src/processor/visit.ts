@@ -39,7 +39,7 @@ export function visit(
   sourceCode: string,
   node: any,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition
+  enclosingFunc?: FunctionDefinition,
 ) {
   if (
     !(
@@ -86,7 +86,7 @@ export function visit(
       // this intialization is global. Needs to be a constant expression, which we can evaluate now
       if (n.value.type === "BinaryExpression" || isConstant(n.value)) {
         n.value = evaluateConstantBinaryExpression(
-          n.value as BinaryExpression | Constant
+          n.value as BinaryExpression | Constant,
         );
       }
     }
@@ -98,7 +98,7 @@ export function visit(
       enclosingFunc.sizeOfLocals +=
         getVariableSize(n.variableType) * n.numElements;
       n.elements.forEach((e) =>
-        visit(sourceCode, e, symbolTable, enclosingFunc)
+        visit(sourceCode, e, symbolTable, enclosingFunc),
       );
     } else {
       // this intialization is global. Needs to be a constant expression (assumed), which we can evaluate now
@@ -106,8 +106,8 @@ export function visit(
       for (const element of n.elements) {
         evaluatedElements.push(
           evaluateConstantBinaryExpression(
-            element as BinaryExpression | IntegerConstant
-          )
+            element as BinaryExpression | IntegerConstant,
+          ),
         );
       }
       n.elements = evaluatedElements;
@@ -160,7 +160,7 @@ export function visit(
     throw new ProcessingError(
       `Unhandled expression: ${toJson(n)}`,
       sourceCode,
-      n.position
+      n.position,
     );
   }
 
