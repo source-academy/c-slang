@@ -4,7 +4,7 @@
 
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmAstNode, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
-import { VariableType } from "~src/common/types";
+import { PrimaryCDataType } from "~src/common/types";
 import { WasmConst } from "~src/wasm-ast/consts";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
@@ -49,7 +49,7 @@ export interface WasmReturnVariable extends WasmAstNode {
 export interface WasmMemoryVariable extends WasmAstNode {
   name: string;
   size: number; // size in bytes of this variable
-  cVarType: VariableType; // the original C variable type
+  cVarType: PrimaryCDataType; // the original C variable type
   wasmVarType: WasmType; // the wasm type to use when loading/storing this variable
   offset: number; // offset from the start of the scope that this variable is in. This is address for globals, offset from BP for locals/params
 }

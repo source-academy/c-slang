@@ -1,7 +1,7 @@
 import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDeclaration, FunctionDefinition } from "~src/c-ast/functions";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
-import { VariableType } from "~src/common/types";
+import { PrimaryCDataType } from "~src/common/types";
 
 export interface CSymbolBase {
   type: "function" | "variable" | "array";
@@ -19,18 +19,18 @@ export type CSymbolCreatorNodes =
 
 export interface FunctionSymbol extends CSymbolBase {
   type: "function";
-  params: VariableType[];
-  returnType: VariableType | null;
+  params: PrimaryCDataType[];
+  returnType: PrimaryCDataType | null;
 }
 
 export interface VariableSymbol extends CSymbolBase {
   type: "variable";
-  variableType: VariableType;
+  variableType: PrimaryCDataType;
 }
 
 export interface ArraySymbol extends CSymbolBase {
   type: "array";
-  variableType: VariableType;
+  variableType: PrimaryCDataType;
   arraySize: number;
 }
 

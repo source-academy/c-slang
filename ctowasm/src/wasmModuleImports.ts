@@ -2,7 +2,7 @@
  *  Definitions of all special functions imported to every wasm program
  */
 
-import { VariableType } from "~src/common/types";
+import { PrimaryCDataType } from "~src/common/types";
 
 import BigNumber from "bignumber.js";
 
@@ -13,8 +13,8 @@ export interface ImportedFunction {
   type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
   parentImportedObject: string; // parent imported object
   name: string; // function name
-  params: VariableType[]; // C types of parameters for the function
-  return: VariableType | null;
+  params: PrimaryCDataType[]; // C types of parameters for the function
+  return: PrimaryCDataType | null;
   // eslint-disable-next-line
   jsFunction: Function; // the actual JS function that is called
 }

@@ -22,6 +22,11 @@ export interface Initialization extends CNode {
 export interface VariableExpr extends Expression {
   type: "VariableExpr";
   name: string; //name of the variable
-  variableType: VariableType;
-  symbolTableId: number; // id of entry in symbol table - to be filled during processing
+}
+
+// node for what array element access expression e.g. arr[2]
+export interface ArrayElementExpr extends Expression {
+  type: "ArrayElementExpr";
+  name: string; // name of the array
+  index: Expression;
 }

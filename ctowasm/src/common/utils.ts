@@ -3,13 +3,13 @@
  */
 
 import { CNode } from "~src/c-ast/core";
-import { VariableType } from "~src/common/types";
+import { PrimaryCDataType } from "~src/common/types";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
  */
-const variableSizes: Record<VariableType, MemoryVariableByteSize> = {
+const variableSizes: Record<PrimaryCDataType, MemoryVariableByteSize> = {
   ["unsigned char"]: 1,
   ["signed char"]: 1,
   ["unsigned short"]: 2,
@@ -25,11 +25,13 @@ const variableSizes: Record<VariableType, MemoryVariableByteSize> = {
 /**
  * Returns the size in bytes of a variable given its type.
  */
-export function getVariableSize(varType: VariableType): MemoryVariableByteSize {
+export function getVariableSize(
+  varType: PrimaryCDataType
+): MemoryVariableByteSize {
   return variableSizes[varType];
 }
 
-export function isSignedIntegerType(variableType: VariableType) {
+export function isSignedIntegerType(variableType: PrimaryCDataType) {
   return (
     variableType === "signed char" ||
     variableType === "signed short" ||
@@ -38,7 +40,7 @@ export function isSignedIntegerType(variableType: VariableType) {
   );
 }
 
-export function isUnsignedIntegerType(variableType: VariableType) {
+export function isUnsignedIntegerType(variableType: PrimaryCDataType) {
   return (
     variableType === "unsigned char" ||
     variableType === "unsigned short" ||
@@ -47,11 +49,11 @@ export function isUnsignedIntegerType(variableType: VariableType) {
   );
 }
 
-export function isFloatType(variableType: VariableType) {
+export function isFloatType(variableType: PrimaryCDataType) {
   return variableType === "float" || variableType === "double";
 }
 
-export function isIntegerType(variableType: VariableType) {
+export function isIntegerType(variableType: PrimaryCDataType) {
   return (
     isUnsignedIntegerType(variableType) || isSignedIntegerType(variableType)
   );

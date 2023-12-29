@@ -13,13 +13,13 @@ export type Constant = IntegerConstant | FloatConstant;
 export interface IntegerConstant extends Expression {
   type: "IntegerConstant";
   value: bigint; // needs to be big int to support all possible values
-  variableType: IntegerVariableType; // to be determined during processing stage. PARSER DOES NOT FILL THIS.
+  variableType: { type: "primary"; primaryDataType: IntegerVariableType }; // to be determined during processing stage. PARSER DOES NOT FILL THIS.
   suffix?: IntegerConstantSuffix;
 }
 
 export interface FloatConstant extends Expression {
   type: "FloatConstant";
   value: number;
-  variableType: FloatVariableType;
+  variableType: { type: "primary"; primaryDataType: FloatVariableType };
   suffix?: FloatConstantSuffix;
 }

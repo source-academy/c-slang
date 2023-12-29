@@ -6,7 +6,6 @@ import {
   PostfixArithmeticExpression,
   PrefixArithmeticExpression,
 } from "~src/c-ast/unaryExpression";
-import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
 import {
   FunctionDefinition,
@@ -59,8 +58,6 @@ export type Declaration = VariableDeclaration | FunctionDeclaration;
 export type Statement =
   | Declaration
   | Initialization
-  | ArrayDeclaration
-  | ArrayInitialization
   | Assignment
   | FunctionCallStatement
   | PrefixArithmeticExpression
