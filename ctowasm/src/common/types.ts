@@ -15,8 +15,8 @@ export type BinaryOperator =
 export type ArithemeticUnaryOperator = "++" | "--";
 export type UnaryOperator = "!" | "~" | "-";
 
-export type PrimaryCDataType = IntegerVariableType | FloatVariableType;
-export type IntegerVariableType = SignedIntegerType | UnsignedIntegerType;
+export type PrimaryCDataType = IntegerDataType | FloatDataType;
+export type IntegerDataType = SignedIntegerType | UnsignedIntegerType;
 export type UnsignedIntegerType =
   | "unsigned char"
   | "unsigned short"
@@ -28,13 +28,19 @@ export type SignedIntegerType =
   | "signed int"
   | "signed long";
 
-export type FloatVariableType = "float" | "double";
+export type FloatDataType = "float" | "double";
 
 /**
  * Definition for objects containing information of different types of variables.
  * All information on a type is contained within these interfaces.
  */
-export type VariableType = PrimaryVariableType | PointerVariableType | StructVariableType |TypeDefVariableType
+export type VariableType =
+  | PrimaryVariableType
+  | ArrayVariableType
+  | PointerVariableType
+  //| FunctionVariableType
+  | StructVariableType
+  | TypeDefVariableType;
 
 export interface PrimaryVariableType {
   type: "primary";

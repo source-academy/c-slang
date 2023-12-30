@@ -5,7 +5,7 @@
 import { Block } from "~src/c-ast/core";
 import { FunctionDefinition } from "~src/c-ast/functions";
 import { ForLoop } from "~src/c-ast/loops";
-import { SymbolTable } from "~src/c-ast/symbolTable";
+import { SymbolTable } from "~src/common/symbolTable";
 import { getVariableSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
 import { visit } from "~src/processor/visit";
@@ -19,7 +19,7 @@ export function handleScopeCreatingNodes(
   sourceCode: string,
   node: ScopeCreatingNodes,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition,
+  enclosingFunc?: FunctionDefinition
 ) {
   if (node.type === "FunctionDefinition") {
     const n = node as FunctionDefinition;
@@ -28,7 +28,7 @@ export function handleScopeCreatingNodes(
     // size of parameters can be calculated immediately
     n.sizeOfParameters = n.parameters.reduce(
       (sum, curr) => sum + getVariableSize(curr.variableType),
-      0,
+      0
     );
     n.sizeOfReturn = n.returnType ? getVariableSize(n.returnType) : 0;
 
@@ -44,7 +44,7 @@ export function handleScopeCreatingNodes(
     const n = node as Block;
     const blockSymbolTable = new SymbolTable(symbolTable);
     n.children.forEach((child) =>
-      visit(sourceCode, child, blockSymbolTable, enclosingFunc),
+      visit(sourceCode, child, blockSymbolTable, enclosingFunc)
     );
   } else if (node.type === "ForLoop") {
     // for loops have a specific scope for the for loop bracketed statements e.g. "(int i = 0; i < 10; i++)"

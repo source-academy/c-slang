@@ -2,7 +2,6 @@
  * Semantic Analyser module that performs checks for semantic errors in C program.
  */
 
-import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
 import { FunctionDeclaration, FunctionDefinition } from "~src/c-ast/functions";
 import { Block, CAstRoot, CNode } from "~src/c-ast/core";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
@@ -23,9 +22,10 @@ import { CSymbolCreatorNodes, Scope } from "~src/semanticAnalyser/types";
 export function checkForErrors(
   sourceCode: string,
   ast: CAstRoot,
-  specialFunctions: string[] = [],
+  specialFunctions: string[] = []
 ) {
   const specialFunctionsSet = new Set(specialFunctions);
+  const globallyDefinedSymbols = new Set(); // set of globally defined symbols, as global symbols can be declared multiple times
   /**
    * Visit function for traversing and analysing the AST.
    */
@@ -73,7 +73,7 @@ export function checkForErrors(
       checkForRedeclaration(sourceCode, n, currentScope);
       checkForRedefinition(sourceCode, n, currentScope);
       createSymbolEntry(n, currentScope, true);
-      visit(n.value, currentScope);
+      visit(n.intializer, currentScope);
     } else if (node.type === "VariableDeclaration") {
       const n = node as VariableDeclaration;
       checkForRedeclaration(sourceCode, n, currentScope);
@@ -101,7 +101,7 @@ export function checkForErrors(
         sourceCode,
         node,
         currentScope,
-        specialFunctionsSet,
+        specialFunctionsSet
       );
     } else if (node.type === "ForLoop") {
       // new scope just for for loop initialization
@@ -139,7 +139,7 @@ function createNewScope(parentScope: Scope | null): Scope {
 function createSymbolEntry(
   node: CSymbolCreatorNodes,
   scope: Scope,
-  isDefined = false,
+  isDefined = false
 ) {
   if (
     node.type === "FunctionDeclaration" ||

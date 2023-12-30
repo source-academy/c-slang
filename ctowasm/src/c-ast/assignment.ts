@@ -3,13 +3,12 @@
  */
 
 import { CNode, Expression } from "~src/c-ast/core";
-import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { VariableExpr } from "~src/c-ast/variable";
 
 // A variable assignment
 export interface Assignment extends CNode {
   type: "Assignment";
-  variable: VariableExpr | ArrayElementExpr;
+  variable: VariableExpr
   value: Expression;
 }
 
@@ -18,6 +17,6 @@ export interface Assignment extends CNode {
  */
 export interface AssignmentExpression extends Expression {
   type: "AssignmentExpression";
-  variable: VariableExpr | ArrayElementExpr;
+  variable: VariableExpr;
   value: Expression;
 }

@@ -2,7 +2,7 @@
  * Utility functions for WAT generation.
  */
 
-import { FloatVariableType, PrimaryCDataType } from "~src/common/types";
+import { FloatDataType, PrimaryCDataType } from "~src/common/types";
 import { getVariableSize } from "~src/common/utils";
 import { WasmConst } from "~src/wasm-ast/consts";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
@@ -124,10 +124,7 @@ function convertWasmNumberToByteStr(
     return convertIntegerToByteString(num.value, getVariableSize(variableType));
   } else {
     // need to get a float byte string
-    return convertFloatToByteString(
-      num.value,
-      variableType as FloatVariableType
-    );
+    return convertFloatToByteString(num.value, variableType as FloatDataType);
   }
 }
 
@@ -155,7 +152,7 @@ function convertIntegerToByteString(
   return finalStr;
 }
 
-function convertFloatToByteString(val: number, floatType: FloatVariableType) {
+function convertFloatToByteString(val: number, floatType: FloatDataType) {
   const buffer = new ArrayBuffer(getVariableSize(floatType));
   let integerValue;
   if (floatType === "float") {

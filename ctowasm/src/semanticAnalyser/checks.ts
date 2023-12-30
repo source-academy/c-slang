@@ -3,11 +3,6 @@
  */
 
 import {
-  ArrayDeclaration,
-  ArrayElementExpr,
-  ArrayInitialization,
-} from "~src/c-ast/arrays";
-import {
   FunctionDefinition,
   FunctionCall,
   FunctionCallStatement,
@@ -16,12 +11,7 @@ import {
 import { Declaration } from "~src/c-ast/core";
 import { Initialization, VariableExpr } from "~src/c-ast/variable";
 import { SemanticAnalysisError } from "~src/errors";
-import {
-  ArraySymbol,
-  FunctionSymbol,
-  Scope,
-  VariableSymbol,
-} from "~src/semanticAnalyser/types";
+import { SymbolTable, VariableSymbolEntry } from "~src/common/symbolTable";
 
 /**
  * Checks for redeclaration of a variable with different signature, throw ProcessingError if redeclaration has occured.
@@ -31,74 +21,63 @@ import {
  */
 export function checkForRedeclaration(
   sourceCode: string,
-  node:
-    | Declaration
-    | Initialization
-    | FunctionDefinition
-    | ArrayDeclaration
-    | ArrayInitialization,
-  scope: Scope,
+  node: Declaration | Initialization | FunctionDefinition | FunctionDeclaration,
+  symbolTable: SymbolTable
 ) {
-  if (node.name in scope.symbols) {
-    if (scope.parentScope !== null) {
+  if (node.name in symbolTable.symbols) {
+    if (symbolTable.parentTable !== null) {
       // Cannot have redeclaration within a function
       throw new SemanticAnalysisError(
         `Redeclaration error: ${node.name} redeclared in same scope`,
         sourceCode,
-        node.position,
+        node.position
       );
     }
 
     if (
-      ((node.type === "FunctionDefinition" ||
-        node.type === "FunctionDeclaration") &&
-        scope.symbols[node.name].type !== "function") ||
-      ((node.type === "VariableDeclaration" ||
-        node.type === "Initialization") &&
-        scope.symbols[node.name].type !== "variable") ||
-      ((node.type === "ArrayDeclaration" ||
-        node.type === "ArrayInitialization") &&
-        scope.symbols[node.name].type !== "array")
+      (node.type === "FunctionDeclaration" ||
+        node.type === "FunctionDefinition") &&
+      symbolTable.getSymbolEntry(node.name).type !== "function"
     ) {
       // check for redeclaration
       throw new SemanticAnalysisError(
         `Redeclaration error: '${
           node.name
-        }' redeclared as different kind of symbol: '${node.type}' instead of '${
-          scope.symbols[node.name].type
+        }' redeclared as different kind of symbol: function instead of '${
+          symbolTable.symbols[node.name].type
         }'`,
         sourceCode,
-        node.position,
+        node.position
+      );
+    } else if (
+      (node.type === "Initialization" || node.type === "VariableDeclaration") &&
+      symbolTable.getSymbolEntry(node.name).type !== "variable"
+    ) {
+      throw new SemanticAnalysisError(
+        `Redeclaration error: '${
+          node.name
+        }' redeclared as different kind of symbol: variable instead of '${
+          symbolTable.symbols[node.name].type
+        }'`,
+        sourceCode,
+        node.position
       );
     }
 
     // check for conflicting variable declarations (same name, different type)
     if (
-      (node.type === "VariableDeclaration" || node.type === "Initialization") &&
-      (scope.symbols[node.name] as VariableSymbol).variableType !==
-        node.variableType
-    ) {
-      throw new SemanticAnalysisError(
-        `Redeclaration error: Variable '${
-          node.name
-        }' redeclared with conflicting type: '${
-          node.variableType
-        }' instead of '${
-          (scope.symbols[node.name] as VariableSymbol).variableType
-        }'`,
-        sourceCode,
-        node.position,
-      );
-    }
-
+      (node.type === "VariableDeclaration" || node.type === "Initialization")) {
+        const existing 
+        if (node.variableType.type === "primary" && )
+      }
     // check for conflicting function declarations (same name, different return type or parameters)
     if (
       (node.type === "FunctionDefinition" ||
         node.type === "FunctionDeclaration") &&
       (node.returnType !==
-        (scope.symbols[node.name] as FunctionSymbol).returnType ||
+        (symbolTable.symbols[node.name] as FunctionSymbol).returnType ||
         node.parameters.toString() !==
-          (scope.symbols[node.name] as FunctionSymbol).params.toString())
+          (symbolTable.symbols[node.name] as FunctionSymbol).params.toString())
     ) {
       throw new SemanticAnalysisError(
         `Redeclaration Error: Function '${
@@ -106,34 +85,12 @@ export function checkForRedeclaration(
         }' redeclared with conflicting type: '${node.returnType} ${
           node.name
         }(${node.parameters.join(", ")})' instead of '${
-          (scope.symbols[node.name] as FunctionSymbol).returnType
+          (symbolTable.symbols[node.name] as FunctionSymbol).returnType
         } ${node.name}(${(
-          scope.symbols[node.name] as FunctionSymbol
+          symbolTable.symbols[node.name] as FunctionSymbol
         ).params.join(", ")})'`,
         sourceCode,
-        node.position,
-      );
-    }
-
-    // check for conflicting array declarations (same name, different type or size)
-    if (
-      (node.type === "ArrayDeclaration" ||
-        node.type === "ArrayInitialization") &&
-      (node.variableType !==
-        (scope.symbols[node.name] as ArraySymbol).variableType ||
-        node.numElements !==
-          (scope.symbols[node.name] as ArraySymbol).arraySize)
-    ) {
-      throw new SemanticAnalysisError(
-        `Redeclaration error: Array '${
-          node.name
-        }' redeclared with conflicting type: '${node.variableType}[${
-          node.numElements
-        }]' instead of '${
-          (scope.symbols[node.name] as ArraySymbol).variableType
-        }[${(scope.symbols[node.name] as ArraySymbol).arraySize}]'`,
-        sourceCode,
-        node.position,
+        node.position
       );
     }
   }
@@ -145,13 +102,13 @@ export function checkForRedeclaration(
 export function checkForRedefinition(
   sourceCode: string,
   node: FunctionDefinition | Initialization | ArrayInitialization,
-  scope: Scope,
+  scope: Scope
 ) {
   if (node.name in scope.symbols && scope.symbols[node.name].isDefined) {
     throw new SemanticAnalysisError(
       `Redefinition error: Symbol '${name} redefined in scope'`,
       sourceCode,
-      node.position,
+      node.position
     );
   }
 }
@@ -163,7 +120,7 @@ export function checkForRedefinition(
 export function checkForVariableDeclaration(
   sourceCode: string,
   node: VariableExpr,
-  scope: Scope,
+  scope: Scope
 ) {
   let curr = scope;
   while (curr != null) {
@@ -174,7 +131,7 @@ export function checkForVariableDeclaration(
       throw new SemanticAnalysisError(
         `${node.name} is a ${curr.symbols[node.name].type}, not a variable`,
         sourceCode,
-        node.position,
+        node.position
       );
     }
     curr = curr.parentScope;
@@ -182,14 +139,14 @@ export function checkForVariableDeclaration(
   throw new SemanticAnalysisError(
     `Undeclared variable: '${node.name}' undeclared before use`,
     sourceCode,
-    node.position,
+    node.position
   );
 }
 
 export function checkForArrayDeclaration(
   sourceCode: string,
   node: ArrayElementExpr,
-  scope: Scope,
+  scope: Scope
 ) {
   let curr = scope;
   while (curr != null) {
@@ -200,7 +157,7 @@ export function checkForArrayDeclaration(
         throw new SemanticAnalysisError(
           `${node.name} is not an array type`,
           sourceCode,
-          node.position,
+          node.position
         );
       }
     }
@@ -209,7 +166,7 @@ export function checkForArrayDeclaration(
   throw new SemanticAnalysisError(
     `Undeclared array: '${node.name}' undeclared before use`,
     sourceCode,
-    node.position,
+    node.position
   );
 }
 
@@ -220,7 +177,7 @@ export function checkForFunctionDeclaration(
   sourceCode: string,
   node: FunctionCall | FunctionCallStatement,
   scope: Scope,
-  specialFunctions: Set<string>,
+  specialFunctions: Set<string>
 ) {
   if (specialFunctions.has(node.name)) {
     // one of the special pre-built functions
@@ -235,7 +192,7 @@ export function checkForFunctionDeclaration(
         throw new SemanticAnalysisError(
           `${node.name} is not a function parameter`,
           sourceCode,
-          node.position,
+          node.position
         );
       }
     }
@@ -244,13 +201,13 @@ export function checkForFunctionDeclaration(
   throw new SemanticAnalysisError(
     `Undeclared function: '${node.name}' undeclared before use`,
     sourceCode,
-    node.position,
+    node.position
   );
 }
 
 export function checkForFunctionParameterRedeclaration(
   sourceCode: string,
-  node: FunctionDeclaration | FunctionDefinition,
+  node: FunctionDeclaration | FunctionDefinition
 ) {
   const params = new Set<string>();
   node.parameters.forEach((p) => {
@@ -258,7 +215,7 @@ export function checkForFunctionParameterRedeclaration(
       throw new SemanticAnalysisError(
         `Redeclaration error: function parameter ${p.name} redeclared`,
         sourceCode,
-        node.position,
+        node.position
       );
     }
     params.add(p.name);

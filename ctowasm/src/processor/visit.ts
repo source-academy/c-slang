@@ -2,23 +2,22 @@
  * Definition of visitor function.
  */
 
-import {
-  ArrayDeclaration,
-  ArrayElementExpr,
-  ArrayInitialization,
-} from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { Constant, IntegerConstant } from "~src/c-ast/constants";
 import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
-import { SymbolTable } from "~src/c-ast/symbolTable";
+import { SymbolTable } from "~src/common/symbolTable";
 import {
   PostfixArithmeticExpression,
   PrefixArithmeticExpression,
   UnaryExpression,
 } from "~src/c-ast/unaryExpression";
-import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
+import {
+  VariableDeclaration,
+  Initialization,
+  ArrayElementExpr,
+} from "~src/c-ast/variable";
 import { getVariableSize, isConstant } from "~src/common/utils";
 import { ProcessingError, toJson } from "~src/errors";
 import {
@@ -39,7 +38,7 @@ export function visit(
   sourceCode: string,
   node: any,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition,
+  enclosingFunc?: FunctionDefinition
 ) {
   if (
     !(
@@ -68,49 +67,29 @@ export function visit(
     }
     symbolTable.addEntry(n);
     return;
-  } else if (node.type === "ArrayDeclaration") {
-    const n = node as ArrayDeclaration;
-    if (enclosingFunc) {
-      enclosingFunc.sizeOfLocals +=
-        getVariableSize(n.variableType) * n.numElements;
-    }
-    symbolTable.addEntry(n);
-    return;
   } else if (node.type === "Initialization") {
     const n = node as Initialization;
     symbolTable.addEntry(n);
     if (enclosingFunc) {
       enclosingFunc.sizeOfLocals += getVariableSize(n.variableType);
-      visit(sourceCode, n.value, symbolTable, enclosingFunc);
+      visit(sourceCode, n.initializer, symbolTable, enclosingFunc);
     } else {
       // this intialization is global. Needs to be a constant expression, which we can evaluate now
-      if (n.value.type === "BinaryExpression" || isConstant(n.value)) {
-        n.value = evaluateConstantBinaryExpression(
-          n.value as BinaryExpression | Constant,
+      if (n.initializer.type === "InitializerSingle") {
+        n.initializer.value = evaluateConstantBinaryExpression(
+          n.initializer.value as BinaryExpression | Constant
         );
+      } else if (n.initializer.type === "InitializerList") {
+        const evaluatedElements = [];
+        for (const element of n.initializer.values) {
+          evaluatedElements.push(
+            evaluateConstantBinaryExpression(
+              element as BinaryExpression | IntegerConstant
+            )
+          );
+        }
+        n.initializer.values = evaluatedElements;
       }
-    }
-    return;
-  } else if (node.type === "ArrayInitialization") {
-    const n = node as ArrayInitialization;
-    symbolTable.addEntry(n);
-    if (enclosingFunc) {
-      enclosingFunc.sizeOfLocals +=
-        getVariableSize(n.variableType) * n.numElements;
-      n.elements.forEach((e) =>
-        visit(sourceCode, e, symbolTable, enclosingFunc),
-      );
-    } else {
-      // this intialization is global. Needs to be a constant expression (assumed), which we can evaluate now
-      const evaluatedElements = [];
-      for (const element of n.elements) {
-        evaluatedElements.push(
-          evaluateConstantBinaryExpression(
-            element as BinaryExpression | IntegerConstant,
-          ),
-        );
-      }
-      n.elements = evaluatedElements;
     }
     return;
   } else if (isConstant(node)) {
@@ -160,7 +139,7 @@ export function visit(
     throw new ProcessingError(
       `Unhandled expression: ${toJson(n)}`,
       sourceCode,
-      n.position,
+      n.position
     );
   }
 

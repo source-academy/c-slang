@@ -15,6 +15,18 @@ export interface Initialization extends CNode {
   type: "Initialization";
   variableType: VariableType;
   name: string;
+  initializer: Initializer;
+}
+
+export type Initializer = InitializerList | InitializerSingle;
+
+export interface InitializerList extends CNode {
+  type: "InitializerList";
+  values: Expression[];
+}
+
+export interface InitializerSingle extends CNode {
+  type: "InitializerSingle";
   value: Expression;
 }
 

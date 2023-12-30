@@ -26,7 +26,7 @@ import translateFunction from "~src/translator/translateFunction";
 
 export default function translate(
   CAstRoot: CAstRoot,
-  imports: Record<string, ImportedFunction> = {},
+  imports: Record<string, ImportedFunction> = {}
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -57,7 +57,7 @@ export default function translate(
         wasmVarType: variableTypeToWasmType[n.variableType],
         initializerValue:
           n.type === "Initialization"
-            ? convertConstantToWasmConst(n.value as IntegerConstant)
+            ? convertConstantToWasmConst(n.intializer as IntegerConstant)
             : undefined,
       };
       addToSymbolTable(rootSymbolTable, globalVariable);
@@ -81,7 +81,7 @@ export default function translate(
         initializerList:
           n.type === "ArrayInitialization"
             ? (n as ArrayInitialization).elements.map((element) =>
-                convertConstantToWasmConst(element as IntegerConstant),
+                convertConstantToWasmConst(element as IntegerConstant)
               )
             : undefined,
       };
@@ -93,7 +93,7 @@ export default function translate(
   setPseudoRegisters(
     wasmRoot,
     wasmRoot.functions["main"].sizeOfLocals,
-    rootSymbolTable.currOffset.value,
+    rootSymbolTable.currOffset.value
   );
 
   return wasmRoot;

@@ -5,11 +5,13 @@
 import { Constant, FloatConstant, IntegerConstant } from "~src/c-ast/constants";
 import {
   BinaryOperator,
-  FloatVariableType,
-  IntegerVariableType,
+  FloatDataType,
+  IntegerDataType,
   SignedIntegerType,
   UnsignedIntegerType,
   PrimaryCDataType,
+  VariableType,
+  PrimaryVariableType,
 } from "~src/common/types";
 import {
   getVariableSize,
@@ -18,18 +20,13 @@ import {
   isIntegerType,
   isSignedIntegerType,
   isUnsignedIntegerType,
+  primaryVariableSizes,
 } from "~src/common/utils";
 import { ProcessingError, toJson } from "~src/errors";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { VariableExpr } from "~src/c-ast/variable";
-import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { FunctionCall } from "~src/c-ast/functions";
-import {
-  ArraySymbolEntry,
-  FunctionSymbolEntry,
-  SymbolTable,
-  VariableSymbolEntry,
-} from "~src/c-ast/symbolTable";
+import { SymbolTable } from "~src/common/symbolTable";
 
 /**
  * Evaluates the result of the binary expression a <operator> b.
@@ -115,7 +112,10 @@ export function evaluateConstantBinaryExpression(
 
     return {
       type: "IntegerConstant",
-      variableType: variableType as IntegerVariableType,
+      variableType: variableType as {
+        type: "primary";
+        primaryDataType: IntegerDataType;
+      },
       value,
       position: binaryExpr.position,
     };
@@ -123,7 +123,10 @@ export function evaluateConstantBinaryExpression(
     // the result of the binary expression is a floating point
     return {
       type: "FloatConstant",
-      variableType: variableType as FloatVariableType,
+      variableType: variableType as {
+        type: "primary";
+        primaryDataType: FloatDataType;
+      },
       value: value as number,
       position: binaryExpr.position,
     };
@@ -135,23 +138,38 @@ export function evaluateConstantBinaryExpression(
  */
 function getAdjustedIntValueAccordingToVariableType(
   value: bigint,
-  variableType: PrimaryCDataType
+  variableType: VariableType
 ) {
   let newValue = value;
   // handle integer overflows
   if (
     isSignedIntegerType(variableType) &&
-    newValue > getMaxValueOfSignedIntType(variableType as SignedIntegerType)
-  ) {
-    newValue =
-      newValue % getMaxValueOfSignedIntType(variableType as SignedIntegerType);
-  } else if (
-    isUnsignedIntegerType(variableType) &&
-    newValue > getMaxValueOfUnsignedIntType(variableType as UnsignedIntegerType)
+    newValue >
+      getMaxValueOfSignedIntType(
+        (variableType as PrimaryVariableType)
+          .primaryDataType as SignedIntegerType
+      )
   ) {
     newValue =
       newValue %
-      getMaxValueOfUnsignedIntType(variableType as UnsignedIntegerType);
+      getMaxValueOfSignedIntType(
+        (variableType as PrimaryVariableType)
+          .primaryDataType as SignedIntegerType
+      );
+  } else if (
+    isUnsignedIntegerType(variableType) &&
+    newValue >
+      getMaxValueOfUnsignedIntType(
+        (variableType as PrimaryVariableType)
+          .primaryDataType as UnsignedIntegerType
+      )
+  ) {
+    newValue =
+      newValue %
+      getMaxValueOfUnsignedIntType(
+        (variableType as PrimaryVariableType)
+          .primaryDataType as UnsignedIntegerType
+      );
   }
 
   return newValue;
@@ -161,15 +179,15 @@ function getAdjustedIntValueAccordingToVariableType(
  * Returns the maximum value of a signed int type.
  */
 function getMaxValueOfSignedIntType(val: SignedIntegerType): bigint {
-  return 2n ** (BigInt(getVariableSize(val)) * 8n - 1n) - 1n;
+  return 2n ** (BigInt(primaryVariableSizes[val]) * 8n - 1n) - 1n;
 }
 
 function getMinValueOfSignedIntType(val: SignedIntegerType): bigint {
-  return -(2n ** (BigInt(getVariableSize(val)) * 8n - 1n));
+  return -(2n ** (BigInt(primaryVariableSizes[val]) * 8n - 1n));
 }
 
 function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType): bigint {
-  return 2n ** (BigInt(getVariableSize(val)) * 8n) - 1n;
+  return 2n ** (BigInt(primaryVariableSizes[val]) * 8n) - 1n;
 }
 
 /**
@@ -177,20 +195,17 @@ function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType): bigint {
  * This, according to the standard, is signed integer overflow which is undefined. Thus the logic here is specific to this compiler
  * implementation, and is made to function similarly to other compilers.
  */
-function capNegativeValue(
-  value: bigint,
-  integerType: IntegerVariableType
-): bigint {
+function capNegativeValue(value: bigint, integerType: IntegerDataType): bigint {
   const minNegativeValue =
-    -(2n ** (BigInt(getVariableSize(integerType)) * 8n)) - 1n;
+    -(2n ** (BigInt(primaryVariableSizes[integerType]) * 8n)) - 1n;
   if (value >= minNegativeValue) {
     // no overflow
     return value;
   }
   const diff = minNegativeValue - value;
   return (
-    2n ** (BigInt(getVariableSize(integerType)) * 8n - 1n) -
-    (diff % (2n ** BigInt(getVariableSize(integerType)) * 8n))
+    2n ** (BigInt(primaryVariableSizes[integerType]) * 8n - 1n) -
+    (diff % (2n ** BigInt(primaryVariableSizes[integerType]) * 8n))
   );
 }
 
@@ -209,12 +224,12 @@ function handlePositiveSignedIntegerOverflow(
   const diff = value - maxVal;
   return (
     getMinValueOfSignedIntType(signedType) +
-    ((diff % 2n ** (BigInt(getVariableSize(signedType)) * 8n)) - 1n)
+    ((diff % 2n ** (BigInt(primaryVariableSizes[signedType]) * 8n)) - 1n)
   );
 }
 
 /**
- * Performs capping of excessively large of negative integer values used for constants. This is needed to prevent wasm errors.
+ * Performs capping of excessively large or negative integer values used for constants. This is needed to prevent wasm errors.
  * For unsigned types, this will be wraparound. (defined behaviour)
  * For signed types with positive value, it will also be wraparound (undefined behaviour)
  * For signed types with negative value, it excessively negative numbers will "wrap" by moving from most neagtive to most positive. E.g. for 8 bits, -129 becomes 127
@@ -225,16 +240,19 @@ function capIntegerValue(constant: IntegerConstant) {
       constant.value =
         constant.value %
         getMaxValueOfUnsignedIntType(
-          constant.variableType as UnsignedIntegerType
+          constant.variableType.primaryDataType as UnsignedIntegerType
         );
     } else {
       constant.value = handlePositiveSignedIntegerOverflow(
         constant.value,
-        constant.variableType as SignedIntegerType
+        constant.variableType.primaryDataType as SignedIntegerType
       );
     }
   } else if (constant.value < 0) {
-    constant.value = capNegativeValue(constant.value, constant.variableType);
+    constant.value = capNegativeValue(
+      constant.value,
+      constant.variableType.primaryDataType
+    );
   }
 }
 
@@ -242,7 +260,7 @@ function capIntegerValue(constant: IntegerConstant) {
  * If the constant overflows float (double corresponds to js number type, so that is already handled), need to cap it to ensure there is no wasm error. This is undefined behaviour, but meant to mimic existing compilers.
  */
 function capFloatValue(constant: FloatConstant) {
-  if (constant.variableType === "float") {
+  if (constant.variableType.primaryDataType === "float") {
     constant.value = Math.fround(constant.value);
   }
 }
@@ -264,52 +282,61 @@ function capConstantValues(constant: Constant) {
  * Caps the values of the constants if necessary.
  */
 function setVariableTypeOfConstant(constant: Constant) {
+  function createPrimaryVariableType<T extends PrimaryCDataType>(
+    varType: T
+  ): { type: "primary"; primaryDataType: typeof varType } {
+    return {
+      type: "primary",
+      primaryDataType: varType,
+    };
+  }
+
   if (constant.type === "IntegerConstant") {
     if (constant.suffix === "ul") {
-      constant.variableType = "unsigned long";
+      constant.variableType = createPrimaryVariableType("unsigned long");
     } else if (constant.suffix === "u") {
       if (constant.value <= getMaxValueOfUnsignedIntType("unsigned int")) {
-        constant.variableType = "unsigned int";
+        constant.variableType = createPrimaryVariableType("unsigned int");
       } else {
-        constant.variableType = "unsigned long";
+        constant.variableType = createPrimaryVariableType("unsigned long");
       }
     } else if (constant.suffix === "l") {
-      constant.variableType = "signed long";
+      constant.variableType = createPrimaryVariableType("signed long");
     } else {
       // no suffix
       if (constant.value < 0) {
         if (constant.value >= getMinValueOfSignedIntType("signed int")) {
-          constant.variableType = "signed int";
+          constant.variableType = createPrimaryVariableType("signed int");
         } else if (
           constant.value >= getMinValueOfSignedIntType("signed long")
         ) {
-          constant.variableType = "signed long";
+          constant.variableType = createPrimaryVariableType("signed long");
         } else {
           // integer is too negative
           // TODO: possibly inform user with warning here
-          constant.variableType = "signed long";
+          constant.variableType = createPrimaryVariableType("signed long");
         }
       } else {
         if (constant.value <= getMaxValueOfSignedIntType("signed int")) {
-          constant.variableType = "signed int";
+          constant.variableType = createPrimaryVariableType("signed int");
         } else if (
           constant.value <= getMaxValueOfSignedIntType("signed long")
         ) {
-          constant.variableType = "signed long";
+          constant.variableType = createPrimaryVariableType("signed long");
         } else {
           // integer is too large
           // TODO: possibly inform user with warning here
-          constant.variableType = "signed long";
+          constant.variableType = createPrimaryVariableType("signed long");
         }
       }
     }
   } else {
     // handle float constant
     if (constant.suffix === "f") {
-      constant.variableType = "float";
+      constant.variableType = createPrimaryVariableType("float");
     } else {
       // by default all float constants are doubles if "f"/"F" suffix is not specified
-      constant.variableType = "double";
+      constant.variableType = createPrimaryVariableType("double");
     }
   }
 }
@@ -325,7 +352,7 @@ export function processConstant(constant: Constant) {
  */
 function determineVariableTypeOfBinaryExpression(
   binaryExpression: BinaryExpression
-): PrimaryCDataType {
+): VariableType {
   if (
     isFloatType(binaryExpression.leftExpr.variableType) &&
     isFloatType(binaryExpression.rightExpr.variableType)
@@ -381,15 +408,13 @@ export function setVariableTypeOfBinaryExpression(
  * Sets the variable type of any kind of expression that involves accessing a symbol.
  */
 export function setVariableTypeOfSymbolAccessExpression(
-  node: FunctionCall | VariableExpr | ArrayElementExpr,
+  node: FunctionCall | VariableExpr,
   symbolTable: SymbolTable
 ) {
   const symbolEntry = symbolTable.getSymbolEntry(node.name);
   if (symbolEntry.type === "function") {
-    const s = symbolEntry as FunctionSymbolEntry;
-    node.variableType = s.returnType;
+    node.variableType = symbolEntry.returnType;
   } else {
-    const s = symbolEntry as VariableSymbolEntry | ArraySymbolEntry;
-    node.variableType = s.variableType;
+    node.variableType = symbolEntry.variableType;
   }
 }

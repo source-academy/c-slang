@@ -18,7 +18,7 @@ import { SelectStatement } from "~src/c-ast/select";
 import { Position } from "~src/c-ast/types";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
 import { VariableType } from "~src/common/types";
-import { SymbolTable } from "~src/c-ast/symbolTable";
+import { SymbolTable } from "~src/common/symbolTable";
 
 export interface CNode {
   type: string;
