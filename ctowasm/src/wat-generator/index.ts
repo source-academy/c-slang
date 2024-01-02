@@ -2,19 +2,16 @@
  * WAT Generator module for generating a WAT string from WAT AST.
  */
 import { WasmModule } from "~src/wasm-ast/core";
-import generateWat from "~src/wat-generator/generateFunctionBodyWat";
-import {
-  convertVariableToByteStr,
-  generateLine,
-} from "~src/wat-generator/util";
+import generateFunctionBodyWat from "~src/wat-generator/generateFunctionBodyWat";
+import { generateLine } from "~src/wat-generator/util";
 
-export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
+export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   let watStr = generateLine("(module", baseIndentation);
 
   // add the memory import
   watStr += generateLine(
     `(import "js" "mem" (memory ${module.memorySize}))`,
-    baseIndentation + 1,
+    baseIndentation + 1
   );
 
   // add the imported functions
@@ -35,7 +32,7 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
           ? ` (result ${importedFunction.return})`
           : ""
       }))`,
-      baseIndentation + 1,
+      baseIndentation + 1
     );
   }
 
@@ -45,36 +42,26 @@ export function generateWAT(module: WasmModule, baseIndentation: number = 0) {
       `(global $${global.name} (${global.isConst ? "" : "mut"} ${
         global.varType
       }) ${
-        global.initializerValue ? generateWat(global.initializerValue) : ""
+        global.initializerValue ? generateFunctionBodyWat(global.initializerValue) : ""
       })`,
-      baseIndentation + 1,
+      baseIndentation + 1
     );
   }
 
-  // add all the global variables (in linear memory) declarations
-  // TODO: check out what to do when not initialized
-  for (const globalVariableName of Object.keys(module.globals)) {
-    const globalVariable = module.globals[globalVariableName];
-    if (
-      (globalVariable.type === "DataSegmentVariable" &&
-        typeof globalVariable.initializerValue !== "undefined") ||
-      (globalVariable.type === "DataSegmentArray" &&
-        typeof globalVariable.initializerList !== "undefined")
-    )
-      watStr += generateLine(
-        `(data (i32.const ${globalVariable.offset}) "${convertVariableToByteStr(
-          globalVariable,
-        )}")`,
-        baseIndentation + 1,
-      );
-  }
+  // add all the global variables (in linear memory) intiializations
+  module.dataSegmentInitializations.forEach((dataSegmentInitialization) => {
+    watStr += generateLine(
+      `(data (i32.const ${dataSegmentInitialization.addr}) "${dataSegmentInitialization.byteStr}")`,
+      baseIndentation + 1
+    );
+  });
 
   // add all the function definitions
   for (const functionName of Object.keys(module.functions)) {
     const func = module.functions[functionName];
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);
     for (const statement of func.body) {
-      watStr += generateLine(generateWat(statement), baseIndentation + 2);
+      watStr += generateLine(generateFunctionBodyWat(statement), baseIndentation + 2);
     }
     watStr += generateLine(")", baseIndentation + 1);
   }

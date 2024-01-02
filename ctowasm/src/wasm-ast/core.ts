@@ -1,4 +1,7 @@
 import {
+  WasmConst,
+} from "~src/wasm-ast/consts";
+import {
   WasmSelectStatement,
   WasmLoop,
   WasmBranchIf,
@@ -6,23 +9,35 @@ import {
   WasmBlock,
 } from "~src/wasm-ast/control";
 import {
+  WasmBinaryExpression,
+  WasmNegateFloatExpression,
+} from "~src/wasm-ast/expressions";
+import {
   WasmFunction,
   WasmFunctionCallStatement,
   WasmReturnStatement,
   WasmRegularFunctionCallStatement,
   WasmImportedFunction,
+  WasmFunctionCall,
+  WasmRegularFunctionCall,
 } from "~src/wasm-ast/functions";
 import {
-  WasmDataSegmentVariable,
-  WasmDataSegmentArray,
   WasmMemoryStore,
   WasmMemoryGrow,
+  WasmDataSegmentInitialization,
+  WasmMemoryLoad,
+  WasmMemorySize,
 } from "~src/wasm-ast/memory";
-import { WasmType } from "~src/wasm-ast/types";
 import {
+  WasmBooleanExpression,
+  WasmNumericConversionWrapper,
+} from "~src/wasm-ast/misc";
+import {
+  WasmGlobalGet,
   WasmGlobalSet,
-  WasmLocalSet,
   WasmGlobalVariable,
+  WasmLocalGet,
+  WasmLocalSet,
 } from "~src/wasm-ast/variables";
 
 /**
@@ -34,7 +49,7 @@ export interface WasmAstNode {
 
 export interface WasmModule extends WasmAstNode {
   type: "Module";
-  globals: Record<string, WasmDataSegmentVariable | WasmDataSegmentArray>;
+  dataSegmentInitializations: WasmDataSegmentInitialization[];
   globalWasmVariables: WasmGlobalVariable[];
   functions: Record<string, WasmFunction>;
   memorySize: number; // number of pages of memory needed for this module
@@ -46,6 +61,7 @@ export type WasmStatement =
   | WasmGlobalSet
   | WasmLocalSet
   | WasmFunctionCallStatement
+  | WasmRegularFunctionCallStatement
   | WasmSelectStatement
   | WasmReturnStatement
   | WasmLoop
@@ -53,20 +69,37 @@ export type WasmStatement =
   | WasmBranch
   | WasmBlock
   | WasmMemoryStore
-  | WasmMemoryGrow
-  | WasmRegularFunctionCallStatement;
+  | WasmMemoryGrow;
+
 
 /**
- * A special type of statement that results in 1 value being put on the stack,
- * in effect behaving like a WasmExpression.
- *
- * Currently this is only enabled for setting statements, to allowing postfix/prefix operators to work.
+ * Wasm Expressions which consist of 1 instruction pushing 1 wasm value to the stack.
  */
-export type WasmExprStatement = WasmLocalSet | WasmGlobalSet | WasmMemoryStore;
+type WasmSingleInstructionExpression =
+  | WasmConst
+  | WasmBinaryExpression
+  | WasmNegateFloatExpression
+  | WasmFunctionCall
+  | WasmRegularFunctionCall
+  | WasmMemoryLoad
+  | WasmMemorySize
+  | WasmBooleanExpression
+  | WasmNumericConversionWrapper
+  | WasmLocalGet
+  | WasmGlobalGet;
 
 /**
- * Expressions are Wasm instructions that push a variable to the virtual wasm stack for use in a statement.
+ * An expression that consists of multiple instructions, which ultimately push 1 or more variables to the stack.
+ * Used for postfix expressions and structs.
  */
-export interface WasmExpression extends WasmAstNode {
-  wasmVariableType: WasmType; // the type of this expression
+export interface WasmMultiInstructionExpression extends WasmAstNode {
+  type: "WasmMultiInstructionExpression";
+  instructions: (WasmStatement | WasmExpression)[]
 }
+
+/**
+ * WasmExpressions are instruction(s) that result in 1 or more wasm values being pushed onto the virtual stack.
+ */
+export type WasmExpression = WasmSingleInstructionExpression | WasmMultiInstructionExpression;
+
+

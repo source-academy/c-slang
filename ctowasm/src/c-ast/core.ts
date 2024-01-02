@@ -17,8 +17,8 @@ import { IterationStatement } from "~src/c-ast/loops";
 import { SelectStatement } from "~src/c-ast/select";
 import { Position } from "~src/c-ast/types";
 import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
-import { VariableType } from "~src/common/types";
-import { SymbolTable } from "~src/common/symbolTable";
+import { DataType } from "~src/common/types";
+import { SymbolTable } from "~src/processor/symbolTable";
 
 export interface CNode {
   type: string;
@@ -29,7 +29,7 @@ export interface CNode {
  * Node definition for expressions to inherit from.
  */
 export interface Expression extends CNode {
-  variableType: VariableType; // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
+  dataType: DataType; // the type of the expression. to be filled before or after processing, depending on the expression type //TODO: not actually set in processor yet
 }
 
 /**

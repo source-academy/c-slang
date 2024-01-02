@@ -59,15 +59,15 @@
     }
   }
 
-  // Creates a PrimaryVariableType object.
-  function createPrimaryVariableType(primaryDataType) {
+  // Creates a PrimaryDataType object.
+  function createPrimaryDataType(primaryDataType) {
     return {
       type: "primary",
       primaryDataType
     };
   } 
 
-  function createArrayVariableType(elementDataType, numElements) {
+  function createArrayDataType(elementDataType, numElements) {
     return {
       type: "array",
       elementDataType: elementDataType,
@@ -165,10 +165,10 @@ declaration
 
 variable_declaration 
   = array_declaration
-  / primaryDataType:type _+ name:identifier { return generateNode("VariableDeclaration", { variableType: createPrimaryVariableType(primaryDataType), name }); }
+  / primaryDataType:type _+ name:identifier { return generateNode("VariableDeclaration", { dataType: createPrimaryDataType(primaryDataType), name }); }
 
 array_declaration
-  = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _*"]" { return generateNode("VariableDeclaration", { variableType: createArrayVariableType(createPrimaryVariableType(primaryDataType), parseInt(numElements)), name }); }  // match on array first as it is a more specific expression 
+  = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _*"]" { return generateNode("VariableDeclaration", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), parseInt(numElements)), name }); }  // match on array first as it is a more specific expression 
 
 function_declaration
   = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
@@ -185,11 +185,11 @@ function_return_type
 
 initialization
   = array_initialization // match on array first as it is a more specific expression
-	/ primaryDataType:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { variableType: createPrimaryVariableType(primaryDataType), name, initializer: createInitializerSingle(value)  }); }
+	/ primaryDataType:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { dataType: createPrimaryDataType(primaryDataType), name, initializer: createInitializerSingle(value)  }); }
 
 array_initialization
-  = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("Initialization", { variableType: createArrayVariableType(createPrimaryVariableType(primaryDataType), numElements), name, initializer: createInitializerList(elements) }); }  
-  / primaryDataType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("Initialization", { variableType: createArrayVariableType(createPrimaryVariableType(primaryDataType), elements.length), name, initializer: createInitializerList(elements) }); }  
+  = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("Initialization", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), numElements), name, initializer: createInitializerList(elements) }); }  
+  / primaryDataType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("Initialization", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), elements.length), name, initializer: createInitializerList(elements) }); }  
 
 list_initializer
   = "{" _* @expression|.., _* "," _* | _* "}"

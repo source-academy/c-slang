@@ -2,7 +2,8 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { WasmImportedFunction, WasmSymbolTable } from "~src/wasm-ast/functions";
+import { WasmImportedFunction } from "~src/wasm-ast/functions";
+import { WasmSymbolTable } from "./symbolTable";
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmModule } from "~src/wasm-ast/core";
 import {
@@ -12,27 +13,41 @@ import {
   HEAP_POINTER,
   REG_1,
   REG_2,
+  WASM_ADDR_TYPE,
 } from "~src/translator/memoryUtil";
 
 import {
   MemoryVariableByteSize,
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
-import { ArithemeticUnaryOperator, PrimaryCDataType } from "~src/common/types";
-import { variableTypeToWasmType } from "~src/translator/variableUtil";
+import { ArithemeticUnaryOperator, DataType } from "~src/common/types";
+import { primaryCDataTypeToWasmType } from "~src/translator/variableUtil";
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
+import { getDataTypeSize } from "~src/common/utils";
+import { TranslationError, toJson } from "~src/errors";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator
  */
 export function arithmeticUnaryOperatorToInstruction(
   op: ArithemeticUnaryOperator,
-  variableType: PrimaryCDataType
+  dataType: DataType
 ) {
-  return `${variableTypeToWasmType[variableType]}.${
-    op === "++" ? "add" : "sub"
-  }`;
+  if (dataType.type === "primary") {
+    return `${primaryCDataTypeToWasmType[dataType.primaryDataType]}.${
+      op === "++" ? "add" : "sub"
+    }`;
+  } else if (dataType.type === "pointer") {
+    return `${WASM_ADDR_TYPE}.${op === "++" ? "add" : "sub"}`;
+  } else {
+    // arithmetic is not defined for non ints or non pointers
+    throw new TranslationError(
+      `arithmeticUnaryOperatorToInstruction(): Unsupported variable type: ${toJson(
+        dataType
+      )}`
+    );
+  }
 }
 
 // Maps wasm type to number of bytes it uses
@@ -60,7 +75,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "IntegerConst",
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
       value: BigInt(wasmRoot.memorySize * WASM_PAGE_SIZE - stackPreallocate),
     },
   });
@@ -71,7 +86,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "IntegerConst",
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
       value: BigInt(wasmRoot.memorySize * WASM_PAGE_SIZE), // BP starts at the memory boundary
     },
   });
@@ -83,7 +98,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "IntegerConst",
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
       value: BigInt(Math.ceil(dataSegmentSize / 4) * 4), // align to 4 byte boundary
     },
   });
@@ -94,7 +109,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "IntegerConst",
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
       value: 0n,
     },
   });
@@ -105,7 +120,7 @@ export function setPseudoRegisters(
     varType: "i32",
     initializerValue: {
       type: "IntegerConst",
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
       value: 0n,
     },
   });
@@ -143,7 +158,7 @@ export function addToSymbolTable(
   variable: WasmMemoryVariable
 ) {
   symbolTable.variables[variable.name] = variable;
-  symbolTable.currOffset.value += variable.size;
+  symbolTable.currOffset.value += getDataTypeSize(variable.dataType);
 }
 
 /**
@@ -170,11 +185,11 @@ export function processImportedFunctions(
     result[f] = {
       ...importedFunctions[f],
       wasmParamTypes: importedFunctions[f].params.map(
-        (p) => variableTypeToWasmType[p]
+        (p) => primaryCDataTypeToWasmType[p]
       ),
       returnWasmType:
         importedFunctions[f].return !== null
-          ? variableTypeToWasmType[importedFunctions[f].return]
+          ? primaryCDataTypeToWasmType[importedFunctions[f].return]
           : null,
     };
   }
@@ -190,13 +205,13 @@ export function getMaxIntConstant(intType: "i32" | "i64"): WasmIntegerConst {
     return {
       type: "IntegerConst",
       value: 4294967296n,
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
     };
   } else {
     return {
       type: "IntegerConst",
       value: 9223372036854775808n,
-      wasmVariableType: "i64",
+      wasmDataType: "i64",
     };
   }
 }

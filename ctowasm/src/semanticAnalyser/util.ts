@@ -1,9 +1,9 @@
-import { VariableType } from "~src/common/types";
+import { DataType } from "~src/common/types";
 
 /**
- * Returns true if two variables of VariableType are the same.
+ * Returns true if two variables of dataType are the same.
  */
-export function areVariableTypesTheSame(a: VariableType, b: VariableType) {
+export function areDataTypesTheSame(a: DataType, b: DataType) {
   if (a.type !== b.type) {
     return false;
   }
@@ -13,10 +13,10 @@ export function areVariableTypesTheSame(a: VariableType, b: VariableType) {
   }
 
   if (a.type === "array" && b.type === "array") {
-    return a.elementDataType === b.elementDataType && a.numElements === b.numElements
+    return (
+      a.elementDataType === b.elementDataType && a.numElements === b.numElements
+    );
   }
 }
 
-export function areFunctionTypesTheSame() {
-
-}
+export function areFunctionTypesTheSame() {}

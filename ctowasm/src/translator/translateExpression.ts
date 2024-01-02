@@ -6,31 +6,29 @@ import {
   PostfixArithmeticExpression,
   UnaryExpression,
 } from "~src/c-ast/unaryExpression";
-import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { AssignmentExpression } from "~src/c-ast/assignment";
 import { FunctionCall } from "~src/c-ast/functions";
 import { Expression } from "~src/c-ast/core";
-import { VariableExpr } from "~src/c-ast/variable";
+import { ArrayElementExpr, VariableExpr } from "~src/c-ast/variable";
 import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 import { arithmeticUnaryOperatorToInstruction } from "~src/translator/util";
 import {
-  convertConstantToWasmConst,
-  getMemoryAccessDetails,
+  convertConstantToWasmConst, convertScalarDataTypeToWasmType, getVariableAddr,
 } from "~src/translator/variableUtil";
 import {
   WasmFunctionCall,
   WasmRegularFunctionCall,
-  WasmSymbolTable,
 } from "~src/wasm-ast/functions";
-import { WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
+import { WasmSymbolTable } from "./symbolTable";
+import { MemoryVariableByteSize, WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 import { Constant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import translateBinaryExpression from "~src/translator/translateBinaryExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
-import { toJson } from "~src/errors";
-import { isConstant } from "~src/common/utils";
+import { TranslationError, UnsupportedFeatureError, toJson } from "~src/errors";
+import { getDataTypeSize, isConstant } from "~src/common/utils";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
 import translateUnaryExpression from "~src/translator/translateUnaryExpression";
 
@@ -40,7 +38,7 @@ import translateUnaryExpression from "~src/translator/translateUnaryExpression";
 export default function translateExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  expr: Expression,
+  expr: Expression
 ): WasmExpression {
   if (isConstant(expr)) {
     const n = expr as Constant;
@@ -53,18 +51,38 @@ export default function translateExpression(
     return translateFunctionCall(wasmRoot, symbolTable, n) as
       | WasmFunctionCall
       | WasmRegularFunctionCall;
-  } else if (expr.type === "VariableExpr" || expr.type === "ArrayElementExpr") {
-    const n = expr as VariableExpr | ArrayElementExpr;
-    const memoryAccessDetails = getMemoryAccessDetails(
-      wasmRoot,
-      symbolTable,
-      n,
-    );
+  } else if (expr.type === "VariableExpr") {
+    const n = expr as VariableExpr;
+    if (n.dataType.type === "primary" || n.dataType.type === "pointer") {
+      return {
+        type: "MemoryLoad",
+        wasmDataType: convertScalarDataTypeToWasmType(n.dataType),
+        addr: getVariableAddr(symbolTable, n.name),
+        numOfBytes: getDataTypeSize(n.dataType) as MemoryVariableByteSize
+      }
+    } else if (n.dataType.type === "struct") {
+      // TODO: when structs supported
+      throw new UnsupportedFeatureError("Structs not yet supported in translation")
+    } else if (n.dataType.type === "typedef") {
+      // TODO: when typedef supported
+      throw new UnsupportedFeatureError("Custom typedef types not yet supported in translation") 
+    } else if (n.dataType.type === "array") {
+      // arrays cannot be used as variable expressions
+      throw new TranslationError("Arrays cannot be used as variable expression")
+    } else {
+      throw new TranslationError("translateExpression(): Unknown data type of variable expression")
+    }
+  } else if (expr.type === "ArrayElementExpr") {
+    const n = expr as ArrayElementExpr;
+    if (n.dataType.type !== "array") {
+      throw new TranslationError(`translateExpression(): Invalid data type for array element expr: ${toJson(n.dataType)} - only arrays supported`)
+    }
     return {
       type: "MemoryLoad",
-      wasmVariableType: memoryAccessDetails.wasmVariableType,
+      wasmDataType: n.dataType.elementDataType,
+      numOfBytes: n.
       ...memoryAccessDetails,
-    } as WasmMemoryLoad;
+    } as WasmMemoryLoad; 
   } else if (expr.type === "BinaryExpression") {
     const n = expr as BinaryExpression;
     return translateBinaryExpression(wasmRoot, symbolTable, n);
@@ -73,29 +91,29 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     const wasmNode: WasmMemoryLoad = {
       type: "MemoryLoad",
-      wasmVariableType: memoryAccessDetails.wasmVariableType,
+      wasmDataType: memoryAccessDetails.wasmDataType,
       preStatements: [
         {
           type: "MemoryStore",
-          wasmVariableType: memoryAccessDetails.wasmVariableType,
+          wasmDataType: memoryAccessDetails.wasmDataType,
           value: {
             type: "BinaryExpression",
             instruction: arithmeticUnaryOperatorToInstruction(
               n.operator,
-              n.variable.variableType,
+              n.variable.dataType
             ),
-            wasmVariableType: memoryAccessDetails.wasmVariableType,
+            wasmDataType: memoryAccessDetails.wasmDataType,
             leftExpr: {
               type: "MemoryLoad",
               ...memoryAccessDetails,
             } as WasmMemoryLoad,
             rightExpr: {
               type: "IntegerConst",
-              wasmVariableType: WASM_ADDR_TYPE,
+              wasmDataType: WASM_ADDR_TYPE,
               value: 1n,
             } as WasmIntegerConst,
           } as WasmBinaryExpression,
@@ -110,7 +128,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     const wasmNode: WasmMemoryStore = {
       type: "MemoryStore",
@@ -118,16 +136,16 @@ export default function translateExpression(
         type: "BinaryExpression",
         instruction: arithmeticUnaryOperatorToInstruction(
           n.operator,
-          n.variable.variableType,
+          n.variable.dataType
         ),
-        wasmVariableType: memoryAccessDetails.wasmVariableType,
+        wasmDataType: memoryAccessDetails.wasmDataType,
         leftExpr: {
           type: "MemoryLoad",
           ...memoryAccessDetails,
         },
         rightExpr: {
           type: "IntegerConst",
-          wasmVariableType: "i32",
+          wasmDataType: "i32",
           value: 1n,
         } as WasmIntegerConst,
       } as WasmBinaryExpression,
@@ -148,7 +166,7 @@ export default function translateExpression(
     const memoryAccessDetails = getMemoryAccessDetails(
       wasmRoot,
       symbolTable,
-      n.variable,
+      n.variable
     );
     return {
       type: "MemoryLoad",
@@ -164,7 +182,7 @@ export default function translateExpression(
   } else {
     console.assert(
       false,
-      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(expr)}`,
+      `WASM TRANSLATION ERROR: Unhandled C expression node\n${toJson(expr)}`
     );
   }
 }

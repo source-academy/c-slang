@@ -2,10 +2,14 @@
  * This file contains utility functions related to variables.
  */
 
-import { ArrayElementExpr } from "~src/c-ast/arrays";
 import { Expression } from "~src/c-ast/core";
-import { VariableExpr } from "~src/c-ast/variable";
-import { PrimaryCDataType } from "~src/common/types";
+import { ArrayElementExpr, VariableExpr } from "~src/c-ast/variable";
+import {
+  PrimaryCDataType,
+  PrimaryDataType,
+  DataType,
+  ScalarDataType,
+} from "~src/common/types";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import {
@@ -16,30 +20,30 @@ import {
   WASM_ADDR_SUB_INSTRUCTION,
   WASM_ADDR_TYPE,
 } from "~src/translator/memoryUtil";
-import { WasmType } from "~src/wasm-ast/types";
+import { WasmFloatType, WasmIntType, WasmType } from "~src/wasm-ast/types";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
-import { WasmSymbolTable } from "~src/wasm-ast/functions";
-import {
-  WasmLocalArray,
-  MemoryVariableByteSize,
-  WasmDataSegmentArray,
-  WasmLocalVariable,
-  WasmDataSegmentVariable,
-} from "~src/wasm-ast/memory";
+import { WasmSymbolTable } from "./symbolTable";
+import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 import { Constant } from "~src/c-ast/constants";
 import { wasmTypeToSize } from "~src/translator/util";
-import { isSignedIntegerType, isUnsignedIntegerType } from "~src/common/utils";
+import {
+  getDataTypeSize,
+  isSignedIntegerType,
+  isUnsignedIntegerType,
+} from "~src/common/utils";
 import {
   NumericConversionInstruction,
   WasmNumericConversionWrapper,
 } from "~src/wasm-ast/misc";
 import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmConst, WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WASM_ADDR_SIZE } from "~src/common/constants";
+import { retrieveVariableFromSymbolTable } from "./symbolTable";
 
 /**
  * Mapping of C variable types to the Wasm variable type used to perform operations on it.
  */
-export const variableTypeToWasmType: Record<PrimaryCDataType, WasmType> = {
+export const primaryCDataTypeToWasmType: Record<PrimaryCDataType, WasmType> = {
   ["unsigned char"]: "i32",
   ["signed char"]: "i32",
   ["unsigned short"]: "i32",
@@ -53,41 +57,39 @@ export const variableTypeToWasmType: Record<PrimaryCDataType, WasmType> = {
 };
 
 /**
+ * Converts a scalar type to a primary data type
+ */
+export function convertScalarDataTypeToWasmType(
+  scalarType: ScalarDataType
+): WasmType {
+  if (scalarType.type === "pointer") {
+    return WASM_ADDR_TYPE;
+  } else {
+    return primaryCDataTypeToWasmType[scalarType.primaryDataType];
+  }
+}
+
+/**
  * Converts a constant to a Wasm const.
  */
 export function convertConstantToWasmConst(constant: Constant): WasmConst {
   if (constant.type === "IntegerConstant") {
     return {
       type: "IntegerConst",
-      wasmVariableType: variableTypeToWasmType[constant.variableType],
+      wasmDataType: primaryCDataTypeToWasmType[
+        constant.dataType.primaryDataType
+      ] as WasmIntType,
       value: constant.value,
     };
   } else {
     return {
       type: "FloatConst",
-      wasmVariableType: variableTypeToWasmType[constant.variableType],
+      wasmDataType: primaryCDataTypeToWasmType[
+        constant.dataType.primaryDataType
+      ] as WasmFloatType,
       value: constant.value,
     };
   }
-}
-
-/**
- * Retrieves information on variable from given function's symbol table, or from globals in wasmRoot if not found.
- */
-export function retrieveVariableFromSymbolTable(
-  symbolTable: WasmSymbolTable,
-  variableName: string
-) {
-  let curr = symbolTable;
-
-  while (curr !== null) {
-    if (variableName in curr.variables) {
-      return curr.variables[variableName];
-    }
-    curr = curr.parentTable;
-  }
-  // should not happen
-  throw new TranslationError("Symbol not found");
 }
 
 /**
@@ -99,33 +101,28 @@ export function getVariableAddr(
   variableName: string
 ): WasmExpression {
   const variable = retrieveVariableFromSymbolTable(symbolTable, variableName);
-  if (
-    variable.type === "DataSegmentArray" ||
-    variable.type === "DataSegmentVariable"
-  ) {
+  if (variable.type === "GlobalMemoryVariable") {
     // this is a global variable
     return {
       type: "IntegerConst",
-      wasmVariableType: WASM_ADDR_TYPE,
+      wasmDataType: WASM_ADDR_TYPE,
       value: BigInt(variable.offset),
-    } as WasmIntegerConst;
+    };
   } else {
     // local variable
     return {
       type: "BinaryExpression",
-      wasmVariableType: WASM_ADDR_TYPE,
       instruction: WASM_ADDR_SUB_INSTRUCTION,
       leftExpr: {
         type: "GlobalGet",
         name: BASE_POINTER,
-        wasmVariableType: WASM_ADDR_TYPE,
       },
       rightExpr: {
         type: "IntegerConst",
-        wasmVariableType: WASM_ADDR_TYPE,
+        wasmDataType: WASM_ADDR_TYPE,
         value: BigInt(variable.offset),
-      } as WasmIntegerConst,
-    } as WasmBinaryExpression;
+      },
+    };
   }
 }
 
@@ -141,90 +138,26 @@ export function getArrayElementAddr(
 ) {
   return {
     type: "BinaryExpression",
-    wasmVariableType: WASM_ADDR_TYPE,
+    wasmDataType: WASM_ADDR_TYPE,
     instruction: WASM_ADDR_ADD_INSTRUCTION,
     leftExpr: getVariableAddr(symbolTable, arrayName),
     // may need a numeric wrapper on the expression used to index the array to make sure it is unsigned int
     rightExpr: getTypeConversionWrapper(
+      // make sure the resultant expression is same type as WASM_ADDR_CTYPE
+      elementIndex.dataType as PrimaryDataType, // expression must be integral type,
       WASM_ADDR_CTYPE,
-      elementIndex.variableType,
       {
         type: "BinaryExpression",
         instruction: WASM_ADDR_MUL_INSTRUCTION,
-        wasmVariableType: WASM_ADDR_TYPE,
         leftExpr: translateExpression(wasmRoot, symbolTable, elementIndex),
         rightExpr: {
           type: "IntegerConst",
-          wasmVariableType: WASM_ADDR_TYPE,
+          wasmDataType: WASM_ADDR_TYPE,
           value: BigInt(elementSize),
-        } as WasmIntegerConst,
-      } as WasmBinaryExpression
+        },
+      }
     ),
-  } as WasmBinaryExpression;
-}
-
-/**
- * All the info needed to access memory during variable read/write.
- */
-interface MemoryAccessDetails {
-  wasmVariableType: WasmType; // variable type for memory access
-  numOfBytes: MemoryVariableByteSize; // size of memory access
-  addr: WasmExpression;
-}
-
-/**
- * Retrieve the details of the the primitive variable or array variable from enclosing func/wasmRoot
- */
-export function getMemoryAccessDetails(
-  wasmRoot: WasmModule,
-  symbolTable: WasmSymbolTable,
-  expr: VariableExpr | ArrayElementExpr
-): MemoryAccessDetails {
-  const variable = retrieveVariableFromSymbolTable(symbolTable, expr.name);
-  if (expr.type === "VariableExpr") {
-    if (
-      !(
-        variable.type === "LocalVariable" ||
-        variable.type === "DataSegmentVariable"
-      )
-    ) {
-      throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
-      );
-    }
-    const v = variable as WasmLocalVariable | WasmDataSegmentVariable;
-    return {
-      addr: getVariableAddr(symbolTable, expr.name),
-      numOfBytes: v.size,
-      wasmVariableType: variable.wasmVarType,
-    };
-  } else if (expr.type === "ArrayElementExpr") {
-    if (
-      !(variable.type === "LocalArray" || variable.type === "DataSegmentArray")
-    ) {
-      throw new TranslationError(
-        "getMemoryAccessDetails error: memory access variable does not match."
-      );
-    }
-    const v = variable as WasmDataSegmentArray | WasmLocalArray;
-    const t = {
-      addr: getArrayElementAddr(
-        wasmRoot,
-        symbolTable,
-        expr.name,
-        expr.index,
-        v.elementSize
-      ),
-      numOfBytes: wasmTypeToSize[v.wasmVarType], // the size of one element of //TODO: need to change when have more types
-      wasmVariableType: v.wasmVarType,
-    };
-    return t;
-  } else {
-    console.assert(
-      false,
-      "getMemoryAccessDetails failed - no matching expression type"
-    );
-  }
+  };
 }
 
 /**
@@ -238,14 +171,13 @@ export function getArrayConstantIndexElementAddr(
 ): WasmBinaryExpression {
   return {
     type: "BinaryExpression",
-    wasmVariableType: WASM_ADDR_TYPE,
     instruction: WASM_ADDR_ADD_INSTRUCTION,
     leftExpr: getVariableAddr(symbolTable, arrayName),
     rightExpr: {
       type: "IntegerConst",
-      wasmVariableType: "i32",
+      wasmDataType: WASM_ADDR_TYPE,
       value: BigInt(elementIndex * elementSize),
-    } as WasmIntegerConst,
+    },
   };
 }
 
@@ -363,52 +295,65 @@ function getNeededNumericConversionInstruction(
 }
 
 /**
- * Get the WAT AST NumericWrapper node that converts a type "from" to another type "to".
+ * Get the WAT AST NumericWrapper node that converts a primary C data type "from" to another type "to".
  */
 export function getTypeConversionWrapper(
-  from: PrimaryCDataType, // the C variable type of value being assigned
-  to: PrimaryCDataType, // the C variable type of variable being assigned to
+  from: ScalarDataType, // the C variable type of value being assigned
+  to: ScalarDataType, // the C variable type of variable being assigned to
   translatedExpression: WasmExpression // the translated expression being assiged to the variable
 ): WasmExpression {
-  const variableWasmType = variableTypeToWasmType[to]; // the wasm type of the variable being assigned to
-  const valueWasmType = variableTypeToWasmType[from]; // the wasm type of the expression being assigned
+  let fromWasmType: WasmType;
+  let toWasmType: WasmType;
+
+  if (from.type === "pointer") {
+    fromWasmType = WASM_ADDR_TYPE;
+  } else {
+    fromWasmType = primaryCDataTypeToWasmType[from.primaryDataType];
+  }
+
+  if (to.type === "pointer") {
+    toWasmType = WASM_ADDR_TYPE;
+  } else {
+    toWasmType = primaryCDataTypeToWasmType[to.primaryDataType];
+  }
 
   // sanity checks
-  if (typeof variableWasmType === "undefined") {
+  if (typeof toWasmType === "undefined") {
     throw new TranslationError(
       `getTypeConversionWrapper: undefined variableWasmType: original type: ${to}`
     );
   }
-  if (typeof valueWasmType === "undefined") {
+  if (typeof fromWasmType === "undefined") {
     throw new TranslationError(
       `getTypeConversionWrapper: undefined valueWasmType: original type: ${from}`
     );
   }
 
-  if (variableWasmType === valueWasmType) {
+  if (toWasmType === fromWasmType) {
     // same wasm type already. no need any numeric conversion, and C implicit conversion rules will be adhered to
     return translatedExpression;
   }
-  if (isUnsignedIntegerType(from)) {
+
+  if (isUnsignedIntegerType(from) || from.type === "pointer") {
     return {
       type: "NumericWrapper",
       instruction: getNeededNumericConversionInstruction(
-        valueWasmType,
-        variableWasmType,
+        fromWasmType,
+        toWasmType,
         "unsigned"
       ),
-      wasmVariableType: variableTypeToWasmType[to],
+      wasmDataType: toWasmType,
       expr: translatedExpression,
     } as WasmNumericConversionWrapper;
   } else if (isSignedIntegerType(from)) {
     return {
       type: "NumericWrapper",
       instruction: getNeededNumericConversionInstruction(
-        valueWasmType,
-        variableWasmType,
+        fromWasmType,
+        toWasmType,
         "signed"
       ),
-      wasmVariableType: variableTypeToWasmType[to],
+      wasmDataType: toWasmType,
       expr: translatedExpression,
     } as WasmNumericConversionWrapper;
   } else {
@@ -416,12 +361,77 @@ export function getTypeConversionWrapper(
     return {
       type: "NumericWrapper",
       instruction: getNeededNumericConversionInstruction(
-        valueWasmType,
-        variableWasmType,
+        fromWasmType,
+        toWasmType,
         "signed"
       ),
-      wasmVariableType: variableTypeToWasmType[to],
+      wasmDataType: toWasmType,
       expr: translatedExpression,
     } as WasmNumericConversionWrapper;
+  }
+}
+
+/**
+ * Information on how to load/store a specific primary C data type in wasm memory.
+ * A struct or array may be composed of multiple of these.
+ */
+interface MemoryInformation {
+  wasmType: WasmType;
+  numOfBytes: MemoryVariableByteSize;
+  offset: number; // offset in number of bytes from the start of the variable (e.g. the 2nd element of an array of ints has offset 4)
+}
+
+/**
+ * Returns all the memory information corresponding to a storing of each primary C data type
+ * that a variable is composed of.
+ */
+export function getMemoryInformation(dataType: DataType): MemoryInformation[] {
+  if (dataType.type === "primary") {
+    return [
+      {
+        wasmType: primaryCDataTypeToWasmType[dataType.primaryDataType],
+        numOfBytes: getDataTypeSize(dataType) as MemoryVariableByteSize,
+        offset: 0,
+      },
+    ];
+  } else if (dataType.type === "pointer") {
+    return [
+      {
+        wasmType: "i32",
+        numOfBytes: WASM_ADDR_SIZE,
+        offset: 0,
+      },
+    ];
+  } else if (dataType.type === "array") {
+    const memoryInfo = [];
+    let offset = 0;
+    const memoryInfoOfOneElement = getMemoryInformation(
+      dataType.elementDataType
+    );
+    for (let i = 0; i < dataType.numElements; ++i) {
+      for (let j = 0; j < memoryInfoOfOneElement.length; ++j) {
+        const m = memoryInfoOfOneElement[j];
+        memoryInfo.push({
+          ...m,
+          offset,
+        });
+        offset += m.numOfBytes;
+      }
+    }
+    return memoryInfo;
+  } else if (dataType.type === "struct") {
+    // TODO: support when typedef is done
+    throw new TranslationError(
+      "getMemoryInformation(): typedef not yet supported"
+    );
+  } else if (dataType.type === "typedef") {
+    // TODO: support when typedef is done
+    throw new TranslationError(
+      "getMemoryInformation(): typedef not yet supported"
+    );
+  } else {
+    throw new TranslationError(
+      "getMemoryInformation(): Unhandled variable type."
+    );
   }
 }

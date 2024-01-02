@@ -24,24 +24,20 @@ export interface WasmGlobalSet extends WasmAstNode {
   type: "GlobalSet";
   name: string;
   value: WasmExpression;
-  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
 export interface WasmLocalSet extends WasmAstNode {
   type: "LocalSet";
   name: string;
   value: WasmExpression;
-  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
-export interface WasmLocalGet extends WasmExpression {
+export interface WasmLocalGet extends WasmAstNode {
   type: "LocalGet";
   name: string;
-  preStatements?: (WasmStatement | WasmExpression)[];
 }
 
-export interface WasmGlobalGet extends WasmExpression {
+export interface WasmGlobalGet extends WasmAstNode {
   type: "GlobalGet";
   name: string;
-  preStatements?: (WasmStatement | WasmExpression)[];
 }

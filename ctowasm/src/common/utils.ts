@@ -4,13 +4,16 @@
 
 import { CNode } from "~src/c-ast/core";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
-import { PrimaryCDataType, VariableType } from "~src/common/types";
+import { PrimaryCDataType, DataType } from "~src/common/types";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
  */
-export const primaryVariableSizes: Record<PrimaryCDataType, MemoryVariableByteSize> = {
+export const primaryVariableSizes: Record<
+  PrimaryCDataType,
+  MemoryVariableByteSize
+> = {
   ["unsigned char"]: 1,
   ["signed char"]: 1,
   ["unsigned short"]: 2,
@@ -24,59 +27,66 @@ export const primaryVariableSizes: Record<PrimaryCDataType, MemoryVariableByteSi
 };
 
 /**
- * Returns the size in bytes of a variable given its type.
+ * Returns the size in bytes of a data type.
  */
-export function getVariableSize(
-  varType: VariableType
-): number {
+export function getDataTypeSize(varType: DataType): number {
   if (varType.type === "primary") {
-    return primaryVariableSizes[varType.primaryDataType]
+    return primaryVariableSizes[varType.primaryDataType];
   } else if (varType.type === "pointer") {
     return WASM_ADDR_SIZE;
   } else if (varType.type === "array") {
-    return getVariableSize(varType.elementDataType) * varType.numElements
+    return getDataTypeSize(varType.elementDataType) * varType.numElements;
   } else if (varType.type === "struct") {
     return 0; // TODO: not yet supported
   }
 }
 
-export function isSignedIntegerType(variableType: VariableType) {
-  if (variableType.type !== "primary") {
+export function isSignedIntegerType(dataType: DataType) {
+  if (dataType.type !== "primary") {
     return false;
   }
   return (
-    variableType.primaryDataType === "signed char" ||
-    variableType.primaryDataType === "signed short" ||
-    variableType.primaryDataType === "signed int" ||
-    variableType.primaryDataType === "signed long"
+    dataType.primaryDataType === "signed char" ||
+    dataType.primaryDataType === "signed short" ||
+    dataType.primaryDataType === "signed int" ||
+    dataType.primaryDataType === "signed long"
   );
 }
 
-export function isUnsignedIntegerType(variableType: VariableType) {
-  if (variableType.type !== "primary") {
+export function isUnsignedIntegerType(dataType: DataType) {
+  if (dataType.type !== "primary") {
     return false;
   }
   return (
-    variableType.primaryDataType === "unsigned char" ||
-    variableType.primaryDataType === "unsigned short" ||
-    variableType.primaryDataType === "unsigned int" ||
-    variableType.primaryDataType === "unsigned long"
+    dataType.primaryDataType === "unsigned char" ||
+    dataType.primaryDataType === "unsigned short" ||
+    dataType.primaryDataType === "unsigned int" ||
+    dataType.primaryDataType === "unsigned long"
   );
 }
 
-export function isFloatType(variableType: VariableType) {
-  if (variableType.type !== "primary") {
+export function isFloatType(dataType: DataType) {
+  if (dataType.type !== "primary") {
     return false;
   }
-  return variableType.primaryDataType === "float" || variableType.primaryDataType === "double";
+  return (
+    dataType.primaryDataType === "float" ||
+    dataType.primaryDataType === "double"
+  );
 }
 
-export function isIntegerType(variableType: VariableType) {
-  return (
-    isUnsignedIntegerType(variableType) || isSignedIntegerType(variableType)
-  );
+export function isIntegerType(dataType: DataType) {
+  return isUnsignedIntegerType(dataType) || isSignedIntegerType(dataType);
 }
 
 export function isConstant(node: CNode) {
   return node.type === "IntegerConstant" || node.type === "FloatConstant";
+}
+
+/**
+ * Returns true if the type is scalar.
+ * Only primary data types and pointers are scalar.
+ */
+export function isScalarType(dataType: DataType) {
+  return dataType.type === "primary" || dataType.type === "pointer";
 }

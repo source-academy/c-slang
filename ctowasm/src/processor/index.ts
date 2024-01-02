@@ -3,7 +3,7 @@
  */
 
 import { CAstRoot } from "~src/c-ast/core";
-import { SymbolTable } from "~src/common/symbolTable";
+import { SymbolTable } from "~src/processor/symbolTable";
 
 import { visit } from "~src/processor/visit";
 

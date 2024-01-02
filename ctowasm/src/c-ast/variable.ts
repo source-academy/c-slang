@@ -3,17 +3,17 @@
  */
 
 import { Expression, CNode } from "~src/c-ast/core";
-import { VariableType } from "~src/common/types";
+import { DataType } from "~src/common/types";
 
 export interface VariableDeclaration extends CNode {
   type: "VariableDeclaration";
-  variableType: VariableType;
+  dataType: DataType;
   name: string;
 }
 
 export interface Initialization extends CNode {
   type: "Initialization";
-  variableType: VariableType;
+  dataType: DataType;
   name: string;
   initializer: Initializer;
 }

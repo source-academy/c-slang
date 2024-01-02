@@ -7,7 +7,7 @@ import { BinaryExpression } from "~src/c-ast/binaryExpression";
 import { Constant, IntegerConstant } from "~src/c-ast/constants";
 import { Expression, isExpression } from "~src/c-ast/core";
 import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
-import { SymbolTable } from "~src/common/symbolTable";
+import { SymbolTable } from "~src/processor/symbolTable";
 import {
   PostfixArithmeticExpression,
   PrefixArithmeticExpression,
@@ -18,13 +18,13 @@ import {
   Initialization,
   ArrayElementExpr,
 } from "~src/c-ast/variable";
-import { getVariableSize, isConstant } from "~src/common/utils";
+import { getDataTypeSize, isConstant } from "~src/common/utils";
 import { ProcessingError, toJson } from "~src/errors";
 import {
   evaluateConstantBinaryExpression,
   processConstant,
-  setVariableTypeOfBinaryExpression,
-  setVariableTypeOfSymbolAccessExpression,
+  setDataTypeOfBinaryExpression,
+  setDataTypeOfSymbolAccessExpression,
 } from "~src/processor/expressionUtil";
 import { handleScopeCreatingNodes } from "~src/processor/util";
 
@@ -63,7 +63,7 @@ export function visit(
   if (node.type === "VariableDeclaration") {
     const n = node as VariableDeclaration;
     if (enclosingFunc) {
-      enclosingFunc.sizeOfLocals += getVariableSize(n.variableType);
+      enclosingFunc.sizeOfLocals += getDataTypeSize(n.dataType);
     }
     symbolTable.addEntry(n);
     return;
@@ -71,7 +71,7 @@ export function visit(
     const n = node as Initialization;
     symbolTable.addEntry(n);
     if (enclosingFunc) {
-      enclosingFunc.sizeOfLocals += getVariableSize(n.variableType);
+      enclosingFunc.sizeOfLocals += getDataTypeSize(n.dataType);
       visit(sourceCode, n.initializer, symbolTable, enclosingFunc);
     } else {
       // this intialization is global. Needs to be a constant expression, which we can evaluate now
@@ -99,21 +99,21 @@ export function visit(
     const n = node as BinaryExpression;
     visit(sourceCode, n.leftExpr, symbolTable, enclosingFunc);
     visit(sourceCode, n.rightExpr, symbolTable, enclosingFunc);
-    setVariableTypeOfBinaryExpression(node as BinaryExpression);
+    setDataTypeOfBinaryExpression(node as BinaryExpression);
     return;
   } else if (node.type === "FunctionCall") {
     const n = node as FunctionCall;
-    setVariableTypeOfSymbolAccessExpression(node, symbolTable);
+    setDataTypeOfSymbolAccessExpression(node, symbolTable);
     n.args.forEach((arg) => visit(sourceCode, arg, symbolTable, enclosingFunc));
     return;
   } else if (node.type === "VariableExpr") {
-    setVariableTypeOfSymbolAccessExpression(node, symbolTable);
+    setDataTypeOfSymbolAccessExpression(node, symbolTable);
     return;
   } else if (node.type === "ArrayElementExpr") {
     const n = node as ArrayElementExpr;
     visit(sourceCode, n.index, symbolTable, enclosingFunc);
-    setVariableTypeOfSymbolAccessExpression(node, symbolTable);
-    n.variableType = n.index.variableType;
+    setDataTypeOfSymbolAccessExpression(node, symbolTable);
+    n.dataType = n.index.dataType;
     return;
   } else if (
     node.type === "PrefixArithmeticExpression" ||
@@ -121,21 +121,21 @@ export function visit(
   ) {
     const n = node as PrefixArithmeticExpression | PostfixArithmeticExpression;
     visit(sourceCode, n.variable, symbolTable, enclosingFunc);
-    n.variableType = n.variable.variableType;
+    n.dataType = n.variable.dataType;
     return;
   } else if (node.type === "AssignmentExpression") {
     const n = node as AssignmentExpression;
     visit(sourceCode, n.variable, symbolTable, enclosingFunc);
     visit(sourceCode, n.value, symbolTable, enclosingFunc);
-    n.variableType = n.variable.variableType;
+    n.dataType = n.variable.dataType;
     return;
   } else if (node.type === "UnaryExpression") {
     const n = node as UnaryExpression;
     visit(sourceCode, n.expression, symbolTable, enclosingFunc);
-    n.variableType = n.expression.variableType;
+    n.dataType = n.expression.dataType;
   } else if (isExpression(node)) {
     const n = node as Expression;
-    // sanity check - make sure no expressions are missed as each need their variableType field set.
+    // sanity check - make sure no expressions are missed as each need their dataType field set.
     throw new ProcessingError(
       `Unhandled expression: ${toJson(n)}`,
       sourceCode,

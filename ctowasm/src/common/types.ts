@@ -34,44 +34,44 @@ export type FloatDataType = "float" | "double";
  * Definition for objects containing information of different types of variables.
  * All information on a type is contained within these interfaces.
  */
-export type VariableType =
-  | PrimaryVariableType
-  | ArrayVariableType
-  | PointerVariableType
-  //| FunctionVariableType
-  | StructVariableType
-  | TypeDefVariableType;
+export type DataType =
+  | ScalarDataType
+  | ArrayDataType
+  | StructDataType
+  | TypedefDataType;
 
-export interface PrimaryVariableType {
+export type ScalarDataType = PrimaryDataType | PointerDataType;
+
+export interface PrimaryDataType {
   type: "primary";
   primaryDataType: PrimaryCDataType;
 }
 
-export interface ArrayVariableType {
+export interface ArrayDataType {
   type: "array";
-  elementDataType: VariableType;
+  elementDataType: DataType;
   numElements: number;
 }
 
-export interface PointerVariableType {
+export interface PointerDataType {
   type: "pointer";
   // type of the object being pointed to
-  pointeeType: VariableType;
+  pointeeType: DataType;
 }
 
-export interface FunctionVariableType {
+export interface FunctionDataType {
   type: "function";
-  returnType: VariableType | null;
-  parameters: VariableType[];
+  returnType: DataType | null;
+  parameters: DataType[];
 }
 
-export interface StructVariableType {
+export interface StructDataType {
   type: "struct";
 }
 
 /**
  * User defined types using typedef.
  */
-export interface TypeDefVariableType {
+export interface TypedefDataType {
   type: "typedef";
 }

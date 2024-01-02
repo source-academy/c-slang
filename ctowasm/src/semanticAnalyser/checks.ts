@@ -11,7 +11,7 @@ import {
 import { Declaration } from "~src/c-ast/core";
 import { Initialization, VariableExpr } from "~src/c-ast/variable";
 import { SemanticAnalysisError } from "~src/errors";
-import { SymbolTable, VariableSymbolEntry } from "~src/common/symbolTable";
+import { SymbolTable } from "~src/processor/symbolTable";
 
 /**
  * Checks for redeclaration of a variable with different signature, throw ProcessingError if redeclaration has occured.
@@ -68,7 +68,7 @@ export function checkForRedeclaration(
     if (
       (node.type === "VariableDeclaration" || node.type === "Initialization")) {
         const existing 
-        if (node.variableType.type === "primary" && )
+        if (node.dataType.type === "primary" && )
       }
     // check for conflicting function declarations (same name, different return type or parameters)
     if (

@@ -148,7 +148,7 @@ function createSymbolEntry(
     scope.symbols[node.name] = {
       type: "function",
       returnType: node.returnType,
-      params: node.parameters.map((p) => p.variableType),
+      params: node.parameters.map((p) => p.dataType),
       isDefined,
     };
   } else if (
@@ -157,7 +157,7 @@ function createSymbolEntry(
   ) {
     scope.symbols[node.name] = {
       type: "variable",
-      variableType: node.variableType,
+      dataType: node.dataType,
       isDefined,
     };
   } else if (
@@ -166,7 +166,7 @@ function createSymbolEntry(
   ) {
     scope.symbols[node.name] = {
       type: "array",
-      variableType: node.variableType,
+      dataType: node.dataType,
       arraySize: node.numElements,
       isDefined,
     };

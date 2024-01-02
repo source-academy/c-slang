@@ -5,8 +5,8 @@
 import { Block } from "~src/c-ast/core";
 import { FunctionDefinition } from "~src/c-ast/functions";
 import { ForLoop } from "~src/c-ast/loops";
-import { SymbolTable } from "~src/common/symbolTable";
-import { getVariableSize } from "~src/common/utils";
+import { SymbolTable } from "~src/processor/symbolTable";
+import { getDataTypeSize } from "~src/common/utils";
 import { ProcessingError } from "~src/errors";
 import { visit } from "~src/processor/visit";
 
@@ -27,10 +27,10 @@ export function handleScopeCreatingNodes(
     n.sizeOfLocals = 0;
     // size of parameters can be calculated immediately
     n.sizeOfParameters = n.parameters.reduce(
-      (sum, curr) => sum + getVariableSize(curr.variableType),
+      (sum, curr) => sum + getDataTypeSize(curr.dataType),
       0
     );
-    n.sizeOfReturn = n.returnType ? getVariableSize(n.returnType) : 0;
+    n.sizeOfReturn = n.returnType ? getDataTypeSize(n.returnType) : 0;
 
     symbolTable.addEntry(n);
 

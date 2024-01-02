@@ -2,9 +2,9 @@
  * Definitions of wasm AST nodes to do with expressions.
  */
 
-import { WasmExpression } from "~src/wasm-ast/core";
+import { WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
 
-export interface WasmBinaryExpression extends WasmExpression {
+export interface WasmBinaryExpression extends WasmAstNode {
   type: "BinaryExpression";
   instruction: string; // the exact binary instruction to use
   leftExpr: WasmExpression;
@@ -14,8 +14,8 @@ export interface WasmBinaryExpression extends WasmExpression {
 /**
  * Specific instruction for negating floats.
  */
-export interface WasmNegateFloatExpression extends WasmExpression {
+export interface WasmNegateFloatExpression extends WasmAstNode {
   type: "NegateFloatExpression";
-  wasmVariableType: "f32" | "f64";
+  wasmDataType: "f32" | "f64";
   expr: WasmExpression;
 }

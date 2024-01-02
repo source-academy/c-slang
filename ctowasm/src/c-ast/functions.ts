@@ -3,11 +3,11 @@
  */
 import { CNode, Block, Expression } from "~src/c-ast/core";
 import { VariableDeclaration } from "~src/c-ast/variable";
-import { VariableType } from "~src/common/types";
+import { DataType } from "~src/common/types";
 
 // Information on a function - return type, name and parameters
 interface FunctionInformation {
-  returnType: VariableType | null;
+  returnType: DataType | null;
   name: string;
   parameters: VariableDeclaration[];
   sizeOfParameters: number; // size of all the parameters in bytes

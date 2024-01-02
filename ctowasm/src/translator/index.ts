@@ -10,19 +10,10 @@ import {
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmModule } from "~src/wasm-ast/core";
 import { CAstRoot } from "~src/c-ast/core";
-import { ArrayDeclaration, ArrayInitialization } from "~src/c-ast/arrays";
-import { IntegerConstant } from "~src/c-ast/constants";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
-import { getVariableSize } from "~src/common/utils";
-import {
-  variableTypeToWasmType,
-  convertConstantToWasmConst,
-} from "~src/translator/variableUtil";
-import {
-  WasmDataSegmentArray,
-  WasmDataSegmentVariable,
-} from "~src/wasm-ast/memory";
 import translateFunction from "~src/translator/translateFunction";
+import { convertVariableToByteStr } from "~src/translator/dataSegmentUtil";
+import { WasmMemoryVariable } from "~src/wasm-ast/memory";
 
 export default function translate(
   CAstRoot: CAstRoot,
@@ -30,8 +21,8 @@ export default function translate(
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
-    globals: {}, // global variables that are stored in memory
-    globalWasmVariables: [], // actual wasm globals
+    dataSegmentInitializations: [], // global program variables
+    globalWasmVariables: [], // actual wasm global variables -  used for pseudo registers
     functions: {},
     memorySize: 1,
     importedFunctions: processImportedFunctions(imports),
@@ -48,45 +39,19 @@ export default function translate(
       child.type === "Initialization"
     ) {
       const n = child as VariableDeclaration | Initialization;
-      const globalVariable: WasmDataSegmentVariable = {
-        type: "DataSegmentVariable",
+      const globalVariable: WasmMemoryVariable = {
+        type: "GlobalMemoryVariable",
         name: n.name,
-        size: getVariableSize(n.variableType),
         offset: rootSymbolTable.currOffset.value,
-        cVarType: n.variableType,
-        wasmVarType: variableTypeToWasmType[n.variableType],
-        initializerValue:
-          n.type === "Initialization"
-            ? convertConstantToWasmConst(n.intializer as IntegerConstant)
-            : undefined,
+        dataType: n.dataType,
       };
       addToSymbolTable(rootSymbolTable, globalVariable);
-      wasmRoot.globals[n.name] = globalVariable;
-    } else if (
-      child.type === "ArrayDeclaration" ||
-      child.type === "ArrayInitialization"
-    ) {
-      const n = child as ArrayDeclaration | ArrayInitialization;
-      const elementSize = getVariableSize(n.variableType);
-      const globalArray: WasmDataSegmentArray = {
-        type: "DataSegmentArray",
-        name: n.name,
-        size: n.numElements * elementSize,
-        arraySize: n.numElements,
-        //TODO: setting vartype for structs will require some kind of array of vartype loads
-        cVarType: n.variableType,
-        wasmVarType: variableTypeToWasmType[n.variableType],
-        elementSize: elementSize,
-        offset: rootSymbolTable.currOffset.value,
-        initializerList:
-          n.type === "ArrayInitialization"
-            ? (n as ArrayInitialization).elements.map((element) =>
-                convertConstantToWasmConst(element as IntegerConstant)
-              )
-            : undefined,
-      };
-      addToSymbolTable(rootSymbolTable, globalArray);
-      wasmRoot.globals[n.name] = globalArray;
+      if (n.type === "Initialization") {
+        wasmRoot.dataSegmentInitializations.push({
+          addr: rootSymbolTable.currOffset.value,
+          byteStr: convertVariableToByteStr(n.initializer),
+        });
+      }
     }
   }
 

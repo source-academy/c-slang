@@ -15,13 +15,13 @@ import {
   WasmFunctionCallStatement,
   WasmRegularFunctionCall,
   WasmRegularFunctionCallStatement,
-  WasmSymbolTable,
 } from "~src/wasm-ast/functions";
+import { WasmSymbolTable } from "./symbolTable";
 
 export default function translateFunctionCall(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  node: FunctionCall | FunctionCallStatement,
+  node: FunctionCall | FunctionCallStatement
 ) {
   const n = node as FunctionCallStatement;
   if (n.name in wasmRoot.importedFunctions) {
@@ -31,10 +31,10 @@ export default function translateFunctionCall(
     for (let i = 0; i < n.args.length; ++i) {
       functionArgs.push(
         getTypeConversionWrapper(
-          n.args[i].variableType,
+          n.args[i].dataType,
           functionBeingCalled.params[i],
-          translateExpression(wasmRoot, symbolTable, n.args[i]),
-        ),
+          translateExpression(wasmRoot, symbolTable, n.args[i])
+        )
       );
     }
     return {
@@ -51,10 +51,10 @@ export default function translateFunctionCall(
     for (let i = 0; i < n.args.length; ++i) {
       functionArgs.push(
         getTypeConversionWrapper(
-          n.args[i].variableType,
-          functionBeingCalled.params[i].cVarType,
-          translateExpression(wasmRoot, symbolTable, n.args[i]),
-        ),
+          n.args[i].dataType,
+          functionBeingCalled.params[i].dataType,
+          translateExpression(wasmRoot, symbolTable, n.args[i])
+        )
       );
     }
     return {
@@ -62,14 +62,14 @@ export default function translateFunctionCall(
       name: n.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         wasmRoot.functions[n.name],
-        functionArgs,
+        functionArgs
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
         wasmRoot.functions[n.name],
         node.type === "FunctionCall" &&
-          wasmRoot.functions[n.name].returnVariable !== null
+          wasmRoot.functions[n.name].returnDataType !== null
           ? true
-          : false,
+          : false
       ),
     } as WasmFunctionCall | WasmFunctionCallStatement;
   }

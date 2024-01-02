@@ -1,6 +1,6 @@
 import { FunctionDeclaration, FunctionDefinition } from "~src/c-ast/functions";
 import { VariableDeclaration, Initialization } from "~src/c-ast/variable";
-import { VariableType } from "~src/common/types";
+import { DataType } from "~src/common/types";
 import { ProcessingError } from "~src/errors";
 
 /**
@@ -9,12 +9,12 @@ import { ProcessingError } from "~src/errors";
 export type SymbolEntry = FunctionSymbolEntry | VariableSymbolEntry;
 export interface FunctionSymbolEntry {
   type: "function";
-  returnType: VariableType | null;
-  parameters: VariableType[];
+  returnType: DataType | null;
+  parameters: DataType[];
 }
 export interface VariableSymbolEntry {
   type: "variable";
-  variableType: VariableType;
+  dataType: DataType;
 }
 
 export class SymbolTable {
@@ -36,13 +36,13 @@ export class SymbolTable {
     if (node.type === "VariableDeclaration" || node.type === "Initialization") {
       this.symbols[node.name] = {
         type: "variable",
-        variableType: node.variableType,
+        dataType: node.dataType,
       };
     } else {
       this.symbols[node.name] = {
         type: "function",
         returnType: node.returnType,
-        parameters: node.parameters.map((varDec) => varDec.variableType),
+        parameters: node.parameters.map((varDec) => varDec.dataType),
       };
     }
   }

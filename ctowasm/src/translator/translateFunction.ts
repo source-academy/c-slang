@@ -6,19 +6,18 @@ import {
   PrefixArithmeticExpression,
   PostfixArithmeticExpression,
 } from "~src/c-ast/unaryExpression";
-import { ArrayInitialization } from "~src/c-ast/arrays";
 import { Assignment } from "~src/c-ast/assignment";
 import { ReturnStatement, FunctionDefinition } from "~src/c-ast/functions";
 import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
 import { Block, BlockItem, isExpression } from "~src/c-ast/core";
 import { SelectStatement } from "~src/c-ast/select";
 import { Initialization } from "~src/c-ast/variable";
-import { getVariableSize } from "~src/common/utils";
+import { getDataTypeSize } from "~src/common/utils";
 import translateExpression from "~src/translator/translateExpression";
 import {
   BASE_POINTER,
   WASM_ADDR_TYPE,
-  getPointerArithmeticNode,
+  getRegisterPointerArithmeticNode,
 } from "~src/translator/memoryUtil";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import {
@@ -30,25 +29,22 @@ import {
   wasmTypeToSize,
 } from "~src/translator/util";
 import {
-  variableTypeToWasmType,
+  primaryCDataTypeToWasmType,
   getArrayConstantIndexElementAddr,
   getVariableAddr,
   getMemoryAccessDetails,
   getTypeConversionWrapper,
+  getMemoryInformation,
 } from "~src/translator/variableUtil";
 import { WasmSelectStatement } from "~src/wasm-ast/control";
 import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
 import {
-  WasmSymbolTable,
   WasmFunction,
   WasmFunctionCallStatement,
   WasmRegularFunctionCallStatement,
 } from "~src/wasm-ast/functions";
-import {
-  WasmLocalVariable,
-  WasmLocalArray,
-  WasmMemoryLoad,
-} from "~src/wasm-ast/memory";
+import { WasmSymbolTable } from "./symbolTable";
+import { WasmMemoryLoad, WasmMemoryVariable } from "~src/wasm-ast/memory";
 import { TranslationError } from "~src/errors";
 import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
@@ -70,16 +66,13 @@ export default function translateFunction(
   const symbolTable = createSymbolTable(rootSymbolTable, true); // reset the offset counter to start symbol table offset fresh for each new function
 
   // evaluate all parameters first
-  const params: WasmLocalVariable[] = [];
+  const params: WasmMemoryVariable[] = [];
   Cfunction.parameters.forEach((param) => {
-    const variableSize = getVariableSize(param.variableType);
-    const localVar: WasmLocalVariable = {
-      type: "LocalVariable",
+    const localVar: WasmMemoryVariable = {
+      type: "LocalMemoryVariable",
       name: param.name,
-      size: variableSize,
-      offset: symbolTable.currOffset.value + variableSize,
-      cVarType: param.variableType,
-      wasmVarType: variableTypeToWasmType[param.variableType],
+      offset: symbolTable.currOffset.value + getDataTypeSize(param.dataType),
+      dataType: param.dataType,
     };
     params.push(localVar);
     addToSymbolTable(symbolTable, localVar);
@@ -91,15 +84,7 @@ export default function translateFunction(
     params,
     sizeOfLocals: Cfunction.sizeOfLocals,
     sizeOfParams: Cfunction.sizeOfParameters,
-    returnVariable:
-      Cfunction.returnType !== null
-        ? {
-            type: "ReturnVariable",
-            name: `${Cfunction.name}_return`,
-            size: Cfunction.sizeOfReturn,
-            varType: variableTypeToWasmType[Cfunction.returnType],
-          }
-        : null,
+    returnDataType: Cfunction.returnType,
     body: [],
   };
 
@@ -128,12 +113,28 @@ export default function translateFunction(
     } else if (node.type === "ReturnStatement") {
       const n = node as ReturnStatement;
       if (typeof n.value !== "undefined") {
+        const memoryInfo = getMemoryInformation(n.value.dataType);
+        statementBody.push(
+          memoryInfo.map((m) => ({
+            type: "MemoryStore",
+            addr: getRegisterPointerArithmeticNode(
+              BASE_POINTER,
+              "+",
+              WASM_ADDR_SIZE
+            ),
+            value: translateExpression(wasmRoot),
+          }))
+        );
         statementBody.push({
           type: "MemoryStore",
-          addr: getPointerArithmeticNode(BASE_POINTER, "+", WASM_ADDR_SIZE),
+          addr: getRegisterPointerArithmeticNode(
+            BASE_POINTER,
+            "+",
+            WASM_ADDR_SIZE
+          ),
           value: translateExpression(wasmRoot, symbolTable, n.value),
-          wasmVariableType: enclosingFunc.returnVariable.varType,
-          numOfBytes: wasmTypeToSize[enclosingFunc.returnVariable.varType], // TODO: change when implement structs
+          wasmDataType: enclosingFunc.returnDataType.dataType,
+          numOfBytes: wasmTypeToSize[enclosingFunc.returnDataType.dataType], // TODO: change when implement structs
         });
       }
       statementBody.push({
@@ -144,14 +145,14 @@ export default function translateFunction(
       node.type === "VariableDeclaration"
     ) {
       const n = node as Initialization;
-      const variableSize = getVariableSize(n.variableType);
+      const variableSize = getDataTypeSize(n.dataType);
       const v: WasmLocalVariable = {
         type: "LocalVariable",
         name: n.name,
         size: variableSize,
         offset: symbolTable.currOffset.value + variableSize, // stack grows from high to low; so start of varaible address needs to account for variable size
-        cVarType: n.variableType,
-        wasmVarType: variableTypeToWasmType[n.variableType],
+        dataType: n.dataType,
+        wasmVarType: primaryCDataTypeToWasmType[n.dataType],
       };
       addToSymbolTable(symbolTable, v);
 
@@ -160,12 +161,12 @@ export default function translateFunction(
           type: "MemoryStore",
           addr: getVariableAddr(symbolTable, v.name),
           value: getTypeConversionWrapper(
-            node.intializer.variableType,
-            n.variableType,
+            node.intializer.dataType,
+            n.dataType,
             translateExpression(wasmRoot, symbolTable, node.intializer)
           ),
-          wasmVariableType: variableTypeToWasmType[n.variableType],
-          numOfBytes: getVariableSize(n.variableType),
+          wasmDataType: primaryCDataTypeToWasmType[n.dataType],
+          numOfBytes: getDataTypeSize(n.dataType),
         });
       }
     } else if (
@@ -173,15 +174,15 @@ export default function translateFunction(
       node.type === "ArrayDeclaration"
     ) {
       const n = node as ArrayInitialization;
-      const elementSize = getVariableSize(n.variableType);
+      const elementSize = getDataTypeSize(n.dataType);
       const array: WasmLocalArray = {
         type: "LocalArray",
         arraySize: n.numElements,
         name: n.name,
         size: n.numElements * elementSize,
         offset: symbolTable.currOffset.value + n.numElements * elementSize,
-        cVarType: n.variableType,
-        wasmVarType: variableTypeToWasmType[n.variableType],
+        dataType: n.dataType,
+        wasmVarType: primaryCDataTypeToWasmType[n.dataType],
         elementSize,
       };
       addToSymbolTable(symbolTable, array);
@@ -194,15 +195,15 @@ export default function translateFunction(
               symbolTable,
               n.name,
               i,
-              getVariableSize(n.variableType)
+              getDataTypeSize(n.dataType)
             ),
             value: getTypeConversionWrapper(
-              n.elements[i].variableType,
-              n.variableType,
+              n.elements[i].dataType,
+              n.dataType,
               translateExpression(wasmRoot, symbolTable, n.elements[i])
             ),
-            wasmVariableType: variableTypeToWasmType[n.variableType],
-            numOfBytes: getVariableSize(n.variableType),
+            wasmDataType: primaryCDataTypeToWasmType[n.dataType],
+            numOfBytes: getDataTypeSize(n.dataType),
           });
         }
       }
@@ -215,10 +216,10 @@ export default function translateFunction(
       );
       statementBody.push({
         type: "MemoryStore",
-        wasmVariableType: variableTypeToWasmType[n.variable.variableType],
+        wasmDataType: primaryCDataTypeToWasmType[n.variable.dataType],
         value: getTypeConversionWrapper(
-          n.value.variableType,
-          n.variable.variableType,
+          n.value.dataType,
+          n.variable.dataType,
           translateExpression(wasmRoot, symbolTable, n.value)
         ),
         ...memoryAccessDetails,
@@ -244,22 +245,22 @@ export default function translateFunction(
       );
       statementBody.push({
         type: "MemoryStore",
-        wasmVariableType: memoryAccessDetails.wasmVariableType,
+        wasmDataType: memoryAccessDetails.wasmDataType,
         value: {
           type: "BinaryExpression",
           instruction: arithmeticUnaryOperatorToInstruction(
             n.operator,
-            n.variable.variableType
+            n.variable.dataType
           ),
-          wasmVariableType: memoryAccessDetails.wasmVariableType,
+          wasmDataType: memoryAccessDetails.wasmDataType,
           leftExpr: {
             type: "MemoryLoad",
-            wasmVariableType: memoryAccessDetails.wasmVariableType,
+            wasmDataType: memoryAccessDetails.wasmDataType,
             ...memoryAccessDetails,
           } as WasmMemoryLoad,
           rightExpr: {
             type: "IntegerConst",
-            wasmVariableType: WASM_ADDR_TYPE,
+            wasmDataType: WASM_ADDR_TYPE,
             value: 1n,
           } as WasmIntegerConst,
         } as WasmBinaryExpression,

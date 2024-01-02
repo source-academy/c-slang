@@ -55,6 +55,15 @@ export class WatGeneratorError extends Error {
 }
 
 /**
+ * Helper error to indicate features not yet supported by the compiler.
+ */
+export class UnsupportedFeatureError extends Error {
+  constructor(message: string) {
+    super("Unsupported Feature Error: " + message)
+  }
+}
+
+/**
  * Convert aribtrary object to json string. Needed to support bigints.
  */
 export function toJson(obj: any) {

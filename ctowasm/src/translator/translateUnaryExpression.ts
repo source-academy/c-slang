@@ -7,45 +7,45 @@ import { isFloatType, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import { getMaxIntConstant } from "~src/translator/util";
-import { variableTypeToWasmType } from "~src/translator/variableUtil";
+import { primaryCDataTypeToWasmType } from "~src/translator/variableUtil";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
 import { WasmExpression, WasmModule } from "~src/wasm-ast/core";
 import {
   WasmBinaryExpression,
   WasmNegateFloatExpression,
 } from "~src/wasm-ast/expressions";
-import { WasmSymbolTable } from "~src/wasm-ast/functions";
+import { WasmSymbolTable } from "./symbolTable";
 import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 
 /**
  * Translates a UnaryExpression into the nodes for that expression,
- * depedning on the expression variableType and operator.
+ * depedning on the expression dataType and operator.
  */
 export default function translateUnaryExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  unaryExpr: UnaryExpression,
+  unaryExpr: UnaryExpression
 ): WasmExpression {
   if (unaryExpr.operator === "-") {
-    if (isIntegerType(unaryExpr.variableType)) {
+    if (isIntegerType(unaryExpr.dataType)) {
       const node: WasmBinaryExpression = {
         type: "BinaryExpression",
         instruction: "sub",
         leftExpr: getMaxIntConstant(
-          variableTypeToWasmType[unaryExpr.variableType] as "i32" | "i64",
+          primaryCDataTypeToWasmType[unaryExpr.dataType] as "i32" | "i64"
         ),
         rightExpr: translateExpression(
           wasmRoot,
           symbolTable,
-          unaryExpr.expression,
+          unaryExpr.expression
         ),
-        wasmVariableType: variableTypeToWasmType[unaryExpr.variableType],
+        wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
       };
       return node;
-    } else if (isFloatType(unaryExpr.variableType)) {
+    } else if (isFloatType(unaryExpr.dataType)) {
       const node: WasmNegateFloatExpression = {
         type: "NegateFloatExpression",
-        wasmVariableType: variableTypeToWasmType[unaryExpr.variableType] as
+        wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType] as
           | "f32"
           | "f64",
         expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expression),
@@ -55,16 +55,16 @@ export default function translateUnaryExpression(
   } else if (unaryExpr.operator === "!") {
     const node: WasmBooleanExpression = {
       type: "BooleanExpression",
-      wasmVariableType: "i32",
+      wasmDataType: "i32",
       expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expression),
       isNegated: true,
     };
     return node;
   } else if (unaryExpr.operator === "~") {
-    if (!isIntegerType(unaryExpr.variableType)) {
+    if (!isIntegerType(unaryExpr.dataType)) {
       // bitwise complement is undefined on non integral types
       throw new TranslationError(
-        `Wrong type argument to bitwise-complement - type used: ${unaryExpr.variableType}`,
+        `Wrong type argument to bitwise-complement - type used: ${unaryExpr.dataType}`
       );
     }
 
@@ -72,21 +72,21 @@ export default function translateUnaryExpression(
       type: "BinaryExpression",
       leftExpr: {
         type: "IntegerConst",
-        wasmVariableType: variableTypeToWasmType[unaryExpr.variableType],
+        wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
         value: -1n,
       } as WasmIntegerConst,
       rightExpr: translateExpression(
         wasmRoot,
         symbolTable,
-        unaryExpr.expression,
+        unaryExpr.expression
       ),
-      wasmVariableType: variableTypeToWasmType[unaryExpr.variableType],
-      instruction: `${variableTypeToWasmType[unaryExpr.variableType]}.xor`,
+      wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
+      instruction: `${primaryCDataTypeToWasmType[unaryExpr.dataType]}.xor`,
     };
     return node;
   } else {
     throw new TranslationError(
-      `translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`,
+      `translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`
     );
   }
 }
