@@ -7,7 +7,7 @@ import {
   PrefixArithmeticExpression,
   PrefixExpression,
 } from "~src/parser/c-ast/unaryExpression";
-import { Assignment, AssignmentExpression } from "~src/parser/c-ast/assignment";
+import { Assignment } from "~src/parser/c-ast/assignment";
 import {
   FunctionDefinition,
   ReturnStatement,
@@ -40,7 +40,6 @@ export type CNode = BlockStatement | FunctionDefinition;
  * Statements that can be present anywhere
  */
 export type Statement =
-  | Assignment
   | Declaration
   | FunctionCallStatement
   | Initialization;
@@ -58,7 +57,7 @@ export type BlockStatement =
 
 export type Expression =
   | ArrayElementExpr
-  | AssignmentExpression
+  | Assignment
   | BinaryExpression
   | IntegerConstant
   | FloatConstant
@@ -74,7 +73,7 @@ export type Expression =
  */
 const expressionNodeTypes = new Set([
   "ArrayElementExpr",
-  "AssignmentExpression",
+  "Assignment",
   "BinaryExpression",
   "IntegerConstant",
   "FloatConstant",

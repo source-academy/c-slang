@@ -6,7 +6,7 @@ import { pointerPrimaryDataType } from "~src/common/constants";
 import { DataType } from "~src/common/types";
 import { getDataTypeSize, primaryVariableSizes } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
-import { Assignment, AssignmentExpression } from "~src/parser/c-ast/assignment";
+import { Assignment } from "~src/parser/c-ast/assignment";
 import { ArrayElementExpr, Initializer } from "~src/parser/c-ast/variable";
 import { ExpressionP } from "~src/processor/c-ast/core";
 import { MemoryStore, MemoryObjectDetail } from "~src/processor/c-ast/memory";
@@ -20,14 +20,9 @@ import visitExpression from "~src/processor/visitExpression";
  */
 export function getAssignmentMemoryStoreNodes(
   sourceCode: string,
-  assignmentNode: Assignment | AssignmentExpression,
+  assignmentNode: Assignment,
   symbolTable: SymbolTable
 ): MemoryStore[] {
-  const symbolEntry = symbolTable.getSymbolEntry(assignmentNode.lvalue.name);
-  if (symbolEntry.type === "function") {
-    throw new ProcessingError("lvalue required as left operand of assignment");
-  }
-
   const assignedValue = visitExpression(
     sourceCode,
     assignmentNode.value,
@@ -35,6 +30,11 @@ export function getAssignmentMemoryStoreNodes(
   );
 
   if (assignmentNode.lvalue.type === "VariableExpr") {
+    const symbolEntry = symbolTable.getSymbolEntry(assignmentNode.lvalue.name);
+    if (symbolEntry.type === "function") {
+      throw new ProcessingError("lvalue required as left operand of assignment");
+    }
+
     if (
       symbolEntry.dataType.type === "primary" ||
       symbolEntry.dataType.type === "pointer"
@@ -44,6 +44,7 @@ export function getAssignmentMemoryStoreNodes(
           "Cannot assign aggregate expression to primary data type or pointer variable"
         );
       }
+
       return [
         {
           type:
@@ -78,7 +79,13 @@ export function getAssignmentMemoryStoreNodes(
       );
     }
   } else if (assignmentNode.lvalue.type === "ArrayElementExpr") {
-  } // put in struct and pointer dereferencing in future
+    const indexExpr = visitExpression(sourceCode, assignmentNode.lvalue.index, symbolTable);
+    const exprBeingAssignedTo = visitExpression(sourceCode, assignmentNode.lvalue.expr, symbolTable);
+    
+    
+  } else {
+    throw new ProcessingError("lvalue required as left operand to assignment", sourceCode, assignmentNode.position)
+  } // put in struct and pointer dereferencing in future 
 }
 
 /**

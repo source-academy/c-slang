@@ -11,6 +11,7 @@ import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { MemoryObjectDetail, MemoryStore } from "./c-ast/memory";
 import {
+  checkFunctionNodeExprIsCallable,
   createMemoryOffsetIntegerConstant,
   processCondition,
   runPrefixPostfixArithmeticChecks,
@@ -150,9 +151,14 @@ export function visit(
     symbolTable.addVariableEntry(node.name, node.dataType);
     return null;
   } else if (node.type === "FunctionCallStatement") {
+    checkFunctionNodeExprIsCallable(node);
+    //TODO: add function pointer support
     return {
       type: "FunctionCall",
-      name: node.expr,
+      calledFunction: {
+        type: "FunctionName",
+        name: node.expr.name
+      },
       args: processFunctionCallArgs(sourceCode, node.args, symbolTable),
     };
   } else if (node.type === "Initialization") {

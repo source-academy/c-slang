@@ -55,8 +55,9 @@ export interface VariableExpr extends CNodeBase {
   name: string; //name of the variable
 }
 
-// node for what array element access expression e.g. arr[2]
+// node for what array element access expression
 export interface ArrayElementExpr extends UnaryExpressionBase {
   type: "ArrayElementExpr";
   index: Expression;
+  expr: ArrayElementExpr
 }

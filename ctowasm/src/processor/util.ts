@@ -15,6 +15,7 @@ import visitExpression from "~src/processor/visitExpression";
 import { IntegerConstant } from "~src/parser/c-ast/constants";
 import { IntegerConstantP } from "~src/processor/c-ast/constants";
 import { pointerPrimaryDataType } from "~src/common/constants";
+import { FunctionCall, FunctionCallStatement, isCallableNode } from "~src/parser/c-ast/function";
 
 /**
  * Basic checks for pre/post-fix arithmetic expressions
@@ -91,5 +92,14 @@ export function createMemoryOffsetIntegerConstant(offset: number): IntegerConsta
     type: "IntegerConstant",
     dataType: pointerPrimaryDataType,
     value: BigInt(offset)
+  }
+}
+
+/**
+ * Check that the expression being called in a function node is callable - function or function pointer.
+ */
+export function checkFunctionNodeExprIsCallable(node: FunctionCall | FunctionCallStatement) {
+  if (!isCallableNode(node.expr)) {
+    throw new ProcessingError(`Expression is not a callable expression: neither a function nor a function pointer`)
   }
 }

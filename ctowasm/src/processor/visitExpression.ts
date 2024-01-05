@@ -18,6 +18,7 @@ import {
 } from "~src/processor/expressionUtil";
 import { SymbolTable, VariableSymbolEntry } from "~src/processor/symbolTable";
 import {
+  checkFunctionNodeExprIsCallable,
   createMemoryOffsetIntegerConstant,
   runPrefixPostfixArithmeticChecks,
 } from "~src/processor/util";
@@ -180,7 +181,9 @@ export default function visitExpression(
   } else if (expr.type === "IntegerConstant" || expr.type === "FloatConstant") {
     return { type: "single", expr: processConstant(expr) };
   } else if (expr.type === "FunctionCall") {
-    const func = symbolTable.getSymbolEntry(expr.expr);
+    checkFunctionNodeExprIsCallable(expr);
+    // TODO: need to change this for function pointer support
+    const func = symbolTable.getSymbolEntry(expr.expr.name);
     if (!func || func.type !== "function") {
       throw new ProcessingError(`Function ${expr.expr} not declared.`);
     }
@@ -204,7 +207,10 @@ export default function visitExpression(
       statements: [
         {
           type: "FunctionCall",
-          name: expr.expr,
+          calledFunction: {
+            type: "FunctionName",
+            name: expr.expr.name
+          },
           args: processFunctionCallArgs(sourceCode, expr.args, symbolTable),
         },
       ],
