@@ -2,8 +2,7 @@
  * Utility functions for processing C functions.
  */
 
-import { pointerPrimaryDataType } from "~src/common/constants";
-import { DataType } from "~src/common/types";
+import { DataType } from "./c-ast/dataTypes";
 import { getDataTypeSize, primaryVariableSizes } from "~src/common/utils";
 import { UnsupportedFeatureError, toJson, ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
@@ -15,6 +14,8 @@ import { MemoryObjectDetail } from "./c-ast/memory";
 import { SymbolTable } from "~src/processor/symbolTable";
 import { visit } from "~src/processor/visit";
 import visitExpression from "~src/processor/visitExpression";
+import { POINTER_SIZE } from "~src/common/constants";
+import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 
 export default function processFunctionDefinition(
   sourceCode: string,
@@ -64,12 +65,12 @@ export function processFunctionParams(
       symbolTable.addVariableEntry(param.name, param.dataType);
       processedParams.push({
         offset,
-        primaryDataType: param.dataType.primaryDataType,
+        dataType: param.dataType.primaryDataType,
       });
       offset += getDataTypeSize(param.dataType);
     } else if (param.dataType.type === "pointer") {
       symbolTable.addVariableEntry(param.name, param.dataType);
-      processedParams.push({ offset, primaryDataType: pointerPrimaryDataType });
+      processedParams.push({ offset, dataType: "pointer" });
       offset += getDataTypeSize(param.dataType);
     } else if (param.dataType.type === "array") {
       // arrays are passed as pointers
@@ -77,8 +78,8 @@ export function processFunctionParams(
         type: "pointer",
         pointeeType: param.dataType.elementDataType,
       });
-      processedParams.push({ offset, primaryDataType: pointerPrimaryDataType });
-      offset += primaryVariableSizes[pointerPrimaryDataType];
+      processedParams.push({ offset, dataType: "pointer" });
+      offset += POINTER_SIZE;
     } else if (param.dataType.type === "struct") {
       // TODO: when support structs
       throw new UnsupportedFeatureError(
@@ -104,12 +105,12 @@ export function processFunctionReturnType(returnDataType: DataType) {
   const memoryDetails: MemoryObjectDetail[] = [];
   if (returnDataType.type === "primary") {
     memoryDetails.push({
-      primaryDataType: returnDataType.primaryDataType,
+      dataType: returnDataType.primaryDataType,
       offset: 0,
     });
   } else if (returnDataType.type === "pointer") {
     memoryDetails.push({
-      primaryDataType: pointerPrimaryDataType,
+      dataType: "pointer",
       offset: 0,
     });
   } else if (returnDataType.type === "struct") {
@@ -151,11 +152,7 @@ export function processFunctionReturnStatement(
       type: "FunctionReturnMemoryStore",
       value: processedExpr.expr,
       dataType: processedExpr.expr.dataType,
-      offset: {
-        type: "IntegerConstant",
-        value: BigInt(functionReturnDetails[i++].offset),
-        dataType: pointerPrimaryDataType,
-      },
+      offset: createMemoryOffsetIntegerConstant(functionReturnDetails[i++].offset),
     });
   } else {
     processedExpr.exprs.forEach((expr) => {
@@ -163,11 +160,8 @@ export function processFunctionReturnStatement(
         type: "FunctionReturnMemoryStore",
         value: expr,
         dataType: expr.dataType,
-        offset: {
-          type: "IntegerConstant",
-          value: BigInt(functionReturnDetails[i++].offset),
-          dataType: pointerPrimaryDataType,
-        },
+        offset: createMemoryOffsetIntegerConstant(functionReturnDetails[i++].offset),
+
       });
     });
   }

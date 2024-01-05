@@ -3,7 +3,7 @@
  */
 
 import { Expression, CNodeBase, CNode } from "~src/parser/c-ast/core";
-import { DataType } from "~src/common/types";
+import { DataType } from "~src/processor/c-ast/dataTypes";
 import { UnaryExpressionBase } from "./unaryExpression";
 
 export interface VariableDeclaration extends CNodeBase {
@@ -37,10 +37,7 @@ export interface InitializerSingle extends CNodeBase {
  */
 export type LValue = VariableExpr | ArrayElementExpr;
 
-const lValues = new Set([
-  "VariableExpr",
-  "ArrayElementExpr"
-])
+const lValues = new Set(["VariableExpr", "ArrayElementExpr"]);
 
 /**
  * Simple utility function to check that a node represents an LValue.
@@ -59,5 +56,5 @@ export interface VariableExpr extends CNodeBase {
 export interface ArrayElementExpr extends UnaryExpressionBase {
   type: "ArrayElementExpr";
   index: Expression;
-  expr: ArrayElementExpr
+  expr: ArrayElementExpr;
 }

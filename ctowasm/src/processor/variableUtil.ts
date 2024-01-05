@@ -2,8 +2,8 @@
  * Utility functions relating to the handling of variable related nodes.
  */
 
-import { pointerPrimaryDataType } from "~src/common/constants";
-import { DataType } from "~src/common/types";
+import { POINTER_SIZE, pointerPrimaryDataType } from "~src/common/constants";
+import { DataType } from "./c-ast/dataTypes";
 import { getDataTypeSize, primaryVariableSizes } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { Assignment } from "~src/parser/c-ast/assignment";
@@ -32,7 +32,9 @@ export function getAssignmentMemoryStoreNodes(
   if (assignmentNode.lvalue.type === "VariableExpr") {
     const symbolEntry = symbolTable.getSymbolEntry(assignmentNode.lvalue.name);
     if (symbolEntry.type === "function") {
-      throw new ProcessingError("lvalue required as left operand of assignment");
+      throw new ProcessingError(
+        "lvalue required as left operand of assignment"
+      );
     }
 
     if (
@@ -79,13 +81,23 @@ export function getAssignmentMemoryStoreNodes(
       );
     }
   } else if (assignmentNode.lvalue.type === "ArrayElementExpr") {
-    const indexExpr = visitExpression(sourceCode, assignmentNode.lvalue.index, symbolTable);
-    const exprBeingAssignedTo = visitExpression(sourceCode, assignmentNode.lvalue.expr, symbolTable);
-    
-    
+    const indexExpr = visitExpression(
+      sourceCode,
+      assignmentNode.lvalue.index,
+      symbolTable
+    );
+    const exprBeingAssignedTo = visitExpression(
+      sourceCode,
+      assignmentNode.lvalue.expr,
+      symbolTable
+    );
   } else {
-    throw new ProcessingError("lvalue required as left operand to assignment", sourceCode, assignmentNode.position)
-  } // put in struct and pointer dereferencing in future 
+    throw new ProcessingError(
+      "lvalue required as left operand to assignment",
+      sourceCode,
+      assignmentNode.position
+    );
+  } // put in struct and pointer dereferencing in future
 }
 
 /**
@@ -126,15 +138,15 @@ export function unpackDataTypeIntoPrimaryDataMemoryObjects(
     if (dataType.type === "primary") {
       primaryDataTypes.push({
         offset: currOffset,
-        primaryDataType: dataType.primaryDataType,
+        dataType: dataType.primaryDataType,
       });
       currOffset += getDataTypeSize(dataType);
     } else if (dataType.type === "pointer") {
       primaryDataTypes.push({
         offset: currOffset,
-        primaryDataType: pointerPrimaryDataType,
+        dataType: pointerPrimaryDataType,
       });
-      currOffset += primaryVariableSizes[pointerPrimaryDataType];
+      currOffset += POINTER_SIZE;
     } else if (dataType.type === "array") {
       for (let i = 0; i < dataType.numElements; ++i) {
         helper(dataType.elementDataType);

@@ -10,18 +10,15 @@ import {
   SignedIntegerType,
   UnsignedIntegerType,
   PrimaryCDataType,
+  ScalarCDataType,
 } from "~src/common/types";
-import {
-  isFloatType,
-  isIntegerType,
-  isSignedIntegerType,
-  isUnsignedIntegerType,
-  primaryVariableSizes,
-} from "~src/common/utils";
+
 import { ProcessingError, toJson } from "~src/errors";
 import { BinaryExpression } from "~src/parser/c-ast/binaryExpression";
 import { ExpressionP } from "~src/processor/c-ast/core";
 import { ConstantP } from "~src/processor/c-ast/constants";
+import { isIntegerType, isSignedIntegerType, isUnsignedIntegerType, primaryVariableSizes, isFloatType } from "~src/common/utils";
+import { POINTER_SIZE } from "~src/common/constants";
 
 /**
  * Evaluates the result of the binary expression a <operator> b.
@@ -130,7 +127,7 @@ export function evaluateConstantBinaryExpression(
  */
 function getAdjustedIntValueAccordingToDataType(
   value: bigint,
-  dataType: PrimaryCDataType
+  dataType: ScalarCDataType
 ) {
   let newValue = value;
   // handle integer overflows
@@ -139,13 +136,18 @@ function getAdjustedIntValueAccordingToDataType(
     newValue > getMaxValueOfSignedIntType(dataType as SignedIntegerType)
   ) {
     newValue =
-      newValue % getMaxValueOfSignedIntType(dataType as SignedIntegerType);
+      newValue % (getMaxValueOfSignedIntType(dataType as SignedIntegerType) + 1n);
   } else if (
     isUnsignedIntegerType(dataType) &&
     newValue > getMaxValueOfUnsignedIntType(dataType as UnsignedIntegerType)
   ) {
     newValue =
-      newValue % getMaxValueOfUnsignedIntType(dataType as UnsignedIntegerType);
+      newValue % (getMaxValueOfUnsignedIntType(dataType as UnsignedIntegerType) + 1n);
+  } else if (dataType === "pointer" && newValue > 2 ** (POINTER_SIZE * 8) - 1) {
+    // just some implementation defined behaviour
+    // although assigning int values to pointer types directly is undefined behaviour and should not be done.
+    // TODO: check this
+    newValue = newValue % 2n ** (BigInt(POINTER_SIZE) * 8n)
   }
 
   return newValue;
@@ -327,10 +329,12 @@ export function determineDataTypeOfBinaryExpression(
   leftExpr: ExpressionP,
   rightExpr: ExpressionP,
   operator: BinaryOperator
-): PrimaryCDataType {
+): ScalarCDataType {
   const leftExprDataType = leftExpr.dataType;
   const rightExprDataType = rightExpr.dataType;
-
+  if (leftExpr.dataType === "pointer" || rightExpr.dataType === "pointer") {
+    return "pointer";
+  }
   if (isFloatType(leftExpr.dataType) && isFloatType(rightExpr.dataType)) {
     // take more higher ranking float type
     if (

@@ -27,9 +27,9 @@ import {
   unpackDataTypeIntoPrimaryDataMemoryObjects,
   unpackInitializer,
 } from "~src/processor/variableUtil";
-import { pointerPrimaryDataType } from "~src/common/constants";
 import { isFloatType } from "~src/common/utils";
 import { FloatDataType, IntegerDataType } from "~src/common/types";
+import visitExpression from "~src/processor/visitExpression";
 
 /**
  * Visitor function for traversing the C AST to process C AST.
@@ -138,8 +138,6 @@ export function visit(
           ) as StatementP[])
         : null,
     };
-  } else if (node.type === "Assignment") {
-    return getAssignmentMemoryStoreNodes(sourceCode, node, symbolTable);
   } else if (node.type === "FunctionDeclaration") {
     symbolTable.addFunctionEntry(
       node.name,
@@ -157,7 +155,7 @@ export function visit(
       type: "FunctionCall",
       calledFunction: {
         type: "FunctionName",
-        name: node.expr.name
+        name: node.expr.name,
       },
       args: processFunctionCallArgs(sourceCode, node.args, symbolTable),
     };
@@ -184,7 +182,7 @@ export function visit(
         dataType:
           node.dataType.type === "primary"
             ? node.dataType.primaryDataType
-            : pointerPrimaryDataType,
+            : "pointer",
         value: unpackedInitializerExpressions[0],
         offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
       };
@@ -205,7 +203,7 @@ export function visit(
             symbolEntry.type === "localVariable"
               ? "LocalObjectMemoryStore"
               : "DataSegmentObjectMemoryStore",
-          dataType: primaryMemoryObjects[i].primaryDataType,
+          dataType: primaryMemoryObjects[i].dataType,
           offset: createMemoryOffsetIntegerConstant(
             primaryMemoryObjects[i].offset
           ),
@@ -220,22 +218,20 @@ export function visit(
             symbolEntry.type === "localVariable"
               ? "LocalObjectMemoryStore"
               : "DataSegmentObjectMemoryStore",
-          dataType: primaryMemoryObjects[j].primaryDataType,
+          dataType: primaryMemoryObjects[j].dataType,
           offset: createMemoryOffsetIntegerConstant(
             primaryMemoryObjects[j].offset
           ),
-          value: isFloatType(primaryMemoryObjects[j].primaryDataType)
+          value: isFloatType(primaryMemoryObjects[j].dataType)
             ? {
                 type: "FloatConstant",
                 value: 0,
-                dataType: primaryMemoryObjects[j]
-                  .primaryDataType as FloatDataType,
+                dataType: primaryMemoryObjects[j].dataType as FloatDataType,
               }
             : {
                 type: "IntegerConstant",
                 value: 0n,
-                dataType: primaryMemoryObjects[j]
-                  .primaryDataType as IntegerDataType,
+                dataType: primaryMemoryObjects[j].dataType as IntegerDataType,
               },
         });
       }
@@ -251,6 +247,7 @@ export function visit(
     node.type === "PostfixArithmeticExpression"
   ) {
     // simple assignment
+    const expressionBeingAssignedTo = visitExpression(sourceCode, node.expr, symbolTable);
     const symbolEntry = symbolTable.getSymbolEntry(
       node.expr.name
     ) as VariableSymbolEntry;
@@ -261,21 +258,19 @@ export function visit(
         symbolEntry.type === "localVariable"
           ? "LocalObjectMemoryStore"
           : "DataSegmentObjectMemoryStore",
-      offset: {
-        type: "IntegerConstant",
-        value: BigInt(symbolEntry.offset),
-        dataType: pointerPrimaryDataType,
-      },
+      offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
       dataType:
         symbolEntry.dataType.type === "primary"
           ? symbolEntry.dataType.primaryDataType
-          : pointerPrimaryDataType,
+          : "pointer",
       value: {
         type: "IntegerConstant",
         value: 1n,
-        dataType: pointerPrimaryDataType, // can be any type, since it is just 1
+        dataType: "signed int", // can be any type, since it is just 1
       },
     };
+  } else if (node.type === "Assignment") {
+    return getAssignmentMemoryStoreNodes(sourceCode, node, symbolTable);
   } else if (isExpression(node)) {
     // ignore all other expressions other than pre/postfix arithmetic, they do not have side effects and can be safely ignored
     return null;

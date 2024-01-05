@@ -2,7 +2,6 @@
  * Definition of function to process Expression expr s.
  */
 
-import { pointerPrimaryDataType } from "~src/common/constants";
 import { isIntegerType } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
@@ -99,7 +98,7 @@ export default function visitExpression(
           dataType:
             symbolEntry.dataType.elementDataType.type === "primary"
               ? symbolEntry.dataType.elementDataType.primaryDataType
-              : pointerPrimaryDataType,
+              : "pointer",
         },
       };
     } else if (symbolEntry.dataType.elementDataType.type === "array") {
@@ -117,7 +116,7 @@ export default function visitExpression(
     } else {
       throw new ProcessingError("Unknown datatype");
     }
-  } else if (expr.type === "AssignmentExpression") {
+  } else if (expr.type === "Assignment") {
     // handle assignment
     const assignmentNodes = getAssignmentMemoryStoreNodes(
       sourceCode,
@@ -197,7 +196,7 @@ export default function visitExpression(
       processFunctionReturnType(func.returnType).map((returnObj) => ({
         type: "FunctionReturnMemoryLoad",
         offset: createMemoryOffsetIntegerConstant(returnObj.offset),
-        dataType: returnObj.primaryDataType,
+        dataType: returnObj.dataType,
       }));
 
     // regardless of return type, all function call expression have a preStatementExpression
@@ -209,7 +208,7 @@ export default function visitExpression(
           type: "FunctionCall",
           calledFunction: {
             type: "FunctionName",
-            name: expr.expr.name
+            name: expr.expr.name,
           },
           args: processFunctionCallArgs(sourceCode, expr.args, symbolTable),
         },
@@ -261,16 +260,16 @@ export default function visitExpression(
             offset: {
               type: "IntegerConstant",
               value: BigInt(symbolEntry.offset),
-              dataType: pointerPrimaryDataType,
+              dataType: "pointer",
             },
             dataType:
               symbolEntry.dataType.type === "primary"
                 ? symbolEntry.dataType.primaryDataType
-                : pointerPrimaryDataType,
+                : "pointer",
             value: {
               type: "IntegerConstant",
               value: 1n,
-              dataType: pointerPrimaryDataType, // can be any type, since it is just 1
+              dataType: "signed int", // can be any type, since it is just 1
             },
           },
         ],
@@ -302,7 +301,7 @@ export default function visitExpression(
           dataType:
             symbolEntry.dataType.type === "primary"
               ? symbolEntry.dataType.primaryDataType
-              : pointerPrimaryDataType,
+              : "pointer",
         },
       };
     } else if (symbolEntry.dataType.type === "array") {

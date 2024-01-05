@@ -2,7 +2,7 @@
  * Definitions of all nodes relating to memory operations.
  */
 
-import { PrimaryCDataType } from "~src/common/types";
+import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 import {
   CNodePBase,
   ExpressionP,
@@ -19,7 +19,7 @@ export type MemoryStore =
   | DataSegmentObjectMemoryStore;
 
 interface PrimaryDataTypeObjectMemoryDetails {
-  dataType: PrimaryCDataType;
+  dataType: ScalarCDataType;
   offset: ExpressionP; // offset from the first byte of the first local object
 }
 
@@ -81,6 +81,6 @@ export interface DataSegmentObjectMemoryLoad
   type: "DataSegmentObjectMemoryLoad";
 }
 export interface MemoryObjectDetail {
-  primaryDataType: PrimaryCDataType;
+  dataType: ScalarCDataType;
   offset: number; // for param - offset from first byte of first param ; for return - offset from first byte of first return
 }

@@ -3,7 +3,7 @@
  */
 import { CNodeBase, Block, Expression, CNode } from "~src/parser/c-ast/core";
 import { VariableDeclaration, VariableExpr } from "~src/parser/c-ast/variable";
-import { DataType } from "~src/common/types";
+import { DataType } from "~src/processor/c-ast/dataTypes";
 import { UnaryExpressionBase } from "./unaryExpression";
 
 // Information on a function - return type, name and parameters
@@ -25,9 +25,7 @@ export interface FunctionDefinition extends FunctionInformation, CNodeBase {
 
 type Callable = VariableExpr; // the nodes that can be called
 
-const callables = new Set([
-  "VariableExpr",
-])
+const callables = new Set(["VariableExpr"]);
 
 /**
  * Helper function to check if a given node type is callable
@@ -39,7 +37,7 @@ export function isCallableNode(node: CNode) {
 export interface FunctionCall extends UnaryExpressionBase {
   type: "FunctionCall";
   expr: Callable;
-  args: (VariableExpr)[];
+  args: VariableExpr[];
 }
 
 /**

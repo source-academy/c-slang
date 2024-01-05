@@ -3,10 +3,11 @@
  */
 
 import { CNodeBase } from "~src/parser/c-ast/core";
-import { WASM_ADDR_SIZE } from "~src/common/constants";
-import { PrimaryCDataType, DataType } from "~src/common/types";
+import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
+import { DataType } from "~src/processor/c-ast/dataTypes";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 import { UnsupportedFeatureError, toJson } from "~src/errors";
+import { POINTER_SIZE } from "./constants";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
@@ -34,21 +35,27 @@ export function getDataTypeSize(varType: DataType): number {
   if (varType.type === "primary") {
     return primaryVariableSizes[varType.primaryDataType];
   } else if (varType.type === "pointer") {
-    return WASM_ADDR_SIZE;
+    return POINTER_SIZE;
   } else if (varType.type === "array") {
     return getDataTypeSize(varType.elementDataType) * varType.numElements;
   } else if (varType.type === "struct") {
     // TODO: when structs supported
-    throw new UnsupportedFeatureError("getDataTypeSize(): structs not yet supported")
+    throw new UnsupportedFeatureError(
+      "getDataTypeSize(): structs not yet supported"
+    );
   } else if (varType.type === "typedef") {
     // TODO: when typedef supported
-    throw new UnsupportedFeatureError("getDataTypeSize(): typedef not yet supported")
+    throw new UnsupportedFeatureError(
+      "getDataTypeSize(): typedef not yet supported"
+    );
   } else {
-    throw new Error(`getDataTypeSize(): unhandled data type: ${toJson(varType)}`)
+    throw new Error(
+      `getDataTypeSize(): unhandled data type: ${toJson(varType)}`
+    );
   }
 }
 
-export function isSignedIntegerType(dataType: PrimaryCDataType) {
+export function isSignedIntegerType(dataType: ScalarCDataType) {
   return (
     dataType === "signed char" ||
     dataType === "signed short" ||
@@ -57,7 +64,7 @@ export function isSignedIntegerType(dataType: PrimaryCDataType) {
   );
 }
 
-export function isUnsignedIntegerType(dataType: PrimaryCDataType) {
+export function isUnsignedIntegerType(dataType: ScalarCDataType) {
   return (
     dataType === "unsigned char" ||
     dataType === "unsigned short" ||
@@ -66,14 +73,11 @@ export function isUnsignedIntegerType(dataType: PrimaryCDataType) {
   );
 }
 
-export function isFloatType(dataType: PrimaryCDataType) {
-  return (
-    dataType === "float" ||
-    dataType === "double"
-  );
+export function isFloatType(dataType: ScalarCDataType) {
+  return dataType === "float" || dataType === "double";
 }
 
-export function isIntegerType(dataType: PrimaryCDataType) {
+export function isIntegerType(dataType: ScalarCDataType) {
   return isUnsignedIntegerType(dataType) || isSignedIntegerType(dataType);
 }
 

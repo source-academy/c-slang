@@ -3,12 +3,12 @@
  */
 
 import { Expression } from "~src/parser/c-ast/core";
+import { PrimaryCDataType } from "~src/common/types";
 import {
-  PrimaryCDataType,
   PrimaryDataType,
   DataType,
   ScalarDataType,
-} from "~src/common/types";
+} from "~src/processor/c-ast/dataTypes";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import {

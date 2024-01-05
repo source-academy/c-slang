@@ -5,7 +5,7 @@
  * Processed node names follow the same naming as their original C AST counterpart, with "P" suffix to indicate that they are the processed version.
  */
 
-import { PrimaryCDataType } from "~src/common/types";
+import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 import { ConstantP } from "~src/processor/c-ast/constants";
 import {
   BinaryExpressionP,
@@ -51,7 +51,7 @@ export type ExpressionP =
  * All expressions should inherit this, as all expressions should have a data type.
  */
 export interface ExpressionPBase extends CNodePBase {
-  dataType: PrimaryCDataType;
+  dataType: ScalarCDataType;
 }
 
 export interface CAstRootP extends CNodePBase {

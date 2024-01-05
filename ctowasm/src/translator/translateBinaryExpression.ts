@@ -3,7 +3,8 @@
  */
 
 import { BinaryExpression } from "~src/parser/c-ast/binaryExpression";
-import { BinaryOperator, ScalarDataType } from "~src/common/types";
+import { BinaryOperator } from "~src/common/types";
+import { ScalarDataType } from "~src/processor/c-ast/dataTypes";
 import {
   isUnsignedIntegerType,
   isSignedIntegerType,

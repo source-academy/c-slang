@@ -15,6 +15,10 @@ export type BinaryOperator =
 export type ArithemeticUnaryOperator = "++" | "--";
 export type PrefixOperator = "!" | "~" | "-" | "+";
 
+// These should be the only data types present in the C AST after processing all aggregate type broken into their primary data types)
+// Hence these are the only types that the translatar module sees.
+export type ScalarCDataType = PrimaryCDataType | PointerCDataType;
+export type PointerCDataType = "pointer";
 export type PrimaryCDataType = IntegerDataType | FloatDataType;
 export type IntegerDataType = SignedIntegerType | UnsignedIntegerType;
 export type UnsignedIntegerType =
@@ -27,51 +31,4 @@ export type SignedIntegerType =
   | "signed short"
   | "signed int"
   | "signed long";
-
 export type FloatDataType = "float" | "double";
-
-/**
- * Definition for objects containing information of different types of variables.
- * All information on a type is contained within these interfaces.
- */
-export type DataType =
-  | ScalarDataType
-  | ArrayDataType
-  | StructDataType
-  | TypedefDataType;
-
-export type ScalarDataType = PrimaryDataType | PointerDataType;
-
-export interface PrimaryDataType {
-  type: "primary";
-  primaryDataType: PrimaryCDataType;
-}
-
-export interface ArrayDataType {
-  type: "array";
-  elementDataType: DataType;
-  numElements: number;
-}
-
-export interface PointerDataType {
-  type: "pointer";
-  // type of the object being pointed to
-  pointeeType: DataType;
-}
-
-export interface FunctionDataType {
-  type: "function";
-  returnType: DataType | null;
-  parameters: DataType[];
-}
-
-export interface StructDataType {
-  type: "struct";
-}
-
-/**
- * User defined types using typedef.
- */
-export interface TypedefDataType {
-  type: "typedef";
-}

@@ -14,7 +14,6 @@ import { Expression } from "~src/parser/c-ast/core";
 import visitExpression from "~src/processor/visitExpression";
 import { IntegerConstant } from "~src/parser/c-ast/constants";
 import { IntegerConstantP } from "~src/processor/c-ast/constants";
-import { pointerPrimaryDataType } from "~src/common/constants";
 import { FunctionCall, FunctionCallStatement, isCallableNode } from "~src/parser/c-ast/function";
 
 /**
@@ -90,7 +89,7 @@ export function processConditionalBlock(
 export function createMemoryOffsetIntegerConstant(offset: number): IntegerConstantP {
   return {
     type: "IntegerConstant",
-    dataType: pointerPrimaryDataType,
+    dataType: "unsigned int", // unsigned int should be appropriate type to give to IntegerConstant offsets since pointer size is 4 TODO: check this
     value: BigInt(offset)
   }
 }

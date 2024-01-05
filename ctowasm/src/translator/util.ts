@@ -20,7 +20,8 @@ import {
   MemoryVariableByteSize,
   WasmMemoryVariable,
 } from "~src/wasm-ast/memory";
-import { ArithemeticUnaryOperator, DataType } from "~src/common/types";
+import { ArithemeticUnaryOperator } from "~src/common/types";
+import { DataType } from "~src/processor/c-ast/dataTypes";
 import { primaryCDataTypeToWasmType } from "~src/translator/variableUtil";
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";

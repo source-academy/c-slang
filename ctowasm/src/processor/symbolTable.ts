@@ -1,12 +1,4 @@
-import {
-  FunctionDeclaration,
-  FunctionDefinition,
-} from "~src/parser/c-ast/function";
-import {
-  VariableDeclaration,
-  Initialization,
-} from "~src/parser/c-ast/variable";
-import { DataType } from "~src/common/types";
+import { DataType } from "./c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
 import { getDataTypeSize } from "~src/common/utils";
 
@@ -54,7 +46,9 @@ export class SymbolTable {
         );
       }
       if (this.symbols[name].type === "function") {
-        throw new ProcessingError(`Redeclaration error: ${name} redeclared as variable instead of function`)
+        throw new ProcessingError(
+          `Redeclaration error: ${name} redeclared as variable instead of function`
+        );
       }
       return this.symbols[name] as VariableSymbolEntry;
     }

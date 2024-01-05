@@ -1,14 +1,10 @@
 import { WasmFunction } from "~src/wasm-ast/functions";
-import {
-  MemoryVariableByteSize,
-  WasmMemoryLoad,
-} from "~src/wasm-ast/memory";
+import { MemoryVariableByteSize, WasmMemoryLoad } from "~src/wasm-ast/memory";
 import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
 import { WasmGlobalGet } from "~src/wasm-ast/variables";
 import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
-import { PrimaryDataType } from "~src/common/types";
 import { convertScalarDataTypeToWasmType } from "~src/translator/variableUtil";
 import { getDataTypeSize } from "~src/common/utils";
 import { TranslationError, UnsupportedFeatureError } from "~src/errors";
@@ -319,7 +315,7 @@ export function getFunctionCallStackFrameSetupStatements(
             type: "BinaryExpression",
             instruction: WASM_ADDR_MUL_INSTRUCTION,
             leftExpr: {
-              type: "MemorySize"
+              type: "MemorySize",
             },
             rightExpr: {
               type: "IntegerConst",
