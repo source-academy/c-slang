@@ -91,8 +91,9 @@
   }
 
   // Evaluates the string of postfix expressions to generate a complete tree of unary expression nodes
+  // Follows left to right associativity.
   // TODO: add struct & pointer operation handling
-  function createUnaryExpressionNode(firstExpr, operations) {
+  function createPostfixExpressionNode(firstExpr, operations) {
     let currNode = firstExpr;
     for (const operation of operations) {
       currNode = {
@@ -102,6 +103,20 @@
     }
     return currNode;
   }
+
+  // Evaluates the string of prefix expressions to generate a complete tree of unary expression nodes
+  // Follows right to left associativity
+  // TODO: add struct & pointer operation handling
+  function createPrefixExpressionNode(firstExpr, operations) {
+    let currNode = firstExpr;
+    for (let i = operations.length - 1; i >= 0; --i) {
+      currNode = {
+        ...(operations[i]),
+        expr: currNode
+      }
+    }
+    return currNode;
+  } 
 }
 
 program = arr:translation_unit  { return generateNode("Root", {children: arr}); }
@@ -111,15 +126,10 @@ program = arr:translation_unit  { return generateNode("Root", {children: arr}); 
 translation_unit 
   = _* i:initialization _* statement_end _* t:translation_unit { return [i, ...t]; }
   / _* s:declaration _* statement_end _* t:translation_unit { return [s, ...t]; }
-  
   / _* f:function_definition _* t:translation_unit { return [f, ...t]; }
   / single_line_comment_body { return []; } // match a single line comment at end of program without newline ending it. this rule must come before the next as it is more specific
   / _* { return []; }
-
-
-function_definition
-	= returnType:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _* ")" _* body:block _* ";"* { return generateNode("FunctionDefinition", { returnType, name, parameters, body }); }
-    
+   
 block
 	= "{" _* children:block_item_list _* "}" { return generateNode("Block", { children }); }
     
@@ -138,7 +148,6 @@ statement
 	/ @declaration 
   / @compound_assignment 
   / @assignment
-  / fn:function_call  { return generateNode("FunctionCallStatement", { name: fn.name, args: fn.args }); } // match a lone function call statement. Needed to generate a different C node.
   / expression // match on expression last so it does not interfere with other things like assignment
   / _* { return null }  // empty statement
 
@@ -146,6 +155,9 @@ iteration_statement
   = "do" _* body:block _* "while" _* "(" _* condition:expression _* ")" _* statement_end { return generateNode("DoWhileLoop", { condition, body }); } // dowhile loops need to end with a ';'
   / "while" _* "(" _* condition:expression _* ")" _* body:block { return generateNode("WhileLoop", { condition, body }); }
   / "for" _* "(" _* initialization:(statement)? _* ";" _* condition:expression? _* ";" _* update:expression? _* ")" _* body:block { return generateNode("ForLoop", { initialization, condition, update, body }); }
+
+
+// ===========  Select Statement ===========
 
 select_statement
   = ifBlock:if_block _* elseIfBlocks:(@else_if_block _*)* _* elseBlock:else_block? { return generateNode("SelectStatement", { ifBlock, elseIfBlocks, elseBlock }); }
@@ -159,23 +171,22 @@ else_if_block
 else_block
   = "else" _* @block
 
-return_statement 
-  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}); }
-  / "return" { return generateNode("ReturnStatement"); } // can also return nothing 
 
+
+// ============ Assignment =========
 assignment
-  = variable:lvalue _* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }
+  = variable:expression_* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }    
 
-array_index_assignment
-  = arrayElement:array_element_term _* "=" _* value:expression { return generateNode("ArrayIndexAssignment", { ...arrayElement, value }); }    
 
-// returns an array of variable declarations 
-declaration_list
-	= variable_declaration|.., _* "," _*|
+// ======== Declarations ========
 
 declaration
   = function_declaration //function declaration must come first, as the first few symbols of func and var declarations are exactly the same, meaning var will always be
   / variable_declaration 
+
+// returns an array of variable declarations 
+declaration_list
+	= variable_declaration|.., _* "," _*|
 
 variable_declaration 
   = array_declaration
@@ -184,15 +195,26 @@ variable_declaration
 array_declaration
   = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _*"]" { return generateNode("VariableDeclaration", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), parseInt(numElements)), name }); }  // match on array first as it is a more specific expression 
 
+
+// ========= Function related nodes ==========
+
+function_definition
+	= returnType:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _* ")" _* body:block _* ";"* { return generateNode("FunctionDefinition", { returnType, name, parameters, body }); }
+ 
 function_declaration
   = type:function_return_type _+ name:identifier _*  "(" _* parameters:declaration_list _*")" { return generateNode("FunctionDeclaration", { returnType: type, name: name, parameters: parameters }); } 
-
-function_call
-  = name:identifier _* "(" _* args:function_argument_list _* ")" { return generateNode("FunctionCall", { name: name, args: args}); }
 
 function_return_type
   = type
   / "void" { return null; }
+
+return_statement 
+  = "return" _* expr:expression { return generateNode("ReturnStatement", { value: expr}); }
+  / "return" { return generateNode("ReturnStatement"); } // can also return nothing 
+
+
+
+// ========== Assignments ============
 
 initialization
   = array_initialization // match on array first as it is a more specific expression
@@ -264,16 +286,21 @@ multiply_divide_expression
   / prefix_expression // as the last binary expression (highest precedence), this rule is needed
 
 prefix_expression 
-  = prefix_unary_expression
+  = operations:(_* @prefix_operation)+ firstExpr:postfix_expression { return createPrefixExpressionNode(primary_expression, operations); }
   / postfix_expression
 
+prefix_operation
+  = operator:("++" / "--"){ return { type: "PrefixArithmeticExpression", operator } }
+  / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator } }
+  //TODO: add pointer stuff (& *) when pointer done, and sizeof
+
 postfix_expression
-  = firstExpr:primary_expression operations:(_* @postfix_operation)+ { return createUnaryExpressionNode(primary_expression, operations); }
+  = firstExpr:primary_expression operations:(_* @postfix_operation)+ { return createPostfixExpressionNode(primary_expression, operations); }
+  / primary_expression
 
 // all the postfix operations
 postfix_operation
-  = "++" { return { type: "PostfixArithmeticExpression", operator: "++" } }
-  / "--" { return { type: "PostfixArithmeticExpression", operator: "--" } }
+  = operator:("++" / "--") { return { type: "PostfixArithmeticExpression", operator } }
   / "(" _* args:function_argument_list _* ")" { return { type: "FunctionCall", args } }
   / "[" _* index:expression _* "]" { return { type: "ArrayElementExpr", index} }
 //  / "." _* field:identifier { return } TODO: when doing structs

@@ -3,12 +3,11 @@
  */
 
 import { CNodeBase, Expression } from "~src/parser/c-ast/core";
-import { ArrayElementExpr, VariableExpr } from "~src/parser/c-ast/variable";
 
 // A variable assignment
 export interface Assignment extends CNodeBase {
   type: "Assignment";
-  variable: VariableExpr | ArrayElementExpr ;
+  lvalue: Expression; //
   value: Expression;
 }
 
@@ -17,6 +16,6 @@ export interface Assignment extends CNodeBase {
  */
 export interface AssignmentExpression extends CNodeBase {
   type: "AssignmentExpression";
-  variable: VariableExpr | ArrayElementExpr;
+  lvalue: Expression;
   value: Expression;
 }

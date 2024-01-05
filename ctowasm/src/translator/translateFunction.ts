@@ -215,14 +215,14 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable
+        n.lvalue
       );
       statementBody.push({
         type: "MemoryStore",
-        wasmDataType: primaryCDataTypeToWasmType[n.variable.dataType],
+        wasmDataType: primaryCDataTypeToWasmType[n.lvalue.dataType],
         value: getTypeConversionWrapper(
           n.value.dataType,
-          n.variable.dataType,
+          n.lvalue.dataType,
           translateExpression(wasmRoot, symbolTable, n.value)
         ),
         ...memoryAccessDetails,
