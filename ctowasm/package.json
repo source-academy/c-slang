@@ -6,7 +6,7 @@
   "author": "benmurphyy <47269122+benmurphyy@users.noreply.github.com>",
   "license": "MIT",
   "type": "module",
-  "source": "src/index.ts",
+  "source": "src/compiler.ts",
   "main": "build/index.js",
   "devDependencies": {
     "@babel/core": "^7.23.2",

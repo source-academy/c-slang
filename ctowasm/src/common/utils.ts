@@ -2,10 +2,11 @@
  * Contains a set of common utility functions used across modules.
  */
 
-import { CNode } from "~src/c-ast/core";
+import { CNodeBase } from "~src/parser/c-ast/core";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { PrimaryCDataType, DataType } from "~src/common/types";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
+import { UnsupportedFeatureError, toJson } from "~src/errors";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
@@ -37,49 +38,46 @@ export function getDataTypeSize(varType: DataType): number {
   } else if (varType.type === "array") {
     return getDataTypeSize(varType.elementDataType) * varType.numElements;
   } else if (varType.type === "struct") {
-    return 0; // TODO: not yet supported
+    // TODO: when structs supported
+    throw new UnsupportedFeatureError("getDataTypeSize(): structs not yet supported")
+  } else if (varType.type === "typedef") {
+    // TODO: when typedef supported
+    throw new UnsupportedFeatureError("getDataTypeSize(): typedef not yet supported")
+  } else {
+    throw new Error(`getDataTypeSize(): unhandled data type: ${toJson(varType)}`)
   }
 }
 
-export function isSignedIntegerType(dataType: DataType) {
-  if (dataType.type !== "primary") {
-    return false;
-  }
+export function isSignedIntegerType(dataType: PrimaryCDataType) {
   return (
-    dataType.primaryDataType === "signed char" ||
-    dataType.primaryDataType === "signed short" ||
-    dataType.primaryDataType === "signed int" ||
-    dataType.primaryDataType === "signed long"
+    dataType === "signed char" ||
+    dataType === "signed short" ||
+    dataType === "signed int" ||
+    dataType === "signed long"
   );
 }
 
-export function isUnsignedIntegerType(dataType: DataType) {
-  if (dataType.type !== "primary") {
-    return false;
-  }
+export function isUnsignedIntegerType(dataType: PrimaryCDataType) {
   return (
-    dataType.primaryDataType === "unsigned char" ||
-    dataType.primaryDataType === "unsigned short" ||
-    dataType.primaryDataType === "unsigned int" ||
-    dataType.primaryDataType === "unsigned long"
+    dataType === "unsigned char" ||
+    dataType === "unsigned short" ||
+    dataType === "unsigned int" ||
+    dataType === "unsigned long"
   );
 }
 
-export function isFloatType(dataType: DataType) {
-  if (dataType.type !== "primary") {
-    return false;
-  }
+export function isFloatType(dataType: PrimaryCDataType) {
   return (
-    dataType.primaryDataType === "float" ||
-    dataType.primaryDataType === "double"
+    dataType === "float" ||
+    dataType === "double"
   );
 }
 
-export function isIntegerType(dataType: DataType) {
+export function isIntegerType(dataType: PrimaryCDataType) {
   return isUnsignedIntegerType(dataType) || isSignedIntegerType(dataType);
 }
 
-export function isConstant(node: CNode) {
+export function isConstant(node: CNodeBase) {
   return node.type === "IntegerConstant" || node.type === "FloatConstant";
 }
 

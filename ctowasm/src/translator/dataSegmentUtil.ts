@@ -2,8 +2,12 @@
  * Some utility functions for converting variable intializers into byte strings.
  */
 
-import { Constant, FloatConstant, IntegerConstant } from "~src/c-ast/constants";
-import { Initializer } from "~src/c-ast/variable";
+import {
+  Constant,
+  FloatConstant,
+  IntegerConstant,
+} from "~src/parser/c-ast/constants";
+import { Initializer } from "~src/parser/c-ast/variable";
 import { getDataTypeSize, isConstant, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 

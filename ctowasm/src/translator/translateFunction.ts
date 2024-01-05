@@ -5,13 +5,16 @@
 import {
   PrefixArithmeticExpression,
   PostfixArithmeticExpression,
-} from "~src/c-ast/unaryExpression";
-import { Assignment } from "~src/c-ast/assignment";
-import { ReturnStatement, FunctionDefinition } from "~src/c-ast/functions";
-import { DoWhileLoop, WhileLoop, ForLoop } from "~src/c-ast/loops";
-import { Block, BlockItem, isExpression } from "~src/c-ast/core";
-import { SelectStatement } from "~src/c-ast/select";
-import { Initialization } from "~src/c-ast/variable";
+} from "~src/parser/c-ast/unaryExpression";
+import { Assignment } from "~src/parser/c-ast/assignment";
+import {
+  ReturnStatement,
+  FunctionDefinition,
+} from "~src/parser/c-ast/function";
+import { DoWhileLoop, WhileLoop, ForLoop } from "~src/parser/c-ast/loops";
+import { Block, BlockStatement, isExpression } from "~src/parser/c-ast/core";
+import { SelectStatement } from "~src/parser/c-ast/select";
+import { Initialization } from "~src/parser/c-ast/variable";
 import { getDataTypeSize } from "~src/common/utils";
 import translateExpression from "~src/translator/translateExpression";
 import {
@@ -101,7 +104,7 @@ export default function translateFunction(
    */
   function visit(
     symbolTable: WasmSymbolTable,
-    node: BlockItem,
+    node: BlockStatement,
     statementBody: WasmStatement[]
   ) {
     if (node.type === "Block") {
@@ -241,7 +244,7 @@ export default function translateFunction(
       const memoryAccessDetails = getMemoryAccessDetails(
         wasmRoot,
         symbolTable,
-        n.variable
+        n.expr
       );
       statementBody.push({
         type: "MemoryStore",
@@ -250,7 +253,7 @@ export default function translateFunction(
           type: "BinaryExpression",
           instruction: arithmeticUnaryOperatorToInstruction(
             n.operator,
-            n.variable.dataType
+            n.expr.dataType
           ),
           wasmDataType: memoryAccessDetails.wasmDataType,
           leftExpr: {

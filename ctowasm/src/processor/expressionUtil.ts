@@ -2,7 +2,7 @@
  * Definitions of various utility functions used for processing the C AST expressions.
  */
 
-import { Constant, FloatConstant, IntegerConstant } from "~src/c-ast/constants";
+import { Constant } from "~src/parser/c-ast/constants";
 import {
   BinaryOperator,
   FloatDataType,
@@ -10,25 +10,18 @@ import {
   SignedIntegerType,
   UnsignedIntegerType,
   PrimaryCDataType,
-  DataType,
-  PrimaryDataType,
-  ScalarDataType,
 } from "~src/common/types";
 import {
-  getDataTypeSize,
-  isConstant,
   isFloatType,
   isIntegerType,
-  isScalarType,
   isSignedIntegerType,
   isUnsignedIntegerType,
   primaryVariableSizes,
 } from "~src/common/utils";
 import { ProcessingError, toJson } from "~src/errors";
-import { BinaryExpression } from "~src/c-ast/binaryExpression";
-import { VariableExpr } from "~src/c-ast/variable";
-import { FunctionCall } from "~src/c-ast/functions";
-import { SymbolTable } from "~src/processor/symbolTable";
+import { BinaryExpression } from "~src/parser/c-ast/binaryExpression";
+import { ExpressionP } from "~src/processor/c-ast/core";
+import { ConstantP } from "~src/processor/c-ast/constants";
 
 /**
  * Evaluates the result of the binary expression a <operator> b.
@@ -75,59 +68,59 @@ export function performBinaryOperation(
 
 /**
  * Evaluates a constant arithmetic expression.
+ * TODO: another check in future on correctness
  */
 export function evaluateConstantBinaryExpression(
-  binaryExpr: BinaryExpression | Constant
-): Constant {
-  if (isConstant(binaryExpr)) {
+  expr: BinaryExpression | Constant
+): ConstantP {
+  if (expr.type === "FloatConstant" || expr.type === "IntegerConstant") {
     // alerady a constant
-    return binaryExpr as Constant;
+    return processConstant(expr);
   }
 
-  if (binaryExpr.type !== "BinaryExpression") {
+  if (expr.type !== "BinaryExpression") {
     throw new ProcessingError(
       `Unknown node being used as binary expression in evaluation of constant binary expressions: ${toJson(
-        binaryExpr
+        expr
       )}`
     );
   }
 
   // need to perform the appropriate truncation on the value if necessary as per C standard
-  let value = performBinaryOperation(
-    evaluateConstantBinaryExpression(
-      binaryExpr.leftExpr as BinaryExpression | Constant
-    ).value,
-    binaryExpr.operator,
-    evaluateConstantBinaryExpression(
-      binaryExpr.rightExpr as BinaryExpression | Constant
-    ).value
+  const evaluatedLeftExpr = evaluateConstantBinaryExpression(
+    expr.leftExpr as BinaryExpression | Constant
+  );
+  const evaluatedRightExpr = evaluateConstantBinaryExpression(
+    expr.rightExpr as BinaryExpression | Constant
   );
 
-  const dataType = determineDataTypeOfBinaryExpression(binaryExpr);
+  let value = performBinaryOperation(
+    evaluatedLeftExpr.value,
+    expr.operator,
+    evaluatedRightExpr.value
+  );
 
-  if (isIntegerType(binaryExpr.dataType)) {
+  const dataType = determineDataTypeOfBinaryExpression(
+    evaluatedLeftExpr,
+    evaluatedRightExpr,
+    expr.operator
+  );
+
+  if (isIntegerType(dataType)) {
     // need to cap integer values correctly
     value = getAdjustedIntValueAccordingToDataType(value as bigint, dataType);
 
     return {
       type: "IntegerConstant",
-      dataType: dataType as {
-        type: "primary";
-        primaryDataType: IntegerDataType;
-      },
+      dataType: dataType as IntegerDataType,
       value,
-      position: binaryExpr.position,
     };
   } else {
     // the result of the binary expression is a floating point
     return {
       type: "FloatConstant",
-      dataType: dataType as {
-        type: "primary";
-        primaryDataType: FloatDataType;
-      },
+      dataType: dataType as FloatDataType,
       value: value as number,
-      position: binaryExpr.position,
     };
   }
 }
@@ -137,34 +130,22 @@ export function evaluateConstantBinaryExpression(
  */
 function getAdjustedIntValueAccordingToDataType(
   value: bigint,
-  dataType: DataType
+  dataType: PrimaryCDataType
 ) {
   let newValue = value;
   // handle integer overflows
   if (
     isSignedIntegerType(dataType) &&
-    newValue >
-      getMaxValueOfSignedIntType(
-        (dataType as PrimaryDataType).primaryDataType as SignedIntegerType
-      )
+    newValue > getMaxValueOfSignedIntType(dataType as SignedIntegerType)
   ) {
     newValue =
-      newValue %
-      getMaxValueOfSignedIntType(
-        (dataType as PrimaryDataType).primaryDataType as SignedIntegerType
-      );
+      newValue % getMaxValueOfSignedIntType(dataType as SignedIntegerType);
   } else if (
     isUnsignedIntegerType(dataType) &&
-    newValue >
-      getMaxValueOfUnsignedIntType(
-        (dataType as PrimaryDataType).primaryDataType as UnsignedIntegerType
-      )
+    newValue > getMaxValueOfUnsignedIntType(dataType as UnsignedIntegerType)
   ) {
     newValue =
-      newValue %
-      getMaxValueOfUnsignedIntType(
-        (dataType as PrimaryDataType).primaryDataType as UnsignedIntegerType
-      );
+      newValue % getMaxValueOfUnsignedIntType(dataType as UnsignedIntegerType);
   }
 
   return newValue;
@@ -229,46 +210,47 @@ function handlePositiveSignedIntegerOverflow(
  * For signed types with positive value, it will also be wraparound (undefined behaviour)
  * For signed types with negative value, it excessively negative numbers will "wrap" by moving from most neagtive to most positive. E.g. for 8 bits, -129 becomes 127
  */
-function capIntegerValue(constant: IntegerConstant) {
-  if (constant.value > 0) {
-    if (isUnsignedIntegerType(constant.dataType)) {
-      constant.value =
-        constant.value %
-        getMaxValueOfUnsignedIntType(
-          constant.dataType.primaryDataType as UnsignedIntegerType
-        );
+function getCappedIntegerValue(value: bigint, dataType: IntegerDataType) {
+  if (value > 0) {
+    if (isUnsignedIntegerType(dataType)) {
+      return (
+        value % getMaxValueOfUnsignedIntType(dataType as UnsignedIntegerType)
+      );
     } else {
-      constant.value = handlePositiveSignedIntegerOverflow(
-        constant.value,
-        constant.dataType.primaryDataType as SignedIntegerType
+      return handlePositiveSignedIntegerOverflow(
+        value,
+        dataType as SignedIntegerType
       );
     }
-  } else if (constant.value < 0) {
-    constant.value = capNegativeValue(
-      constant.value,
-      constant.dataType.primaryDataType
-    );
+  } else if (value < 0) {
+    return capNegativeValue(value, dataType);
+  } else {
+    return value;
   }
 }
 
 /**
  * If the constant overflows float (double corresponds to js number type, so that is already handled), need to cap it to ensure there is no wasm error. This is undefined behaviour, but meant to mimic existing compilers.
  */
-function capFloatValue(constant: FloatConstant) {
-  if (constant.dataType.primaryDataType === "float") {
-    constant.value = Math.fround(constant.value);
+function getCappedFloatValue(value: number, dataType: FloatDataType) {
+  if (dataType === "float") {
+    return Math.fround(value);
   }
+  return value;
 }
 
 /**
  * Cap the values of constants that have overflowing values to avoid wasm runtime errors.
  */
-function capConstantValues(constant: Constant) {
+function getCappedConstantValue(
+  constant: Constant,
+  dataType: PrimaryCDataType
+): bigint | number {
   if (constant.type === "IntegerConstant") {
-    capIntegerValue(constant);
+    return getCappedIntegerValue(constant.value, dataType as IntegerDataType);
   } else {
     // floating point constant
-    capFloatValue(constant);
+    return getCappedFloatValue(constant.value, dataType as FloatDataType);
   }
 }
 
@@ -276,121 +258,104 @@ function capConstantValues(constant: Constant) {
  * Sets the dataType of a constant (like a literal number "123") as per 6.4.4.1 of C17 standard.
  * Caps the values of the constants if necessary.
  */
-function setDataTypeOfConstant(constant: Constant) {
-  function createPrimaryDataType<T extends PrimaryCDataType>(
-    varType: T
-  ): { type: "primary"; primaryDataType: typeof varType } {
-    return {
-      type: "primary",
-      primaryDataType: varType,
-    };
-  }
-
+function getDataTypeOfConstant(constant: Constant) {
   if (constant.type === "IntegerConstant") {
     if (constant.suffix === "ul") {
-      constant.dataType = createPrimaryDataType("unsigned long");
+      return "unsigned long";
     } else if (constant.suffix === "u") {
       if (constant.value <= getMaxValueOfUnsignedIntType("unsigned int")) {
-        constant.dataType = createPrimaryDataType("unsigned int");
+        return "unsigned int";
       } else {
-        constant.dataType = createPrimaryDataType("unsigned long");
+        return "unsigned long";
       }
     } else if (constant.suffix === "l") {
-      constant.dataType = createPrimaryDataType("signed long");
+      return "signed long";
     } else {
       // no suffix
       if (constant.value < 0) {
         if (constant.value >= getMinValueOfSignedIntType("signed int")) {
-          constant.dataType = createPrimaryDataType("signed int");
+          return "signed int";
         } else if (
           constant.value >= getMinValueOfSignedIntType("signed long")
         ) {
-          constant.dataType = createPrimaryDataType("signed long");
+          return "signed long";
         } else {
           // integer is too negative
           // TODO: possibly inform user with warning here
-          constant.dataType = createPrimaryDataType("signed long");
+          return "signed long";
         }
       } else {
         if (constant.value <= getMaxValueOfSignedIntType("signed int")) {
-          constant.dataType = createPrimaryDataType("signed int");
+          return "signed int";
         } else if (
           constant.value <= getMaxValueOfSignedIntType("signed long")
         ) {
-          constant.dataType = createPrimaryDataType("signed long");
+          return "signed long";
         } else {
           // integer is too large
           // TODO: possibly inform user with warning here
-          constant.dataType = createPrimaryDataType("signed long");
+          return "signed long";
         }
       }
     }
   } else {
     // handle float constant
     if (constant.suffix === "f") {
-      constant.dataType = createPrimaryDataType("float");
+      return "float";
     } else {
       // by default all float constants are doubles if "f"/"F" suffix is not specified
-      constant.dataType = createPrimaryDataType("double");
+      return "double";
     }
   }
 }
 
-export function processConstant(constant: Constant) {
-  setDataTypeOfConstant(constant);
-  capConstantValues(constant);
+export function processConstant(constant: Constant): ConstantP {
+  const dataType = getDataTypeOfConstant(constant);
+  const cappedValue = getCappedConstantValue(constant, dataType);
+  return {
+    type: constant.type,
+    value: cappedValue,
+    dataType: dataType,
+  } as ConstantP;
 }
 
 /**
  * Returns the correct varaible type for a binary expression accorsinf to rules of arithemetic conversion 6.3.1.8 in C17 standard.
  * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
  */
-function determineDataTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
-): ScalarDataType {
-  if (
-    !isScalarType(binaryExpression.leftExpr.dataType) ||
-    !isScalarType(binaryExpression.rightExpr.dataType)
-  ) {
-    throw new ProcessingError(
-      `Non-Scalar type used as operand in "${binaryExpression.operator}" binary expression`
-    );
-  }
-  const leftExprDataType = binaryExpression.leftExpr.dataType as ScalarDataType;
-  const rightExprDataType = binaryExpression.rightExpr
-    .dataType as ScalarDataType;
+export function determineDataTypeOfBinaryExpression(
+  leftExpr: ExpressionP,
+  rightExpr: ExpressionP,
+  operator: BinaryOperator
+): PrimaryCDataType {
+  const leftExprDataType = leftExpr.dataType;
+  const rightExprDataType = rightExpr.dataType;
 
-  if (
-    isFloatType(binaryExpression.leftExpr.dataType) &&
-    isFloatType(binaryExpression.rightExpr.dataType)
-  ) {
+  if (isFloatType(leftExpr.dataType) && isFloatType(rightExpr.dataType)) {
     // take more higher ranking float type
     if (
-      getDataTypeSize(binaryExpression.rightExpr.dataType) >
-      getDataTypeSize(binaryExpression.leftExpr.dataType)
+      primaryVariableSizes[rightExpr.dataType] >
+      primaryVariableSizes[leftExpr.dataType]
     ) {
       return leftExprDataType;
     } else {
       return rightExprDataType;
     }
-  } else if (isFloatType(binaryExpression.leftExpr.dataType)) {
+  } else if (isFloatType(leftExpr.dataType)) {
     // float types have greater precedence than any integer types
     return leftExprDataType;
-  } else if (isFloatType(binaryExpression.rightExpr.dataType)) {
+  } else if (isFloatType(rightExpr.dataType)) {
     return rightExprDataType;
   } else {
     // both types are integers
     // special handling for bitwise shift, which does not follow usual arithmetic implicit conversion rules
-    if (
-      binaryExpression.operator === "<<" ||
-      binaryExpression.operator === ">>"
-    ) {
+    if (operator === "<<" || operator === ">>") {
       return leftExprDataType;
     }
 
     if (
-      getDataTypeSize(binaryExpression.rightExpr.dataType) >
-      getDataTypeSize(binaryExpression.leftExpr.dataType)
+      primaryVariableSizes[rightExpr.dataType] >
+      primaryVariableSizes[leftExpr.dataType]
     ) {
       return rightExprDataType;
     } else {
@@ -399,29 +364,3 @@ function determineDataTypeOfBinaryExpression(
   }
 }
 
-/**
-
- * TODO: add unsigned behaviour later.
- * TODO: add float handling later
- */
-export function setDataTypeOfBinaryExpression(
-  binaryExpression: BinaryExpression
-) {
-  binaryExpression.dataType =
-    determineDataTypeOfBinaryExpression(binaryExpression);
-}
-
-/**
- * Sets the variable type of any kind of expression that involves accessing a symbol.
- */
-export function setDataTypeOfSymbolAccessExpression(
-  node: FunctionCall | VariableExpr,
-  symbolTable: SymbolTable
-) {
-  const symbolEntry = symbolTable.getSymbolEntry(node.name);
-  if (symbolEntry.type === "function") {
-    node.dataType = symbolEntry.returnType;
-  } else {
-    node.dataType = symbolEntry.dataType;
-  }
-}

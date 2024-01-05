@@ -2,7 +2,7 @@
  * Translate a binary expression into corresponding WAT AST nodes based on operator.
  */
 
-import { BinaryExpression } from "~src/c-ast/binaryExpression";
+import { BinaryExpression } from "~src/parser/c-ast/binaryExpression";
 import { BinaryOperator, ScalarDataType } from "~src/common/types";
 import {
   isUnsignedIntegerType,
@@ -46,16 +46,12 @@ export default function translateBinaryExpression(
       leftExpr: {
         type: "BooleanExpression",
         expr: translateExpression(wasmRoot, symbolTable, binaryExpr.leftExpr),
-        wasmDataType: convertScalarDataTypeToWasmType(
-          leftExprDataType
-        ),
+        wasmDataType: convertScalarDataTypeToWasmType(leftExprDataType),
       },
       rightExpr: {
         type: "BooleanExpression",
         expr: translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr),
-        wasmDataType: convertScalarDataTypeToWasmType(
-          rightExprDataType
-        ),
+        wasmDataType: convertScalarDataTypeToWasmType(rightExprDataType),
       },
       instruction: getBinaryExpressionInstruction(
         binaryExpr.operator,

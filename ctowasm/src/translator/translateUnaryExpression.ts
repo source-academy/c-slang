@@ -2,7 +2,7 @@
  * Definition of function to handle unary expressions
  */
 
-import { UnaryExpression } from "~src/c-ast/unaryExpression";
+import { PrefixExpression } from "~src/parser/c-ast/unaryExpression";
 import { isFloatType, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
@@ -24,7 +24,7 @@ import { WasmBooleanExpression } from "~src/wasm-ast/misc";
 export default function translateUnaryExpression(
   wasmRoot: WasmModule,
   symbolTable: WasmSymbolTable,
-  unaryExpr: UnaryExpression
+  unaryExpr: PrefixExpression
 ): WasmExpression {
   if (unaryExpr.operator === "-") {
     if (isIntegerType(unaryExpr.dataType)) {
@@ -34,11 +34,7 @@ export default function translateUnaryExpression(
         leftExpr: getMaxIntConstant(
           primaryCDataTypeToWasmType[unaryExpr.dataType] as "i32" | "i64"
         ),
-        rightExpr: translateExpression(
-          wasmRoot,
-          symbolTable,
-          unaryExpr.expression
-        ),
+        rightExpr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
         wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
       };
       return node;
@@ -48,7 +44,7 @@ export default function translateUnaryExpression(
         wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType] as
           | "f32"
           | "f64",
-        expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expression),
+        expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
       };
       return node;
     }
@@ -56,7 +52,7 @@ export default function translateUnaryExpression(
     const node: WasmBooleanExpression = {
       type: "BooleanExpression",
       wasmDataType: "i32",
-      expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expression),
+      expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
       isNegated: true,
     };
     return node;
@@ -75,11 +71,7 @@ export default function translateUnaryExpression(
         wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
         value: -1n,
       } as WasmIntegerConst,
-      rightExpr: translateExpression(
-        wasmRoot,
-        symbolTable,
-        unaryExpr.expression
-      ),
+      rightExpr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
       wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
       instruction: `${primaryCDataTypeToWasmType[unaryExpr.dataType]}.xor`,
     };

@@ -2,8 +2,7 @@
  * This file contains utility functions related to variables.
  */
 
-import { Expression } from "~src/c-ast/core";
-import { ArrayElementExpr, VariableExpr } from "~src/c-ast/variable";
+import { Expression } from "~src/parser/c-ast/core";
 import {
   PrimaryCDataType,
   PrimaryDataType,
@@ -24,8 +23,7 @@ import { WasmFloatType, WasmIntType, WasmType } from "~src/wasm-ast/types";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 import { WasmSymbolTable } from "./symbolTable";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
-import { Constant } from "~src/c-ast/constants";
-import { wasmTypeToSize } from "~src/translator/util";
+import { Constant } from "~src/parser/c-ast/constants";
 import {
   getDataTypeSize,
   isSignedIntegerType,
@@ -36,7 +34,7 @@ import {
   WasmNumericConversionWrapper,
 } from "~src/wasm-ast/misc";
 import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
-import { WasmConst, WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WasmConst } from "~src/wasm-ast/consts";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { retrieveVariableFromSymbolTable } from "./symbolTable";
 

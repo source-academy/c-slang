@@ -7,9 +7,9 @@ import {
   FunctionCall,
   FunctionCallStatement,
   FunctionDeclaration,
-} from "~src/c-ast/functions";
-import { Declaration } from "~src/c-ast/core";
-import { Initialization, VariableExpr } from "~src/c-ast/variable";
+} from "~src/parser/c-ast/function";
+import { Declaration } from "~src/parser/c-ast/core";
+import { Initialization, VariableExpr } from "~src/parser/c-ast/variable";
 import { SemanticAnalysisError } from "~src/errors";
 import { SymbolTable } from "~src/processor/symbolTable";
 
@@ -179,18 +179,18 @@ export function checkForFunctionDeclaration(
   scope: Scope,
   specialFunctions: Set<string>
 ) {
-  if (specialFunctions.has(node.name)) {
+  if (specialFunctions.has(node.expr)) {
     // one of the special pre-built functions
     return;
   }
   let curr = scope;
   while (curr != null) {
-    if (node.name in curr.symbols) {
-      if (curr.symbols[node.name].type === "function") {
+    if (node.expr in curr.symbols) {
+      if (curr.symbols[node.expr].type === "function") {
         return;
       } else {
         throw new SemanticAnalysisError(
-          `${node.name} is not a function parameter`,
+          `${node.expr} is not a function parameter`,
           sourceCode,
           node.position
         );
@@ -199,7 +199,7 @@ export function checkForFunctionDeclaration(
     curr = curr.parentScope;
   }
   throw new SemanticAnalysisError(
-    `Undeclared function: '${node.name}' undeclared before use`,
+    `Undeclared function: '${node.expr}' undeclared before use`,
     sourceCode,
     node.position
   );

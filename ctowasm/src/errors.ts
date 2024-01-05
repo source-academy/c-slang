@@ -2,7 +2,7 @@
  * This file contains all the error classes that can be thrown by the compiler.
  */
 
-import { Position } from "~src/c-ast/types";
+import { Position } from "~src/parser/c-ast/types";
 
 /**
  * An error that occured in relation to the C source code during compilation.
@@ -59,7 +59,7 @@ export class WatGeneratorError extends Error {
  */
 export class UnsupportedFeatureError extends Error {
   constructor(message: string) {
-    super("Unsupported Feature Error: " + message)
+    super("Unsupported Feature Error: " + message);
   }
 }
 

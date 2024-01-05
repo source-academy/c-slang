@@ -2,149 +2,282 @@
  * Definition of visitor function.
  */
 
-import { AssignmentExpression } from "~src/c-ast/assignment";
-import { BinaryExpression } from "~src/c-ast/binaryExpression";
-import { Constant, IntegerConstant } from "~src/c-ast/constants";
-import { Expression, isExpression } from "~src/c-ast/core";
-import { FunctionCall, FunctionDefinition } from "~src/c-ast/functions";
-import { SymbolTable } from "~src/processor/symbolTable";
-import {
-  PostfixArithmeticExpression,
-  PrefixArithmeticExpression,
-  UnaryExpression,
-} from "~src/c-ast/unaryExpression";
-import {
-  VariableDeclaration,
-  Initialization,
-  ArrayElementExpr,
-} from "~src/c-ast/variable";
-import { getDataTypeSize, isConstant } from "~src/common/utils";
+import { BlockStatement, isExpression } from "~src/parser/c-ast/core";
+import { SymbolTable, VariableSymbolEntry } from "~src/processor/symbolTable";
+
 import { ProcessingError, toJson } from "~src/errors";
+
+import { StatementP } from "~src/processor/c-ast/core";
+import { FunctionDefinitionP } from "~src/processor/c-ast/function";
+import { MemoryObjectDetail, MemoryStore } from "./c-ast/memory";
 import {
-  evaluateConstantBinaryExpression,
-  processConstant,
-  setDataTypeOfBinaryExpression,
-  setDataTypeOfSymbolAccessExpression,
-} from "~src/processor/expressionUtil";
-import { handleScopeCreatingNodes } from "~src/processor/util";
+  createMemoryOffsetIntegerConstant,
+  processCondition,
+  runPrefixPostfixArithmeticChecks,
+} from "~src/processor/util";
+import {
+  processFunctionCallArgs,
+  processFunctionReturnStatement,
+} from "./functionUtil";
+import { processConditionalBlock } from "./util";
+import { ForLoopP } from "~src/processor/c-ast/loops";
+import {
+  getAssignmentMemoryStoreNodes,
+  unpackDataTypeIntoPrimaryDataMemoryObjects,
+  unpackInitializer,
+} from "~src/processor/variableUtil";
+import { pointerPrimaryDataType } from "~src/common/constants";
+import { isFloatType } from "~src/common/utils";
+import { FloatDataType, IntegerDataType } from "~src/common/types";
 
 /**
  * Visitor function for traversing the C AST to process C AST.
- * Will call visit on all the fields of the current node being traversed.
+ * Returns the processed CNode.
  * @param ast
  * @param sourceCode
  */
 export function visit(
   sourceCode: string,
-  node: any,
+  node: BlockStatement,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinition
-) {
-  if (
-    !(
-      Array.isArray(node) ||
-      (typeof node === "object" && node !== null && "type" in node)
-    )
-  ) {
-    // ignore objects that are not AST nodes OR not an array of nodes
-    return;
-  }
-  // Handle nodes that create new symboltables
-  if (
-    node.type === "FunctionDefinition" ||
-    node.type === "ForLoop" ||
-    node.type === "Block"
-  ) {
-    handleScopeCreatingNodes(sourceCode, node, symbolTable, enclosingFunc);
-    return;
-  }
-
-  // Handle other nodes that may require specific actions
-  if (node.type === "VariableDeclaration") {
-    const n = node as VariableDeclaration;
-    if (enclosingFunc) {
-      enclosingFunc.sizeOfLocals += getDataTypeSize(n.dataType);
-    }
-    symbolTable.addEntry(n);
-    return;
-  } else if (node.type === "Initialization") {
-    const n = node as Initialization;
-    symbolTable.addEntry(n);
-    if (enclosingFunc) {
-      enclosingFunc.sizeOfLocals += getDataTypeSize(n.dataType);
-      visit(sourceCode, n.initializer, symbolTable, enclosingFunc);
-    } else {
-      // this intialization is global. Needs to be a constant expression, which we can evaluate now
-      if (n.initializer.type === "InitializerSingle") {
-        n.initializer.value = evaluateConstantBinaryExpression(
-          n.initializer.value as BinaryExpression | Constant
-        );
-      } else if (n.initializer.type === "InitializerList") {
-        const evaluatedElements = [];
-        for (const element of n.initializer.values) {
-          evaluatedElements.push(
-            evaluateConstantBinaryExpression(
-              element as BinaryExpression | IntegerConstant
-            )
-          );
-        }
-        n.initializer.values = evaluatedElements;
+  enclosingFunc?: FunctionDefinitionP // reference to enclosing function, if any
+): StatementP | StatementP[] | null {
+  if (node.type === "Block") {
+    const blockSymbolTable = new SymbolTable(symbolTable);
+    const statements: StatementP[] = [];
+    node.children.forEach((child) => {
+      const result = visit(sourceCode, child, blockSymbolTable, enclosingFunc);
+      if (result === null) {
+        return;
+      } else if (Array.isArray(result)) {
+        // A block was visited, returning an array of StatementP
+        result.forEach((statement) => statements.push(statement));
+      } else {
+        statements.push(result);
       }
+    });
+    return statements;
+  } else if (node.type === "ForLoop") {
+    // for loops have a specific scope for the for loop bracketed statements e.g. "(int i = 0; i < 10; i++)"
+    const forLoopSymbolTable = new SymbolTable(symbolTable);
+    const processedForLoopNode: ForLoopP = {
+      type: "ForLoop",
+      initialization: visit(
+        sourceCode,
+        node.initialization,
+        forLoopSymbolTable,
+        enclosingFunc
+      ) as StatementP,
+      condition: processCondition(sourceCode, node.condition, symbolTable),
+      update: visit(
+        sourceCode,
+        node.update,
+        forLoopSymbolTable,
+        enclosingFunc
+      ) as StatementP,
+      body: visit(
+        sourceCode,
+        node.body,
+        forLoopSymbolTable,
+        enclosingFunc
+      ) as StatementP[],
+    };
+    return processedForLoopNode;
+  } else if (node.type === "DoWhileLoop" || node.type === "WhileLoop") {
+    return {
+      type: node.type,
+      condition: processCondition(sourceCode, node.condition, symbolTable),
+      body: visit(
+        sourceCode,
+        node.body,
+        symbolTable,
+        enclosingFunc
+      ) as StatementP[], // processing a block always gives array of statements
+    };
+  } else if (node.type === "ReturnStatement") {
+    // there must be an enclosing func
+    if (typeof enclosingFunc === "undefined") {
+      throw new ProcessingError(
+        "Return statement is not valid outside of a function"
+      );
     }
-    return;
-  } else if (isConstant(node)) {
-    processConstant(node as Constant);
-    return;
-  } else if (node.type === "BinaryExpression") {
-    const n = node as BinaryExpression;
-    visit(sourceCode, n.leftExpr, symbolTable, enclosingFunc);
-    visit(sourceCode, n.rightExpr, symbolTable, enclosingFunc);
-    setDataTypeOfBinaryExpression(node as BinaryExpression);
-    return;
-  } else if (node.type === "FunctionCall") {
-    const n = node as FunctionCall;
-    setDataTypeOfSymbolAccessExpression(node, symbolTable);
-    n.args.forEach((arg) => visit(sourceCode, arg, symbolTable, enclosingFunc));
-    return;
-  } else if (node.type === "VariableExpr") {
-    setDataTypeOfSymbolAccessExpression(node, symbolTable);
-    return;
-  } else if (node.type === "ArrayElementExpr") {
-    const n = node as ArrayElementExpr;
-    visit(sourceCode, n.index, symbolTable, enclosingFunc);
-    setDataTypeOfSymbolAccessExpression(node, symbolTable);
-    n.dataType = n.index.dataType;
-    return;
+
+    if (typeof node.value === "undefined" || node === null) {
+      return {
+        type: "ReturnStatement",
+      };
+    }
+
+    // there is an expression to return, break up the return into series of memory stores of the expression
+    // in the return memory object locations
+    return processFunctionReturnStatement(
+      sourceCode,
+      node.value,
+      enclosingFunc.returnMemoryDetails as MemoryObjectDetail[],
+      symbolTable
+    );
+  } else if (node.type === "SelectStatement") {
+    return {
+      type: "SelectStatement",
+      ifBlock: processConditionalBlock(
+        sourceCode,
+        node.ifBlock,
+        symbolTable,
+        enclosingFunc
+      ),
+      elseIfBlocks: node.elseIfBlocks.map((block) =>
+        processConditionalBlock(sourceCode, block, symbolTable, enclosingFunc)
+      ),
+      elseBody: node.elseBlock
+        ? (visit(
+            sourceCode,
+            node.elseBlock,
+            symbolTable,
+            enclosingFunc
+          ) as StatementP[])
+        : null,
+    };
+  } else if (node.type === "Assignment") {
+    return getAssignmentMemoryStoreNodes(sourceCode, node, symbolTable);
+  } else if (node.type === "FunctionDeclaration") {
+    symbolTable.addFunctionEntry(
+      node.name,
+      node.parameters.map((p) => p.dataType),
+      node.returnType
+    );
+    return null; // no processed node to return
+  } else if (node.type === "VariableDeclaration") {
+    symbolTable.addVariableEntry(node.name, node.dataType);
+    return null;
+  } else if (node.type === "FunctionCallStatement") {
+    return {
+      type: "FunctionCall",
+      name: node.expr,
+      args: processFunctionCallArgs(sourceCode, node.args, symbolTable),
+    };
+  } else if (node.type === "Initialization") {
+    const symbolEntry = symbolTable.addVariableEntry(node.name, node.dataType);
+    const unpackedInitializerExpressions = unpackInitializer(
+      sourceCode,
+      node.initializer,
+      symbolTable
+    );
+    if (node.dataType.type === "primary" || node.dataType.type === "pointer") {
+      if (unpackedInitializerExpressions.length > 1) {
+        throw new ProcessingError(
+          "Excess elements in scalar initializer",
+          sourceCode,
+          node.position
+        );
+      }
+      return {
+        type:
+          symbolEntry.type === "localVariable"
+            ? "LocalObjectMemoryStore"
+            : "DataSegmentObjectMemoryStore",
+        dataType:
+          node.dataType.type === "primary"
+            ? node.dataType.primaryDataType
+            : pointerPrimaryDataType,
+        value: unpackedInitializerExpressions[0],
+        offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
+      };
+    } else if (
+      node.dataType.type === "array" ||
+      node.dataType.type === "struct" ||
+      node.dataType.type === "typedef"
+    ) {
+      const memoryStoreStatements: MemoryStore[] = [];
+      // unpack the aggregate data type into series of primary data type memory objects
+      const primaryMemoryObjects = unpackDataTypeIntoPrimaryDataMemoryObjects(
+        node.dataType
+      );
+      let i = 0;
+      for (; i < unpackedInitializerExpressions.length; ++i) {
+        memoryStoreStatements.push({
+          type:
+            symbolEntry.type === "localVariable"
+              ? "LocalObjectMemoryStore"
+              : "DataSegmentObjectMemoryStore",
+          dataType: primaryMemoryObjects[i].primaryDataType,
+          offset: createMemoryOffsetIntegerConstant(
+            primaryMemoryObjects[i].offset
+          ),
+          value: unpackedInitializerExpressions[i],
+        });
+      }
+
+      // fill in the rest with zero constants TODO: check if correct for typdef
+      for (let j = i; i < memoryStoreStatements.length; ++j) {
+        memoryStoreStatements.push({
+          type:
+            symbolEntry.type === "localVariable"
+              ? "LocalObjectMemoryStore"
+              : "DataSegmentObjectMemoryStore",
+          dataType: primaryMemoryObjects[j].primaryDataType,
+          offset: createMemoryOffsetIntegerConstant(
+            primaryMemoryObjects[j].offset
+          ),
+          value: isFloatType(primaryMemoryObjects[j].primaryDataType)
+            ? {
+                type: "FloatConstant",
+                value: 0,
+                dataType: primaryMemoryObjects[j]
+                  .primaryDataType as FloatDataType,
+              }
+            : {
+                type: "IntegerConstant",
+                value: 0n,
+                dataType: primaryMemoryObjects[j]
+                  .primaryDataType as IntegerDataType,
+              },
+        });
+      }
+      return memoryStoreStatements;
+    } else {
+      throw new ProcessingError(
+        `Unhandled data type: ${toJson(node.dataType)}`
+      );
+    }
+    // handle the unpacking of the data type here -> make utility function
   } else if (
     node.type === "PrefixArithmeticExpression" ||
     node.type === "PostfixArithmeticExpression"
   ) {
-    const n = node as PrefixArithmeticExpression | PostfixArithmeticExpression;
-    visit(sourceCode, n.variable, symbolTable, enclosingFunc);
-    n.dataType = n.variable.dataType;
-    return;
-  } else if (node.type === "AssignmentExpression") {
-    const n = node as AssignmentExpression;
-    visit(sourceCode, n.variable, symbolTable, enclosingFunc);
-    visit(sourceCode, n.value, symbolTable, enclosingFunc);
-    n.dataType = n.variable.dataType;
-    return;
-  } else if (node.type === "UnaryExpression") {
-    const n = node as UnaryExpression;
-    visit(sourceCode, n.expression, symbolTable, enclosingFunc);
-    n.dataType = n.expression.dataType;
-  } else if (isExpression(node)) {
-    const n = node as Expression;
-    // sanity check - make sure no expressions are missed as each need their dataType field set.
-    throw new ProcessingError(
-      `Unhandled expression: ${toJson(n)}`,
-      sourceCode,
-      n.position
-    );
-  }
+    // simple assignment
+    const symbolEntry = symbolTable.getSymbolEntry(
+      node.expr.name
+    ) as VariableSymbolEntry;
+    runPrefixPostfixArithmeticChecks(symbolEntry, sourceCode, node.position);
 
-  // for other nodes, just traverse all their fields
-  for (const k of Object.keys(node)) {
-    visit(sourceCode, node[k], symbolTable, enclosingFunc);
+    return {
+      type:
+        symbolEntry.type === "localVariable"
+          ? "LocalObjectMemoryStore"
+          : "DataSegmentObjectMemoryStore",
+      offset: {
+        type: "IntegerConstant",
+        value: BigInt(symbolEntry.offset),
+        dataType: pointerPrimaryDataType,
+      },
+      dataType:
+        symbolEntry.dataType.type === "primary"
+          ? symbolEntry.dataType.primaryDataType
+          : pointerPrimaryDataType,
+      value: {
+        type: "IntegerConstant",
+        value: 1n,
+        dataType: pointerPrimaryDataType, // can be any type, since it is just 1
+      },
+    };
+  } else if (isExpression(node)) {
+    // ignore all other expressions other than pre/postfix arithmetic, they do not have side effects and can be safely ignored
+    return null;
+  } else {
+    throw new ProcessingError(
+      `Unhandled C AST node: ${toJson(node)}`,
+      sourceCode,
+      node.position
+    );
   }
 }

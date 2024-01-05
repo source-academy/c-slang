@@ -26,21 +26,22 @@
    */
   function createBinaryExpressionNode(firstExpr, exprsWithOperatorArr) {
     let currNode = firstExpr;
-    for (let i = 0; i < exprsWithOperatorArr.length - 1; ++i) {
+    for (const operation of exprsWithOperatorArr) {
       // create a new operation node
       currNode = {
         type: "BinaryExpression",
         leftExpr: currNode,
-        rightExpr: exprsWithOperatorArr[i][1],
-        operator: exprsWithOperatorArr[i][0]
+        rightExpr: operation[1],
+        operator: operation[0]
       }
     }
-    return {
-      type: "BinaryExpression",
-      leftExpr: currNode,
-      rightExpr: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][1],
-      operator: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][0]
-    }
+    return currNode
+    // return {
+    //   type: "BinaryExpression",
+    //   leftExpr: currNode,
+    //   rightExpr: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][1],
+    //   operator: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][0]
+    // }
   }
 
   function createUnaryExpressionNode(expr, operator) {
@@ -77,18 +78,30 @@
 
   function createInitializerList(values) {
     return {
-      type: "list",
+      type: "InitializerList",
       values
     };
   }
 
   function createInitializerSingle(value) {
     return {
-      type: "single",
+      type: "InitializerSingle",
       value
     };
   }
 
+  // Evaluates the string of postfix expressions to generate a complete tree of unary expression nodes
+  // TODO: add struct & pointer operation handling
+  function createUnaryExpressionNode(firstExpr, operations) {
+    let currNode = firstExpr;
+    for (const operation of operations) {
+      currNode = {
+        ...operation,
+        expr: currNode
+      }
+    }
+    return currNode;
+  }
 }
 
 program = arr:translation_unit  { return generateNode("Root", {children: arr}); }
@@ -96,8 +109,9 @@ program = arr:translation_unit  { return generateNode("Root", {children: arr}); 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = _* s:declaration _* statement_end _* t:translation_unit { return [s, ...t]; }
-  / _* i:initialization _* statement_end _* t:translation_unit { return [i, ...t]; }
+  = _* i:initialization _* statement_end _* t:translation_unit { return [i, ...t]; }
+  / _* s:declaration _* statement_end _* t:translation_unit { return [s, ...t]; }
+  
   / _* f:function_definition _* t:translation_unit { return [f, ...t]; }
   / single_line_comment_body { return []; } // match a single line comment at end of program without newline ending it. this rule must come before the next as it is more specific
   / _* { return []; }
@@ -150,7 +164,7 @@ return_statement
   / "return" { return generateNode("ReturnStatement"); } // can also return nothing 
 
 assignment
-  = variable:lvalue_term _* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }
+  = variable:lvalue _* "=" _* value:expression { return generateNode("Assignment", { variable, value }); }
 
 array_index_assignment
   = arrayElement:array_element_term _* "=" _* value:expression { return generateNode("ArrayIndexAssignment", { ...arrayElement, value }); }    
@@ -176,9 +190,6 @@ function_declaration
 function_call
   = name:identifier _* "(" _* args:function_argument_list _* ")" { return generateNode("FunctionCall", { name: name, args: args}); }
 
-function_argument_list
-  = expression|.., _* "," _*|
-
 function_return_type
   = type
   / "void" { return null; }
@@ -188,14 +199,15 @@ initialization
 	/ primaryDataType:type _+ name:identifier _* "=" _* value:expression { return generateNode("Initialization", { dataType: createPrimaryDataType(primaryDataType), name, initializer: createInitializerSingle(value)  }); }
 
 array_initialization
-  = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _* "]" _* "=" _* elements:list_initializer { return generateNode("Initialization", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), numElements), name, initializer: createInitializerList(elements) }); }  
-  / primaryDataType:type _+ name:identifier _* "[" _* "]" _* "=" _* elements:list_initializer { return generateNode("Initialization", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), elements.length), name, initializer: createInitializerList(elements) }); }  
+  = primaryDataType:type _+ name:identifier _* "[" _* numElements:integer _* "]" _* "=" _* initializer:list_initializer { return generateNode("Initialization", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), numElements), name, initializer }); }  
+  / primaryDataType:type _+ name:identifier _* "[" _* "]" _* "=" _* initializer:list_initializer { return generateNode("Initialization", { dataType: createArrayDataType(createPrimaryDataType(primaryDataType), initializer.values.length), name, initializer }); }  
 
 list_initializer
-  = "{" _* @expression|.., _* "," _* | _* "}"
+  = "{" _* list:list_initializer|.., _* "," _* | _* "}" { return createInitializerList(list); }
+  / value:expression  { return createInitializerSingle(value); }
 
 compound_assignment
-  = variable:lvalue_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("Assignment", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
+  = variable:lvalue _* operator:[%/*+\-] "=" _* value:expression { return generateNode("Assignment", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 
 expression
   = assignment_expression 
@@ -203,10 +215,10 @@ expression
   / logical_or_expression // start trying to match on conditional expression since && and || have lowest precedence
 
 assignment_expression
-  = variable:lvalue_term _* "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
+  = variable:lvalue _* "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value }); } 
 
 compound_assignment_expression
-  = variable:lvalue_term _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
+  = variable:lvalue _* operator:[%/*+\-] "=" _* value:expression { return generateNode("AssignmentExpression", { variable, value: { type: "BinaryExpression", leftExpr: variable, rightExpr: value, operator } }); }
 
 // ======= Binary Expressions =======
 
@@ -256,31 +268,41 @@ prefix_expression
   / postfix_expression
 
 postfix_expression
-  = postfix_unary_expression
-  / function_call // function call is considerd a "postfix expression" in terms of precedence
-  / primary_expression
+  = firstExpr:primary_expression operations:(_* @postfix_operation)+ { return createUnaryExpressionNode(primary_expression, operations); }
+
+// all the postfix operations
+postfix_operation
+  = "++" { return { type: "PostfixArithmeticExpression", operator: "++" } }
+  / "--" { return { type: "PostfixArithmeticExpression", operator: "--" } }
+  / "(" _* args:function_argument_list _* ")" { return { type: "FunctionCall", args } }
+  / "[" _* index:expression _* "]" { return { type: "ArrayElementExpr", index} }
+//  / "." _* field:identifier { return } TODO: when doing structs
+//  / "->" _* TODO: when structs and pointers are done
+
+function_argument_list
+  = expression|.., _* "," _*|
 
 prefix_unary_expression
-  = operator:("++" / "--") variable:lvalue_term { return generateNode("PrefixArithmeticExpression", { operator, variable }); }
+  = operator:("++" / "--") variable:lvalue { return generateNode("PrefixArithmeticExpression", { operator, variable }); }
   / "+" @expression //  "+" operator doesnt really do anything, just return expression
   / op:("-" / "~" / "!") expression:expression { return createUnaryExpressionNode(expression, op); }
 
 postfix_unary_expression
-  = variable:lvalue_term operator:("--" / "++") { return generateNode("PostfixArithmeticExpression", { operator, variable }); } 
+  = variable:lvalue operator:("--" / "++") { return generateNode("PostfixArithmeticExpression", { operator, variable }); } 
 
 primary_expression
-  = lvalue_term 
+  = lvalue 
   / constant
   / "(" _* @expression _* ")"
 
 // lvalue expressions
-lvalue_term
+lvalue
   = array_element_term
   / name:identifier { return generateNode("VariableExpr", { name }); } // for variables
 
 // array element used as an experssion. like a[2]
 array_element_term
-  = name:identifier _* "[" _* index:expression _* "]" { return generateNode("ArrayElementExpr", { name, index }); } 
+  = lvalue:lvalue _* "[" _* index:expression _* "]" { return generateNode("ArrayElementExpr", { lvalue, index }); } 
 
 single_line_comment
 	= single_line_comment_body "\n" // this rule must be first as it is more specific

@@ -2,7 +2,9 @@
  * C AST Processor Module.
  */
 
-import { CAstRoot } from "~src/c-ast/core";
+import { CAstRoot } from "~src/parser/c-ast/core";
+import { CAstRootP, CNodeP } from "~src/processor/c-ast/core";
+import processFunctionDefinition from "~src/processor/functionUtil";
 import { SymbolTable } from "~src/processor/symbolTable";
 
 import { visit } from "~src/processor/visit";
@@ -14,7 +16,30 @@ import { visit } from "~src/processor/visit";
  * @returns
  */
 export default function process(sourceCode: string, ast: CAstRoot) {
-  ast.symbolTable = new SymbolTable();
-  visit(sourceCode, ast, ast.symbolTable);
-  return ast;
+  const symbolTable = new SymbolTable();
+  const processedAst: CAstRootP = {
+    type: "Root",
+    functions: [],
+    statements: [],
+  };
+  ast.children.forEach((child) => {
+    // special handling for function definitions
+    if (child.type === "FunctionDefinition") {
+      processedAst.functions.push(
+        processFunctionDefinition(sourceCode, child, symbolTable)
+      );
+    } else {
+      const processedNode = visit(sourceCode, child, symbolTable);
+      if (processedNode === null) {
+        return;
+      } else if (Array.isArray(processedNode)) {
+        processedNode.forEach((statement) =>
+          processedAst.statements.push(statement)
+        );
+      } else {
+        processedAst.statements.push(processedNode);
+      }
+    }
+  });
+  return processedAst;
 }

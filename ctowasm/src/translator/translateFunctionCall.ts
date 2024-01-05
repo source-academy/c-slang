@@ -2,7 +2,10 @@
  * Definition of function to translate function calls.
  */
 
-import { FunctionCall, FunctionCallStatement } from "~src/c-ast/functions";
+import {
+  FunctionCall,
+  FunctionCallStatement,
+} from "~src/parser/c-ast/function";
 import {
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,
@@ -24,9 +27,9 @@ export default function translateFunctionCall(
   node: FunctionCall | FunctionCallStatement
 ) {
   const n = node as FunctionCallStatement;
-  if (n.name in wasmRoot.importedFunctions) {
+  if (n.expr in wasmRoot.importedFunctions) {
     // special wasm module imported function call - will override any manually written functions that are written manually - TODO: emit warning/error
-    const functionBeingCalled = wasmRoot.importedFunctions[n.name];
+    const functionBeingCalled = wasmRoot.importedFunctions[n.expr];
     const functionArgs = [];
     for (let i = 0; i < n.args.length; ++i) {
       functionArgs.push(
@@ -42,12 +45,12 @@ export default function translateFunctionCall(
         node.type === "FunctionCall"
           ? "RegularFunctionCall"
           : "RegularFunctionCallStatement",
-      name: n.name,
+      name: n.expr,
       args: functionArgs,
     } as WasmRegularFunctionCall | WasmRegularFunctionCallStatement;
   } else {
     const functionArgs = [];
-    const functionBeingCalled = wasmRoot.functions[n.name];
+    const functionBeingCalled = wasmRoot.functions[n.expr];
     for (let i = 0; i < n.args.length; ++i) {
       functionArgs.push(
         getTypeConversionWrapper(
@@ -59,15 +62,15 @@ export default function translateFunctionCall(
     }
     return {
       type: node.type,
-      name: n.name,
+      name: n.expr,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
-        wasmRoot.functions[n.name],
+        wasmRoot.functions[n.expr],
         functionArgs
       ),
       stackFrameTearDown: getFunctionStackFrameTeardownStatements(
-        wasmRoot.functions[n.name],
+        wasmRoot.functions[n.expr],
         node.type === "FunctionCall" &&
-          wasmRoot.functions[n.name].returnDataType !== null
+          wasmRoot.functions[n.expr].returnDataType !== null
           ? true
           : false
       ),

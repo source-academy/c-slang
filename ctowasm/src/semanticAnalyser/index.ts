@@ -2,9 +2,15 @@
  * Semantic Analyser module that performs checks for semantic errors in C program.
  */
 
-import { FunctionDeclaration, FunctionDefinition } from "~src/c-ast/functions";
-import { Block, CAstRoot, CNode } from "~src/c-ast/core";
-import { Initialization, VariableDeclaration } from "~src/c-ast/variable";
+import {
+  FunctionDeclaration,
+  FunctionDefinition,
+} from "~src/parser/c-ast/function";
+import { Block, CAstRoot, CNodeBase } from "~src/parser/c-ast/core";
+import {
+  Initialization,
+  VariableDeclaration,
+} from "~src/parser/c-ast/variable";
 import {
   checkForArrayDeclaration,
   checkForFunctionDeclaration,
@@ -29,7 +35,7 @@ export function checkForErrors(
   /**
    * Visit function for traversing and analysing the AST.
    */
-  function visit(node: any, currentScope: Scope, pre?: CNode) {
+  function visit(node: any, currentScope: Scope, pre?: CNodeBase) {
     if (
       !(
         Array.isArray(node) ||
