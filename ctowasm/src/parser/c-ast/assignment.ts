@@ -3,11 +3,12 @@
  */
 
 import { CNodeBase, Expression } from "~src/parser/c-ast/core";
+import { LValue } from "~src/parser/c-ast/variable";
 
 // A variable assignment
 export interface Assignment extends CNodeBase {
   type: "Assignment";
-  lvalue: Expression; //
+  lvalue: LValue; // only lvalues can be assigned to
   value: Expression;
 }
 
@@ -16,6 +17,6 @@ export interface Assignment extends CNodeBase {
  */
 export interface AssignmentExpression extends CNodeBase {
   type: "AssignmentExpression";
-  lvalue: Expression;
+  lvalue: LValue;
   value: Expression;
 }
