@@ -123,10 +123,10 @@
    */
   function createAssignmentTree(firstExpr, assignmentOperations) {
     let currNode = firstExpr;
-    for (let i = operations.length - 1; i >= 0; --i) {
+    for (let i = assignmentOperations.length - 1; i >= 0; --i) {
       const operation = assignmentOperations[i]
       // check if operator is null
-      if (operation[1] !== null) {
+      if (operation[1].length > 1) {
         // compound assignment
         currNode = {
           type: "Assignment",
@@ -135,7 +135,7 @@
             type: "BinaryExpression",
             leftExpr: operation[0],
             rightExpr: currNode,
-            operator: operation[1]
+            operator: operation[1][0]
           }
         }
       } else {
@@ -379,65 +379,6 @@
     })
     return unpackedItems;
   }
-
-  // // evaluate a string consisting of expressions using C operators on constants, which JS supports
-  // function evaluateConstantExpressionString(str) {
-  //   //TODO: check behaviour if a huge constant value is provided
-  //   // eval() is safe to use here since the parser only allows strings with numeric constants and operators to be passed to this function
-
-  //   function evaluateAndExpressionString(andStr) {
-  //     const orRegex = /&&/gi
-  //     let result, indices;
-  //     while ((result = orRegex.exec(str))) {
-  //         indices.push(result.index);
-  //     }
-  //     if (indices.length > 0) {
-  //       let prvIndex = 0;
-  //       let result;
-  //       for (let i = 0; i < indices.length; ++i) {
-  //         result = +eval(str.slice(prvIndex, indices[i])) !== 0 && result !== 0 ? 1 : 0;
-  //         if (result === 0) {
-  //           return result;
-  //         }
-  //         prvIndex = indices[i] + 2;
-  //       }
-  //       result = +eval(str.slice(indices[indices.length - 1], str.length))
-  //       return result;
-  //     }
-
-  //     return eval(andStr);
-  //   }
-
-  //   try {
-  //     // need to specially handle && and || as their behaviour in JS differs from C (they preserve value, C redueces to 0 (false) or 1 (true))
-  //     const orRegex = /||/gi
-  //     let result, indices;
-  //     while ( (result = orRegex.exec(str)) ) {
-  //         indices.push(result.index);
-  //     }
-  //     if (indices.length > 0) {
-  //       let prvIndex = 0;
-  //       let result;
-  //       for (let i = 0; i < indices.length; ++i) {
-  //         result = evaluateConstantExpressionString(str.slice(prvIndex, indices[i])) !== 0 || result !== 0 ? 1 : 0;
-  //         if (result === 1) {
-  //           return result;
-  //         }
-  //         prvIndex = indices[i] + 2;
-  //       }
-  //       result = evaluateConstantExpressionString(str.slice(indices[indices.length - 1] + 2, str.length))
-  //     }
-      
-
-      
-  //     const orRegex = /||/gi
-      
-      
-  //     return +eval(str); // use "+" operator to convert boolean types to integer
-  //   } catch (error) {
-  //     error("Invalid expression used for array size", location());
-  //   }
-  // }
 }
 
 // ======== Beginning of Grammar rules =========
@@ -501,7 +442,7 @@ iteration_statement
 // ========== Selection Statement ===========
 
 selection_statement
-  = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
+  = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" _ elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
   / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return { type: "SelectionStatement", condition, ifStatement }; }
 
 
@@ -563,7 +504,7 @@ function_declarator_suffix
   = "(" _ parameterDataTypesAndNames:parameter_list _ ")" { return { type: "FunctionDeclarator", parameters: parameterDataTypesAndNames.dataTypes, parameterNames: parameterDataTypesAndNames.names }; }
 
 array_declarator_suffix
-  = "[" _ numElements:expression _ "]" { return { type: "ArrayDeclarator", numElements }; }
+  = "[" _ numElements:expression? _ "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
 
 parameter_list
   = parameters:parameter_declaration|.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
@@ -574,11 +515,11 @@ parameter_declaration
 
 // an abstract declarator is specifically for function declaration parameters that do not have names given to them
 abstract_declarator
-  = pointers:(@pointer _)? directAbstractDeclarator:direct_abstract_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directAbstractDeclarator) : directAbstractDeclarator; }
+  = pointers:pointer? _ directAbstractDeclarator:direct_abstract_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directAbstractDeclarator) : directAbstractDeclarator; }
   / pointers:pointer { return createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }); };
 
 direct_abstract_declarator
-  = directAbstractDeclarator:(@direct_abstract_declarator_helper _)? _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
+  = directAbstractDeclarator:direct_abstract_declarator_helper? _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
 
 direct_abstract_declarator_helper
   = "(" _ @abstract_declarator _ ")"
@@ -596,52 +537,52 @@ expression
   = assignment
 
 assignment
-  = assignmentOperations:(@logical_or_expression _ @("+" / "-" / "*" / "/" / "%" / "<<" / ">>" / "&" / "^" / "|")? "=" _ )+ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
+  = assignmentOperations:(@logical_or_expression _ @("+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / "&=" / "^=" / "|=" / "=") _ )+ _ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
   / logical_or_expression
 
 // binary expressions are ordered by operator precedence (top is least precedence, bottom is highest precedence)
 logical_or_expression
-  = firstExpr:logical_and_expression tail:(_ @"||" _ @logical_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:logical_and_expression _ tail:(_ @"||" _ @logical_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / logical_and_expression
 
 logical_and_expression
-  = firstExpr:bitwise_or_expression tail:(_ @"&&" _ @bitwise_or_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_or_expression _ tail:(_ @"&&" _ @bitwise_or_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_or_expression
 
 bitwise_or_expression
-  = firstExpr:bitwise_xor_expression tail:(_ @("|") _ @bitwise_xor_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_xor_expression _ tail:(_ @("|") _ @bitwise_xor_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_xor_expression
 
 bitwise_xor_expression 
-  = firstExpr:bitwise_and_expression tail:(_ @("^") _ @bitwise_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_and_expression _ tail:(_ @("^") _ @bitwise_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_and_expression
 
 bitwise_and_expression 
-  = firstExpr:equality_relational_expression tail:(_ @("&") _ @equality_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:equality_relational_expression _ tail:(_ @("&") _ @equality_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / equality_relational_expression
 
 equality_relational_expression
-  = firstExpr:relative_relational_expression tail:(_ @("!="/"==") _ @relative_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:relative_relational_expression _ tail:(_ @("!="/"==") _ @relative_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / relative_relational_expression
 
 relative_relational_expression
-  = firstExpr:bitwise_shift_expression tail:(_ @("<="/">="/"<"/">") _ @bitwise_shift_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_shift_expression _ tail:(_ @("<="/">="/"<"/">") _ @bitwise_shift_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_shift_expression
 
 bitwise_shift_expression
-  = firstExpr:add_subtract_expression tail:(_ @("<<" / ">>") _ @add_subtract_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); } 
+  = firstExpr:add_subtract_expression _ tail:(_ @("<<" / ">>") _ @add_subtract_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); } 
   / add_subtract_expression
 
 add_subtract_expression
-  = firstExpr:multiply_divide_expression tail:(_ @[+\-] _ @multiply_divide_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:multiply_divide_expression _ tail:(_ @("+" / "-") _ @multiply_divide_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / multiply_divide_expression
 
 multiply_divide_expression
-  = firstExpr:prefix_expression tail:(_ @[%/*] _ @prefix_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:prefix_expression _ tail:(_ @("*" / "/" / "%") _ @prefix_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / prefix_expression // as the last binary expression (highest precedence), this rule is needed
 
 prefix_expression 
-  = operations:(_ @prefix_operation)+ firstExpr:postfix_expression { return createPrefixExpressionNode(firstExpr, operations); }
+  = operations:(_ @prefix_operation _)+ _ firstExpr:postfix_expression { return createPrefixExpressionNode(firstExpr, operations); }
   / postfix_expression
 
 prefix_operation
@@ -652,7 +593,7 @@ prefix_operation
   / "sizeof" _ { return { type: "SizeOfExpression"}; }
 
 postfix_expression
-  = firstExpr:primary_expression operations:(_ @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }
+  = firstExpr:primary_expression _ operations:(_ @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }
   / primary_expression
 
 // all the postfix operations
