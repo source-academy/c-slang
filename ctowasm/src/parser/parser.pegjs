@@ -125,21 +125,23 @@
     let currNode = firstExpr;
     for (let i = operations.length - 1; i >= 0; --i) {
       const operation = assignmentOperations[i]
-      if (operation.type === "CompoundAssignment") {
+      // check if operator is null
+      if (operation[1] !== null) {
+        // compound assignment
         currNode = {
           type: "Assignment",
-          lvalue: operation.lvalue,
+          lvalue: operation[0],
           expr: {
             type: "BinaryExpression",
-            leftExpr: operation.lvalue,
+            leftExpr: operation[0],
             rightExpr: currNode,
-            operator: operation.operator
+            operator: operation[1]
           }
         }
       } else {
         currNode = {
           type: "Assignment",
-          lvalue: operation.lvalue,
+          lvalue: operation[0],
           expr: currNode
         }
       }
@@ -532,7 +534,7 @@ init_declarator_list
   = init_declarator|1.., _* "," _*|
 
 init_declarator
-  = declarator:declarator _* "=" _* initializer  { return { ...declarator, initializer  }; } // this rule must come first as per PEG parsing behaviour
+  = declarator:declarator _* "=" _* initializer:initializer  { return { ...declarator, initializer  }; } // this rule must come first as per PEG parsing behaviour
   / declarator:declarator
 
 declarator 
@@ -572,7 +574,7 @@ parameter_declaration
 
 // an abstract declarator is specifically for function declaration parameters that do not have names given to them
 abstract_declarator
-  = pointers:pointer? directAbstractDeclarator:direct_abstract_declarator { return createPointerDeclaratorNode(pointers, directAbstractDeclarator); }
+  = pointers:pointer? directAbstractDeclarator:direct_abstract_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directAbstractDeclarator) : directAbstractDeclarator; }
   / pointers:pointer { return { createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }) }};
 
 direct_abstract_declarator
@@ -594,11 +596,8 @@ expression
   = assignment
 
 assignment
-  = assignmentOperations:(@assignment_operation _*)+ _* "=" _* firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); } 
-
-assignment_operation
-  = lvalue:logical_or_expression _* operator:("+" / "-" / "*" / "/" / "%" / "<<" / ">>" / "&" / "^" / "|") "=" { return { type: "CompoundAssignment", lvalue, operator }; }
-  / lvalue:logical_or_expression _* "=" { return { type: "Assignment", lvalue }; }
+  = assignmentOperations:(@logical_or_expression _* @("+" / "-" / "*" / "/" / "%" / "<<" / ">>" / "&" / "^" / "|")? "=" _* )+ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
+  / logical_or_expression
 
 // binary expressions are ordered by operator precedence (top is least precedence, bottom is highest precedence)
 logical_or_expression
