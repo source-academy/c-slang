@@ -531,18 +531,18 @@ primary_type_specifier
   / "void"
 
 init_declarator_list 
-  = init_declarator|1.., _ "," _|
+  = init_declarator|.., _ "," _|
 
 init_declarator
   = declarator:declarator _ "=" _ initializer:initializer  { return { ...declarator, initializer  }; } // this rule must come first as per PEG parsing behaviour
   / declarator:declarator
 
 declarator 
-  = pointers:(@pointer _)? directDeclarator:direct_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directDeclarator) : directDeclarator; }
+  = pointers:pointer? _ directDeclarator:direct_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directDeclarator) : directDeclarator; }
 
 // TODO: add type qualifiers to pointer
 pointer 
-  = "*"|1.., _|
+  = "*"|.., _|
 
 initializer
   = list_initializer
@@ -552,8 +552,7 @@ list_initializer
   = "{" _ list:list_initializer|.., _ "," _ | (_ "," / "") "}" { return createInitializerList(list); } // list initializer can end with extra comma
 
 direct_declarator 
-  = directDeclarator:direct_declarator_helper _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes); } 
-  / directDeclarator:direct_declarator_helper { return direcDeclarator; }
+  = directDeclarator:direct_declarator_helper _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _| { return evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes); } 
 
 direct_declarator_helper // helper rule to remove left recursion in direct_declarator. Works fine as you cannot have a function returning a function in C.
   = symbolName:identifier { return { type: "SymbolDeclarator", symbolName }; }
@@ -562,18 +561,17 @@ direct_declarator_helper // helper rule to remove left recursion in direct_decla
 // This rule, along with array_declarator_suffix, are helper rules to avoid left recursion, to use Peggy.js || expressions instead
 function_declarator_suffix
   = "(" _ parameterDataTypesAndNames:parameter_list _ ")" { return { type: "FunctionDeclarator", parameters: parameterDataTypesAndNames.dataTypes, parameterNames: parameterDataTypesAndNames.names }; }
-  / "(" _ ")" { return { type: "FunctionDeclarator", parameters: [], parameterNames: [] }; }
 
 array_declarator_suffix
   = "[" _ numElements:expression _ "]" { return { type: "ArrayDeclarator", numElements }; }
   / "[" _ "]" { return { type: "ArrayDeclarator", numElements: undefined }; } 
 
 parameter_list
-  = parameters:parameter_declaration|1.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
+  = parameters:parameter_declaration|.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
 
 parameter_declaration
   = declarationSpecifiers:declaration_specifiers _ declarator:declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, declarator); }
-  / declarationSpecifiers:declaration_specifiers _? abstractDeclarator:abstract_declarator? { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); }// to support function declarations without explicit function paramter names 
+  / declarationSpecifiers:declaration_specifiers _ abstractDeclarator:abstract_declarator? { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); }// to support function declarations without explicit function paramter names 
 
 // an abstract declarator is specifically for function declaration parameters that do not have names given to them
 abstract_declarator
@@ -581,8 +579,7 @@ abstract_declarator
   / pointers:pointer { return createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }); };
 
 direct_abstract_declarator
-  = directAbstractDeclarator:(@direct_abstract_declarator_helper _)? declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
-  / directAbstractDeclarator:(@direct_abstract_declarator_helper _)? { return directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }; }
+  = directAbstractDeclarator:(@direct_abstract_declarator_helper _)? _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
 
 direct_abstract_declarator_helper
   = "(" _ @abstract_declarator _ ")"
@@ -662,8 +659,7 @@ postfix_expression
 // all the postfix operations
 postfix_operation
   = operator:("++" / "--") { return { type: "PostfixArithmeticExpression", operator }; }
-  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; }
-  / "(" _ ")"
+  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; } //TODO: check
   / "[" _ index:expression _ "]" { return { type: "ArrayElementExpr", index }; }
 //  / "." _ field:identifier { return } TODO: when doing structs
 //  / "->" _ TODO: when structs and pointers are done
@@ -788,5 +784,8 @@ identifier
 integer
   = $[0-9]+
 
-_ "separator"
-  = " "
+// this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
+// it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.
+// Otherwise, the optional setting does not affect anything, as it is guaranteed by the preprocesser that all tokens are delimited by whitespaces
+_ "token separator"
+  = " "?
