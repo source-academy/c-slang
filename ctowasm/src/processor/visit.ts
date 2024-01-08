@@ -2,7 +2,7 @@
  * Definition of visitor function.
  */
 
-import { BlockStatement, isExpression } from "~src/parser/c-ast/core";
+import { Statement, isExpression } from "~src/parser/c-ast/core";
 import { SymbolTable, VariableSymbolEntry } from "~src/processor/symbolTable";
 
 import { ProcessingError, toJson } from "~src/errors";
@@ -39,7 +39,7 @@ import visitExpression from "~src/processor/visitExpression";
  */
 export function visit(
   sourceCode: string,
-  node: BlockStatement,
+  node: Statement,
   symbolTable: SymbolTable,
   enclosingFunc?: FunctionDefinitionP // reference to enclosing function, if any
 ): StatementP | StatementP[] | null {
@@ -65,7 +65,7 @@ export function visit(
       type: "ForLoop",
       initialization: visit(
         sourceCode,
-        node.initialization,
+        node.declaration,
         forLoopSymbolTable,
         enclosingFunc
       ) as StatementP,
@@ -119,7 +119,7 @@ export function visit(
     );
   } else if (node.type === "SelectStatement") {
     return {
-      type: "SelectStatement",
+      type: "SelectionStatement",
       ifBlock: processConditionalBlock(
         sourceCode,
         node.ifBlock,
@@ -247,7 +247,11 @@ export function visit(
     node.type === "PostfixArithmeticExpression"
   ) {
     // simple assignment
-    const expressionBeingAssignedTo = visitExpression(sourceCode, node.expr, symbolTable);
+    const expressionBeingAssignedTo = visitExpression(
+      sourceCode,
+      node.expr,
+      symbolTable
+    );
     const symbolEntry = symbolTable.getSymbolEntry(
       node.expr.name
     ) as VariableSymbolEntry;

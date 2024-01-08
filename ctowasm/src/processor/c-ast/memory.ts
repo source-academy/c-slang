@@ -2,7 +2,7 @@
  * Definitions of all nodes relating to memory operations.
  */
 
-import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
+import { ScalarCDataType } from "~src/common/types";
 import {
   CNodePBase,
   ExpressionP,
@@ -18,7 +18,10 @@ export type MemoryStore =
   | FunctionReturnMemoryStore
   | DataSegmentObjectMemoryStore;
 
-interface PrimaryDataTypeObjectMemoryDetails {
+// Represents expressions that correspond to addresses in memory.
+export type ObjectMemoryAddress = LocalObjectMemoryAddress | DataSegmentObjectMemoryAddress
+
+interface ScalarDataTypeObjectMemoryDetails {
   dataType: ScalarCDataType;
   offset: ExpressionP; // offset from the first byte of the first local object
 }
@@ -32,16 +35,26 @@ interface PrimaryDataTypeObjectMemoryDetails {
  * LocalVariableMemoryStore nodes.
  */
 export interface LocalObjectMemoryStore
-  extends PrimaryDataTypeObjectMemoryDetails,
+  extends ScalarDataTypeObjectMemoryDetails,
     CNodePBase {
   type: "LocalObjectMemoryStore";
   value: ExpressionP;
 }
 
 export interface LocalObjectMemoryLoad
-  extends PrimaryDataTypeObjectMemoryDetails,
+  extends ScalarDataTypeObjectMemoryDetails,
     ExpressionPBase {
   type: "LocalObjectMemoryLoad";
+}
+
+/**
+ * Represents a specific location in the stack frame,
+ * relative to the first byte of the first local variable (function parameter or local function variable)
+ */
+export interface LocalObjectMemoryAddress extends ExpressionPBase {
+  type: "LocalObjectMemoryAddress";
+  dataType: "pointer",
+  offset: number;
 }
 
 /**
@@ -49,7 +62,7 @@ export interface LocalObjectMemoryLoad
  * Functions that return structs may have multiple of these as structs are composed of multiple primary data types.
  */
 export interface FunctionReturnMemoryStore
-  extends PrimaryDataTypeObjectMemoryDetails,
+  extends ScalarDataTypeObjectMemoryDetails,
     CNodePBase {
   type: "FunctionReturnMemoryStore";
   value: ExpressionP;
@@ -61,7 +74,7 @@ export interface FunctionReturnMemoryStore
  */
 export interface FunctionReturnMemoryLoad
   extends ExpressionPBase,
-    PrimaryDataTypeObjectMemoryDetails {
+    ScalarDataTypeObjectMemoryDetails {
   type: "FunctionReturnMemoryLoad";
 }
 
@@ -69,17 +82,32 @@ export interface FunctionReturnMemoryLoad
  * Represents the storing of a primary data object in the data segment. (static storage)
  */
 export interface DataSegmentObjectMemoryStore
-  extends PrimaryDataTypeObjectMemoryDetails,
+  extends ScalarDataTypeObjectMemoryDetails,
     CNodePBase {
   type: "DataSegmentObjectMemoryStore";
   value: ExpressionP;
 }
 
 export interface DataSegmentObjectMemoryLoad
-  extends PrimaryDataTypeObjectMemoryDetails,
+  extends ScalarDataTypeObjectMemoryDetails,
     ExpressionPBase {
   type: "DataSegmentObjectMemoryLoad";
 }
+
+export interface DataSegmentObjectMemoryAddress extends ExpressionPBase {
+  type: "DataSegmentObjectMemoryAddress",
+  offset: number;
+}
+
+/**
+ * Represents the loading of specific memory address specified by the expression.
+ */
+export interface MemoryAddressExpressionLoad extends ExpressionPBase {
+  type: "DataSegmenetMemoryAddress";
+  offset: ExpressionP;
+}
+
+
 export interface MemoryObjectDetail {
   dataType: ScalarCDataType;
   offset: number; // for param - offset from first byte of first param ; for return - offset from first byte of first return

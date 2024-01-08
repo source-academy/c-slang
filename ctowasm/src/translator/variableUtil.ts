@@ -8,7 +8,7 @@ import {
   PrimaryDataType,
   DataType,
   ScalarDataType,
-} from "~src/processor/c-ast/dataTypes";
+} from "~src/parser/c-ast/dataTypes";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import {

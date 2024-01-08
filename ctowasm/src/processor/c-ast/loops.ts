@@ -21,6 +21,9 @@ export interface WhileLoopP extends IterationStatementBase {
 
 export interface ForLoopP extends IterationStatementBase {
   type: "ForLoop";
-  initialization: StatementP;
-  update: StatementP;
+  clause: {
+    type: "Expression" | "Declaration",
+    value: DeclarationP | ExpressionP
+  } | null;
+  update: ExpressionP;
 }

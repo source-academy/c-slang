@@ -2,12 +2,12 @@
  * Utility functions for processing C functions.
  */
 
-import { DataType } from "./c-ast/dataTypes";
-import { getDataTypeSize, primaryVariableSizes } from "~src/common/utils";
+import { DataType } from "../parser/c-ast/dataTypes";
+import { getDataTypeSize } from "~src/common/utils";
 import { UnsupportedFeatureError, toJson, ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import { FunctionDefinition } from "~src/parser/c-ast/function";
-import { VariableDeclaration } from "~src/parser/c-ast/variable";
+import { Declaration } from "~src/parser/c-ast/variable";
 import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { MemoryObjectDetail } from "./c-ast/memory";
@@ -56,7 +56,7 @@ export default function processFunctionDefinition(
 
 export function processFunctionParams(
   symbolTable: SymbolTable,
-  params: VariableDeclaration[]
+  params: Declaration[]
 ): MemoryObjectDetail[] {
   let offset = 0;
   const processedParams: MemoryObjectDetail[] = [];
@@ -152,7 +152,9 @@ export function processFunctionReturnStatement(
       type: "FunctionReturnMemoryStore",
       value: processedExpr.expr,
       dataType: processedExpr.expr.dataType,
-      offset: createMemoryOffsetIntegerConstant(functionReturnDetails[i++].offset),
+      offset: createMemoryOffsetIntegerConstant(
+        functionReturnDetails[i++].offset
+      ),
     });
   } else {
     processedExpr.exprs.forEach((expr) => {
@@ -160,8 +162,9 @@ export function processFunctionReturnStatement(
         type: "FunctionReturnMemoryStore",
         value: expr,
         dataType: expr.dataType,
-        offset: createMemoryOffsetIntegerConstant(functionReturnDetails[i++].offset),
-
+        offset: createMemoryOffsetIntegerConstant(
+          functionReturnDetails[i++].offset
+        ),
       });
     });
   }

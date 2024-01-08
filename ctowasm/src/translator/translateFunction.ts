@@ -7,13 +7,15 @@ import {
   PostfixArithmeticExpression,
 } from "~src/parser/c-ast/unaryExpression";
 import { Assignment } from "~src/parser/c-ast/assignment";
+import { FunctionDefinition } from "~src/parser/c-ast/function";
+import { ReturnStatement } from "~src/parser/c-ast/jumpStatement";
 import {
-  ReturnStatement,
-  FunctionDefinition,
-} from "~src/parser/c-ast/function";
-import { DoWhileLoop, WhileLoop, ForLoop } from "~src/parser/c-ast/loops";
-import { Block, BlockStatement, isExpression } from "~src/parser/c-ast/core";
-import { SelectStatement } from "~src/parser/c-ast/select";
+  DoWhileLoop,
+  WhileLoop,
+  ForLoop,
+} from "~src/parser/c-ast/iterationStatement";
+import { Block, Statement, isExpression } from "~src/parser/c-ast/core";
+import { SelectionStatement } from "~src/parser/c-ast/selectionStatement";
 import { Initialization } from "~src/parser/c-ast/variable";
 import { getDataTypeSize } from "~src/common/utils";
 import translateExpression from "~src/translator/translateExpression";
@@ -104,7 +106,7 @@ export default function translateFunction(
    */
   function visit(
     symbolTable: WasmSymbolTable,
-    node: BlockStatement,
+    node: Statement,
     statementBody: WasmStatement[]
   ) {
     if (node.type === "Block") {
@@ -270,11 +272,11 @@ export default function translateFunction(
         ...memoryAccessDetails,
       });
     } else if (node.type === "SelectStatement") {
-      const n = node as SelectStatement;
+      const n = node as SelectionStatement;
       const actions: WasmStatement[] = [];
       visit(symbolTable, n.ifBlock.block, actions); // visit all the actions inside the if block
       const rootSelectNode: WasmSelectStatement = {
-        type: "SelectStatement",
+        type: "SelectionStatement",
         condition: translateExpression(
           wasmRoot,
           symbolTable,
@@ -288,7 +290,7 @@ export default function translateFunction(
         const actions: WasmStatement[] = [];
         visit(symbolTable, elseIfBlock.block, actions);
         const elseIfNode: WasmSelectStatement = {
-          type: "SelectStatement",
+          type: "SelectionStatement",
           condition: translateExpression(
             wasmRoot,
             symbolTable,
@@ -359,7 +361,7 @@ export default function translateFunction(
       const blockLabel = generateBlockLabel();
       const loopLabel = generateLoopLabel();
       const conditionSymbolTable = createSymbolTable(symbolTable); // symbol table for condition part of for loop
-      visit(conditionSymbolTable, n.initialization, statementBody); // add init statement for for loop
+      visit(conditionSymbolTable, n.declaration, statementBody); // add init statement for for loop
       const body: WasmStatement[] = [];
       // add the branch if statement to start of loop body
       body.push({

@@ -4,7 +4,7 @@
 
 import { CNodeBase } from "~src/parser/c-ast/core";
 import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
-import { DataType } from "~src/processor/c-ast/dataTypes";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
 import { UnsupportedFeatureError, toJson } from "~src/errors";
 import { POINTER_SIZE } from "./constants";

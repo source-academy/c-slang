@@ -2,25 +2,17 @@
  * Contains the defintions for all function related nodes.
  */
 import { CNodeBase, Block, Expression, CNode } from "~src/parser/c-ast/core";
-import { VariableDeclaration, VariableExpr } from "~src/parser/c-ast/variable";
-import { DataType } from "~src/processor/c-ast/dataTypes";
+import { VariableExpr } from "~src/parser/c-ast/variable";
+import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { UnaryExpressionBase } from "./unaryExpression";
 
-// Information on a function - return type, name and parameters
-interface FunctionInformation {
-  returnType: DataType | null;
-  name: string;
-  parameters: VariableDeclaration[];
-}
 
-export interface FunctionDeclaration extends FunctionInformation, CNodeBase {
-  type: "FunctionDeclaration";
-  // TODO: parameters for func declaration dont need names, hence variable decalration is incorrect, CHANGE THIS
-}
-
-export interface FunctionDefinition extends FunctionInformation, CNodeBase {
+export interface FunctionDefinition extends CNodeBase {
   type: "FunctionDefinition";
+  name: string;
+  dataType: FunctionDataType; // contains returntype and parameter type details
   body: Block;
+  parameterNames: string[]; // the names of the parameters of the function following the same order as parameter types inside functionType
 }
 
 type Callable = VariableExpr; // the nodes that can be called
@@ -47,9 +39,4 @@ export interface FunctionCallStatement extends UnaryExpressionBase {
   type: "FunctionCallStatement";
   expr: Callable;
   args: Expression[];
-}
-
-export interface ReturnStatement extends CNodeBase {
-  type: "ReturnStatement";
-  value?: Expression;
 }

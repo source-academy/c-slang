@@ -8,52 +8,46 @@ import {
   PrefixExpression,
 } from "~src/parser/c-ast/unaryExpression";
 import { Assignment } from "~src/parser/c-ast/assignment";
-import {
-  FunctionDefinition,
-  ReturnStatement,
-  FunctionDeclaration,
-  FunctionCallStatement,
-  FunctionCall,
-} from "~src/parser/c-ast/function";
-import { IterationStatement } from "~src/parser/c-ast/loops";
-import { SelectStatement } from "~src/parser/c-ast/select";
+import { FunctionDefinition, FunctionCall } from "~src/parser/c-ast/function";
+import { ReturnStatement } from "./jumpStatement";
+import { IterationStatement } from "~src/parser/c-ast/iterationStatement";
+import { SelectionStatement } from "~src/parser/c-ast/selectionStatement";
 import { Position } from "~src/parser/c-ast/types";
 import {
   ArrayElementExpr,
-  Initialization,
-  VariableDeclaration,
+  Declaration,
   VariableExpr,
 } from "~src/parser/c-ast/variable";
 import { BinaryExpression } from "~src/parser/c-ast/binaryExpression";
 import { IntegerConstant, FloatConstant } from "~src/parser/c-ast/constants";
+import {
+  AddressOfExpression,
+  PointerDereference,
+} from "~src/parser/c-ast/pointers";
 
 export interface CNodeBase {
   type: string;
   position: Position;
 }
 
-export type Declaration = FunctionDeclaration | VariableDeclaration;
-
-export type CNode = BlockStatement | FunctionDefinition;
+export type CNode = Statement | FunctionDefinition;
 
 /**
- * Statements that can be present anywhere
+ * Statements that can be present outside a block
  */
-export type Statement =
-  | Declaration
-  | FunctionCallStatement
-  | Initialization;
+export type ExternalDeclaration = Declaration | FunctionDefinition;
 
 /**
  * Statements that can be present in blocks
  */
-export type BlockStatement =
+export type Statement =
   | Block
   | Expression
   | IterationStatement
   | ReturnStatement
-  | SelectStatement
-  | Statement;
+  | SelectionStatement;
+
+export type BlockItem = Statement | Declaration;
 
 export type Expression =
   | ArrayElementExpr
@@ -65,7 +59,9 @@ export type Expression =
   | PrefixArithmeticExpression
   | PostfixArithmeticExpression
   | VariableExpr
-  | PrefixExpression;
+  | PrefixExpression
+  | PointerDereference
+  | AddressOfExpression;
 
 /**
  * A collection of type names of expression nodes.
@@ -81,7 +77,9 @@ const expressionNodeTypes = new Set([
   "PrefixArithmeticExpression",
   "PostfixArithmeticExpression",
   "VariableExpr",
-  "UnaryExpression",
+  "PrefixExpression",
+  "PointerDereference",
+  "AddressOfExpression",
 ]);
 
 export function isExpression(node: CNode) {
@@ -90,11 +88,11 @@ export function isExpression(node: CNode) {
 
 export interface Block extends CNodeBase {
   type: "Block";
-  children: BlockStatement[];
+  children: Statement[];
 }
 
 // Root represents the starting node of the AST
 export interface CAstRoot extends CNodeBase {
   type: "Root";
-  children: (Statement | FunctionDefinition)[];
+  children: (ExternalDeclaration | FunctionDefinition)[];
 }

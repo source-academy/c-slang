@@ -1,4 +1,4 @@
-import { DataType } from "~src/processor/c-ast/dataTypes";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
 /**
  * Returns true if two variables of dataType are the same.

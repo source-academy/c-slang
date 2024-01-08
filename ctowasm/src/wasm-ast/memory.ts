@@ -4,7 +4,7 @@
 
 import { WasmType } from "~src/wasm-ast/types";
 import { WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
-import { DataType } from "~src/processor/c-ast/dataTypes";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 

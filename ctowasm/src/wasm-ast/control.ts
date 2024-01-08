@@ -4,7 +4,7 @@ import { WasmAstNode, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
  * Definitions of wasm AST nodes to do with control flow instructions.
  */
 export interface WasmSelectStatement extends WasmAstNode {
-  type: "SelectStatement";
+  type: "SelectionStatement";
   condition: WasmExpression;
   actions: WasmStatement[];
   elseStatements: WasmStatement[];

@@ -3,8 +3,8 @@
  */
 
 import { POINTER_SIZE, pointerPrimaryDataType } from "~src/common/constants";
-import { DataType } from "./c-ast/dataTypes";
-import { getDataTypeSize, primaryVariableSizes } from "~src/common/utils";
+import { DataType } from "../parser/c-ast/dataTypes";
+import { getDataTypeSize } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { Assignment } from "~src/parser/c-ast/assignment";
 import { ArrayElementExpr, Initializer } from "~src/parser/c-ast/variable";

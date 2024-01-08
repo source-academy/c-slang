@@ -10,10 +10,7 @@ import {
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmModule } from "~src/wasm-ast/core";
 import { CAstRoot } from "~src/parser/c-ast/core";
-import {
-  VariableDeclaration,
-  Initialization,
-} from "~src/parser/c-ast/variable";
+import { Declaration, Initialization } from "~src/parser/c-ast/variable";
 import translateFunction from "~src/translator/translateFunction";
 import { convertVariableToByteStr } from "~src/translator/dataSegmentUtil";
 import { WasmMemoryVariable } from "~src/wasm-ast/memory";
@@ -41,7 +38,7 @@ export default function translate(
       child.type === "VariableDeclaration" ||
       child.type === "Initialization"
     ) {
-      const n = child as VariableDeclaration | Initialization;
+      const n = child as Declaration | Initialization;
       const globalVariable: WasmMemoryVariable = {
         type: "GlobalMemoryVariable",
         name: n.name,

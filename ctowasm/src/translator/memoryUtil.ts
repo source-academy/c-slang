@@ -202,7 +202,7 @@ export function getFunctionCallStackFrameSetupStatements(
       ? getDataTypeSize(calledFunction.returnDataType)
       : 0);
   statements.push({
-    type: "SelectStatement",
+    type: "SelectionStatement",
     condition: {
       type: "BinaryExpression",
       instruction: WASM_ADDR_LE_INSTRUCTION,

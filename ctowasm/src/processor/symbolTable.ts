@@ -1,4 +1,4 @@
-import { DataType } from "./c-ast/dataTypes";
+import { DataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
 import { getDataTypeSize } from "~src/common/utils";
 

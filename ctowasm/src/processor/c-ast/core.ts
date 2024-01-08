@@ -5,7 +5,7 @@
  * Processed node names follow the same naming as their original C AST counterpart, with "P" suffix to indicate that they are the processed version.
  */
 
-import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
+import { ScalarCDataType } from "~src/common/types";
 import { ConstantP } from "~src/processor/c-ast/constants";
 import {
   BinaryExpressionP,
@@ -19,8 +19,13 @@ import {
   ReturnStatementP,
 } from "~src/processor/c-ast/function";
 import { IterationStatementP } from "~src/processor/c-ast/loops";
-import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
-import { SelectStatementP } from "~src/processor/c-ast/select";
+import {
+  MemoryAddressExpressionLoad,
+  MemoryLoad,
+  MemoryStore,
+  ObjectMemoryAddress,
+} from "~src/processor/c-ast/memory";
+import { SelectionStatementP } from "~src/processor/c-ast/selection";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -33,7 +38,7 @@ export interface CNodePBase {
 
 export type StatementP =
   | MemoryStore
-  | SelectStatementP
+  | SelectionStatementP
   | IterationStatementP
   | FunctionCallP
   | ReturnStatementP;
@@ -45,7 +50,9 @@ export type ExpressionP =
   | ConstantP
   | PreStatementExpressionP
   | PostStatementExpressionP
-  | UnaryExpressionP;
+  | UnaryExpressionP
+  | ObjectMemoryAddress
+  | MemoryAddressExpressionLoad;
 
 /**
  * All expressions should inherit this, as all expressions should have a data type.

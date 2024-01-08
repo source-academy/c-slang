@@ -7,10 +7,7 @@ import {
   FunctionDefinition,
 } from "~src/parser/c-ast/function";
 import { Block, CAstRoot, CNodeBase } from "~src/parser/c-ast/core";
-import {
-  Initialization,
-  VariableDeclaration,
-} from "~src/parser/c-ast/variable";
+import { Initialization, Declaration } from "~src/parser/c-ast/variable";
 import {
   checkForArrayDeclaration,
   checkForFunctionDeclaration,
@@ -81,7 +78,7 @@ export function checkForErrors(
       createSymbolEntry(n, currentScope, true);
       visit(n.intializer, currentScope);
     } else if (node.type === "VariableDeclaration") {
-      const n = node as VariableDeclaration;
+      const n = node as Declaration;
       checkForRedeclaration(sourceCode, n, currentScope);
       createSymbolEntry(n, currentScope, true);
     } else if (node.type === "ArrayInitialization") {

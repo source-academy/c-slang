@@ -3,20 +3,14 @@
  */
 
 import { Expression, CNodeBase, CNode } from "~src/parser/c-ast/core";
-import { DataType } from "~src/processor/c-ast/dataTypes";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 import { UnaryExpressionBase } from "./unaryExpression";
 
-export interface VariableDeclaration extends CNodeBase {
-  type: "VariableDeclaration";
+export interface Declaration extends CNodeBase {
+  type: "Declaration";
   dataType: DataType;
   name: string;
-}
-
-export interface Initialization extends CNodeBase {
-  type: "Initialization";
-  dataType: DataType;
-  name: string;
-  initializer: Initializer;
+  initializer?: Initializer; // a declaration may be optionally initialized
 }
 
 export type Initializer = InitializerList | InitializerSingle;
@@ -35,7 +29,7 @@ export interface InitializerSingle extends CNodeBase {
  * LValues are expressions which refer to allocated spaces in memory.
  * TODO: add pointer dereferencing
  */
-export type LValue = VariableExpr | ArrayElementExpr;
+export type LValue = VariableExpr;
 
 const lValues = new Set(["VariableExpr", "ArrayElementExpr"]);
 

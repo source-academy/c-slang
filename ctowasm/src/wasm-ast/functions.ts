@@ -6,7 +6,7 @@ import { WasmMemoryLoad, WasmMemoryVariable } from "~src/wasm-ast/memory";
 import { WasmStatement, WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmType } from "~src/wasm-ast/types";
-import { DataType } from "~src/processor/c-ast/dataTypes";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
 export interface WasmFunction extends WasmAstNode {

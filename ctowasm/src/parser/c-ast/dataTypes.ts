@@ -1,4 +1,5 @@
 import { PrimaryCDataType } from "~src/common/types";
+import { Expression } from "~src/parser/c-ast/core";
 
 /**
  * Definition for objects containing information of different types of variables.
@@ -10,7 +11,8 @@ export type DataType =
   | ScalarDataType
   | ArrayDataType
   | StructDataType
-  | TypedefDataType;
+  | TypedefDataType
+  | FunctionDataType;
 
 export type ScalarDataType = PrimaryDataType | PointerDataType;
 
@@ -22,13 +24,13 @@ export interface PrimaryDataType {
 export interface ArrayDataType {
   type: "array";
   elementDataType: DataType;
-  numElements: number;
+  numElements: Expression;
 }
 
 export interface PointerDataType {
   type: "pointer";
   // type of the object being pointed to
-  pointeeType: DataType;
+  pointeeType: DataType | null; // when this is null it represents a void pointer
 }
 
 export interface FunctionDataType {
