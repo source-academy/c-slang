@@ -311,7 +311,7 @@
       initializer: declarator.initializer // may be undefined
     };
     if (declarationNode.dataType.type === "array") {
-      if (typeof declarationNode.initializer !== undefined) {
+      if (typeof declarationNode.initializer !== "undefined") {
         if (declarationNode.initializer.type !== "InitializerList") {
           error("Invalid initializer for array", location());
         }
@@ -549,7 +549,7 @@ initializer
   / value:expression  { return createInitializerSingle(value); }
 
 list_initializer
-  = "{" _ list:list_initializer|.., _ "," _ | (_ "," / "") "}" { return createInitializerList(list); } // list initializer can end with extra comma
+  = "{" _ list:initializer|.., _ "," _ | _ ","? _ "}" { return createInitializerList(list); } // list initializer can end with extra comma
 
 direct_declarator 
   = directDeclarator:direct_declarator_helper _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _| { return evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes); } 
@@ -564,7 +564,6 @@ function_declarator_suffix
 
 array_declarator_suffix
   = "[" _ numElements:expression _ "]" { return { type: "ArrayDeclarator", numElements }; }
-  / "[" _ "]" { return { type: "ArrayDeclarator", numElements: undefined }; } 
 
 parameter_list
   = parameters:parameter_declaration|.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
