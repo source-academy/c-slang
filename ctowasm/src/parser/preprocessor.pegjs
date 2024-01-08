@@ -35,7 +35,7 @@ token
 	/ backslash_newline+ { return "\\n" }
 	/ _+ { return ""; } // reduce consecutive separator characters to a single whitespace for simplicity
   / identifier_or_keyword
-  / c_source_character
+  / punctuator
 
 string_literal
 	= $('"' (!'"' .)* '"')
@@ -58,8 +58,17 @@ single_line_comment
 multi_line_comment
   = "/*" (!"*/" .)* "*/"
   
-c_source_character // non alphanumeric (and no underscore) characters, these will be separated into separate tokens by surrounding with whitespace
-  = $[!"#%&'()*+,\-./:;<=>?[\]^_{|}~]
+punctuator // non alphanumeric (and no underscore) characters, these will be separated into separate tokens by surrounding with whitespace
+// match on multi char punctuators first as per C standard of generating the longest possible lexeme (no backtracking)
+  = multi_char_punctuator
+  / $[!"#%&'()*+,\-./:;<=>?[\]^_{|}~]
+
+multi_char_punctuator 
+  // specifically match specific operator chars together
+  = "%:%:"
+  / "..." / "<<=" / ">>=" 
+  / "++" / "--" / "+=" / "-=" / "*=" / "/=" / "%="  / "&=" / "^=" / "|=" / "==" / "!=" / "<=" / ">=" / ">>" / "<<" / "->" / "&&" / "||"
+  / "##" / "%:" / "<:" / ":>" / "<%" / "%>"
 
 // all the characters that may be grouped together to form a valid identifier or keyword token
 identifier_or_keyword
