@@ -187,36 +187,7 @@
 
       currNode = { directDeclarator: currNode, ...suffix };
     }
-
     return currNode;
-  }
-
-  // helper function to use in evaluateInitDeclarator() for adding DataType to composite DataType objects
-  function addDataType(compositeDataType, dataTypeToAdd) {
-    if (compositeDataType.type === "array") {
-      return {
-        ...compositeDataType,
-        elementDataType: dataTypeToAdd
-      }
-    } else if (compositeDataType.type === "pointer") {
-      return {
-        ...compositeDataType,
-        pointeeType: dataTypeToAdd
-      }
-    } else if (compositeDataType.type === "function") {
-      return {
-        ...compositeDataType,
-        returnType: dataTypeToAdd 
-      }
-    } else if (compositeDataType.type === "Declaration") {
-      return {
-        ...compositeDataType,
-        dataType: dataTypeToAdd
-      }
-    } else {
-      // should not happen based on parsing rules and how this function is used
-      error(`Invalid composite type '${compositeDataType.type}' to add data type to`, location());
-    }
   }
 
   // Return the type specifier data type from a list of declarationspecifiers
@@ -239,14 +210,16 @@
     // only pointers and functions can have null type specifier - void type
     if (typeSpecifierDataType === null) {
       if (currNode.type === "primary") {
-        error(`Variable or field '${declarationNode.name}' declared as void`, location());
+        error(`Variable or field declared as void`, location());
       } else if (currNode.type === "array") {
-        error(`Declaration of ${declarationNode.name} as array of voids`, location());
+        error(`Declaration of array of voids`, location());
       }
     }
-
     return typeSpecifierDataType;
   }
+
+
+  
 
   // Recursively traverses a tree of declarators to create a DataType object and extract the name of the symbol with this dataType,
   // returning the object with type: { name: string, dataType: DataType }
@@ -254,9 +227,22 @@
   function convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType) {
     const result = {};
     let currNode = result;
+    // helper function to add datatype to currNode
+    function addDataType(dataTypeToAdd) {
+      if (currNode.type === "array") {
+        currNode.elementDataType = dataTypeToAdd;
+      } else if (currNode.type === "pointer") {
+        currNode.pointeeType = dataTypeToAdd;
+      } else if (currNode.type === "function") {
+        currNode.returnType = dataTypeToAdd;
+      } else {
+        currNode.dataType = dataTypeToAdd;
+      }
+    }
+    
     function recursiveHelper(declarator) {
       if (declarator.type === "SymbolDeclarator") {
-        // all declarations will end with a symbol (based on parsing rules)
+        // all non-abstract declarations will end with a symbol (based on parsing rules)
         result.name = declarator.symbolName;
         return;
       } else if (declarator.type === "AbstractDeclarator") {
@@ -272,12 +258,13 @@
         const pointerType = {
           type: "pointer"
         }
-        addDataType(currNode, pointerType)
+        addDataType(pointerType)
         currNode = pointerType;
       } else if (declarator.type === "FunctionDeclarator") {
         const functionType = {
           type: "function",
-          parameters: declarator.parameters
+          parameters: declarator.parameters,
+          parameterNames: declarator.parameterNames
         }
         // some error checks
         if (currNode.type === "FunctionDeclarator") {
@@ -286,7 +273,7 @@
           error("Cannot declare an array of functions", location());
         }
 
-        addDataType(currNode, functionType);
+        addDataType(functionType);
         currNode = functionType;
       } else if (declarator.type === "ArrayDeclarator") {
         const arrayType = {
@@ -298,13 +285,13 @@
           error("Cannot declare a function returning an array", location());
         }
 
-        addDataType(currNode, arrayType);
+        addDataType(arrayType);
         currNode = arrayType;
       } else {
         error("Unknown declarator type", location());
       }
     }
-
+    recursiveHelper(declarator);
     currNode.dataType = typeSpecifierDataType;
     return result;
   }
@@ -315,14 +302,12 @@
   function evaluateDeclarator(declarationSpecifiers, declarator) {
     const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
     const dataTypeAndSymbolName = convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType);
-
     const declarationNode = {
       type: "Declaration",
       name: dataTypeAndSymbolName.name,
       dataType: dataTypeAndSymbolName.dataType,
       initializer: declarator.initializer // may be undefined
     };
-
     if (declarationNode.dataType.type === "array") {
       if (typeof declarationNode.initializer !== undefined) {
         if (declarationNode.initializer.type !== "InitializerList") {
