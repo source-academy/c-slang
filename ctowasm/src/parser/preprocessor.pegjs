@@ -5,13 +5,37 @@
  * - Reduces consecutive separators (comments and whitespace chars) to single whitespace for simplicity
  */
 
-source_code = character:c_source_character_set* { return character.reduce((prv, c) => prv + c, ""); }
+{
+  function createStringOfTokens(tokens) {
+    let tokenStr = "";
+    let prv = null;
+    for (const token of tokens) {
+      if (token === "") {
+        // ignore empty tokens from whitespaces
+        continue;
+      }
+      if (prv === "\\n") {
+        // join to previous token
+        tokenStr += token;
+      } else {
+        tokenStr += " " + token; // add separating @ between tokenStr
+      }
+      prv = token;
+    }
+    return tokenStr.trim();
+  }
+}
 
-c_source_character_set 
-	= string_literal // strings should be left untouched
-	/ backslash_newline { return ""; }
-	/ _+ { return " "; } // reduce consecutive separator characters to a single whitespace for simplicity
-    / c_source_characters // characters that can be present anywhere in the program and are returned as is
+// separate all tokens by a space, unless if was backslash-newline
+source_code = tokens:token* { return createStringOfTokens(tokens); }
+
+// wrap each possible token with whitespace, this way the C preprocessor functions something like a "lexer" to produce "tokens" in one single string
+token
+	= string_literal// strings should be left untouched
+	/ backslash_newline+ { return "\\n" }
+	/ _+ { return ""; } // reduce consecutive separator characters to a single whitespace for simplicity
+  / identifier_or_keyword
+  / c_source_character
 
 string_literal
 	= $('"' (!'"' .)* '"')
@@ -21,17 +45,22 @@ _ "separator"
   / multi_line_comment
   / whitespace
 
-backslash_newline = "\\\n" 
+backslash_newline 
+  = "\\\n" 
 
 whitespace
 	= [ \t\n\v\f]+
 
 // for use at end of program. There a single-line-comment need not end with newline
 single_line_comment
-  = "//" (!"\n" .)* "\n" { return " "; }
+  = "//" (!"\n" .)* "\n"
 
 multi_line_comment
-  = "/*" (!"*/" .)* "*/" { return " "; }
+  = "/*" (!"*/" .)* "*/"
   
-c_source_characters
-  = $[a-z0-9!"#%&'()*+,\-./:;<=>?[\]^_{|}~]i
+c_source_character // non alphanumeric (and no underscore) characters, these will be separated into separate tokens by surrounding with whitespace
+  = $[!"#%&'()*+,\-./:;<=>?[\]^_{|}~]
+
+// all the characters that may be grouped together to form a valid identifier or keyword token
+identifier_or_keyword
+  = $[a-z0-9_]i+

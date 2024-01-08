@@ -447,10 +447,10 @@ program = children:translation_unit  { return generateNode("Root", { children })
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = items:(function_definition / declaration)|.., ((_ / ";")*)| { return unpackDeclarations(items); }
+  = items:(function_definition / declaration)|.., _| { return unpackDeclarations(items); } //TODO: come back here for ;
    
 function_definition
-	= declarationSpecifiers:declaration_specifiers _+ declarator:declarator  _* body:compound_statement { return generateFunctionDefinitionNode(declarationSpecifiers, declarator, body); }
+	= declarationSpecifiers:declaration_specifiers _ declarator:declarator _ body:compound_statement { return generateFunctionDefinitionNode(declarationSpecifiers, declarator, body); }
 
 
 // ======= Statements ==========
@@ -466,10 +466,10 @@ statement
 // ======== Compound Statement =========
 
 compound_statement "block"
-	= "{" _* children:block_item_list _* "}" { return generateNode("Block", { children }); }
+	= "{" _ children:block_item_list _ "}" { return generateNode("Block", { children }); }
     
 block_item_list
-  = items:block_item|.., _*| { return unpackDeclarations(items); } // unpack any arrays, as declarations can declare multiple symbols in one declarations which equates to multiple declaration nodes
+  = items:block_item|.., _| { return unpackDeclarations(items); } // unpack any arrays, as declarations can declare multiple symbols in one declarations which equates to multiple declaration nodes
 
 block_item
   = declaration
@@ -478,31 +478,31 @@ block_item
 // ========= Jump Statement ==========
 
 jump_statement
-  = "return" _* expr:expression? _* ";" { return generateNode("ReturnStatement", { value: expr === null ? undefined : expr } ); }
-  / "break" _* ";" { return generateNode("BreakStatement"); }
-  / "continue" _* ";" { return generateNode("ContinueStatement"); }
+  = "return" _ expr:expression? _ ";" { return generateNode("ReturnStatement", { value: expr === null ? undefined : expr } ); }
+  / "break" _ ";" { return generateNode("BreakStatement"); }
+  / "continue" _ ";" { return generateNode("ContinueStatement"); }
 
 
 // ========= Expression Statement =========
 
 expression_statement
-  = @expression? _* ";" // the optional specifier allows us to match empty specifiers
+  = @expression? _ ";" // the optional specifier allows us to match empty specifiers
 
 
 // ========== Iteration Statement ============
 
 iteration_statement
-  = "do" _* body:statement _* "while" _* "(" _* condition:expression _* ")" _* ";" { return generateNode("DoWhileLoop", { condition, body }); } // dowhile loops need to end with a ';'
-  / "while" _* "(" _* condition:expression _* ")" _* body:statement { return generateNode("WhileLoop", { condition, body }); }
-  / "for" _* "(" _* clause:expression? _* ";" _* condition:expression? _* ";" _* update:expression? _* ")" _* body:statement { return generateNode("ForLoop", { clause: clause === null ? null : { type: "Expression", value: clause }, condition, update, body }); }
-  / "for" _* "(" _* clause:declaration _* condition:expression? _* ";" _* update:expression? _* ")" _* body:statement { return generateNode("ForLoop", { clause: { type: "Declaration", value: clause }, condition, update, body }); }
+  = "do" _ body:statement _ "while" _ "(" _ condition:expression _ ")" _ ";" { return generateNode("DoWhileLoop", { condition, body }); } // dowhile loops need to end with a ';'
+  / "while" _ "(" _ condition:expression _ ")" _ body:statement { return generateNode("WhileLoop", { condition, body }); }
+  / "for" _ "(" _ clause:expression? _ ";" _ condition:expression? _ ";" _ update:expression? _ ")" _ body:statement { return generateNode("ForLoop", { clause: clause === null ? null : { type: "Expression", value: clause }, condition, update, body }); }
+  / "for" _ "(" _ clause:declaration _ condition:expression? _ ";" _ update:expression? _ ")" _ body:statement { return generateNode("ForLoop", { clause: { type: "Declaration", value: clause }, condition, update, body }); }
 
 
 // ========== Selection Statement ===========
 
 selection_statement
-  = "if" _* "(" _* condition:expression _* ")" _* ifStatement:statement _* "else" elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
-  / "if" _* "(" _* condition:expression _* ")" _* ifStatement:statement { return { type: "SelectionStatement", condition, ifStatement }; }
+  = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
+  / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return { type: "SelectionStatement", condition, ifStatement }; }
 
 
 
@@ -510,10 +510,10 @@ selection_statement
 
 // declaration returns an array of declaration nodes
 declaration
-  = declarationSpecifiers:declaration_specifiers _+ initDeclarators:init_declarator_list _* ";" { return initDeclarators.map(initDeclarator => evaluateDeclarator(declarationSpecifiers, initDeclarator) ); }
+  = declarationSpecifiers:declaration_specifiers _ initDeclarators:init_declarator_list _ ";" { return initDeclarators.map(initDeclarator => evaluateDeclarator(declarationSpecifiers, initDeclarator) ); }
 
 declaration_specifiers
-  = declaration_specifier|1.., _+|
+  = declaration_specifier|1.., _|
 
 // TODO: add more specifiers
 declaration_specifier
@@ -531,57 +531,61 @@ primary_type_specifier
   / "void"
 
 init_declarator_list 
-  = init_declarator|1.., _* "," _*|
+  = init_declarator|1.., _ "," _|
 
 init_declarator
-  = declarator:declarator _* "=" _* initializer:initializer  { return { ...declarator, initializer  }; } // this rule must come first as per PEG parsing behaviour
+  = declarator:declarator _ "=" _ initializer:initializer  { return { ...declarator, initializer  }; } // this rule must come first as per PEG parsing behaviour
   / declarator:declarator
 
 declarator 
-  = pointers:pointer? _* directDeclarator:direct_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directDeclarator) : directDeclarator; }
+  = pointers:(@pointer _)? directDeclarator:direct_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directDeclarator) : directDeclarator; }
 
 // TODO: add type qualifiers to pointer
 pointer 
-  = "*"|1.., _*|
+  = "*"|1.., _|
 
 initializer
   = list_initializer
   / value:expression  { return createInitializerSingle(value); }
 
 list_initializer
-  = "{" _* list:list_initializer|.., _* "," _* | _* ("," / "") "}" { return createInitializerList(list); } // list initializer can end with extra comma
+  = "{" _ list:list_initializer|.., _ "," _ | (_ "," / "") "}" { return createInitializerList(list); } // list initializer can end with extra comma
 
 direct_declarator 
-  = directDeclarator:direct_declarator_helper _* declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _*| { return evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes); } 
+  = directDeclarator:direct_declarator_helper _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes); } 
+  / directDeclarator:direct_declarator_helper { return direcDeclarator; }
 
 direct_declarator_helper // helper rule to remove left recursion in direct_declarator. Works fine as you cannot have a function returning a function in C.
   = symbolName:identifier { return { type: "SymbolDeclarator", symbolName }; }
-  / "(" _* @declarator _* ")" 
+  / "(" _ @declarator _ ")" 
 
 // This rule, along with array_declarator_suffix, are helper rules to avoid left recursion, to use Peggy.js || expressions instead
 function_declarator_suffix
-  = "(" _* parameterDataTypesAndNames:parameter_list _* ")" { return { type: "FunctionDeclarator", parameters: parameterDataTypesAndNames.dataTypes, parameterNames: parameterDataTypesAndNames.names }; }
+  = "(" _ parameterDataTypesAndNames:parameter_list _ ")" { return { type: "FunctionDeclarator", parameters: parameterDataTypesAndNames.dataTypes, parameterNames: parameterDataTypesAndNames.names }; }
+  / "(" _ ")" { return { type: "FunctionDeclarator", parameters: [], parameterNames: [] }; }
 
 array_declarator_suffix
-  = "[" _* numElements:expression _* "]" { return { type: "ArrayDeclarator", numElements }; }
+  = "[" _ numElements:expression _ "]" { return { type: "ArrayDeclarator", numElements }; }
+  / "[" _ "]" { return { type: "ArrayDeclarator", numElements: undefined }; } 
 
 parameter_list
-  = parameters:parameter_declaration|.., _* "," _*| { return splitParameterDataTypesAndNames(parameters); }
+  = parameters:parameter_declaration|1.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
 
 parameter_declaration
-  = declarationSpecifiers:declaration_specifiers _+ declarator:declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, declarator); }
-  / declarationSpecifiers:declaration_specifiers abstractDeclarator:abstract_declarator? { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); }// to support function declarations without explicit function paramter names 
+  = declarationSpecifiers:declaration_specifiers _ declarator:declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, declarator); }
+  / declarationSpecifiers:declaration_specifiers _? abstractDeclarator:abstract_declarator? { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); }// to support function declarations without explicit function paramter names 
 
 // an abstract declarator is specifically for function declaration parameters that do not have names given to them
 abstract_declarator
-  = pointers:pointer? directAbstractDeclarator:direct_abstract_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directAbstractDeclarator) : directAbstractDeclarator; }
-  / pointers:pointer { return { createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }) }};
+  = pointers:(@pointer _)? directAbstractDeclarator:direct_abstract_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directAbstractDeclarator) : directAbstractDeclarator; }
+  / pointers:pointer { return createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }); };
 
 direct_abstract_declarator
-  = directAbstractDeclarator:direct_abstract_declarator_helper? _* declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|.., _*| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
+  = directAbstractDeclarator:(@direct_abstract_declarator_helper _)? declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
+  / directAbstractDeclarator:(@direct_abstract_declarator_helper _)? { return directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }; }
 
 direct_abstract_declarator_helper
-  = "(" _* @abstract_declarator _* ")"
+  = "(" _ @abstract_declarator _ ")"
 
 
 
@@ -596,52 +600,52 @@ expression
   = assignment
 
 assignment
-  = assignmentOperations:(@logical_or_expression _* @("+" / "-" / "*" / "/" / "%" / "<<" / ">>" / "&" / "^" / "|")? "=" _* )+ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
+  = assignmentOperations:(@logical_or_expression _ @("+" / "-" / "*" / "/" / "%" / "<<" / ">>" / "&" / "^" / "|")? "=" _ )+ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
   / logical_or_expression
 
 // binary expressions are ordered by operator precedence (top is least precedence, bottom is highest precedence)
 logical_or_expression
-  = firstExpr:logical_and_expression tail:(_* @"||" _* @logical_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:logical_and_expression tail:(_ @"||" _ @logical_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / logical_and_expression
 
 logical_and_expression
-  = firstExpr:bitwise_or_expression tail:(_* @"&&" _* @bitwise_or_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_or_expression tail:(_ @"&&" _ @bitwise_or_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_or_expression
 
 bitwise_or_expression
-  = firstExpr:bitwise_xor_expression tail:(_* @("|") _* @bitwise_xor_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_xor_expression tail:(_ @("|") _ @bitwise_xor_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_xor_expression
 
 bitwise_xor_expression 
-  = firstExpr:bitwise_and_expression tail:(_* @("^") _* @bitwise_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_and_expression tail:(_ @("^") _ @bitwise_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_and_expression
 
 bitwise_and_expression 
-  = firstExpr:equality_relational_expression tail:(_* @("&") _* @equality_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:equality_relational_expression tail:(_ @("&") _ @equality_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / equality_relational_expression
 
 equality_relational_expression
-  = firstExpr:relative_relational_expression tail:(_* @("!="/"==") _* @relative_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:relative_relational_expression tail:(_ @("!="/"==") _ @relative_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / relative_relational_expression
 
 relative_relational_expression
-  = firstExpr:bitwise_shift_expression tail:(_* @("<="/">="/"<"/">") _* @bitwise_shift_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_shift_expression tail:(_ @("<="/">="/"<"/">") _ @bitwise_shift_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_shift_expression
 
 bitwise_shift_expression
-  = firstExpr:add_subtract_expression tail:(_* @("<<" / ">>") _* @add_subtract_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); } 
+  = firstExpr:add_subtract_expression tail:(_ @("<<" / ">>") _ @add_subtract_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); } 
   / add_subtract_expression
 
 add_subtract_expression
-  = firstExpr:multiply_divide_expression tail:(_* @[+\-] _* @multiply_divide_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:multiply_divide_expression tail:(_ @[+\-] _ @multiply_divide_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / multiply_divide_expression
 
 multiply_divide_expression
-  = firstExpr:prefix_expression tail:(_* @[%/*] _* @prefix_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:prefix_expression tail:(_ @[%/*] _ @prefix_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / prefix_expression // as the last binary expression (highest precedence), this rule is needed
 
 prefix_expression 
-  = operations:(_* @prefix_operation)+ firstExpr:postfix_expression { return createPrefixExpressionNode(firstExpr, operations); }
+  = operations:(_ @prefix_operation)+ firstExpr:postfix_expression { return createPrefixExpressionNode(firstExpr, operations); }
   / postfix_expression
 
 prefix_operation
@@ -649,28 +653,29 @@ prefix_operation
   / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator }; }
   / operator:("*") { return { type: "PointerDereference" }; }
   / "&" { return { type: "AddressOfExpression" }; }
-  / "sizeof" _+ { return { type: "SizeOfExpression"}; }
+  / "sizeof" _ { return { type: "SizeOfExpression"}; }
 
 postfix_expression
-  = firstExpr:primary_expression operations:(_* @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }
+  = firstExpr:primary_expression operations:(_ @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }
   / primary_expression
 
 // all the postfix operations
 postfix_operation
   = operator:("++" / "--") { return { type: "PostfixArithmeticExpression", operator }; }
-  / "(" _* args:function_argument_list _* ")" { return { type: "FunctionCall", args }; }
-  / "[" _* index:expression _* "]" { return { type: "ArrayElementExpr", index }; }
-//  / "." _* field:identifier { return } TODO: when doing structs
-//  / "->" _* TODO: when structs and pointers are done
+  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; }
+  / "(" _ ")"
+  / "[" _ index:expression _ "]" { return { type: "ArrayElementExpr", index }; }
+//  / "." _ field:identifier { return } TODO: when doing structs
+//  / "->" _ TODO: when structs and pointers are done
 
 function_argument_list
-  = expression|.., _* "," _*|
+  = expression|.., _ "," _|
 
 primary_expression
-  = "sizeof" _* "(" _* expr:primary_expression _* ")" { return generateNode("SizeOfExpression", { expr } ); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
+  = "sizeof" _ "(" _ expr:primary_expression _ ")" { return generateNode("SizeOfExpression", { expr } ); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
   / name:identifier { return generateNode("VariableExpr", { name }); } // for variables 
   / constant
-  / "(" _* @expression _* ")"
+  / "(" _ @expression _ ")"
 
 
 
