@@ -35,12 +35,6 @@
       })
     }
     return currNode
-    // return {
-    //   type: "BinaryExpression",
-    //   leftExpr: currNode,
-    //   rightExpr: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][1],
-    //   operator: exprsWithOperatorArr[exprsWithOperatorArr.length - 1][0]
-    // }
   }
 
   function createUnaryExpressionNode(expr, operator) {
@@ -209,14 +203,6 @@
       error(`${numberOfTypeSpecifiers} type specifiers present in declaration specifiers, should only have 1`, location());
     }
 
-    // only pointers and functions can have null type specifier - void type
-    if (typeSpecifierDataType === null) {
-      if (currNode.type === "primary") {
-        error(`Variable or field declared as void`, location());
-      } else if (currNode.type === "array") {
-        error(`Declaration of array of voids`, location());
-      }
-    }
     return typeSpecifierDataType;
   }
 
@@ -231,6 +217,14 @@
     let currNode = result;
     // helper function to add datatype to currNode
     function addDataType(dataTypeToAdd) {
+      // only pointers and functions can have null type specifier - void type
+      if (dataTypeToAdd === null) {
+        if (typeof currNode.type === "undefined" || currNode.type === "primary") {
+          error(`Variable or field declared as void`, location());
+        } else if (currNode.type === "array") {
+          error(`Declaration of array of voids`, location());
+        }
+      }
       if (currNode.type === "array") {
         currNode.elementDataType = dataTypeToAdd;
       } else if (currNode.type === "pointer") {
@@ -293,8 +287,10 @@
         error("Unknown declarator type", location());
       }
     }
+
     recursiveHelper(declarator);
     addDataType(typeSpecifierDataType);
+
     return result;
   }
 
@@ -304,6 +300,7 @@
   function evaluateDeclarator(declarationSpecifiers, declarator) {
     const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
     const dataTypeAndSymbolName = convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType);
+    
     const declarationNode = {
       type: "Declaration",
       name: dataTypeAndSymbolName.name,
@@ -320,8 +317,7 @@
           declarationNode.dataType.numElements = generateNode("IntegerConstant", { value: BigInt(declarator.initializer.values.length) });
         }
       } else if (typeof declarationNode.dataType.numElements === "undefined") {
-        // no intializer provided, if numElements not defined, then it is set to 1 - provide warning to user
-        warning(`Array ${declarationNode.name} assumed to have 1 element`);
+        // no intializer provided, if numElements not defined, then it is set to 1 - TODO: provide warning to user
         declarationNode.dataType.numElements = generateNode("IntegerConstant", { value: 1n } );
       }
     }    
