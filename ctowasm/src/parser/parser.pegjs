@@ -294,7 +294,7 @@
       }
     }
     recursiveHelper(declarator);
-    currNode.dataType = typeSpecifierDataType;
+    addDataType(typeSpecifierDataType);
     return result;
   }
 
