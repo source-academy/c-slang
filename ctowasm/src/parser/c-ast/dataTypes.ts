@@ -11,7 +11,6 @@ export type DataType =
   | ScalarDataType
   | ArrayDataType
   | StructDataType
-  | TypedefDataType
   | FunctionDataType;
 
 export type ScalarDataType = PrimaryDataType | PointerDataType;
@@ -41,11 +40,4 @@ export interface FunctionDataType {
 
 export interface StructDataType {
   type: "struct";
-}
-/**
- * User defined types using typedef.
- */
-
-export interface TypedefDataType {
-  type: "typedef";
 }

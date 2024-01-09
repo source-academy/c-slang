@@ -1,10 +1,17 @@
 /**
- * Any other C AST nodes are defined here.
+ * Various miscellaneous types that are not AST nodes, but used as fields in AST nodes.
  */
 
-import { CNodeBase, Expression } from "~src/parser/c-ast/core";
+/**
+ * This file contains the typescript interfaces for each astNode.
+ */
+interface Point {
+  line: number;
+  offset: number;
+  column: number;
+}
 
-export interface SizeOfExpression extends CNodeBase {
-  type: "SizeOfExpression",
-  expr: Expression // the expression whose size is being retrieved
+export interface Position {
+  start: Point;
+  end: Point;
 }

@@ -9,6 +9,8 @@ type FloatConstantSuffix = "F" | "f"; // floating constants in C also have "L"/"
 
 export type Constant = IntegerConstant | FloatConstant;
 
+export default Constant;
+
 export interface IntegerConstant extends CNodeBase {
   type: "IntegerConstant";
   value: bigint; // needs to be big int to support all possible values

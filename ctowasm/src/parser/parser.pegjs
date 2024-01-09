@@ -582,7 +582,7 @@ prefix_expression
   / postfix_expression
 
 prefix_operation
-  = operator:("++" / "--"){ return { type: "PrefixArithmeticExpression", operator }; }
+  = operator:("++" / "--") { return { type: "PrefixArithmeticExpression", operator }; }
   / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator }; }
   / operator:("*") { return { type: "PointerDereference" }; }
   / "&" { return { type: "AddressOfExpression" }; }

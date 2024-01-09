@@ -1,9 +1,5 @@
-import {
-  Expression,
-  CNodeBase,
-  Statement,
-} from "~src/parser/c-ast/core";
-import { Declaration } from "~src/parser/c-ast/variable";
+import { Expression, CNodeBase, Statement } from "~src/parser/c-ast/core";
+import { Declaration } from "../declaration";
 
 type IterationStatement = DoWhileLoop | WhileLoop | ForLoop;
 export default IterationStatement;
@@ -28,8 +24,8 @@ export interface ForLoop extends IterationStatementBase {
   type: "ForLoop";
   // clause of a for loop (to run before condition) can be delcaration, expression or null
   clause: {
-    type: "Expression" | "Declaration",
-    value: Declaration | Expression
+    type: "Expression" | "Declaration";
+    value: Declaration | Expression;
   } | null;
   update: Expression;
 }
