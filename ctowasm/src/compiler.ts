@@ -1,13 +1,15 @@
 /**
  * Compiler for C to webassembly
  */
-import parser from "./parser/parser";
+import wasmModuleImports, {
+  ImportedFunction, extractImportedFunctionCDetails,
+} from "~src/wasmModuleImports";
+import parse from "./parser/parser";
 import process from "./processor";
 import { generateWat } from "./wat-generator";
 import { compileWatToWasm } from "./wat-to-wasm";
-import { ImportedFunction } from "~src/wasmModuleImports";
 import translate from "~src/translator";
-import { toJson } from "~src/errors";
+import { SourceCodeError, toJson } from "~src/errors";
 
 export interface CompilationResult {
   wasm: Uint8Array;
@@ -18,15 +20,23 @@ export async function compile(
   cSourceCode: string,
   wasmModuleImports?: Record<string, ImportedFunction>
 ): Promise<CompilationResult> {
-  const CAst = parser.parse(cSourceCode);
-  //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
-  const wasmModule = translate(process(cSourceCode, CAst), wasmModuleImports);
-  const initialMemory = wasmModule.memorySize; // save the initial memory in pages needed for the module
-  const output = await compileWatToWasm(generateWat(wasmModule));
-  return {
-    wasm: output,
-    initialMemory,
-  };
+  try {
+    const CAst = parse(cSourceCode);
+    const processedCAst = process(CAst, wasmModuleImports ? extractImportedFunctionCDetails(wasmModuleImports) : undefined)
+    const wasmModule = translate(processedCAst, wasmModuleImports);
+    const initialMemory = wasmModule.memorySize; // save the initial memory in pages needed for the module
+    const output = await compileWatToWasm(generateWat(wasmModule));
+    return {
+      wasm: output,
+      initialMemory,
+    };
+  } catch (e) {
+    if (e instanceof SourceCodeError) {
+      e.generateFullErrorMessage(cSourceCode);
+    }
+    throw e;
+  }
+  
 }
 
 // TODO: this function does NOT include handling of memory
@@ -34,30 +44,54 @@ export function compileToWat(
   cSourceCode: string,
   wasmModuleImports?: Record<string, ImportedFunction>
 ) {
-  const CAst = parser.parse(cSourceCode);
-  //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
-  const wasmModule = translate(process(cSourceCode, CAst), wasmModuleImports);
-  const output = generateWat(wasmModule);
-  return output;
+  try {
+    const CAst = parse(cSourceCode);
+    const processedCAst = process(CAst, wasmModuleImports ? extractImportedFunctionCDetails(wasmModuleImports) : undefined)
+    const wasmModule = translate(processedCAst, wasmModuleImports);
+    const output = generateWat(wasmModule);
+    return output;
+  } catch (e) {
+    if (e instanceof SourceCodeError) {
+      e.generateFullErrorMessage(cSourceCode);
+    }
+    throw e;
+  }
+
 }
 
 export function generate_C_AST(cSourceCode: string) {
-  const ast = parser.parse(cSourceCode);
-  return toJson(ast);
+  try {
+    const ast = parse(cSourceCode);
+    return toJson(ast);
+  } catch (e) {
+    if (e instanceof SourceCodeError) {
+      e.generateFullErrorMessage(cSourceCode);
+    }
+    throw e;
+  }
 }
 
-export function generate_processed_C_AST(cSourceCode: string) {
-  const CAst = parser.parse(cSourceCode);
-  //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
-  const ast = process(cSourceCode, CAst);
-  return toJson(ast);
+//TODO: edit when translator done
+export function generate_processed_C_AST(
+  cSourceCode: string /*,wasmModuleImports: Record<string, ImportedFunction>*/
+) {
+  try {
+    const CAst = parse(cSourceCode);
+    const processedCAst = process(CAst, wasmModuleImports ? extractImportedFunctionCDetails(wasmModuleImports) : undefined)
+    return toJson(processedCAst);
+  } catch (e) {
+    if (e instanceof SourceCodeError) {
+      e.generateFullErrorMessage(cSourceCode);
+    }
+    throw e;
+  }
 }
 
 export function generate_WAT_AST(
   cSourceCode: string,
   wasmModuleImports?: Record<string, ImportedFunction>
 ) {
-  const CAst = parser.parse(cSourceCode);
+  const CAst = parse(cSourceCode);
   //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
   const wasmAst = translate(
     process(cSourceCode, parser.parse(cSourceCode)),

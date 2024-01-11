@@ -2,8 +2,6 @@
  *  Definitions of all special functions imported to every wasm program
  */
 
-import { PrimaryCDataType } from "~src/common/types";
-
 import BigNumber from "bignumber.js";
 import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 
@@ -11,15 +9,10 @@ const defaultParentImportedObject = "imports";
 
 // Defines the signature of a wasm imported function
 export interface ImportedFunction {
-  type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
   parentImportedObject: string; // parent imported object
   functionType: FunctionDataType;
   // eslint-disable-next-line
   jsFunction: Function; // the actual JS function that is called
-}
-
-export interface WasmOriginalImportedFunction extends ImportedFunction {
-  type: "original";
 }
 
 // default print to stdout is to console.log
@@ -30,18 +23,19 @@ export function setPrintFunction(printFunc: (str: string) => void) {
   print = printFunc;
 }
 
-export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
+export const wasmModuleImports: Record<string, ImportedFunction> = {
   // prints a signed int (4 bytes and smaller)
   print_int: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "signed int"
-      } ],
-      returnType: null
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "signed int",
+        },
+      ],
+      returnType: null,
     },
     jsFunction: (int: number) => {
       // to print the correct int (4 bytes), need to handle signage
@@ -55,16 +49,17 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   },
   // prints an unsigned int (4 bytes and smaller)
   print_int_unsigned: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "unsigned int"
-      } ],
-      returnType: null
-    }, 
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "unsigned int",
+        },
+      ],
+      returnType: null,
+    },
     jsFunction: (val: number) => {
       // need to intepret val as unsigned 4 byte int
       if (val < 0) {
@@ -76,15 +71,16 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   },
   // prints a char (signed) as a character
   print_char: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "signed char"
-      } ],
-      returnType: null
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "signed char",
+        },
+      ],
+      returnType: null,
     },
     jsFunction: (char: number) => {
       // signed int overflow is undefined, no need to worry about handling that
@@ -93,15 +89,16 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   },
   // print a signed long type (8 bytes)
   print_long: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "signed long"
-      } ],
-      returnType: null
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "signed long",
+        },
+      ],
+      returnType: null,
     },
     jsFunction: (long: bigint) => {
       // to prlong the correct long (4 bytes), need to handle signage
@@ -115,15 +112,16 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   },
   // print an usigned long type (8 bytes)
   print_long_unsigned: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "unsigned long"
-      } ],
-      returnType: null
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "unsigned long",
+        },
+      ],
+      returnType: null,
     },
     jsFunction: (val: bigint) => {
       // need to intepret val as unsigned 8 byte unsigned int
@@ -135,32 +133,46 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
     },
   },
   print_float: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "float"
-      } ],
-      returnType: null
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "float",
+        },
+      ],
+      returnType: null,
     },
     jsFunction: printFloatCStyle,
   },
   print_double: {
-    type: "original",
     parentImportedObject: defaultParentImportedObject,
     functionType: {
       type: "function",
-      parameters: [ {
-        type: "primary",
-        primaryDataType: "double"
-      } ],
-      returnType: null
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "double",
+        },
+      ],
+      returnType: null,
     },
     jsFunction: printFloatCStyle,
   },
 };
+
+// used to extract the details of imported functions in terms of C -> to be used by compiler
+export function extractImportedFunctionCDetails(
+  wasmModuleImports: Record<string, ImportedFunction>
+) {
+  const importedFunctionCDetails: Record<string, FunctionDataType> = {};
+  Object.keys(wasmModuleImports).forEach((importedFuncName) => {
+    importedFunctionCDetails[importedFuncName] =
+      wasmModuleImports[importedFuncName].functionType;
+  });
+  return importedFunctionCDetails;
+}
 
 /**
  * Function for printing float in the c style ("%f" format specifier) - 6 decimal places.
