@@ -5,40 +5,25 @@
  * - Reduces consecutive separators (comments and whitespace chars) to single whitespace for simplicity
  */
 
-{
-  function createStringOfTokens(tokens) {
-    let tokenStr = "";
-    let prv = null;
-    for (const token of tokens) {
-      if (token === "") {
-        // ignore empty tokens from whitespaces
-        continue;
-      }
-      if (prv === "\\n") {
-        // join to previous token
-        tokenStr += token;
-      } else {
-        tokenStr += " " + token; // add separating @ between tokenStr
-      }
-      prv = token;
-    }
-    return tokenStr.trim();
-  }
-}
 
 // separate all tokens by a space, unless if was backslash-newline
-source_code = tokens:token* { return createStringOfTokens(tokens); }
+source_code = tokens:token* { return tokens.join("").trim(); }
 
 // wrap each possible token with whitespace, this way the C preprocessor functions something like a "lexer" to produce "tokens" in one single string
 token
-	= string_literal// strings should be left untouched
-	/ backslash_newline+ { return "\\n" }
+	= s:string_literal { return s + " "} // strings should be left untouched
+    / _* p:punctuator _* { return p + " "; }
+    / s:identifier_or_keyword { return s + " "; }
 	/ _+ { return ""; } // reduce consecutive separator characters to a single whitespace for simplicity
-  / identifier_or_keyword
-  / punctuator
+    
+
 
 string_literal
-	= $('"' (!'"' .)* '"')
+	= '"' chars:string_char* '"' { return '"' + chars.join("") + '"'; }
+
+string_char
+	= $(!'"'!backslash_newline .)
+    / backslash_newline
     
 _ "separator"
   = single_line_comment
@@ -46,7 +31,7 @@ _ "separator"
   / whitespace
 
 backslash_newline 
-  = "\\\n" 
+  = "\\\n" { return ""; }
 
 whitespace
 	= [ \t\n\v\f]+
@@ -72,4 +57,8 @@ multi_char_punctuator
 
 // all the characters that may be grouped together to form a valid identifier or keyword token
 identifier_or_keyword
-  = $[a-z0-9_]i+
+  = chars:identifier_char+ { return chars.join(""); }
+  
+identifier_char
+  = $[a-z0-9_]i
+  / backslash_newline { return "" }
