@@ -60,25 +60,3 @@ export type Expression =
   | PostfixExpression
   | PointerDereference
   | AddressOfExpression;
-
-/**
- * A collection of type names of expression nodes.
- * Useful for traversal of AST to easily determine if a node is an expression.
- */
-const expressionNodeTypes = new Set([
-  "Assignment",
-  "BinaryExpression",
-  "IntegerConstant",
-  "FloatConstant",
-  "FunctionCall",
-  "IdentifierExpression",
-  "SizeOfExpression",
-  "PrefixExpression",
-  "PostfixExpression",
-  "PointerDereference",
-  "AddressOfExpression",
-]);
-
-export function isExpression(node: CNode) {
-  return "type" in node && expressionNodeTypes.has(node.type);
-}

@@ -23,10 +23,12 @@ export class SymbolTable {
   parentTable: SymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
   symbols: Record<string, SymbolEntry>;
+  externalFunctions: Record<string, FunctionSymbolEntry>;
 
   constructor(parentTable?: SymbolTable | null) {
     this.parentTable = parentTable ? parentTable : null;
     this.symbols = {};
+    this.externalFunctions = parentTable ? parentTable.externalFunctions : {};
     if (!parentTable || parentTable.parentTable === null) {
       // all tables take the previous tables offset except the top 2 level parenttables
       // root table (1st level) is the global scope
@@ -36,6 +38,18 @@ export class SymbolTable {
       this.currOffset = parentTable.currOffset;
     }
   }
+
+  setExternalFunctions(externalFunctions: Record<string, FunctionDataType>) {
+    this.externalFunctions = {};
+    for (const funcName in externalFunctions) {
+      this.externalFunctions[funcName] = {type: "function", dataType: externalFunctions[funcName]};
+    }
+  }
+
+  isExternalFunction(funcName: string) {
+    return funcName in this.externalFunctions;
+  }
+
 
   addEntry(declaration: Declaration): SymbolEntry {
     if (declaration.dataType.type === "function") {
@@ -129,6 +143,11 @@ export class SymbolTable {
       }
       curr = curr.parentTable;
     }
+
+    if (name in this.externalFunctions) {
+      return this.externalFunctions[name];
+    }
+
     throw new ProcessingError(`Symbol ${name} not found in symbol table`);
   }
 }

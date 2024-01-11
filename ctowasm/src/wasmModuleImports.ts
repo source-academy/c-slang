@@ -5,6 +5,7 @@
 import { PrimaryCDataType } from "~src/common/types";
 
 import BigNumber from "bignumber.js";
+import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 
 const defaultParentImportedObject = "imports";
 
@@ -12,9 +13,7 @@ const defaultParentImportedObject = "imports";
 export interface ImportedFunction {
   type: "original" | "modified"; // two variants - original means imported function is used as is, modified means there is another function definition in the wasm module that calls this imported function
   parentImportedObject: string; // parent imported object
-  name: string; // function name
-  params: PrimaryCDataType[]; // C types of parameters for the function
-  return: PrimaryCDataType | null;
+  functionType: FunctionDataType;
   // eslint-disable-next-line
   jsFunction: Function; // the actual JS function that is called
 }
@@ -36,9 +35,14 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   print_int: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_int",
-    params: ["signed int"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "signed int"
+      } ],
+      returnType: null
+    },
     jsFunction: (int: number) => {
       // to print the correct int (4 bytes), need to handle signage
       if (int > Math.pow(2, 32) - 1) {
@@ -53,9 +57,14 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   print_int_unsigned: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_int_unsigned",
-    params: ["unsigned int"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "unsigned int"
+      } ],
+      returnType: null
+    }, 
     jsFunction: (val: number) => {
       // need to intepret val as unsigned 4 byte int
       if (val < 0) {
@@ -69,9 +78,14 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   print_char: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_char",
-    params: ["signed char"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "signed char"
+      } ],
+      returnType: null
+    },
     jsFunction: (char: number) => {
       // signed int overflow is undefined, no need to worry about handling that
       print(String.fromCharCode(char));
@@ -81,9 +95,14 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   print_long: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_long",
-    params: ["signed long"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "signed long"
+      } ],
+      returnType: null
+    },
     jsFunction: (long: bigint) => {
       // to prlong the correct long (4 bytes), need to handle signage
       if (long > 2n ** 64n - 1n) {
@@ -98,9 +117,14 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   print_long_unsigned: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_long_unsigned",
-    params: ["unsigned long"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "unsigned long"
+      } ],
+      returnType: null
+    },
     jsFunction: (val: bigint) => {
       // need to intepret val as unsigned 8 byte unsigned int
       if (val < 0) {
@@ -113,17 +137,27 @@ export const wasmModuleImports: Record<string, WasmOriginalImportedFunction> = {
   print_float: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_float",
-    params: ["float"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "float"
+      } ],
+      returnType: null
+    },
     jsFunction: printFloatCStyle,
   },
   print_double: {
     type: "original",
     parentImportedObject: defaultParentImportedObject,
-    name: "print_double",
-    params: ["double"],
-    return: null,
+    functionType: {
+      type: "function",
+      parameters: [ {
+        type: "primary",
+        primaryDataType: "double"
+      } ],
+      returnType: null
+    },
     jsFunction: printFloatCStyle,
   },
 };

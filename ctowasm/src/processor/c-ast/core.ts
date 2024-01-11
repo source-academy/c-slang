@@ -14,6 +14,7 @@ import {
   UnaryExpressionP,
 } from "~src/processor/c-ast/expression/expressions";
 import {
+  ExternalFunctionCallP,
   FunctionCallP,
   FunctionDefinitionP,
 } from "~src/processor/c-ast/function";
@@ -45,6 +46,7 @@ export type StatementP =
   | JumpStatementP
   | MemoryStore
   | FunctionReturnMemoryStore
+  | ExternalFunctionCallP
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =

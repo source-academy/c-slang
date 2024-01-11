@@ -2,36 +2,23 @@
  * Definition of function to process Expression expr s.
  */
 
-import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
+import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
-import {
-  ExpressionWrapperP,
-  PreStatementExpressionP,
-} from "~src/processor/c-ast/expression/expressions";
-import { FunctionReturnMemoryLoad, MemoryLoad } from "~src/processor/c-ast/memory";
+import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
+import { FunctionReturnMemoryLoad } from "~src/processor/c-ast/memory";
 import {
   determineDataTypeOfBinaryExpression,
   getDerefExpressionMemoryDetails,
   processPostfixExpression,
   processPrefixExpression,
 } from "~src/processor/expressionUtil";
-import {
-  FunctionSymbolEntry,
-  SymbolTable,
-  VariableSymbolEntry,
-} from "~src/processor/symbolTable";
-import {
-  createMemoryOffsetIntegerConstant,
-  runPrefixPostfixArithmeticChecks,
-} from "~src/processor/util";
+import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
+import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import { processFunctionReturnType } from "./functionUtil";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
-import processStatement from "~src/processor/processStatement";
-import { DataType } from "~src/parser/c-ast/dataTypes";
-import { ExpressionP } from "~src/processor/c-ast/core";
+import processBlockItem from "~src/processor/processBlockItem";
 import { getDataTypeSize, isScalarType } from "~src/processor/dataTypeUtil";
-import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { IntegerDataType, ScalarCDataType } from "~src/common/types";
+import { IntegerDataType } from "~src/common/types";
 import processConstant from "~src/processor/processConstant";
 import { SIZE_OF_EXPR_RESULT_DATA_TYPE } from "~src/common/constants";
 
@@ -167,13 +154,15 @@ export default function processExpression(
         exprs: [processedConstant],
       };
     } else if (expr.type === "FunctionCall") {
-      const functionCallStatements = processStatement(expr, symbolTable);
+      const functionCallStatements = processBlockItem(expr, symbolTable);
 
       let funcReturnType;
       if (expr.expr.type === "IdentifierExpression") {
+
         const symbolEntry = symbolTable.getSymbolEntry(
           expr.expr.name
         ) as FunctionSymbolEntry;
+
         funcReturnType = symbolEntry.dataType.returnType;
         if (funcReturnType === null) {
           throw new ProcessingError(
@@ -310,15 +299,16 @@ export default function processExpression(
         throw new ProcessingError("lvalue required for unary '&' operand");
       }
     } else if (expr.type === "PointerDereference") {
-      const { originalDataType, primaryMemoryObjectDetails } = getDerefExpressionMemoryDetails(expr, symbolTable);
+      const { originalDataType, primaryMemoryObjectDetails } =
+        getDerefExpressionMemoryDetails(expr, symbolTable);
       return {
         originalDataType,
-        exprs: primaryMemoryObjectDetails.map(memObj => ({
+        exprs: primaryMemoryObjectDetails.map((memObj) => ({
           type: "MemoryLoad",
           address: memObj.address,
-          dataType: memObj.dataType
-        }))
-      }
+          dataType: memObj.dataType,
+        })),
+      };
     } else if (expr.type === "SizeOfExpression") {
       const exprDataType = processExpression(
         expr.expr,
@@ -339,7 +329,7 @@ export default function processExpression(
       };
     } else {
       // this should not happen
-      throw new ProcessingError("Unhandled Expression")
+      throw new ProcessingError("Unhandled Expression");
     }
   } catch (e) {
     if (e instanceof ProcessingError) {

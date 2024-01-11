@@ -8,16 +8,12 @@ import { ProcessingError, toJson } from "~src/errors";
 
 import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
-import {
-  createMemoryOffsetIntegerConstant,
-  processCondition,
-  runPrefixPostfixArithmeticChecks,
-} from "~src/processor/util";
+import { processCondition } from "~src/processor/util";
 import { processFunctionReturnStatement } from "./functionUtil";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processExpression from "~src/processor/processExpression";
-import { Statement, isExpression } from "~src/parser/c-ast/core";
+import { BlockItem, Statement } from "~src/parser/c-ast/core";
 import processDeclaration from "~src/processor/processDeclaration";
 import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
 
@@ -29,8 +25,8 @@ import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressio
  * @param ast
  * @param sourceCode
  */
-export default function processStatement(
-  node: Statement,
+export default function processBlockItem(
+  node: BlockItem,
   symbolTable: SymbolTable,
   enclosingFunc?: FunctionDefinitionP // reference to enclosing function, if any
 ): StatementP[] {
@@ -39,7 +35,7 @@ export default function processStatement(
       const blockSymbolTable = new SymbolTable(symbolTable);
       const statements: StatementP[] = [];
       node.statements.forEach((child) => {
-        const result = processStatement(child, blockSymbolTable, enclosingFunc);
+        const result = processBlockItem(child, blockSymbolTable, enclosingFunc);
         if (result === null) {
           return;
         } else if (Array.isArray(result)) {
@@ -58,7 +54,7 @@ export default function processStatement(
         forLoopSymbolTable = new SymbolTable(symbolTable);
         clause = processDeclaration(node.clause.value, forLoopSymbolTable);
       } else if (node.clause !== null && node.clause.type === "Expression") {
-        clause = processStatement(node.clause.value, forLoopSymbolTable);
+        clause = processBlockItem(node.clause.value, forLoopSymbolTable);
       } else {
         clause = [];
       }
@@ -67,12 +63,12 @@ export default function processStatement(
         type: "ForLoop",
         clause,
         condition: processCondition(node.condition, symbolTable),
-        update: processStatement(
+        update: processBlockItem(
           node.update,
           forLoopSymbolTable,
           enclosingFunc
         ),
-        body: processStatement(node.body, forLoopSymbolTable, enclosingFunc),
+        body: processBlockItem(node.body, forLoopSymbolTable, enclosingFunc),
       };
 
       return [processedForLoopNode];
@@ -81,7 +77,7 @@ export default function processStatement(
         {
           type: node.type,
           condition: processCondition(node.condition, symbolTable),
-          body: processStatement(node.body, symbolTable, enclosingFunc), // processing a block always gives array of statements
+          body: processBlockItem(node.body, symbolTable, enclosingFunc), // processing a block always gives array of statements
         },
       ];
     } else if (node.type === "ReturnStatement") {
@@ -120,9 +116,9 @@ export default function processStatement(
         {
           type: "SelectionStatement",
           condition: processCondition(node.condition, symbolTable),
-          ifStatements: processStatement(node.ifStatement, symbolTable),
+          ifStatements: processBlockItem(node.ifStatement, symbolTable),
           elseStatements: node.elseStatement
-            ? processStatement(node.elseStatement, symbolTable)
+            ? processBlockItem(node.elseStatement, symbolTable)
             : null,
         },
       ];
@@ -183,12 +179,15 @@ export default function processStatement(
       node.type === "AddressOfExpression" ||
       node.type === "BinaryExpression" ||
       node.type === "FloatConstant" ||
+      node.type === "IntegerConstant" ||
       node.type === "IdentifierExpression" ||
       node.type === "PointerDereference" ||
       node.type === "SizeOfExpression"
     ) {
       // all these expression statements can be safely ignored as they have no side effects
       return [];
+    } else if(node.type === "Declaration") {
+      return processDeclaration(node, symbolTable, enclosingFunc);
     } else {
       throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);
     }

@@ -1,4 +1,4 @@
-import { CNodePBase, ExpressionP, StatementP } from "~src/processor/c-ast/core";
+import { CNodePBase, ExpressionP, ExpressionPBase, StatementP } from "~src/processor/c-ast/core";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 
 /**
@@ -37,4 +37,15 @@ export interface FunctionCallP {
   type: "FunctionCall";
   calledFunction: CallableP;
   args: ExpressionP[]; // the sequence of expressions which load up the function arguments
+}
+
+/**
+ * Represents the call of an external function, which is on not defined inside the source program.
+ * In this particular c to wasm compiler, these are functions imported into the wasm module, such as from the JS environment.
+ * No memory store statements are generated for the return of such a function, it is assumed to be handled externally. 
+ */
+export interface ExternalFunctionCallP {
+  type: "FunctionCall";
+  functionName: string;
+  args: ExpressionP[];
 }

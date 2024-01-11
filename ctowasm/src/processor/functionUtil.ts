@@ -3,17 +3,21 @@
  */
 
 import { DataType } from "../parser/c-ast/dataTypes";
-import { PrimaryDataTypeMemoryObjectDetails, getDataTypeSize, unpackDataType } from "./dataTypeUtil";
+import {
+  PrimaryDataTypeMemoryObjectDetails,
+  getDataTypeSize,
+  unpackDataType,
+} from "./dataTypeUtil";
 import { UnsupportedFeatureError, toJson, ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
-import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
+import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { POINTER_SIZE } from "~src/common/constants";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
-import processStatement from "~src/processor/processStatement";
+import processBlockItem from "~src/processor/processBlockItem";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
@@ -46,7 +50,7 @@ export default function processFunctionDefinition(
     body: [],
   };
   // visit body
-  const body = processStatement(
+  const body = processBlockItem(
     node.body,
     paramSymbolTable,
     functionDefinitionNode
@@ -128,21 +132,23 @@ export function processFunctionReturnStatement(
 
   // sanity check - the types of processedExpression and the function return details should match
   if (functionReturnDetails.length !== processedExpr.exprs.length) {
-    throw new ProcessingError("Number of primary objects in returned expression does not match the function return details")
+    throw new ProcessingError(
+      "Number of primary objects in returned expression does not match the function return details"
+    );
   }
 
   let i = 0; // curr index of functionReturnDetails
 
-    processedExpr.exprs.forEach((expr) => {
-      statements.push({
-        type: "FunctionReturnMemoryStore",
-        value: expr,
-        dataType: expr.dataType,
-        offset: createMemoryOffsetIntegerConstant(
-          functionReturnDetails[i++].offset
-        ),
-      });
+  processedExpr.exprs.forEach((expr) => {
+    statements.push({
+      type: "FunctionReturnMemoryStore",
+      value: expr,
+      dataType: expr.dataType,
+      offset: createMemoryOffsetIntegerConstant(
+        functionReturnDetails[i++].offset
+      ),
     });
+  });
 
   statements.push({
     type: "ReturnStatement",

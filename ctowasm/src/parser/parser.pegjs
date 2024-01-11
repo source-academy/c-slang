@@ -416,7 +416,7 @@ statement
 // ======== Compound Statement =========
 
 compound_statement "block"
-	= "{" _ children:block_item_list _ "}" { return generateNode("Block", { children }); }
+	= "{" _ statements:block_item_list _ "}" { return generateNode("Block", { statements }); }
     
 block_item_list
   = items:block_item|.., _| { return unpackDeclarations(items); } // unpack any arrays, as declarations can declare multiple symbols in one declarations which equates to multiple declaration nodes
