@@ -41,10 +41,10 @@ export default function processDeclaration(
     if (typeof node.initializer !== "undefined") {
       const memoryStoreStatements: MemoryStore[] = [];
 
-      const unpackedInitializerExpressions = unpackInitializer(
-        node.initializer,
-        symbolTable
-      );
+      const unpackedInitializerExpressions =
+        typeof enclosingFunc === "undefined"
+          ? unpackDataSegmentInitializer(node.initializer)
+          : unpackInitializer(node.initializer, symbolTable);
 
       const unpackedDataType = unpackDataType(node.dataType);
 
@@ -67,46 +67,50 @@ export default function processDeclaration(
         memoryStoreStatements.push({
           type: "MemoryStore",
           address: {
-            type: symbolEntry.type === "localVariable" ? "LocalAddress" : "DataSegmentAddress",
+            type:
+              symbolEntry.type === "localVariable"
+                ? "LocalAddress"
+                : "DataSegmentAddress",
             offset: createMemoryOffsetIntegerConstant(primaryDataObject.offset),
-            dataType: primaryDataObject.dataType
+            dataType: primaryDataObject.dataType,
           },
           value: unpackedInitializerExpressions[i],
-          dataType: primaryDataObject.dataType
-
-        })
-      } 
+          dataType: primaryDataObject.dataType,
+        });
+      }
 
       for (let j = i; j < unpackedDataType.length; ++j) {
         // set the rest of the data types to 0, since they are not set
         const primaryDataObject = unpackedDataType[j];
-        
+
         let zeroExpression: ConstantP;
         if (isFloatType(primaryDataObject.dataType)) {
-          zeroExpression =  {
+          zeroExpression = {
             type: "FloatConstant",
             value: 0,
-            dataType: primaryDataObject.dataType as FloatDataType
-          }
+            dataType: primaryDataObject.dataType as FloatDataType,
+          };
         } else {
           zeroExpression = {
             type: "IntegerConstant",
             value: 0n,
-            dataType: primaryDataObject.dataType as IntegerDataType
-          }
+            dataType: primaryDataObject.dataType as IntegerDataType,
+          };
         }
 
         memoryStoreStatements.push({
           type: "MemoryStore",
           address: {
-            type: symbolEntry.type === "globalVariable" ? "DataSegmentAddress" : "LocalAddress",
+            type:
+              symbolEntry.type === "globalVariable"
+                ? "DataSegmentAddress"
+                : "LocalAddress",
             offset: createMemoryOffsetIntegerConstant(primaryDataObject.offset),
-            dataType: primaryDataObject.dataType
+            dataType: primaryDataObject.dataType,
           },
           value: zeroExpression,
-          dataType: primaryDataObject.dataType
-
-        })
+          dataType: primaryDataObject.dataType,
+        });
       }
       return memoryStoreStatements;
     } else {
@@ -123,9 +127,8 @@ export default function processDeclaration(
 /**
  * Unpacks an Initializer into an array of PrimaryDataTypeExpressionP.
  */
-
 function unpackInitializer(
-  intializer: Initializer,
+  initializer: Initializer,
   symbolTable: SymbolTable
 ): ExpressionP[] {
   const expressions: ExpressionP[] = [];
@@ -138,6 +141,31 @@ function unpackInitializer(
       initializer.values.forEach((init) => helper(init));
     }
   }
-  helper(intializer);
+  helper(initializer);
   return expressions;
+}
+
+/**
+ * Unpacks an intializer used for a data segment (global) variable. The initializer expression must be a compile-time constant.
+ */
+function unpackDataSegmentInitializer(initializer: Initializer): ExpressionP[] {
+  const expressions: ExpressionP[] = [];
+  function helper(initializer: Initializer) {
+    if (initializer.type === "InitializerSingle") {
+      const expr = evaluateCompileTimeExpression(initializer.value);
+      expressions.push(expr);
+    } else {
+      // visit all the sub initializers of this intializer list
+      initializer.values.forEach((init) => helper(init));
+    }
+  }
+  try {
+    helper(initializer);
+    return expressions;
+  } catch (e) {
+    if (e instanceof ProcessingError) {
+      throw new ProcessingError("Initializer element is not a constant");
+    }
+    throw e;
+  }
 }

@@ -2,36 +2,39 @@ import { WatGeneratorError, toJson } from "~src/errors";
 import {
   WasmBinaryExpression,
   WasmNegateFloatExpression,
-} from "~src/wasm-ast/expressions";
-import { WasmFloatConst, WasmIntegerConst } from "~src/wasm-ast/consts";
+} from "~src/translator/wasm-ast/expressions";
+import {
+  WasmFloatConst,
+  WasmIntegerConst,
+} from "~src/translator/wasm-ast/consts";
 import {
   WasmSelectStatement,
   WasmLoop,
   WasmBlock,
   WasmBranch,
   WasmBranchIf,
-} from "~src/wasm-ast/control";
+} from "~src/translator/wasm-ast/control";
 import {
   WasmFunctionCall,
   WasmFunctionCallStatement,
   WasmRegularFunctionCall,
   WasmRegularFunctionCallStatement,
-} from "~src/wasm-ast/functions";
+} from "~src/translator/wasm-ast/functions";
 import {
   WasmMemoryGrow,
   WasmMemoryLoad,
   WasmMemoryStore,
-} from "~src/wasm-ast/memory";
+} from "~src/translator/wasm-ast/memory";
 import {
   WasmBooleanExpression,
   WasmNumericConversionWrapper,
-} from "~src/wasm-ast/misc";
+} from "~src/translator/wasm-ast/misc";
 import {
   WasmGlobalGet,
   WasmGlobalSet,
   WasmLocalGet,
   WasmLocalSet,
-} from "~src/wasm-ast/variables";
+} from "~src/translator/wasm-ast/variables";
 import {
   getPreStatementsStr,
   generateStatementsList,
@@ -39,7 +42,7 @@ import {
   generateArgString,
   getWasmMemoryLoadInstruction,
 } from "~src/wat-generator/util";
-import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
+import { WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
 
 /**
  * Generates the WAT from given AST node. Only to be used for nodes within a function body.

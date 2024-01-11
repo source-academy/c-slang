@@ -4,7 +4,7 @@
 
 import { CNodeBase } from "~src/parser/c-ast/core";
 import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
-import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
+import { MemoryVariableByteSize } from "~src/translator/wasm-ast/memory";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.

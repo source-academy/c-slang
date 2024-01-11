@@ -1,17 +1,15 @@
-import {
-  WasmConst,
-} from "~src/wasm-ast/consts";
+import { WasmConst } from "~src/translator/wasm-ast/consts";
 import {
   WasmSelectStatement,
   WasmLoop,
   WasmBranchIf,
   WasmBranch,
   WasmBlock,
-} from "~src/wasm-ast/control";
+} from "~src/translator/wasm-ast/control";
 import {
   WasmBinaryExpression,
   WasmNegateFloatExpression,
-} from "~src/wasm-ast/expressions";
+} from "~src/translator/wasm-ast/expressions";
 import {
   WasmFunction,
   WasmFunctionCallStatement,
@@ -20,25 +18,25 @@ import {
   WasmImportedFunction,
   WasmFunctionCall,
   WasmRegularFunctionCall,
-} from "~src/wasm-ast/functions";
+} from "~src/translator/wasm-ast/functions";
 import {
   WasmMemoryStore,
   WasmMemoryGrow,
   WasmDataSegmentInitialization,
   WasmMemoryLoad,
   WasmMemorySize,
-} from "~src/wasm-ast/memory";
+} from "~src/translator/wasm-ast/memory";
 import {
   WasmBooleanExpression,
   WasmNumericConversionWrapper,
-} from "~src/wasm-ast/misc";
+} from "~src/translator/wasm-ast/misc";
 import {
   WasmGlobalGet,
   WasmGlobalSet,
   WasmGlobalVariable,
   WasmLocalGet,
   WasmLocalSet,
-} from "~src/wasm-ast/variables";
+} from "~src/translator/wasm-ast/variables";
 
 /**
  * Main file containing all the core wasm AST node definitions.
@@ -71,7 +69,6 @@ export type WasmStatement =
   | WasmMemoryStore
   | WasmMemoryGrow;
 
-
 /**
  * Wasm Expressions which consist of 1 instruction pushing 1 wasm value to the stack.
  */
@@ -94,12 +91,12 @@ type WasmSingleInstructionExpression =
  */
 export interface WasmMultiInstructionExpression extends WasmAstNode {
   type: "WasmMultiInstructionExpression";
-  instructions: (WasmStatement | WasmExpression)[]
+  instructions: (WasmStatement | WasmExpression)[];
 }
 
 /**
  * WasmExpressions are instruction(s) that result in 1 or more wasm values being pushed onto the virtual stack.
  */
-export type WasmExpression = WasmSingleInstructionExpression | WasmMultiInstructionExpression;
-
-
+export type WasmExpression =
+  | WasmSingleInstructionExpression
+  | WasmMultiInstructionExpression;

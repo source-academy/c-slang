@@ -13,32 +13,6 @@ import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { isScalarType } from "~src/processor/dataTypeUtil";
 
-/**
- * Basic checks for pre/post-fix arithmetic expressions
- */
-export function runPrefixPostfixArithmeticChecks(
-  symbolEntry: SymbolEntry,
-  position: Position
-) {
-  if (symbolEntry.type === "function") {
-    throw new ProcessingError(
-      "lvalue required as increment/decrement operand",
-      position
-    );
-  }
-  if (
-    !(
-      symbolEntry.dataType.type === "pointer" ||
-      symbolEntry.dataType.type === "primary"
-    )
-  ) {
-    throw new ProcessingError(
-      `Wrong type argument to increment/decrement: ${symbolEntry.dataType.type}`,
-      position
-    );
-  }
-}
-
 export function processCondition(
   condition: Expression,
   symbolTable: SymbolTable

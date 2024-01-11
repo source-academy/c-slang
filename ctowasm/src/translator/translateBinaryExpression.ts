@@ -8,12 +8,10 @@ import { ScalarDataType } from "~src/parser/c-ast/dataTypes";
 import { isUnsignedIntegerType, isSignedIntegerType } from "~src/common/utils";
 import { isScalarType } from "~src/processor/dataTypeUtil";
 import translateExpression from "~src/translator/translateExpression";
-import {
-  convertScalarDataTypeToWasmType,
-  getTypeConversionWrapper,
-} from "~src/translator/variableUtil";
-import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
-import { WasmModule } from "~src/wasm-ast/core";
+import { getTypeConversionWrapper } from "./dataTypeUtil";
+import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
+import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
+import { WasmModule } from "~src/translator/wasm-ast/core";
 import { WasmSymbolTable } from "./symbolTable";
 import { TranslationError } from "~src/errors";
 

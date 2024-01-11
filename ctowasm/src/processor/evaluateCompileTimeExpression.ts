@@ -94,10 +94,10 @@ export function performUnaryOperation(a: any, operator: UnaryOperator) {
       return a;
   }
 }
+
 /**
  * Evaluates a compile time expression.
  */
-
 export default function evaluateCompileTimeExpression(
   expr: Expression
 ): ConstantP {

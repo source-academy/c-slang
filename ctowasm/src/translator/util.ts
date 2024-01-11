@@ -2,10 +2,10 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { WasmImportedFunction } from "~src/wasm-ast/functions";
+import { WasmImportedFunction } from "~src/translator/wasm-ast/functions";
 import { WasmSymbolTable } from "./symbolTable";
-import { WasmType } from "~src/wasm-ast/types";
-import { WasmModule } from "~src/wasm-ast/core";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
+import { WasmModule } from "~src/translator/wasm-ast/core";
 import {
   STACK_POINTER,
   WASM_PAGE_SIZE,
@@ -19,12 +19,12 @@ import {
 import {
   MemoryVariableByteSize,
   WasmMemoryVariable,
-} from "~src/wasm-ast/memory";
+} from "~src/translator/wasm-ast/memory";
 import { ArithemeticUnaryOperator } from "~src/common/types";
 import { DataType } from "~src/parser/c-ast/dataTypes";
-import { primaryCDataTypeToWasmType } from "~src/translator/variableUtil";
+import { primaryCDataTypeToWasmType } from "./dataTypeUtil";
 import { ImportedFunction } from "~src/wasmModuleImports";
-import { WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError, toJson } from "~src/errors";
 
@@ -52,7 +52,7 @@ export function arithmeticUnaryOperatorToInstruction(
 }
 
 // Maps wasm type to number of bytes it uses
-export const wasmTypeToSize: Record<WasmType, MemoryVariableByteSize> = {
+export const wasmTypeToSize: Record<WasmDataType, MemoryVariableByteSize> = {
   i32: 4,
   i64: 8,
   f32: 4,

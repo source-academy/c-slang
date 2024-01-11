@@ -11,14 +11,14 @@ import {
   getFunctionStackFrameTeardownStatements,
 } from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
-import { getTypeConversionWrapper } from "~src/translator/variableUtil";
-import { WasmModule } from "~src/wasm-ast/core";
+import { getTypeConversionWrapper } from "./dataTypeUtil";
+import { WasmModule } from "~src/translator/wasm-ast/core";
 import {
   WasmFunctionCall,
   WasmFunctionCallStatement,
   WasmRegularFunctionCall,
   WasmRegularFunctionCallStatement,
-} from "~src/wasm-ast/functions";
+} from "~src/translator/wasm-ast/functions";
 import { WasmSymbolTable } from "./symbolTable";
 
 export default function translateFunctionCall(

@@ -7,15 +7,15 @@ import { isFloatType, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import { getMaxIntConstant } from "~src/translator/util";
-import { primaryCDataTypeToWasmType } from "~src/translator/variableUtil";
-import { WasmIntegerConst } from "~src/wasm-ast/consts";
-import { WasmExpression, WasmModule } from "~src/wasm-ast/core";
+import { primaryCDataTypeToWasmType } from "./dataTypeUtil";
+import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
+import { WasmExpression, WasmModule } from "~src/translator/wasm-ast/core";
 import {
   WasmBinaryExpression,
   WasmNegateFloatExpression,
-} from "~src/wasm-ast/expressions";
+} from "~src/translator/wasm-ast/expressions";
 import { WasmSymbolTable } from "./symbolTable";
-import { WasmBooleanExpression } from "~src/wasm-ast/misc";
+import { WasmBooleanExpression } from "~src/translator/wasm-ast/misc";
 
 /**
  * Translates a UnaryExpression into the nodes for that expression,

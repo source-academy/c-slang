@@ -8,9 +8,11 @@ import {
   IntegerConstant,
 } from "~src/parser/c-ast/expression/constant";
 import { Initializer } from "~src/parser/c-ast/declaration";
-import { isConstant, isIntegerType } from "~src/common/utils";
+import { isConstant, isIntegerType, primaryVariableSizes } from "~src/common/utils";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError } from "~src/errors";
+import { ConstantP, FloatConstantP, IntegerConstantP } from "~src/processor/c-ast/expression/constants";
+import { primaryCDataTypeToWasmType } from "~src/translator/dataTypeUtil";
 
 /**
  * Converts a given variable to byte string, for storage in data segment.
@@ -37,19 +39,19 @@ export function convertVariableToByteStr(initializer: Initializer) {
         "convertVariableToByteStr: initializer list element is not a constant"
       );
     }
-    finalStr += convertConstantToByteStr(element as Constant);
+    finalStr += convertConstantToByteStr(element);
   });
   return finalStr;
 }
 /**
  * Converts a Constant into its byte string representation in little endian format.
  */
-function convertConstantToByteStr(constant: Constant) {
+function convertConstantToByteStr(constant: ConstantP) {
   if (isIntegerType(constant.dataType)) {
-    return convertIntegerConstantToByteString(constant as IntegerConstant);
+    return convertIntegerConstantToByteString(constant as IntegerConstantP);
   } else {
     // need to get a float byte string
-    return convertFloatConstantToByteString(constant as FloatConstant);
+    return convertFloatConstantToByteString(constant as FloatConstantP);
   }
 }
 
@@ -77,17 +79,17 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
   return finalStr;
 }
 
-function convertIntegerConstantToByteString(integerConstant: IntegerConstant) {
+function convertIntegerConstantToByteString(integerConstant: IntegerConstantP) {
   return convertIntegerToByteString(
     integerConstant.value,
-    getDataTypeSize(integerConstant.dataType)
+    primaryVariableSizes[integerConstant.dataType]
   );
 }
 
-function convertFloatConstantToByteString(floatConstant: FloatConstant) {
-  const buffer = new ArrayBuffer(getDataTypeSize(floatConstant.dataType));
+function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
+  const buffer = new ArrayBuffer(primaryVariableSizes[floatConstant.dataType]);
   let integerValue;
-  if (floatConstant.dataType.primaryDataType === "float") {
+  if (floatConstant.dataType === "float") {
     const float32Arr = new Float32Array(buffer);
     const uint32Arr = new Uint32Array(buffer);
     float32Arr[0] = floatConstant.value;
@@ -103,6 +105,6 @@ function convertFloatConstantToByteString(floatConstant: FloatConstant) {
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    getDataTypeSize(floatConstant.dataType)
+    primaryVariableSizes[floatConstant.dataType]
   );
 }

@@ -2,10 +2,17 @@
  * Definitions of nodes to do with functions.
  */
 
-import { WasmMemoryLoad, WasmMemoryVariable } from "~src/wasm-ast/memory";
-import { WasmStatement, WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
+import {
+  WasmMemoryLoad,
+  WasmMemoryVariable,
+} from "~src/translator/wasm-ast/memory";
+import {
+  WasmStatement,
+  WasmAstNode,
+  WasmExpression,
+} from "~src/translator/wasm-ast/core";
 import { ImportedFunction } from "~src/wasmModuleImports";
-import { WasmType } from "~src/wasm-ast/types";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export type WasmFunctionBodyLine = WasmStatement | WasmExpression;
@@ -59,6 +66,6 @@ export interface WasmReturnStatement extends WasmAstNode {
  * Wasm Imported function with some added information.
  */
 export interface WasmImportedFunction extends ImportedFunction {
-  wasmParamTypes: WasmType[]; // the params of the functions in wasm
-  returnWasmType: WasmType | null;
+  wasmParamTypes: WasmDataType[]; // the params of the functions in wasm
+  returnWasmType: WasmDataType | null;
 }

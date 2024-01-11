@@ -2,14 +2,18 @@
  * Definitions of nodes for wasm variables (not the C variables that are stored in memory), and supporting operations.
  */
 
-import { WasmType } from "~src/wasm-ast/types";
-import { WasmAstNode, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
-import { WasmConst } from "~src/wasm-ast/consts";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
+import {
+  WasmAstNode,
+  WasmExpression,
+  WasmStatement,
+} from "~src/translator/wasm-ast/core";
+import { WasmConst } from "~src/translator/wasm-ast/consts";
 
 export interface WasmVariable extends WasmAstNode {
   name: string;
   isConst?: boolean; // TODO: to support later on
-  varType: WasmType;
+  varType: WasmDataType;
 }
 
 /**

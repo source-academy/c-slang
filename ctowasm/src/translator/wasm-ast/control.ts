@@ -1,4 +1,8 @@
-import { WasmAstNode, WasmExpression, WasmStatement } from "~src/wasm-ast/core";
+import {
+  WasmAstNode,
+  WasmExpression,
+  WasmStatement,
+} from "~src/translator/wasm-ast/core";
 
 /**
  * Definitions of wasm AST nodes to do with control flow instructions.

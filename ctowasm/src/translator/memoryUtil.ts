@@ -1,11 +1,14 @@
-import { WasmFunction } from "~src/wasm-ast/functions";
-import { MemoryVariableByteSize, WasmMemoryLoad } from "~src/wasm-ast/memory";
-import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
-import { WasmGlobalGet } from "~src/wasm-ast/variables";
-import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
-import { WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WasmFunction } from "~src/translator/wasm-ast/functions";
+import {
+  MemoryVariableByteSize,
+  WasmMemoryLoad,
+} from "~src/translator/wasm-ast/memory";
+import { WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
+import { WasmGlobalGet } from "~src/translator/wasm-ast/variables";
+import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
+import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
-import { convertScalarDataTypeToWasmType } from "~src/translator/variableUtil";
+import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError, UnsupportedFeatureError } from "~src/errors";
 

@@ -34,27 +34,30 @@ import {
   wasmTypeToSize,
 } from "~src/translator/util";
 import {
-  primaryCDataTypeToWasmType,
   getArrayConstantIndexElementAddr,
   getVariableAddr,
   getMemoryAccessDetails,
-  getTypeConversionWrapper,
   getMemoryInformation,
 } from "~src/translator/variableUtil";
-import { WasmSelectStatement } from "~src/wasm-ast/control";
-import { WasmModule, WasmStatement } from "~src/wasm-ast/core";
+import { getTypeConversionWrapper } from "./dataTypeUtil";
+import { primaryCDataTypeToWasmType } from "./dataTypeUtil";
+import { WasmSelectStatement } from "~src/translator/wasm-ast/control";
+import { WasmModule, WasmStatement } from "~src/translator/wasm-ast/core";
 import {
   WasmFunction,
   WasmFunctionCallStatement,
   WasmRegularFunctionCallStatement,
-} from "~src/wasm-ast/functions";
+} from "~src/translator/wasm-ast/functions";
 import { WasmSymbolTable } from "./symbolTable";
-import { WasmMemoryLoad, WasmMemoryVariable } from "~src/wasm-ast/memory";
+import {
+  WasmMemoryLoad,
+  WasmMemoryVariable,
+} from "~src/translator/wasm-ast/memory";
 import { TranslationError } from "~src/errors";
-import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
-import { WasmBooleanExpression } from "~src/wasm-ast/misc";
+import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
+import { WasmBooleanExpression } from "~src/translator/wasm-ast/misc";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
-import { WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
 
 /**
  * Function for trnslating a C function to a wasm function.

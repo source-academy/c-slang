@@ -1,7 +1,7 @@
 /**
  * WAT Generator module for generating a WAT string from WAT AST.
  */
-import { WasmModule } from "~src/wasm-ast/core";
+import { WasmModule } from "~src/translator/wasm-ast/core";
 import generateFunctionBodyWat from "~src/wat-generator/generateFunctionBodyWat";
 import { generateLine } from "~src/wat-generator/util";
 
@@ -42,7 +42,9 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
       `(global $${global.name} (${global.isConst ? "" : "mut"} ${
         global.varType
       }) ${
-        global.initializerValue ? generateFunctionBodyWat(global.initializerValue) : ""
+        global.initializerValue
+          ? generateFunctionBodyWat(global.initializerValue)
+          : ""
       })`,
       baseIndentation + 1
     );
@@ -61,7 +63,10 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
     const func = module.functions[functionName];
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);
     for (const statement of func.body) {
-      watStr += generateLine(generateFunctionBodyWat(statement), baseIndentation + 2);
+      watStr += generateLine(
+        generateFunctionBodyWat(statement),
+        baseIndentation + 2
+      );
     }
     watStr += generateLine(")", baseIndentation + 1);
   }

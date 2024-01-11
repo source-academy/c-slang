@@ -3,7 +3,7 @@
  */
 
 import { TranslationError } from "~src/errors";
-import { WasmMemoryVariable } from "~src/wasm-ast/memory";
+import { WasmMemoryVariable } from "~src/translator/wasm-ast/memory";
 
 /**
  * Some type definitions for non-node objects.

@@ -1,4 +1,4 @@
-import { WasmAstNode } from "~src/wasm-ast/core";
+import { WasmAstNode } from "~src/translator/wasm-ast/core";
 
 /**
  * Definition of WAT nodes for consts.

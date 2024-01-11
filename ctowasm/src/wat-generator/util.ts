@@ -2,8 +2,8 @@
  * Utility functions for WAT generation.
  */
 
-import { WasmExpression, WasmStatement } from "~src/wasm-ast/core";
-import { WasmType } from "~src/wasm-ast/types";
+import { WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 import generateFunctionBodyWat from "~src/wat-generator/generateFunctionBodyWat";
 
 /**
@@ -29,7 +29,7 @@ export function generateBlock(block: string, indentation: number) {
  * TODO: support unsigned types in future.
  */
 export function getWasmMemoryLoadInstruction(
-  varType: WasmType,
+  varType: WasmDataType,
   numOfBytes: number
 ) {
   if (
@@ -42,7 +42,7 @@ export function getWasmMemoryLoadInstruction(
 }
 
 export function getWasmMemoryStoreInstruction(
-  varType: WasmType,
+  varType: WasmDataType,
   numOfBytes: number
 ) {
   if (

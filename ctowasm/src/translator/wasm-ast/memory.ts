@@ -2,8 +2,8 @@
  * Definitions of nodes that interact with wasm linear memory.
  */
 
-import { WasmType } from "~src/wasm-ast/types";
-import { WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
+import { WasmAstNode, WasmExpression } from "~src/translator/wasm-ast/core";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
@@ -11,7 +11,7 @@ export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 export interface WasmMemoryLoad extends WasmAstNode {
   type: "MemoryLoad";
   addr: WasmExpression; // the offset in memory to load from
-  wasmDataType: WasmType;
+  wasmDataType: WasmDataType;
   numOfBytes: MemoryVariableByteSize; // number of bytes to load
 }
 
@@ -19,7 +19,7 @@ export interface WasmMemoryStore extends WasmAstNode {
   type: "MemoryStore";
   addr: WasmExpression;
   value: WasmExpression;
-  wasmDataType: WasmType; // wasm var type for the store instruction
+  wasmDataType: WasmDataType; // wasm var type for the store instruction
   numOfBytes: MemoryVariableByteSize; // number of bytes to store
 }
 

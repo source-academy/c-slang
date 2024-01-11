@@ -13,24 +13,26 @@ import { ArrayElementExpr, VariableExpr } from "~src/c-ast/variable";
 import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 import { arithmeticUnaryOperatorToInstruction } from "~src/translator/util";
 import {
-  convertConstantToWasmConst, convertScalarDataTypeToWasmType, getVariableAddr,
+  getVariableAddr,
 } from "~src/translator/variableUtil";
+import { convertConstantToWasmConst } from "./dataTypeUtil";
+import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
 import {
   WasmFunctionCall,
   WasmRegularFunctionCall,
-} from "~src/wasm-ast/functions";
+} from "~src/translator/wasm-ast/functions";
 import { WasmSymbolTable } from "./symbolTable";
-import { MemoryVariableByteSize, WasmMemoryLoad, WasmMemoryStore } from "~src/wasm-ast/memory";
-import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
+import { MemoryVariableByteSize, WasmMemoryLoad, WasmMemoryStore } from "~src/translator/wasm-ast/memory";
+import { WasmModule, WasmExpression } from "~src/translator/wasm-ast/core";
 import { Constant } from "~src/c-ast/constants";
 import { BinaryExpression } from "~src/c-ast/binaryExpression";
-import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
+import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
 import translateBinaryExpression from "~src/translator/translateBinaryExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 import { TranslationError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { isConstant } from "~src/common/utils";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
-import { WasmIntegerConst } from "~src/wasm-ast/consts";
+import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
 import translateUnaryExpression from "~src/translator/translateUnaryExpression";
 
 /**

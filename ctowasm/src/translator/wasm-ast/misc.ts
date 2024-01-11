@@ -1,5 +1,5 @@
-import { WasmAstNode, WasmExpression } from "~src/wasm-ast/core";
-import { WasmType } from "~src/wasm-ast/types";
+import { WasmAstNode, WasmExpression } from "~src/translator/wasm-ast/core";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 
 /**
  * Base class for nodes that are meant to wrap other expressions to perform some simple operation on the results of the wrapped expression.
@@ -13,7 +13,7 @@ interface WasmWrapperNode extends WasmAstNode {
  */
 export interface WasmBooleanExpression extends WasmWrapperNode {
   type: "BooleanExpression";
-  wasmDataType: WasmType;
+  wasmDataType: WasmDataType;
   isNegated?: boolean;
 }
 

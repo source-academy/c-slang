@@ -8,16 +8,15 @@ import {
   setPseudoRegisters,
 } from "~src/translator/util";
 import { ImportedFunction } from "~src/wasmModuleImports";
-import { WasmModule } from "~src/wasm-ast/core";
-import { CAstRoot } from "~src/parser/c-ast/core";
-import { Initialization } from "~src/parser/c-ast/variable";
+import { WasmModule } from "~src/translator/wasm-ast/core";
 import { Declaration } from "~src/parser/c-ast/declaration";
 import translateFunction from "~src/translator/translateFunction";
 import { convertVariableToByteStr } from "~src/translator/dataSegmentUtil";
-import { WasmMemoryVariable } from "~src/wasm-ast/memory";
+import { WasmMemoryVariable } from "~src/translator/wasm-ast/memory";
+import { CAstRootP } from "~src/processor/c-ast/core";
 
 export default function translate(
-  CAstRoot: CAstRoot,
+  CAstRoot: CAstRootP,
   imports: Record<string, ImportedFunction> = {}
 ) {
   const wasmRoot: WasmModule = {
