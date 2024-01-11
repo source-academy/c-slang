@@ -2,14 +2,11 @@
  * Translate a binary expression into corresponding WAT AST nodes based on operator.
  */
 
-import { BinaryExpression } from "~src/parser/c-ast/binaryExpression";
+import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";
 import { BinaryOperator } from "~src/common/types";
 import { ScalarDataType } from "~src/parser/c-ast/dataTypes";
-import {
-  isUnsignedIntegerType,
-  isSignedIntegerType,
-  isScalarType,
-} from "~src/common/utils";
+import { isUnsignedIntegerType, isSignedIntegerType } from "~src/common/utils";
+import { isScalarType } from "~src/processor/dataTypeUtil";
 import translateExpression from "~src/translator/translateExpression";
 import {
   convertScalarDataTypeToWasmType,

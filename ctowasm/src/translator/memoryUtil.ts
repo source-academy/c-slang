@@ -6,7 +6,7 @@ import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { convertScalarDataTypeToWasmType } from "~src/translator/variableUtil";
-import { getDataTypeSize } from "~src/common/utils";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError, UnsupportedFeatureError } from "~src/errors";
 
 /**

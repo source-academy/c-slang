@@ -86,9 +86,22 @@
   function createPostfixExpressionNode(firstExpr, operations) {
     let currNode = firstExpr;
     for (const operation of operations) {
-      currNode = {
-        ...operation,
-        expr: currNode
+      if (operation.type === "ArrayElementExpr") {
+        // array element expr are equivalent to pointer dereference expression A[B] => *(A + B)
+        currNode = {
+          type: "PointerDereference",
+          expr: {
+            type: "BinaryExpression",
+            leftExpr: currNode,
+            rightExpr: operation.index,
+            operator: "+"
+          }
+        }
+      } else {
+        currNode = {
+          ...operation,
+          expr: currNode
+        }
       }
     }
     return currNode;
@@ -582,7 +595,7 @@ prefix_expression
   / postfix_expression
 
 prefix_operation
-  = operator:("++" / "--") { return { type: "PrefixArithmeticExpression", operator }; }
+  = operator:("++" / "--") { return { type: "PrefixExpression", operator }; }
   / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator }; }
   / operator:("*") { return { type: "PointerDereference" }; }
   / "&" { return { type: "AddressOfExpression" }; }
@@ -594,8 +607,8 @@ postfix_expression
 
 // all the postfix operations
 postfix_operation
-  = operator:("++" / "--") { return { type: "PostfixArithmeticExpression", operator }; }
-  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; } //TODO: check
+  = operator:("++" / "--") { return { type: "PostfixExpression", operator }; }
+  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; } 
   / "[" _ index:expression _ "]" { return { type: "ArrayElementExpr", index }; }
 //  / "." _ field:identifier { return } TODO: when doing structs
 //  / "->" _ TODO: when structs and pointers are done
@@ -605,7 +618,7 @@ function_argument_list
 
 primary_expression
   = "sizeof" _ "(" _ expr:primary_expression _ ")" { return generateNode("SizeOfExpression", { expr } ); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
-  / name:identifier { return generateNode("VariableExpr", { name }); } // for variables 
+  / name:identifier { return generateNode("IdentifierExpression", { name }); } // for variables 
   / constant
   / "(" _ @expression _ ")"
 

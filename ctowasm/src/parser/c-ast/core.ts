@@ -3,8 +3,8 @@
  */
 
 import {
-  PostfixArithmeticExpression,
-  PrefixArithmeticExpression,
+  FunctionCall,
+  PostfixExpression,
   PrefixExpression,
 } from "~src/parser/c-ast/expression/unaryExpression";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
@@ -20,10 +20,9 @@ import {
 } from "./expression/unaryExpression";
 import IterationStatement from "~src/parser/c-ast/statement/iterationStatement";
 import SizeOfExpression from "~src/parser/c-ast/expression/sizeof";
-import FunctionCall from "~src/parser/c-ast/expression/functionCall";
-import IdentifierExpr from "~src/parser/c-ast/expression/identifierExpr";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import Block from "~src/parser/c-ast/statement/compoundStatement";
+import IdentifierExpression from "~src/parser/c-ast/expression/identifierExpr";
 
 export interface CNodeBase {
   type: string;
@@ -55,11 +54,10 @@ export type Expression =
   | BinaryExpression
   | Constant
   | FunctionCall
-  | IdentifierExpr
+  | IdentifierExpression
   | SizeOfExpression
-  | PostfixArithmeticExpression
   | PrefixExpression
-  | PrefixArithmeticExpression
+  | PostfixExpression
   | PointerDereference
   | AddressOfExpression;
 
@@ -73,11 +71,10 @@ const expressionNodeTypes = new Set([
   "IntegerConstant",
   "FloatConstant",
   "FunctionCall",
-  "IdentifierExpr",
+  "IdentifierExpression",
   "SizeOfExpression",
-  "PostfixArithmeticExpression",
   "PrefixExpression",
-  "PrefixArithmeticExpression",
+  "PostfixExpression",
   "PointerDereference",
   "AddressOfExpression",
 ]);

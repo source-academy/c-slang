@@ -4,33 +4,25 @@
 
 import { SymbolEntry, SymbolTable } from "~src/processor/symbolTable";
 import { ProcessingError } from "~src/errors";
-import { Position } from "~src/parser/c-ast/types";
-import { ConditionalBlock } from "~src/parser/c-ast/selectionStatement";
+import { Position } from "~src/parser/c-ast/misc";
 import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
-import { ConditionalBlockP } from "~src/processor/c-ast/selection";
-import { visit } from "~src/processor/visit";
 import { Expression } from "~src/parser/c-ast/core";
-import visitExpression from "~src/processor/visitExpression";
-import { IntegerConstantP } from "~src/processor/c-ast/constants";
-import {
-  FunctionCall,
-  FunctionCallStatement,
-  isCallableNode,
-} from "~src/parser/c-ast/function";
+import processExpression from "~src/processor/processExpression";
+import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
+import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
+import { isScalarType } from "~src/processor/dataTypeUtil";
 
 /**
  * Basic checks for pre/post-fix arithmetic expressions
  */
 export function runPrefixPostfixArithmeticChecks(
   symbolEntry: SymbolEntry,
-  sourceCode: string,
   position: Position
 ) {
   if (symbolEntry.type === "function") {
     throw new ProcessingError(
       "lvalue required as increment/decrement operand",
-      sourceCode,
       position
     );
   }
@@ -42,51 +34,20 @@ export function runPrefixPostfixArithmeticChecks(
   ) {
     throw new ProcessingError(
       `Wrong type argument to increment/decrement: ${symbolEntry.dataType.type}`,
-      sourceCode,
       position
     );
   }
 }
 
 export function processCondition(
-  sourceCode: string,
   condition: Expression,
   symbolTable: SymbolTable
 ) {
-  const processedCondition = visitExpression(
-    sourceCode,
-    condition,
-    symbolTable
-  );
-  if (processedCondition.type !== "single") {
-    throw new ProcessingError(
-      "Used aggregate type where scalar type required",
-      sourceCode,
-      condition.position
-    );
+  const processedCondition = processExpression(condition, symbolTable);
+  if (!isScalarType(processedCondition.originalDataType)) {
+    throw new ProcessingError(`Cannot use ${processedCondition.originalDataType.type} where scalar is required`)
   }
-  return processedCondition.expr;
-}
-
-export function processConditionalBlock(
-  sourceCode: string,
-  conditionalBlock: ConditionalBlock,
-  symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinitionP
-): ConditionalBlockP {
-  return {
-    condition: processCondition(
-      sourceCode,
-      conditionalBlock.condition,
-      symbolTable
-    ),
-    body: visit(
-      sourceCode,
-      conditionalBlock.block,
-      symbolTable,
-      enclosingFunc
-    ) as StatementP[],
-  };
+  return processedCondition.exprs[0];
 }
 
 export function createMemoryOffsetIntegerConstant(
@@ -97,17 +58,4 @@ export function createMemoryOffsetIntegerConstant(
     dataType: "unsigned int", // unsigned int should be appropriate type to give to IntegerConstant offsets since pointer size is 4 TODO: check this
     value: BigInt(offset),
   };
-}
-
-/**
- * Check that the expression being called in a function node is callable - function or function pointer.
- */
-export function checkFunctionNodeExprIsCallable(
-  node: FunctionCall | FunctionCallStatement
-) {
-  if (!isCallableNode(node.expr)) {
-    throw new ProcessingError(
-      `Expression is not a callable expression: neither a function nor a function pointer`
-    );
-  }
 }

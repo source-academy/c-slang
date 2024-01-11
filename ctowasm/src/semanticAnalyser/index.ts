@@ -5,9 +5,10 @@
 import {
   FunctionDeclaration,
   FunctionDefinition,
-} from "~src/parser/c-ast/function";
+} from "~src/parser/c-ast/expression/functionCall";
 import { Block, CAstRoot, CNodeBase } from "~src/parser/c-ast/core";
-import { Initialization, Declaration } from "~src/parser/c-ast/variable";
+import { Initialization } from "~src/parser/c-ast/variable";
+import { Declaration } from "~src/parser/c-ast/declaration";
 import {
   checkForArrayDeclaration,
   checkForFunctionDeclaration,

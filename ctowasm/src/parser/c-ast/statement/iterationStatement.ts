@@ -23,9 +23,15 @@ export interface WhileLoop extends IterationStatementBase {
 export interface ForLoop extends IterationStatementBase {
   type: "ForLoop";
   // clause of a for loop (to run before condition) can be delcaration, expression or null
-  clause: {
-    type: "Expression" | "Declaration";
-    value: Declaration | Expression;
-  } | null;
+  clause:
+    | {
+        type: "Expression";
+        value: Expression;
+      }
+    | {
+        type: "Declaration";
+        value: Declaration;
+      }
+    | null;
   update: Expression;
 }

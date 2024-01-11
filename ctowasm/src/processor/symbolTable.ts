@@ -1,6 +1,8 @@
-import { DataType } from "../parser/c-ast/dataTypes";
+import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
-import { getDataTypeSize } from "~src/common/utils";
+import { Declaration } from "~src/parser/c-ast/declaration";
+import { Position } from "~src/parser/c-ast/misc";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
@@ -8,8 +10,7 @@ import { getDataTypeSize } from "~src/common/utils";
 export type SymbolEntry = FunctionSymbolEntry | VariableSymbolEntry;
 export interface FunctionSymbolEntry {
   type: "function";
-  returnType: DataType | null;
-  parameters: DataType[];
+  dataType: FunctionDataType;
 }
 
 export interface VariableSymbolEntry {
@@ -36,19 +37,33 @@ export class SymbolTable {
     }
   }
 
+  addEntry(declaration: Declaration): SymbolEntry {
+    if (declaration.dataType.type === "function") {
+      return this.addFunctionEntry(declaration.name, declaration.dataType);
+    } else {
+      return this.addVariableEntry(declaration.name, declaration.dataType);
+    }
+  }
+
   addVariableEntry(name: string, dataType: DataType): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
       // multiple declarations only allowed outside of function bodies
       if (this.parentTable !== null) {
-        throw new ProcessingError(
-          `Redeclaration error: ${name} redeclared in scope.`
-        );
+        throw new ProcessingError(`${name} redeclared in scope.`);
       }
       if (this.symbols[name].type === "function") {
         throw new ProcessingError(
-          `Redeclaration error: ${name} redeclared as variable instead of function`
+          `${name} redeclared as variable instead of function`
         );
+      }
+
+      if (toJson(this.symbols[name].dataType) !== toJson(dataType)) {
+        throw new ProcessingError(
+          `Conflicting types for ${name}:  redeclared as ${
+            this.symbols[name].dataType
+          } instead of ${toJson(dataType)}`
+        ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
     }
@@ -62,11 +77,7 @@ export class SymbolTable {
     return entry;
   }
 
-  addFunctionEntry(
-    name: string,
-    parameters: DataType[],
-    returnType: DataType | null
-  ) {
+  addFunctionEntry(name: string, dataType: FunctionDataType): FunctionSymbolEntry {
     if (name in this.symbols) {
       // function was already declared before
       // simple check that symbol is a function and the params and return types match
@@ -77,8 +88,9 @@ export class SymbolTable {
       }
 
       if (
-        toJson((this.symbols[name] as FunctionSymbolEntry).parameters) !==
-        toJson(parameters)
+        toJson(
+          (this.symbols[name] as FunctionSymbolEntry).dataType.parameters
+        ) !== toJson(dataType.parameters.toString())
       ) {
         throw new ProcessingError(
           `${name} redeclared as function with different signature: different parameters`
@@ -86,21 +98,24 @@ export class SymbolTable {
       }
 
       if (
-        toJson((this.symbols[name] as FunctionSymbolEntry).returnType) !==
-        toJson(returnType)
+        toJson(
+          (this.symbols[name] as FunctionSymbolEntry).dataType.returnType
+        ) !== toJson(dataType.returnType)
       ) {
         throw new ProcessingError(
           `${name} redeclared as function with different signature: different return type`
         );
       }
 
-      return;
+      return this.symbols[name] as FunctionSymbolEntry;
     }
-    this.symbols[name] = {
+    const entry = {
       type: "function",
-      returnType,
-      parameters,
-    };
+      dataType,
+    } as FunctionSymbolEntry;
+
+    this.symbols[name] = entry;
+    return entry;
   }
 
   /**

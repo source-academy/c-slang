@@ -6,9 +6,10 @@ import {
   Constant,
   FloatConstant,
   IntegerConstant,
-} from "~src/parser/c-ast/constants";
-import { Initializer } from "~src/parser/c-ast/variable";
-import { getDataTypeSize, isConstant, isIntegerType } from "~src/common/utils";
+} from "~src/parser/c-ast/expression/constant";
+import { Initializer } from "~src/parser/c-ast/declaration";
+import { isConstant, isIntegerType } from "~src/common/utils";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError } from "~src/errors";
 
 /**

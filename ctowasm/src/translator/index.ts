@@ -10,7 +10,8 @@ import {
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmModule } from "~src/wasm-ast/core";
 import { CAstRoot } from "~src/parser/c-ast/core";
-import { Declaration, Initialization } from "~src/parser/c-ast/variable";
+import { Initialization } from "~src/parser/c-ast/variable";
+import { Declaration } from "~src/parser/c-ast/declaration";
 import translateFunction from "~src/translator/translateFunction";
 import { convertVariableToByteStr } from "~src/translator/dataSegmentUtil";
 import { WasmMemoryVariable } from "~src/wasm-ast/memory";

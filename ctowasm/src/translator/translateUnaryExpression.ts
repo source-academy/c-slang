@@ -2,7 +2,7 @@
  * Definition of function to handle unary expressions
  */
 
-import { PrefixExpression } from "~src/parser/c-ast/unaryExpression";
+import { PrefixExpression } from "~src/parser/c-ast/expression/unaryExpression";
 import { isFloatType, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";

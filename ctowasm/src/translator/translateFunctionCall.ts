@@ -5,7 +5,7 @@
 import {
   FunctionCall,
   FunctionCallStatement,
-} from "~src/parser/c-ast/function";
+} from "~src/parser/c-ast/expression/functionCall";
 import {
   getFunctionCallStackFrameSetupStatements,
   getFunctionStackFrameTeardownStatements,

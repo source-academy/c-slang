@@ -5,19 +5,19 @@
 import {
   PrefixArithmeticExpression,
   PostfixArithmeticExpression,
-} from "~src/parser/c-ast/unaryExpression";
-import { Assignment } from "~src/parser/c-ast/assignment";
-import { FunctionDefinition } from "~src/parser/c-ast/function";
-import { ReturnStatement } from "~src/parser/c-ast/jumpStatement";
+} from "~src/parser/c-ast/expression/unaryExpression";
+import { Assignment } from "~src/parser/c-ast/expression/assignment";
+import { FunctionDefinition } from "~src/parser/c-ast/expression/functionCall";
+import { ReturnStatement } from "~src/parser/c-ast/statement/jumpStatement";
 import {
   DoWhileLoop,
   WhileLoop,
   ForLoop,
-} from "~src/parser/c-ast/iterationStatement";
+} from "~src/parser/c-ast/statement/iterationStatement";
 import { Block, Statement, isExpression } from "~src/parser/c-ast/core";
-import { SelectionStatement } from "~src/parser/c-ast/selectionStatement";
+import { SelectionStatement } from "~src/parser/c-ast/statement/selectionStatement";
 import { Initialization } from "~src/parser/c-ast/variable";
-import { getDataTypeSize } from "~src/common/utils";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import translateExpression from "~src/translator/translateExpression";
 import {
   BASE_POINTER,

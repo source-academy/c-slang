@@ -6,26 +6,27 @@
  */
 
 import { ScalarCDataType } from "~src/common/types";
-import { ConstantP } from "~src/processor/c-ast/constants";
+import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import {
   BinaryExpressionP,
   PostStatementExpressionP,
   PreStatementExpressionP,
   UnaryExpressionP,
-} from "~src/processor/c-ast/expressions";
+} from "~src/processor/c-ast/expression/expressions";
 import {
   FunctionCallP,
   FunctionDefinitionP,
-  ReturnStatementP,
 } from "~src/processor/c-ast/function";
-import { IterationStatementP } from "~src/processor/c-ast/loops";
+import { IterationStatementP } from "~src/processor/c-ast/statement/iterationStatement";
 import {
-  MemoryAddressExpressionLoad,
+  Address,
+  FunctionReturnMemoryLoad,
+  FunctionReturnMemoryStore,
   MemoryLoad,
   MemoryStore,
-  ObjectMemoryAddress,
 } from "~src/processor/c-ast/memory";
-import { SelectionStatementP } from "~src/processor/c-ast/selection";
+import { SelectionStatementP } from "~src/processor/c-ast/statement/selectionStatement";
+import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -41,21 +42,23 @@ export type StatementP =
   | SelectionStatementP
   | IterationStatementP
   | FunctionCallP
-  | ReturnStatementP;
+  | JumpStatementP
+  | MemoryStore
+  | FunctionReturnMemoryStore
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =
-  | MemoryLoad
   | BinaryExpressionP
   | ConstantP
   | PreStatementExpressionP
   | PostStatementExpressionP
   | UnaryExpressionP
-  | ObjectMemoryAddress
-  | MemoryAddressExpressionLoad;
+  | Address
+  | MemoryLoad
+  | FunctionReturnMemoryLoad
 
 /**
- * All expressions should inherit this, as all expressions should have a data type.
+ * All expressions should inherit this, as all expressions should have a primary data type.
  */
 export interface ExpressionPBase extends CNodePBase {
   dataType: ScalarCDataType;

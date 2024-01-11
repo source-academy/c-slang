@@ -2,43 +2,54 @@
  * This file contains all the error classes that can be thrown by the compiler.
  */
 
-import { Position } from "~src/parser/c-ast/types";
+import { Position } from "~src/parser/c-ast/misc";
 
 /**
  * An error that occured in relation to the C source code during compilation.
  * Contains positional information for debugging purposes.
  */
 export class SourceCodeError extends Error {
-  constructor(message: string, sourceCode?: string, position?: Position) {
+  position: Position | undefined;
+  constructor(message: string, position?: Position) {
     super();
+    this.message = message;
+    this.position = position;
+  }
 
-    if (typeof sourceCode === "undefined" || typeof position === "undefined") {
-      this.message = message;
-      return;
-    }
+  addPositionInfo(position: Position) {
+    this.position = position;
+  }
 
-    this.message = `\n${message}\n${position.start.line} | `;
-    let currLine = position.start.line;
-    for (let i = position.start.offset; i < position.end.offset; ++i) {
-      if (sourceCode[i] === "\n") {
-        this.message += `\n${++currLine} | `;
-      } else {
-        this.message += sourceCode[i];
+  /**
+   * Add sourcecode and generate full error message with position info if available.
+   * @param sourceCode
+   * @param position
+   */
+  generateFullErrorMessage(sourceCode: string) {
+    if (typeof this.position !== "undefined") {
+      this.message = `\n${this.message}\n${this.position.start.line} | `;
+      let currLine = this.position.start.line;
+      for (let i = this.position.start.offset; i < this.position.end.offset; ++i) {
+        if (sourceCode[i] === "\n") {
+          this.message += `\n${++currLine} | `;
+        } else {
+          this.message += sourceCode[i];
+        }
       }
+      this.message += "\n";
     }
-    this.message += "\n";
   }
 }
 
 export class ProcessingError extends SourceCodeError {
-  constructor(message: string, sourceCode?: string, position?: Position) {
-    super(`Processing Error: ${message}`, sourceCode, position);
+  constructor(message: string, position?: Position) {
+    super(`Processing Error: ${message}`, position);
   }
 }
 
 export class SemanticAnalysisError extends SourceCodeError {
-  constructor(message: string, sourceCode?: string, position?: Position) {
-    super(`Semantic Analysis Error: ${message}`, sourceCode, position);
+  constructor(message: string, position?: Position) {
+    super(`Semantic Analysis Error: ${message}`, position);
   }
 }
 

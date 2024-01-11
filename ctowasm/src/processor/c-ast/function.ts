@@ -1,13 +1,13 @@
 import { CNodePBase, ExpressionP, StatementP } from "~src/processor/c-ast/core";
-import { MemoryObjectDetail } from "./memory";
+import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 
 /**
  * A processed function definition should include detailson the size of locals and size of return.
  */
 export interface FunctionDefinitionP extends CNodePBase {
   type: "FunctionDefinition";
-  params: MemoryObjectDetail[];
-  returnMemoryDetails: MemoryObjectDetail[] | null; // The return of a function is broken up into multiple primary data types, as structs may be returned form functions
+  params: PrimaryDataTypeMemoryObjectDetails[];
+  returnMemoryDetails: PrimaryDataTypeMemoryObjectDetails[] | null; // The return of a function is broken up into multiple primary data types, as structs may be returned form functions
   sizeOfLocals: number; // size of all the locals in bytes
   sizeOfReturn: number; /// size of the return type
   sizeOfParams: number; // size of all the parameters in bytes
@@ -37,8 +37,4 @@ export interface FunctionCallP {
   type: "FunctionCall";
   calledFunction: CallableP;
   args: ExpressionP[]; // the sequence of expressions which load up the function arguments
-}
-
-export interface ReturnStatementP extends CNodePBase {
-  type: "ReturnStatement";
 }

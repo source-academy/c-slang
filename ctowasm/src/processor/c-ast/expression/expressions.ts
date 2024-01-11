@@ -1,4 +1,5 @@
 import { BinaryOperator, PrefixOperator } from "~src/common/types";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 import {
   ExpressionP,
   StatementP,
@@ -13,7 +14,7 @@ export interface BinaryExpressionP extends ExpressionPBase {
 }
 
 export interface UnaryExpressionP extends ExpressionPBase {
-  type: "PrefixExpression";
+  type: "UnaryExpression";
   operator: PrefixOperator;
   expr: ExpressionP;
 }
@@ -48,18 +49,9 @@ export interface PostStatementExpressionP extends ExpressionPBase {
 }
 
 /**
- * Helper expresssion wrappers that wraps ExpressionP(s)
- * There are not a processed C AST node, merely used for type checks
- * during visiting of functions.
+ * A wrapper for the result of processing expressions, to be used by the processor only (not present in generated AST)
  */
-export type ExpressionWrapperP = SingleExpressionP | MultiExpressionP;
-
-export interface SingleExpressionP {
-  type: "single";
-  expr: ExpressionP;
-}
-
-export interface MultiExpressionP {
-  type: "multi";
-  exprs: ExpressionP[];
+export interface ExpressionWrapperP {
+  originalDataType: DataType;
+  exprs: ExpressionP[] // the resultant processed ExpressionP
 }

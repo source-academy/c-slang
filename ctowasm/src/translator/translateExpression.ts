@@ -28,7 +28,8 @@ import { WasmBinaryExpression } from "~src/wasm-ast/expressions";
 import translateBinaryExpression from "~src/translator/translateBinaryExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 import { TranslationError, UnsupportedFeatureError, toJson } from "~src/errors";
-import { getDataTypeSize, isConstant } from "~src/common/utils";
+import { isConstant } from "~src/common/utils";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
 import translateUnaryExpression from "~src/translator/translateUnaryExpression";
 

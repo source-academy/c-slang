@@ -23,12 +23,9 @@ import { WasmFloatType, WasmIntType, WasmType } from "~src/wasm-ast/types";
 import { WasmModule, WasmExpression } from "~src/wasm-ast/core";
 import { WasmSymbolTable } from "./symbolTable";
 import { MemoryVariableByteSize } from "~src/wasm-ast/memory";
-import { Constant } from "~src/parser/c-ast/constants";
-import {
-  getDataTypeSize,
-  isSignedIntegerType,
-  isUnsignedIntegerType,
-} from "~src/common/utils";
+import { Constant } from "~src/parser/c-ast/expression/constant";
+import { isSignedIntegerType, isUnsignedIntegerType } from "~src/common/utils";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import {
   NumericConversionInstruction,
   WasmNumericConversionWrapper,

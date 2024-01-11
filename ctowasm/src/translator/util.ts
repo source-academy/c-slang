@@ -25,7 +25,7 @@ import { DataType } from "~src/parser/c-ast/dataTypes";
 import { primaryCDataTypeToWasmType } from "~src/translator/variableUtil";
 import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmIntegerConst } from "~src/wasm-ast/consts";
-import { getDataTypeSize } from "~src/common/utils";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError, toJson } from "~src/errors";
 
 /**

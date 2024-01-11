@@ -3,11 +3,11 @@ import { CNodeBase, Expression } from "~src/parser/c-ast/core";
 type JumpStatement = BreakStatement | ContinueStatement | ReturnStatement;
 export default JumpStatement;
 
-export interface BreakStatement {
+export interface BreakStatement extends CNodeBase {
   type: "BreakStatement";
 }
 
-export interface ContinueStatement {
+export interface ContinueStatement extends CNodeBase {
   type: "ContinueStatement";
 }
 

@@ -7,9 +7,10 @@ import {
   FunctionCall,
   FunctionCallStatement,
   FunctionDeclaration,
-} from "~src/parser/c-ast/function";
+} from "~src/parser/c-ast/expression/functionCall";
 import { Declaration } from "~src/parser/c-ast/core";
-import { Initialization, VariableExpr } from "~src/parser/c-ast/variable";
+import { Initialization } from "~src/parser/c-ast/variable";
+import { IdentifierExpr } from "~src/parser/c-ast/expression/identifierExpr";
 import { SemanticAnalysisError } from "~src/errors";
 import { SymbolTable } from "~src/processor/symbolTable";
 
@@ -119,7 +120,7 @@ export function checkForRedefinition(
  */
 export function checkForVariableDeclaration(
   sourceCode: string,
-  node: VariableExpr,
+  node: IdentifierExpr,
   scope: Scope
 ) {
   let curr = scope;

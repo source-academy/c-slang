@@ -4,111 +4,62 @@
 
 import { ScalarCDataType } from "~src/common/types";
 import {
-  CNodePBase,
   ExpressionP,
   ExpressionPBase,
 } from "~src/processor/c-ast/core";
+import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 
-export type MemoryLoad =
-  | LocalObjectMemoryLoad
-  | DataSegmentObjectMemoryLoad
-  | FunctionReturnMemoryLoad;
-export type MemoryStore =
-  | LocalObjectMemoryStore
-  | FunctionReturnMemoryStore
-  | DataSegmentObjectMemoryStore;
+/**
+ * Types of addresses. Each address represents the address of a specific primary data type object in memory.
+ */
+export type Address = LocalAddress | DataSegmentAddress | DynamicAddress;
 
-// Represents expressions that correspond to addresses in memory.
-export type ObjectMemoryAddress = LocalObjectMemoryAddress | DataSegmentObjectMemoryAddress
+// this covers local variables and parameters in a functions.
+//
+export interface LocalAddress extends ExpressionPBase {
+  type: "LocalAddress";
+  offset: ExpressionP; // represents the number of bytes of this address from the the first byte of first local object (which will be function parameter if function has any)
+}
 
-interface ScalarDataTypeObjectMemoryDetails {
+// covers data segment (global) variables
+export interface DataSegmentAddress extends ExpressionPBase {
+  type: "DataSegmentAddress";
+  offset: ExpressionP; // represents the number of bytes of this address from the first byte of the first data segment object
+}
+
+export interface DynamicAddress extends ExpressionPBase {
+  type: "DynamicAddress";
+  address: ExpressionP; // represents the exact address itself
+}
+
+/**
+ * Nodes that represent interactions with objects in memory.
+ */
+
+// Represents the loading of a primary data type object in an address in memory
+export interface MemoryLoad extends ExpressionPBase {
+  type: "MemoryLoad";
+  address: Address;
+}
+
+// Represents the storing of a primary data type object in an address in memory
+export interface MemoryStore {
+  type: "MemoryStore";
+  address: Address;
+  value: ExpressionP;
   dataType: ScalarCDataType;
-  offset: ExpressionP; // offset from the first byte of the first local object
 }
 
-/**
- * Represents the storing of the value of an expression to the memory location that defines
- * a local variable, which consists of locally defined variables in a function, and the function parameters.
- * Thus local variables and function parameters are assumed to be laid out contiguously in memory, with function parameters first.
- *
- * Memory storing is with regards to primary data types - storage of aggregate data types are broken up into multipl
- * LocalVariableMemoryStore nodes.
- */
-export interface LocalObjectMemoryStore
-  extends ScalarDataTypeObjectMemoryDetails,
-    CNodePBase {
-  type: "LocalObjectMemoryStore";
-  value: ExpressionP;
-}
-
-export interface LocalObjectMemoryLoad
-  extends ScalarDataTypeObjectMemoryDetails,
-    ExpressionPBase {
-  type: "LocalObjectMemoryLoad";
-}
-
-/**
- * Represents a specific location in the stack frame,
- * relative to the first byte of the first local variable (function parameter or local function variable)
- */
-export interface LocalObjectMemoryAddress extends ExpressionPBase {
-  type: "LocalObjectMemoryAddress";
-  dataType: "pointer",
-  offset: number;
-}
-
-/**
- * Represents storing of the return primary data object of a function.
- * Functions that return structs may have multiple of these as structs are composed of multiple primary data types.
- */
-export interface FunctionReturnMemoryStore
-  extends ScalarDataTypeObjectMemoryDetails,
-    CNodePBase {
-  type: "FunctionReturnMemoryStore";
-  value: ExpressionP;
-}
-
-/**
- * To be used only after function calls where return is used.
- * Represents the loading of a primary data type (of which the return object may be composed of a number of).
- */
-export interface FunctionReturnMemoryLoad
-  extends ExpressionPBase,
-    ScalarDataTypeObjectMemoryDetails {
+// Special node for handling loading of return object in memory, since return object is not an lvalue.
+export interface FunctionReturnMemoryLoad extends ExpressionPBase {
   type: "FunctionReturnMemoryLoad";
+  offset: IntegerConstantP;
 }
 
-/**
- * Represents the storing of a primary data object in the data segment. (static storage)
- */
-export interface DataSegmentObjectMemoryStore
-  extends ScalarDataTypeObjectMemoryDetails,
-    CNodePBase {
-  type: "DataSegmentObjectMemoryStore";
+// Special node for handling storing of return in memory.
+export interface FunctionReturnMemoryStore {
+  type: "FunctionReturnMemoryStore";
+  offset: IntegerConstantP; // number of bytes from first byte of first return primary data type memory object (since an entire return object may be broken into multiple primary data types eg for returning structs)
   value: ExpressionP;
-}
-
-export interface DataSegmentObjectMemoryLoad
-  extends ScalarDataTypeObjectMemoryDetails,
-    ExpressionPBase {
-  type: "DataSegmentObjectMemoryLoad";
-}
-
-export interface DataSegmentObjectMemoryAddress extends ExpressionPBase {
-  type: "DataSegmentObjectMemoryAddress",
-  offset: number;
-}
-
-/**
- * Represents the loading of specific memory address specified by the expression.
- */
-export interface MemoryAddressExpressionLoad extends ExpressionPBase {
-  type: "DataSegmenetMemoryAddress";
-  offset: ExpressionP;
-}
-
-
-export interface MemoryObjectDetail {
   dataType: ScalarCDataType;
-  offset: number; // for param - offset from first byte of first param ; for return - offset from first byte of first return
 }

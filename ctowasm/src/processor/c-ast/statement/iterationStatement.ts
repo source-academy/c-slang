@@ -1,11 +1,11 @@
 import { CNodePBase, ExpressionP, StatementP } from "~src/processor/c-ast/core";
 
-export type IterationStatementP = DoWhileLoopP | WhileLoopP | ForLoopP
+export type IterationStatementP = DoWhileLoopP | WhileLoopP | ForLoopP;
 
 /**
  * Contain definition for AST node relating to loops in C.
  */
-interface IterationStatementBase extends CNodePBase{
+interface IterationStatementBase extends CNodePBase {
   type: "DoWhileLoop" | "WhileLoop" | "ForLoop";
   condition: ExpressionP;
   body: StatementP[];
@@ -21,9 +21,7 @@ export interface WhileLoopP extends IterationStatementBase {
 
 export interface ForLoopP extends IterationStatementBase {
   type: "ForLoop";
-  clause: {
-    type: "Expression" | "Declaration",
-    value: DeclarationP | ExpressionP
-  } | null;
-  update: ExpressionP;
+  // statements that run before the condition and body
+  clause: StatementP[];
+  update: StatementP[];
 }
