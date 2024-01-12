@@ -11,7 +11,6 @@ import { ImportedFunction } from "~src/wasmModuleImports";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import { Declaration } from "~src/parser/c-ast/declaration";
 import translateFunction from "~src/translator/translateFunction";
-import { convertVariableToByteStr } from "~src/translator/dataSegmentUtil";
 import { WasmMemoryVariable } from "~src/translator/wasm-ast/memory";
 import { CAstRootP } from "~src/processor/c-ast/core";
 
@@ -31,7 +30,7 @@ export default function translate(
   const rootSymbolTable = createSymbolTable(); // root symbol table; contains globals.
 
   // 1st pass - get all function and global variable information
-  for (const child of CAstRoot.children) {
+  for (const child of CAstRoot.statements) {
     if (child.type === "FunctionDefinition") {
       translateFunction(wasmRoot, child, rootSymbolTable);
     } else if (

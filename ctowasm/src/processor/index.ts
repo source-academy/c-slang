@@ -5,8 +5,8 @@
 import { CAstRoot } from "~src/parser/c-ast/core";
 import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { CAstRootP } from "~src/processor/c-ast/core";
-import processFunctionDefinition from "~src/processor/functionUtil";
-import processDeclaration from "~src/processor/processDeclaration";
+import processFunctionDefinition from "~src/processor/processFunctionDefinition";
+import { processDataSegmentVariableDeclaration } from "~src/processor/processDeclaration";
 import { SymbolTable } from "~src/processor/symbolTable";
 
 /**
@@ -15,13 +15,16 @@ import { SymbolTable } from "~src/processor/symbolTable";
  * @param sourceCode
  * @returns
  */
-export default function process(ast: CAstRoot, externalFunctions?: Record<string, FunctionDataType>) {
+export default function process(
+  ast: CAstRoot,
+  externalFunctions?: Record<string, FunctionDataType>
+) {
   const symbolTable = new SymbolTable();
-  symbolTable.setExternalFunctions(externalFunctions?? {});
+  symbolTable.setExternalFunctions(externalFunctions ?? {});
   const processedAst: CAstRootP = {
     type: "Root",
     functions: [],
-    statements: [],
+    dataSegmentByteStr: "",
   };
   ast.children.forEach((child) => {
     // special handling for function definitions
@@ -30,10 +33,10 @@ export default function process(ast: CAstRoot, externalFunctions?: Record<string
         processFunctionDefinition(child, symbolTable)
       );
     } else {
-      const processedNode = processDeclaration(child, symbolTable);
-      processedNode.forEach((statement) =>
-        processedAst.statements.push(statement)
-      );
+      processedAst.dataSegmentByteStr += processDataSegmentVariableDeclaration(
+        child,
+        symbolTable
+      ); // add the byte str used to initalize this variable to teh data segment byte string
     }
   });
   return processedAst;

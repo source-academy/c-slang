@@ -6,7 +6,7 @@ import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 
 import { ExpressionP } from "~src/processor/c-ast/core";
 import {
-  primaryVariableSizes,
+  scalarDataTypeSizes,
   isFloatType,
   isIntegerType,
 } from "~src/common/utils";
@@ -102,8 +102,8 @@ export function determineDataTypeOfBinaryExpression(
   ) {
     // take more higher ranking float type
     if (
-      primaryVariableSizes[rightExprDataType.primaryDataType] >
-      primaryVariableSizes[leftExprDataType.primaryDataType]
+      scalarDataTypeSizes[rightExprDataType.primaryDataType] >
+      scalarDataTypeSizes[leftExprDataType.primaryDataType]
     ) {
       return leftExprDataType;
     } else {
@@ -122,8 +122,8 @@ export function determineDataTypeOfBinaryExpression(
     }
 
     if (
-      primaryVariableSizes[rightExprDataType.primaryDataType] >
-      primaryVariableSizes[leftExprDataType.primaryDataType]
+      scalarDataTypeSizes[rightExprDataType.primaryDataType] >
+      scalarDataTypeSizes[leftExprDataType.primaryDataType]
     ) {
       return rightExprDataType;
     } else {

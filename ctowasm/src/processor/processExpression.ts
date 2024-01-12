@@ -14,7 +14,7 @@ import {
 } from "~src/processor/expressionUtil";
 import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
-import { processFunctionReturnType } from "./functionUtil";
+import { convertFunctionCallToFunctionCallP, processFunctionReturnType } from "./processFunctionDefinition";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processBlockItem from "~src/processor/processBlockItem";
 import { getDataTypeSize, isScalarType } from "~src/processor/dataTypeUtil";
@@ -154,11 +154,10 @@ export default function processExpression(
         exprs: [processedConstant],
       };
     } else if (expr.type === "FunctionCall") {
-      const functionCallStatements = processBlockItem(expr, symbolTable);
+      const functionCallStatement = convertFunctionCallToFunctionCallP(expr, symbolTable);
 
       let funcReturnType;
       if (expr.expr.type === "IdentifierExpression") {
-
         const symbolEntry = symbolTable.getSymbolEntry(
           expr.expr.name
         ) as FunctionSymbolEntry;
@@ -188,7 +187,7 @@ export default function processExpression(
           {
             type: "PreStatementExpression",
             // run function call before loading return values
-            statements: functionCallStatements,
+            statements: [functionCallStatement],
             dataType: returnObjectMemoryLoads[0].dataType,
             expr: returnObjectMemoryLoads[0],
           },

@@ -9,13 +9,13 @@ import { ProcessingError, toJson } from "~src/errors";
 import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { processCondition } from "~src/processor/util";
-import { processFunctionReturnStatement } from "./functionUtil";
+import { convertFunctionCallToFunctionCallP, processFunctionReturnStatement } from "./processFunctionDefinition";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processExpression from "~src/processor/processExpression";
 import { BlockItem, Statement } from "~src/parser/c-ast/core";
-import processDeclaration from "~src/processor/processDeclaration";
 import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
+import { processLocalVariableDeclaration } from "~src/processor/processDeclaration";
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -28,7 +28,7 @@ import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressio
 export default function processBlockItem(
   node: BlockItem,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinitionP // reference to enclosing function, if any
+  enclosingFunc: FunctionDefinitionP // reference to enclosing function, if any
 ): StatementP[] {
   try {
     if (node.type === "Block") {
@@ -52,9 +52,9 @@ export default function processBlockItem(
       if (node.clause !== null && node.clause.type === "Declaration") {
         // create new scope for this declaration
         forLoopSymbolTable = new SymbolTable(symbolTable);
-        clause = processDeclaration(node.clause.value, forLoopSymbolTable);
+        clause = processLocalVariableDeclaration(node.clause.value, forLoopSymbolTable, enclosingFunc);
       } else if (node.clause !== null && node.clause.type === "Expression") {
-        clause = processBlockItem(node.clause.value, forLoopSymbolTable);
+        clause = processBlockItem(node.clause.value, forLoopSymbolTable, enclosingFunc);
       } else {
         clause = [];
       }
@@ -116,9 +116,9 @@ export default function processBlockItem(
         {
           type: "SelectionStatement",
           condition: processCondition(node.condition, symbolTable),
-          ifStatements: processBlockItem(node.ifStatement, symbolTable),
+          ifStatements: processBlockItem(node.ifStatement, symbolTable, enclosingFunc),
           elseStatements: node.elseStatement
-            ? processBlockItem(node.elseStatement, symbolTable)
+            ? processBlockItem(node.elseStatement, symbolTable, enclosingFunc)
             : null,
         },
       ];
@@ -136,34 +136,7 @@ export default function processBlockItem(
       return getAssignmentMemoryStoreNodes(node, symbolTable);
     } else if (node.type === "FunctionCall") {
       // in this context, the return (if any) of the functionCall is ignored, as it is used as a statement
-      if (node.expr.type === "IdentifierExpression") {
-        const symbolEntry = symbolTable.getSymbolEntry(node.expr.name);
-        if (symbolEntry.dataType.type !== "function") {
-          throw new ProcessingError(
-            `Called object '${node.expr.name}' is neither a function nor function pointer`
-          );
-        }
-        return [
-          {
-            type: "FunctionCall",
-            calledFunction: {
-              type: "FunctionName",
-              name: node.expr.name,
-            },
-            args: node.args.reduce(
-              (prv, expr) =>
-                prv.concat(processExpression(expr, symbolTable).exprs),
-              [] as ExpressionP[]
-            ),
-          },
-        ];
-      } else {
-        throw new ProcessingError(
-          `Called expression is neither a function nor function pointer`,
-          node.position
-        );
-      }
-      //TODO: add function pointer support
+      return [convertFunctionCallToFunctionCallP(node, symbolTable)]
     } else if (
       node.type === "PrefixExpression" ||
       node.type === "PostfixExpression"
@@ -186,8 +159,8 @@ export default function processBlockItem(
     ) {
       // all these expression statements can be safely ignored as they have no side effects
       return [];
-    } else if(node.type === "Declaration") {
-      return processDeclaration(node, symbolTable, enclosingFunc);
+    } else if (node.type === "Declaration") {
+      return processLocalVariableDeclaration(node, symbolTable, enclosingFunc);
     } else {
       throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);
     }

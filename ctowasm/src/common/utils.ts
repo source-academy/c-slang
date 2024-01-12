@@ -5,12 +5,13 @@
 import { CNodeBase } from "~src/parser/c-ast/core";
 import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 import { MemoryVariableByteSize } from "~src/translator/wasm-ast/memory";
+import { POINTER_SIZE } from "~src/common/constants";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
  */
-export const primaryVariableSizes: Record<
-  PrimaryCDataType,
+export const scalarDataTypeSizes: Record<
+  ScalarCDataType,
   MemoryVariableByteSize
 > = {
   ["unsigned char"]: 1,
@@ -23,6 +24,7 @@ export const primaryVariableSizes: Record<
   ["signed long"]: 8,
   ["float"]: 4,
   ["double"]: 8,
+  ["pointer"]: POINTER_SIZE
 };
 
 export function isSignedIntegerType(dataType: ScalarCDataType) {

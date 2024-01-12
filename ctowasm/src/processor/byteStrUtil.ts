@@ -2,51 +2,51 @@
  * Some utility functions for converting variable intializers into byte strings.
  */
 
+import { isIntegerType, scalarDataTypeSizes } from "~src/common/utils";
+import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import {
-  Constant,
-  FloatConstant,
-  IntegerConstant,
-} from "~src/parser/c-ast/expression/constant";
-import { Initializer } from "~src/parser/c-ast/declaration";
-import { isConstant, isIntegerType, primaryVariableSizes } from "~src/common/utils";
-import { getDataTypeSize } from "~src/processor/dataTypeUtil";
-import { TranslationError } from "~src/errors";
-import { ConstantP, FloatConstantP, IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { primaryCDataTypeToWasmType } from "~src/translator/dataTypeUtil";
+  ConstantP,
+  FloatConstantP,
+  IntegerConstantP,
+} from "~src/processor/c-ast/expression/constants";
+import { DataType } from "~src/parser/c-ast/dataTypes";
+import { POINTER_SIZE } from "~src/common/constants";
+import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 
-/**
- * Converts a given variable to byte string, for storage in data segment.
- */
-
-export function convertVariableToByteStr(initializer: Initializer) {
-  if (initializer.type === "InitializerSingle") {
-    if (!isConstant(initializer.value)) {
-      // A single initializer must already be a constant
-      throw new TranslationError(
-        "convertVariableToByteStr: initializer value is not a constant"
-      );
+export function getZeroInializerByteStrForDataType(dataType: DataType) {
+  let byteStr = "";
+  if (dataType.type === "primary" || dataType.type === "pointer") {
+    const numOfBytes =
+      dataType.type === "primary"
+        ? scalarDataTypeSizes[dataType.primaryDataType]
+        : POINTER_SIZE;
+    for (let i = 0; i < numOfBytes; ++i) {
+      byteStr += "\\00";
     }
-    const n = initializer.value as Constant;
-    return convertConstantToByteStr(n);
+  } else if (dataType.type === "array") {
+    const numElements = evaluateCompileTimeExpression(
+      dataType.numElements
+    ).value;
+    const elementZeroStr = getZeroInializerByteStrForDataType(
+      dataType.elementDataType
+    );
+    for (let i = 0; i < numElements; i++) {
+      byteStr += elementZeroStr;
+    }
+  } else if (dataType.type === "struct") {
+    // TODO: struct
+    throw new UnsupportedFeatureError("structs not yet supported");
+  } else if (dataType.type === "function") {
+    throw new ProcessingError("Cannot initialize a function data type");
   }
 
-  // Initializer list
-  let finalStr = "";
-  initializer.values.forEach((element) => {
-    if (!isConstant(element)) {
-      // should already be a constant
-      throw new TranslationError(
-        "convertVariableToByteStr: initializer list element is not a constant"
-      );
-    }
-    finalStr += convertConstantToByteStr(element);
-  });
-  return finalStr;
+  return byteStr;
 }
+
 /**
  * Converts a Constant into its byte string representation in little endian format.
  */
-function convertConstantToByteStr(constant: ConstantP) {
+export function convertConstantToByteStr(constant: ConstantP) {
   if (isIntegerType(constant.dataType)) {
     return convertIntegerConstantToByteString(constant as IntegerConstantP);
   } else {
@@ -82,12 +82,12 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
 function convertIntegerConstantToByteString(integerConstant: IntegerConstantP) {
   return convertIntegerToByteString(
     integerConstant.value,
-    primaryVariableSizes[integerConstant.dataType]
+    scalarDataTypeSizes[integerConstant.dataType]
   );
 }
 
 function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
-  const buffer = new ArrayBuffer(primaryVariableSizes[floatConstant.dataType]);
+  const buffer = new ArrayBuffer(scalarDataTypeSizes[floatConstant.dataType]);
   let integerValue;
   if (floatConstant.dataType === "float") {
     const float32Arr = new Float32Array(buffer);
@@ -105,6 +105,6 @@ function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    primaryVariableSizes[floatConstant.dataType]
+    scalarDataTypeSizes[floatConstant.dataType]
   );
 }

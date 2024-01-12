@@ -10,14 +10,18 @@ import {
 } from "./dataTypeUtil";
 import { UnsupportedFeatureError, toJson, ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
-import { StatementP } from "~src/processor/c-ast/core";
-import { FunctionDefinitionP } from "~src/processor/c-ast/function";
+import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
+import {
+  FunctionCallP,
+  FunctionDefinitionP,
+} from "~src/processor/c-ast/function";
 import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { POINTER_SIZE } from "~src/common/constants";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import processBlockItem from "~src/processor/processBlockItem";
+import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
@@ -154,4 +158,38 @@ export function processFunctionReturnStatement(
     type: "ReturnStatement",
   });
   return statements;
+}
+
+/**
+ * Convert a FunctionCall node into its corresponding FunctionCallP.
+ */
+export function convertFunctionCallToFunctionCallP(
+  node: FunctionCall,
+  symbolTable: SymbolTable
+): FunctionCallP {
+  if (node.expr.type === "IdentifierExpression") {
+    const symbolEntry = symbolTable.getSymbolEntry(node.expr.name);
+    if (symbolEntry.dataType.type !== "function") {
+      throw new ProcessingError(
+        `Called object '${node.expr.name}' is neither a function nor function pointer`
+      );
+    }
+    return {
+      type: "FunctionCall",
+      calledFunction: {
+        type: "FunctionName",
+        name: node.expr.name,
+      },
+      args: node.args.reduce(
+        (prv, expr) => prv.concat(processExpression(expr, symbolTable).exprs),
+        [] as ExpressionP[]
+      ),
+    };
+  } else {
+    throw new ProcessingError(
+      `Called expression is neither a function nor function pointer`,
+      node.position
+    );
+  }
+  //TODO: add function pointer support
 }
