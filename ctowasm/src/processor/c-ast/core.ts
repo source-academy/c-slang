@@ -14,7 +14,6 @@ import {
   UnaryExpressionP,
 } from "~src/processor/c-ast/expression/expressions";
 import {
-  ExternalFunctionCallP,
   FunctionCallP,
   FunctionDefinitionP,
 } from "~src/processor/c-ast/function";
