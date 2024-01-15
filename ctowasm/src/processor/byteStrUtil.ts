@@ -2,7 +2,6 @@
  * Some utility functions for converting variable intializers into byte strings.
  */
 
-import { isIntegerType, priamryDataTypeSizes } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import {
   ConstantP,
@@ -10,16 +9,14 @@ import {
   IntegerConstantP,
 } from "~src/processor/c-ast/expression/constants";
 import { DataType } from "~src/parser/c-ast/dataTypes";
-import { POINTER_SIZE } from "~src/common/constants";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
+import { getDataTypeSize } from "~src/processor/dataTypeUtil";
+import { isIntegerType, primaryDataTypeSizes } from "~src/common/utils";
 
 export function getZeroInializerByteStrForDataType(dataType: DataType) {
   let byteStr = "";
   if (dataType.type === "primary" || dataType.type === "pointer") {
-    const numOfBytes =
-      dataType.type === "primary"
-        ? priamryDataTypeSizes[dataType.primaryDataType]
-        : POINTER_SIZE;
+    const numOfBytes = getDataTypeSize(dataType);
     for (let i = 0; i < numOfBytes; ++i) {
       byteStr += "\\00";
     }
@@ -82,12 +79,12 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
 function convertIntegerConstantToByteString(integerConstant: IntegerConstantP) {
   return convertIntegerToByteString(
     integerConstant.value,
-    priamryDataTypeSizes[integerConstant.dataType]
+    primaryDataTypeSizes[integerConstant.dataType]
   );
 }
 
 function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
-  const buffer = new ArrayBuffer(priamryDataTypeSizes[floatConstant.dataType]);
+  const buffer = new ArrayBuffer(primaryDataTypeSizes[floatConstant.dataType]);
   let integerValue;
   if (floatConstant.dataType === "float") {
     const float32Arr = new Float32Array(buffer);
@@ -105,6 +102,6 @@ function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    priamryDataTypeSizes[floatConstant.dataType]
+    primaryDataTypeSizes[floatConstant.dataType]
   );
 }

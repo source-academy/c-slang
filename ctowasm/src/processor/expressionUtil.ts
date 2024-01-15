@@ -5,9 +5,9 @@
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 
 import {
-  priamryDataTypeSizes,
   isFloatType,
   isIntegerType,
+  primaryDataTypeSizes,
 } from "~src/common/utils";
 import {
   DataType,
@@ -99,8 +99,8 @@ export function determineDataTypeOfBinaryExpression(
   ) {
     // take more higher ranking float type
     if (
-      priamryDataTypeSizes[rightExprDataType.primaryDataType] >
-      priamryDataTypeSizes[leftExprDataType.primaryDataType]
+      primaryDataTypeSizes[rightExprDataType.primaryDataType] >
+      primaryDataTypeSizes[leftExprDataType.primaryDataType]
     ) {
       return leftExprDataType;
     } else {
@@ -119,8 +119,8 @@ export function determineDataTypeOfBinaryExpression(
     }
 
     if (
-      priamryDataTypeSizes[rightExprDataType.primaryDataType] >
-      priamryDataTypeSizes[leftExprDataType.primaryDataType]
+      primaryDataTypeSizes[rightExprDataType.primaryDataType] >
+      primaryDataTypeSizes[leftExprDataType.primaryDataType]
     ) {
       return rightExprDataType;
     } else {
