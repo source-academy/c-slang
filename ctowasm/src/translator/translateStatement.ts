@@ -78,7 +78,7 @@ export default function translateStatement(
         ? statement.elseStatements.map((s) =>
             translateStatement(s, enclosingLoopDetails)
           )
-        : null,
+        : [],
     };
   } else if (statement.type === "DoWhileLoop") {
     const loopLabel = generateLoopLabel(enclosingLoopDetails);

@@ -2,7 +2,8 @@
  * WAT Generator module for generating a WAT string from WAT AST.
  */
 import { WasmModule } from "~src/translator/wasm-ast/core";
-import generateFunctionBodyWat from "~src/wat-generator/generateFunctionBodyWat";
+import generateWatExpression from "~src/wat-generator/generateWatExpression";
+import generateWatStatement from "~src/wat-generator/generateWatStatement";
 import { generateLine } from "~src/wat-generator/util";
 
 export function generateWat(module: WasmModule, baseIndentation: number = 0) {
@@ -15,12 +16,11 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   );
 
   // add the imported functions
-  for (const importedFunctionName of Object.keys(module.importedFunctions)) {
-    const importedFunction = module.importedFunctions[importedFunctionName];
+  for (const importedFunction of module.importedFunctions) {
     watStr += generateLine(
-      `(import "${importedFunction.parentImportedObject}" "${
-        importedFunction.name
-      }" (func $${importedFunction.name}${
+      `(import ${importedFunction.importPath
+        .map((s) => `"${s}"`)
+        .join(" ")} (func $${importedFunction.name}${
         importedFunction.wasmParamTypes.length > 0
           ? " " +
             importedFunction.wasmParamTypes
@@ -28,8 +28,11 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
               .join(" ")
           : ""
       }${
-        importedFunction.returnWasmType !== null
-          ? ` (result ${importedFunction.return})`
+        importedFunction.returnWasmTypes.length > 0
+          ? " " +
+            importedFunction.returnWasmTypes
+              .map((r) => `(result ${r})`)
+              .join(" ")
           : ""
       }))`,
       baseIndentation + 1
@@ -40,10 +43,10 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   for (const global of module.globalWasmVariables) {
     watStr += generateLine(
       `(global $${global.name} (${global.isConst ? "" : "mut"} ${
-        global.varType
+        global.wasmDataType
       }) ${
         global.initializerValue
-          ? generateFunctionBodyWat(global.initializerValue)
+          ? generateWatExpression(global.initializerValue)
           : ""
       })`,
       baseIndentation + 1
@@ -51,12 +54,11 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   }
 
   // add all the global variables (in linear memory) intiializations
-  module.dataSegmentByteStr.forEach((dataSegmentInitialization) => {
-    watStr += generateLine(
-      `(data (i32.const ${dataSegmentInitialization.addr}) "${dataSegmentInitialization.byteStr}")`,
-      baseIndentation + 1
-    );
-  });
+  module.dataSegmentByteStr = generateLine(
+    `(data (i32.const 0) "${module.dataSegmentByteStr}")`,
+    baseIndentation + 1
+  );
+  
 
   // add all the function definitions
   for (const functionName of Object.keys(module.functions)) {
@@ -64,7 +66,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
     watStr += generateLine(`(func $${func.name}`, baseIndentation + 1);
     for (const statement of func.body) {
       watStr += generateLine(
-        generateFunctionBodyWat(statement),
+        generateWatStatement(statement),
         baseIndentation + 2
       );
     }

@@ -33,7 +33,7 @@ export interface WasmGlobalSet extends WasmAstNode {
 export interface WasmLocalSet extends WasmAstNode {
   type: "LocalSet";
   name: string;
-  wasmDataType: WasmDataType;
+  value: WasmExpression;
 }
 
 export interface WasmLocalGet extends WasmAstNode {

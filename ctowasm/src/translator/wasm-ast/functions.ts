@@ -32,7 +32,7 @@ export interface WasmFunctionCall extends WasmAstNode {
   type: "FunctionCall";
   name: string;
   stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
-  stackFrameTearDown: (WasmStatement | WasmMemoryLoad)[]; // statements teardown the stack frame
+  stackFrameTearDown: WasmStatement[]; // statements teardown the stack frame
 }
 
 /**
@@ -56,5 +56,5 @@ export interface WasmImportedFunction {
   name: string; // the name defined for this imported function within the wasm module
   importPath: string[]; // import path for function e.g: ["console", "log"]
   wasmParamTypes: WasmDataType[]; // the params of the functions in wasm
-  returnWasmTypes: WasmDataType[] | null;
+  returnWasmTypes: WasmDataType[];
 }

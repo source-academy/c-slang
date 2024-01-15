@@ -12,7 +12,7 @@ export interface WasmSelectionStatement extends WasmAstNode {
   type: "SelectionStatement";
   condition: WasmBooleanExpression;
   actions: WasmStatement[];
-  elseStatements: WasmStatement[] | null ;
+  elseStatements: WasmStatement[];
 }
 
 export interface WasmLoop extends WasmAstNode {

@@ -4,7 +4,8 @@
 
 import { WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
-import generateFunctionBodyWat from "~src/wat-generator/generateFunctionBodyWat";
+import generateWatExpression from "~src/wat-generator/generateWatExpression";
+import generateWatStatement from "~src/wat-generator/generateWatStatement";
 
 /**
  * Function that returns a line in wat file with given level of identation & ending with newline.
@@ -62,7 +63,7 @@ export function getWasmMemoryStoreInstruction(
 export function generateArgString(exprs: WasmExpression[]) {
   let argsStr = "";
   for (const arg of exprs) {
-    argsStr += generateFunctionBodyWat(arg) + " ";
+    argsStr += generateWatExpression(arg) + " ";
   }
   return argsStr.trim();
 }
@@ -71,16 +72,7 @@ export function generateArgString(exprs: WasmExpression[]) {
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
 export function generateStatementsList(
-  statements: (WasmStatement | WasmExpression)[]
+  statements: WasmStatement[]
 ) {
-  return statements.map((s) => generateFunctionBodyWat(s)).join(" ");
-}
-
-export function getPreStatementsStr(
-  preStatements?: (WasmStatement | WasmExpression)[]
-) {
-  const s = preStatements
-    ? preStatements.map((s) => generateFunctionBodyWat(s))
-    : [];
-  return s.length > 0 ? " " + s.join(" ") : "";
+  return statements.map((s) => generateWatStatement(s)).join(" ");
 }

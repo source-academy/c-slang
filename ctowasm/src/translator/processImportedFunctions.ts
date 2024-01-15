@@ -45,7 +45,7 @@ export default function processImportedFunctions(
         ? externalCFunction.returnObjects.map((retObj) =>
             convertScalarDataTypeToWasmType(retObj.dataType)
           )
-        : null,
+        : [],
     });
 
     // create the function wrapper
@@ -99,6 +99,6 @@ export default function processImportedFunctions(
     }
    
   }
-  
+
   return { functionImports, wrappedFunctions };
 }

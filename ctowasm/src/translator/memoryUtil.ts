@@ -140,7 +140,7 @@ export function getPointerDecrementNode(
  */
 export function getFunctionCallStackFrameTeardownStatements(
   functionDetails: FunctionDetails
-): (WasmStatement | WasmMemoryLoad)[] {
+): WasmStatement[] {
   return [
     // bring the stack pointer back down to end of previous stack frame
     getStackPointerSetNode({
