@@ -130,7 +130,7 @@ export function getPointerDecrementNode(
   return {
     type: "GlobalSet",
     name: pointer,
-    value: getRegisterPointerArithmeticNode(pointer, "+", decVal),
+    value: getRegisterPointerArithmeticNode(pointer, "-", decVal),
   };
 }
 
