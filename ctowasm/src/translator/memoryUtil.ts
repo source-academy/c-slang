@@ -304,6 +304,7 @@ export function getStackSpaceAllocationCheckStatement(
           },
         },
       },
+
       // copy the stack memory to the end, get REG_1 to below stack pointer
       {
         type: "Block",
@@ -452,7 +453,7 @@ export function getFunctionCallStackFrameSetupStatements(
       type: "MemoryStore",
       addr: {
         type: "BinaryExpression",
-        instruction: WASM_ADDR_SUB_INSTRUCTION,
+        instruction: WASM_ADDR_ADD_INSTRUCTION,
         leftExpr: reg1GetNode,
         rightExpr: {
           type: "IntegerConst",

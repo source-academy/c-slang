@@ -556,15 +556,15 @@ logical_and_expression
   / bitwise_or_expression
 
 bitwise_or_expression
-  = firstExpr:bitwise_xor_expression _ tail:(_ @("|") _ @bitwise_xor_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_xor_expression _ tail:(_ @"|" _ @bitwise_xor_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_xor_expression
 
 bitwise_xor_expression 
-  = firstExpr:bitwise_and_expression _ tail:(_ @("^") _ @bitwise_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:bitwise_and_expression _ tail:(_ @"^" _ @bitwise_and_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / bitwise_and_expression
 
 bitwise_and_expression 
-  = firstExpr:equality_relational_expression _ tail:(_ @("&") _ @equality_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  = firstExpr:equality_relational_expression _ tail:(_ @"&" _ @equality_relational_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
   / equality_relational_expression
 
 equality_relational_expression

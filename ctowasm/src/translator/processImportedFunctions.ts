@@ -35,7 +35,7 @@ export default function processImportedFunctions(
       ); // should not happen as imports are synchronized across modules
     }
     const externalCFunction = externalCFunctions[functionName];
-    
+
     functionImports.push({
       name: functionName + "_imported",
       importPath: [importedFunction.parentImportedObject, functionName],
@@ -76,7 +76,7 @@ export default function processImportedFunctions(
         }
         importedFunctionCall.args.push({
           type: "MemoryLoad",
-          addr: getRegisterPointerArithmeticNode(BASE_POINTER, "-", externalCFunction.parameters[i].offset),
+          addr: getRegisterPointerArithmeticNode(BASE_POINTER, "+", externalCFunction.parameters[i].offset),
           wasmDataType: convertScalarDataTypeToWasmType(externalCFunction.parameters[i].dataType), 
           numOfBytes: getSizeOfScalarDataType(externalCFunction.parameters[i].dataType),
         })
