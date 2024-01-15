@@ -8,10 +8,7 @@ import { MemoryStore } from "~src/processor/c-ast/memory";
 import { SymbolTable } from "~src/processor/symbolTable";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import processExpression from "~src/processor/processExpression";
-import {
-  stringifyDataType,
-  unpackDataType,
-} from "~src/processor/dataTypeUtil";
+import { unpackDataType } from "~src/processor/dataTypeUtil";
 import { getDerefExpressionMemoryDetails } from "~src/processor/expressionUtil";
 
 /**
@@ -24,7 +21,7 @@ export function getAssignmentMemoryStoreNodes(
 ): MemoryStore[] {
   try {
     const memoryStoreStatements: MemoryStore[] = [];
-    const assignedExprs = processExpression(assignmentNode.value, symbolTable);
+    const assignedExprs = processExpression(assignmentNode.expr, symbolTable);
 
     if (assignmentNode.lvalue.type === "IdentifierExpression") {
       const symbolEntry = symbolTable.getSymbolEntry(

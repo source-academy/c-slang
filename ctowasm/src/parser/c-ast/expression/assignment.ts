@@ -4,9 +4,9 @@
 
 import { CNodeBase, Expression } from "~src/parser/c-ast/core";
 
-// A variable assignment
+// An assignment of expr to an lvalue
 export interface Assignment extends CNodeBase {
   type: "Assignment";
   lvalue: Expression; // only lvalues can be assigned to
-  value: Expression;
+  expr: Expression;
 }

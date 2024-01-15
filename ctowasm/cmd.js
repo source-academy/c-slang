@@ -94,4 +94,4 @@ fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
 fs.writeFileSync(outputFile, output);
 
-console.log(`WAT file saved to ${outputFile}`);
+console.log(`Output saved to ${outputFile}`);
