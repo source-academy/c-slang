@@ -66,7 +66,6 @@ export const wasmTypeToSize: Record<WasmDataType, MemoryVariableByteSize> = {
  */
 export function setPseudoRegisters(
   wasmRoot: WasmModule,
-  stackPreallocate: number,
   dataSegmentSize: number
 ) {
   wasmRoot.globalWasmVariables.push({
@@ -76,7 +75,7 @@ export function setPseudoRegisters(
     initializerValue: {
       type: "IntegerConst",
       wasmDataType: "i32",
-      value: BigInt(wasmRoot.memorySize * WASM_PAGE_SIZE - stackPreallocate),
+      value: BigInt(wasmRoot.memorySize * WASM_PAGE_SIZE),
     },
   });
 

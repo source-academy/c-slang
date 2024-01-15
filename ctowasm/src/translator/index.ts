@@ -21,8 +21,6 @@ export default function translate(
     importedFunctions: [],
   };
 
-  let stackPreAllocateSize = 0; // preallocate space for main function stack frame
-
   const processedImportedFunctions = processImportedFunctions(imports, CAstRoot.externalFunctions);
 
   wasmRoot.importedFunctions = processedImportedFunctions.functionImports;
@@ -31,20 +29,12 @@ export default function translate(
     wasmRoot.functions[wrappedFunction.name] = wrappedFunction
   })
 
-  for (const func of CAstRoot.functions) {
-    if (func.name === "main") {
-      stackPreAllocateSize = func.sizeOfLocals;
-    }
-    translateFunction(func);
-  }
-
   CAstRoot.functions.forEach((func) => {
     wasmRoot.functions[func.name] = translateFunction(func);
   });
 
   setPseudoRegisters(
     wasmRoot,
-    stackPreAllocateSize,
     CAstRoot.dataSegmentSizeInBytes
   );
 
