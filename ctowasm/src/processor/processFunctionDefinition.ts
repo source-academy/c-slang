@@ -2,14 +2,7 @@
  * Utility functions for processing C functions.
  */
 
-import { DataType } from "../parser/c-ast/dataTypes";
-import {
-  PrimaryDataTypeMemoryObjectDetails,
-  areDataTypesEqual,
-  getDataTypeSize,
-  unpackDataType,
-} from "./dataTypeUtil";
-import { UnsupportedFeatureError, toJson, ProcessingError } from "~src/errors";
+import { toJson, ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import {
@@ -18,12 +11,10 @@ import {
 } from "~src/processor/c-ast/function";
 import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
-import { POINTER_SIZE } from "~src/common/constants";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
-import { ScalarCDataType } from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 
 export default function processFunctionDefinition(
@@ -46,7 +37,7 @@ export default function processFunctionDefinition(
     name: node.name,
     sizeOfLocals: 0, // will be incremented as body is visited
     body: [],
-    dataType: node.dataType
+    dataType: node.dataType,
   };
   // visit body
   const body = processBlockItem(
@@ -70,17 +61,20 @@ export function processFunctionReturnStatement(
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);
 
-  if (
-    enclosingFunc.dataType.returnType !== null &&
-    areDataTypesEqual(
-      processedExpr.originalDataType,
-      enclosingFunc.dataType.returnType
-    )
-  ) {
-    throw new ProcessingError(
-      "Data type of expression being returned does not match declared function returntype"
-    );
-  }
+  // TODO: data type check
+  // if (
+  //   enclosingFunc.dataType.returnType !== null &&
+  //   !checkDataTypeCompatibility(
+  //     processedExpr.originalDataType,
+  //     enclosingFunc.dataType.returnType
+  //   )
+  // ) {
+  //   throw new ProcessingError(
+  //     `Data type of expression being returned does not match declared function returntype - expression type: ${toJson(
+  //       processedExpr.originalDataType
+  //     )} declared type: ${toJson(enclosingFunc.dataType.returnType)}`
+  //   );
+  // }
 
   let currOffset = 0;
   processedExpr.exprs.forEach((expr) => {

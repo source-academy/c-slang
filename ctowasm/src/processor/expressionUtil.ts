@@ -18,7 +18,6 @@ import {
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { ProcessingError } from "~src/errors";
 import {
-  areDataTypesEqual,
   isArithmeticType,
   isScalarType,
   unpackDataType,
@@ -72,11 +71,7 @@ export function determineDataTypeOfBinaryExpression(
         );
       }
     } else {
-      if (!areDataTypesEqual(leftExprDataType, rightExprDataType)) {
-        throw new ProcessingError(
-          `Left operand and right operand of binary expression do not point to the same type`
-        );
-      }
+      // TODO: add pointer type check
     }
     return leftExprDataType;
   }

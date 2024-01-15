@@ -2,12 +2,11 @@
  * Some utility functions used by the processor when working with data types.
  */
 
-import { DataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 
-import { POINTER_SIZE } from "~src/common/constants";
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
-import { ScalarCDataType } from "~src/common/types";
+import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 
 /**
@@ -63,12 +62,25 @@ export function isArithmeticType(dataType: DataType) {
   return dataType.type === "primary";
 }
 
-/**
- * Performs a deep comparison of datatypes, and returns true if they are equal.
- */
-export function areDataTypesEqual(dataTypeA: DataType, dataTypeB: DataType) {
-  return toJson(dataTypeA) === toJson(dataTypeB);
-}
+// /**
+//  * Checks two data types to determine if they are compatible (meaning one can be assigned to another).
+//  * TODO: add proper data type compatibility checks
+//  */
+// export function checkDataTypeCompatibility(
+//   dataTypeA: DataType,
+//   dataTypeB: DataType
+// ): boolean {
+//   if (dataTypeA.type !== dataTypeB.type) {
+//     return false
+//   };
+//   if (dataTypeA.type === "primary") {
+
+//   }
+// }
+
+// export function checkPrimaryDataTypeCompatibility(dataTypeA: PrimaryCDataType, dataTypeB: PrimaryCDataType) {
+//   return
+// }
 
 /**
  * Utlity function to generate data type string.
