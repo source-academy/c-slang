@@ -2,7 +2,7 @@
  * Definition of function to process Expression expr s.
  */
 
-import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
+import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { FunctionReturnMemoryLoad } from "~src/processor/c-ast/memory";

@@ -84,7 +84,7 @@ export function toJson(obj: any) {
     }
     for (const fieldName of Object.keys(obj)) {
       if (typeof obj[fieldName] === "bigint") {
-        obj[fieldName] = obj[fieldName].toString(); // stringify bigints first
+        obj[fieldName] = obj[fieldName].toString() + "n"; // stringify bigints first
       } else {
         recursionHelper(obj[fieldName]);
       }

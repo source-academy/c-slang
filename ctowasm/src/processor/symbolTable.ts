@@ -42,7 +42,7 @@ export class SymbolTable {
 
   setExternalFunctions(externalFunctions: Record<string, FunctionDataType>) {
     this.externalFunctions = {};
-    for (const funcName in externalFunctions) {
+    for (const funcName of Object.keys(externalFunctions)) {
       this.addFunctionEntry(funcName, externalFunctions[funcName], true)
     }
     return this.externalFunctions;
@@ -83,25 +83,26 @@ export class SymbolTable {
       return this.symbols[name] as VariableSymbolEntry;
     }
 
+    let entry: SymbolEntry;
     if (this.parentTable === null) {
       // the offset grows inthe positive direction (low to high adress) for globals
-      const entry: SymbolEntry = {
+      entry = {
         type: "globalVariable",
         dataType: dataType,
         offset: this.currOffset.value,
       };
       this.currOffset.value += getDataTypeSize(dataType);
-      return entry;
     } else {
       // offset grows in negative direction (high to low adderss) for locals
       this.currOffset.value -= getDataTypeSize(dataType);
-      const entry: SymbolEntry = {
+      entry = {
         type: "localVariable",
         dataType: dataType,
         offset: this.currOffset.value,
       };
-      return entry;
     }
+    this.symbols[name] = entry;
+    return entry;
   }
 
   addFunctionEntry(

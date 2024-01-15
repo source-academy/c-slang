@@ -2,13 +2,11 @@ import wasmModuleImports from "~src/wasmModuleImports";
 import {
   compile as originalCompile,
   compileToWat as originalCompileToWat,
-  generate_C_AST,
+  generate_C_AST as original_generate_C_AST,
   generate_WAT_AST as originalGenerate_WAT_AST,
-  generate_processed_C_AST,
+  generate_processed_C_AST as original_generate_processed_C_AST,
 } from "./compiler";
 export { setPrintFunction } from "~src/wasmModuleImports";
-
-export { generate_C_AST, generate_processed_C_AST };
 
 export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   const memory = new WebAssembly.Memory({
@@ -51,4 +49,12 @@ export async function compileAndRun(program: string) {
     wasmModuleImports,
   );
   await runWasm(wasm, initialMemory);
+}
+
+export function generate_processed_C_AST(program: string) {
+  return original_generate_processed_C_AST(program, wasmModuleImports)
+}
+
+export function generate_C_AST(program: string) {
+  return original_generate_C_AST(program)
 }
