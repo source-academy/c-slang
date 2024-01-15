@@ -28,6 +28,7 @@ import {
 } from "~src/processor/c-ast/memory";
 import { SelectionStatementP } from "~src/processor/c-ast/statement/selectionStatement";
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
+import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -46,7 +47,6 @@ export type StatementP =
   | JumpStatementP
   | MemoryStore
   | FunctionReturnMemoryStore
-  | ExternalFunctionCallP;
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =
@@ -66,8 +66,16 @@ export interface ExpressionPBase extends CNodePBase {
   dataType: ScalarCDataType;
 }
 
+export interface ExternalFunction {
+  name: string;
+  parameters: PrimaryDataTypeMemoryObjectDetails[],
+  returnObjects: PrimaryDataTypeMemoryObjectDetails[] | null;
+}
+
 export interface CAstRootP extends CNodePBase {
   type: "Root";
   functions: FunctionDefinitionP[];
   dataSegmentByteStr: string; // the string of bytes (each byte is in the form "\\XX" where X is a digit in base-16) to initialize the data segment with, determined by processing initializers for data segment variables.
+  dataSegmentSizeInBytes: number;
+  externalFunctions: Record<string, ExternalFunction>
 }

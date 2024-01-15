@@ -2,60 +2,54 @@
  * Definition of function to handle unary expressions
  */
 
-import { PrefixExpression } from "~src/parser/c-ast/expression/unaryExpression";
 import { isFloatType, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
 import { getMaxIntConstant } from "~src/translator/util";
-import { primaryCDataTypeToWasmType } from "./dataTypeUtil";
-import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
-import { WasmExpression, WasmModule } from "~src/translator/wasm-ast/core";
-import {
-  WasmBinaryExpression,
-  WasmNegateFloatExpression,
-} from "~src/translator/wasm-ast/expressions";
-import { WasmSymbolTable } from "./symbolTable";
-import { WasmBooleanExpression } from "~src/translator/wasm-ast/misc";
+import { convertScalarDataTypeToWasmType, priamryCDataTypeToWasmType } from "./dataTypeUtil";
+import { WasmExpression } from "~src/translator/wasm-ast/core";
+
+import { UnaryExpressionP } from "~src/processor/c-ast/expression/expressions";
+import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 
 /**
  * Translates a UnaryExpression into the nodes for that expression,
  * depedning on the expression dataType and operator.
  */
 export default function translateUnaryExpression(
-  wasmRoot: WasmModule,
-  symbolTable: WasmSymbolTable,
-  unaryExpr: PrefixExpression
+  unaryExpr: UnaryExpressionP,
+  enclosingLoopDetails?: EnclosingLoopDetails
 ): WasmExpression {
   if (unaryExpr.operator === "-") {
     if (isIntegerType(unaryExpr.dataType)) {
-      const node: WasmBinaryExpression = {
+      return {
         type: "BinaryExpression",
         instruction: "sub",
         leftExpr: getMaxIntConstant(
-          primaryCDataTypeToWasmType[unaryExpr.dataType] as "i32" | "i64"
+          convertScalarDataTypeToWasmType(unaryExpr.dataType) as "i32" | "i64"
         ),
-        rightExpr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
-        wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
+        rightExpr: translateExpression(unaryExpr.expr,enclosingLoopDetails),
       };
-      return node;
     } else if (isFloatType(unaryExpr.dataType)) {
-      const node: WasmNegateFloatExpression = {
+      return {
         type: "NegateFloatExpression",
-        wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType] as
+        wasmDataType: convertScalarDataTypeToWasmType(unaryExpr.dataType) as
           | "f32"
           | "f64",
-        expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
+        expr: translateExpression(unaryExpr.expr, enclosingLoopDetails),
       };
-      return node;
+    } else {
+      throw new TranslationError(
+        "'-' prefix operator is only valid on arithmetic types"
+      );
     }
   } else if (unaryExpr.operator === "!") {
-    const node: WasmBooleanExpression = {
+    return {
       type: "BooleanExpression",
       wasmDataType: "i32",
-      expr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
+      expr: translateExpression(unaryExpr.expr, enclosingLoopDetails),
       isNegated: true,
     };
-    return node;
   } else if (unaryExpr.operator === "~") {
     if (!isIntegerType(unaryExpr.dataType)) {
       // bitwise complement is undefined on non integral types
@@ -64,18 +58,18 @@ export default function translateUnaryExpression(
       );
     }
 
-    const node: WasmBinaryExpression = {
+    return {
       type: "BinaryExpression",
       leftExpr: {
         type: "IntegerConst",
-        wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
+        wasmDataType: convertScalarDataTypeToWasmType(unaryExpr.dataType) as
+          | "i32"
+          | "i64",
         value: -1n,
-      } as WasmIntegerConst,
-      rightExpr: translateExpression(wasmRoot, symbolTable, unaryExpr.expr),
-      wasmDataType: primaryCDataTypeToWasmType[unaryExpr.dataType],
-      instruction: `${primaryCDataTypeToWasmType[unaryExpr.dataType]}.xor`,
+      },
+      rightExpr: translateExpression(unaryExpr.expr, enclosingLoopDetails),
+      instruction: `${convertScalarDataTypeToWasmType(unaryExpr.dataType)}.xor`,
     };
-    return node;
   } else {
     throw new TranslationError(
       `translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`

@@ -5,6 +5,7 @@
 import { DataType } from "../parser/c-ast/dataTypes";
 import {
   PrimaryDataTypeMemoryObjectDetails,
+  areDataTypesEqual,
   getDataTypeSize,
   unpackDataType,
 } from "./dataTypeUtil";
@@ -22,6 +23,8 @@ import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
+import { ScalarCDataType } from "~src/common/types";
+import { getSizeOfScalarDataType } from "~src/common/utils";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
@@ -30,28 +33,20 @@ export default function processFunctionDefinition(
   symbolTable.addFunctionEntry(node.name, node.dataType);
 
   const paramSymbolTable = new SymbolTable(symbolTable);
+
+  if (
+    node.dataType.returnType !== null &&
+    node.dataType.returnType.type === "array"
+  ) {
+    throw new ProcessingError("Arrays cannot be returned from a function");
+  }
+
   const functionDefinitionNode: FunctionDefinitionP = {
     type: "FunctionDefinition",
-    params: processFunctionParams(
-      paramSymbolTable,
-      node.name,
-      node.dataType.parameters,
-      node.parameterNames
-    ),
-    returnMemoryDetails:
-      node.dataType.returnType !== null
-        ? processFunctionReturnType(node.dataType.returnType)
-        : null,
+    name: node.name,
     sizeOfLocals: 0, // will be incremented as body is visited
-    sizeOfReturn:
-      node.dataType.returnType !== null
-        ? getDataTypeSize(node.dataType.returnType)
-        : 0,
-    sizeOfParams: node.dataType.parameters.reduce(
-      (sum, paramDataType) => sum + getDataTypeSize(paramDataType),
-      0
-    ),
     body: [],
+    dataType: node.dataType
   };
   // visit body
   const body = processBlockItem(
@@ -63,95 +58,39 @@ export default function processFunctionDefinition(
   return functionDefinitionNode;
 }
 
-export function processFunctionParams(
-  symbolTable: SymbolTable,
-  functionName: string,
-  paramDataTypes: DataType[],
-  paramNames: string[]
-): PrimaryDataTypeMemoryObjectDetails[] {
-  let offset = 0;
-  const processedParams: PrimaryDataTypeMemoryObjectDetails[] = [];
-
-  for (let i = 0; i < paramNames.length; ++i) {
-    const paramDataType = paramDataTypes[i];
-    const paramName = paramNames[i];
-
-    if (paramDataTypes.length !== paramNames.length) {
-      throw new ProcessingError(
-        `Number of parameter data types does not match number of parameter names in function '${functionName}'`
-      );
-    }
-
-    if (paramDataType.type === "primary") {
-      symbolTable.addVariableEntry(paramName, paramDataType);
-      processedParams.push({
-        offset,
-        dataType: paramDataType.primaryDataType,
-      });
-      offset += getDataTypeSize(paramDataType);
-    } else if (paramDataType.type === "pointer") {
-      symbolTable.addVariableEntry(paramName, paramDataType);
-      processedParams.push({ offset, dataType: "pointer" });
-      offset += getDataTypeSize(paramDataType);
-    } else if (paramDataType.type === "array") {
-      // arrays are passed as pointers
-      symbolTable.addVariableEntry(paramName, {
-        type: "pointer",
-        pointeeType: paramDataType.elementDataType,
-      });
-      processedParams.push({ offset, dataType: "pointer" });
-      offset += POINTER_SIZE;
-    } else if (paramDataType.type === "struct") {
-      // TODO: when support structs
-      throw new UnsupportedFeatureError(
-        "processFunctionParams(): structs not yet supported"
-      );
-    } else {
-      throw new Error(
-        `processFunctionParams(): unhandled data type: ${toJson(paramDataType)}`
-      );
-    }
-  }
-  return processedParams;
-}
-
-export function processFunctionReturnType(returnDataType: DataType) {
-  if (returnDataType.type === "array") {
-    throw new ProcessingError("Arrays cannot be returned from a function");
-  }
-  return unpackDataType(returnDataType);
-}
-
 /**
  * Process the expression that is returned from a function into a series of stores
  * of primary data objects in the return object location.
  */
 export function processFunctionReturnStatement(
   expr: Expression,
-  functionReturnDetails: PrimaryDataTypeMemoryObjectDetails[], // TODO: consider if this is really ncessary in futture
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
+  enclosingFunc: FunctionDefinitionP // details of the function within which the return statement is present
 ): StatementP[] {
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);
 
-  // sanity check - the types of processedExpression and the function return details should match
-  if (functionReturnDetails.length !== processedExpr.exprs.length) {
+  if (
+    enclosingFunc.dataType.returnType !== null &&
+    areDataTypesEqual(
+      processedExpr.originalDataType,
+      enclosingFunc.dataType.returnType
+    )
+  ) {
     throw new ProcessingError(
-      "Number of primary objects in returned expression does not match the function return details"
+      "Data type of expression being returned does not match declared function returntype"
     );
   }
 
-  let i = 0; // curr index of functionReturnDetails
-
+  let currOffset = 0;
   processedExpr.exprs.forEach((expr) => {
     statements.push({
       type: "FunctionReturnMemoryStore",
       value: expr,
       dataType: expr.dataType,
-      offset: createMemoryOffsetIntegerConstant(
-        functionReturnDetails[i++].offset
-      ),
+      offset: createMemoryOffsetIntegerConstant(currOffset),
     });
+    currOffset += getSizeOfScalarDataType(expr.dataType);
   });
 
   statements.push({
@@ -169,19 +108,30 @@ export function convertFunctionCallToFunctionCallP(
 ): FunctionCallP {
   if (node.expr.type === "IdentifierExpression") {
     const symbolEntry = symbolTable.getSymbolEntry(node.expr.name);
-    if (symbolEntry.dataType.type !== "function") {
+    if (symbolEntry.type !== "function") {
+      // TODO: add function pointer check later on
       throw new ProcessingError(
         `Called object '${node.expr.name}' is neither a function nor function pointer`
       );
     }
+    // TODO: type check params and args
+
+    // create functionDetails for this function call
+
     return {
       type: "FunctionCall",
       calledFunction: {
         type: "FunctionName",
         name: node.expr.name,
+        // save the parameters as the primary data types
+        // concatenation in reverse order per parameter to follow stack frame structure
+        functionDetails: symbolEntry.processedFunctionDetails,
       },
       args: node.args.reduce(
-        (prv, expr) => prv.concat(processExpression(expr, symbolTable).exprs),
+        // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
+        // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
+        (prv, expr) =>
+          prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
         [] as ExpressionP[]
       ),
     };

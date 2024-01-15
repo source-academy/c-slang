@@ -13,7 +13,7 @@ import { WasmConst } from "~src/translator/wasm-ast/consts";
 export interface WasmVariable extends WasmAstNode {
   name: string;
   isConst?: boolean; // TODO: to support later on
-  varType: WasmDataType;
+  wasmDataType: WasmDataType;
 }
 
 /**
@@ -33,7 +33,7 @@ export interface WasmGlobalSet extends WasmAstNode {
 export interface WasmLocalSet extends WasmAstNode {
   type: "LocalSet";
   name: string;
-  value: WasmExpression;
+  wasmDataType: WasmDataType;
 }
 
 export interface WasmLocalGet extends WasmAstNode {

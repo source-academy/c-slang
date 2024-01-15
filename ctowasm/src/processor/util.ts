@@ -29,7 +29,7 @@ export function createMemoryOffsetIntegerConstant(
 ): IntegerConstantP {
   return {
     type: "IntegerConstant",
-    dataType: "unsigned int", // unsigned int should be appropriate type to give to IntegerConstant offsets since pointer size is 4 TODO: check this
+    dataType: "signed int", // unsigned int should be appropriate type to give to IntegerConstant offsets since pointer size is 4 TODO: check this
     value: BigInt(offset),
   };
 }

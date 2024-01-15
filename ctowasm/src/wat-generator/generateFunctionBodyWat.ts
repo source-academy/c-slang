@@ -8,7 +8,7 @@ import {
   WasmIntegerConst,
 } from "~src/translator/wasm-ast/consts";
 import {
-  WasmSelectStatement,
+  WasmSelectionStatement,
   WasmLoop,
   WasmBlock,
   WasmBranch,
@@ -25,10 +25,8 @@ import {
   WasmMemoryLoad,
   WasmMemoryStore,
 } from "~src/translator/wasm-ast/memory";
-import {
-  WasmBooleanExpression,
-  WasmNumericConversionWrapper,
-} from "~src/translator/wasm-ast/misc";
+import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
+import { WasmNumericConversionWrapper } from "~src/translator/wasm-ast/numericConversion";
 import {
   WasmGlobalGet,
   WasmGlobalSet,
@@ -65,7 +63,7 @@ export default function generateWat(
     const n = node as WasmRegularFunctionCallStatement;
     return `(call $${n.name} ${generateArgString(n.args)})`;
   } else if (node.type === "SelectStatement") {
-    const n = node as WasmSelectStatement;
+    const n = node as WasmSelectionStatement;
     return `(if ${generateWat(n.condition)} (then ${n.actions
       .map((action) => generateWat(action))
       .join(" ")})${

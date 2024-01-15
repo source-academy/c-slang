@@ -1,17 +1,17 @@
+import { ScalarCDataType } from "~src/common/types";
+import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { CNodePBase, ExpressionP, ExpressionPBase, StatementP } from "~src/processor/c-ast/core";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 
 /**
- * A processed function definition should include detailson the size of locals and size of return.
+ * A processed function definition should include details on the size of locals and size of return.
  */
 export interface FunctionDefinitionP extends CNodePBase {
   type: "FunctionDefinition";
-  params: PrimaryDataTypeMemoryObjectDetails[];
-  returnMemoryDetails: PrimaryDataTypeMemoryObjectDetails[] | null; // The return of a function is broken up into multiple primary data types, as structs may be returned form functions
+  name: string;
   sizeOfLocals: number; // size of all the locals in bytes
-  sizeOfReturn: number; /// size of the return type
-  sizeOfParams: number; // size of all the parameters in bytes
   body: StatementP[];
+  dataType: FunctionDataType; // data type of the function. only used for type check
 }
 
 /**
@@ -19,14 +19,22 @@ export interface FunctionDefinitionP extends CNodePBase {
  * CallableP is a type refering to both of these.
  * TODO: add function pointers
  */
-export type CallableP = FunctionNameP;
+export type Callable = FunctionName;
+
+export interface FunctionDetails {
+  parameters: PrimaryDataTypeMemoryObjectDetails[] // the parameters of the function in terms of primary data types, as they would appear in memory (high to low address order)
+  returnObjects: PrimaryDataTypeMemoryObjectDetails[] | null;
+  sizeOfParams: number;
+  sizeOfReturn: number;
+}
 
 /**
  * Helper type to indicate that a
  */
-export interface FunctionNameP {
+export interface FunctionName {
   type: "FunctionName";
   name: string;
+  functionDetails: FunctionDetails
 }
 
 /**
@@ -35,17 +43,6 @@ export interface FunctionNameP {
  */
 export interface FunctionCallP {
   type: "FunctionCall";
-  calledFunction: CallableP;
+  calledFunction: Callable;
   args: ExpressionP[]; // the sequence of expressions which load up the function arguments
-}
-
-/**
- * Represents the call of an external function, which is on not defined inside the source program.
- * In this particular c to wasm compiler, these are functions imported into the wasm module, such as from the JS environment.
- * No memory store statements are generated for the return of such a function, it is assumed to be handled externally. 
- */
-export interface ExternalFunctionCallP {
-  type: "FunctionCall";
-  functionName: string;
-  args: ExpressionP[];
 }

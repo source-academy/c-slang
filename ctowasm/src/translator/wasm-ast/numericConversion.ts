@@ -1,21 +1,4 @@
-import { WasmAstNode, WasmExpression } from "~src/translator/wasm-ast/core";
-import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
-
-/**
- * Base class for nodes that are meant to wrap other expressions to perform some simple operation on the results of the wrapped expression.
- */
-interface WasmWrapperNode extends WasmAstNode {
-  expr: WasmExpression;
-}
-
-/**
- * Special wrapper node to handle converting an expression value to a "boolean" value (1 or 0).
- */
-export interface WasmBooleanExpression extends WasmWrapperNode {
-  type: "BooleanExpression";
-  wasmDataType: WasmDataType;
-  isNegated?: boolean;
-}
+import { WasmWrapperNode } from "./expressions";
 
 type ExtendIntInstructions = "i64.extend_i32_s" | "i64.extend_i32_u";
 type WrapIntInstructions = "i32.wrap_i64";
@@ -47,10 +30,10 @@ export type NumericConversionInstruction =
   | DemoteFloatInstructions
   | ConvertIntToFloatInstructions
   | TruncateFloatToIntInstructions;
-
 /**
  * Wrapper for wasm types that performs a operation on a numeric type, like extending/wrapping ints.
  */
+
 export interface WasmNumericConversionWrapper extends WasmWrapperNode {
   type: "NumericWrapper";
   instruction: NumericConversionInstruction;

@@ -2,7 +2,7 @@
  * Some utility functions for converting variable intializers into byte strings.
  */
 
-import { isIntegerType, scalarDataTypeSizes } from "~src/common/utils";
+import { isIntegerType, priamryDataTypeSizes } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import {
   ConstantP,
@@ -18,7 +18,7 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
   if (dataType.type === "primary" || dataType.type === "pointer") {
     const numOfBytes =
       dataType.type === "primary"
-        ? scalarDataTypeSizes[dataType.primaryDataType]
+        ? priamryDataTypeSizes[dataType.primaryDataType]
         : POINTER_SIZE;
     for (let i = 0; i < numOfBytes; ++i) {
       byteStr += "\\00";
@@ -82,12 +82,12 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
 function convertIntegerConstantToByteString(integerConstant: IntegerConstantP) {
   return convertIntegerToByteString(
     integerConstant.value,
-    scalarDataTypeSizes[integerConstant.dataType]
+    priamryDataTypeSizes[integerConstant.dataType]
   );
 }
 
 function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
-  const buffer = new ArrayBuffer(scalarDataTypeSizes[floatConstant.dataType]);
+  const buffer = new ArrayBuffer(priamryDataTypeSizes[floatConstant.dataType]);
   let integerValue;
   if (floatConstant.dataType === "float") {
     const float32Arr = new Float32Array(buffer);
@@ -105,6 +105,6 @@ function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    scalarDataTypeSizes[floatConstant.dataType]
+    priamryDataTypeSizes[floatConstant.dataType]
   );
 }

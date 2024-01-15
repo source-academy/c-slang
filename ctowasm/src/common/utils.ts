@@ -10,8 +10,8 @@ import { POINTER_SIZE } from "~src/common/constants";
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
  */
-export const scalarDataTypeSizes: Record<
-  ScalarCDataType,
+export const primaryDataTypeSizes: Record<
+  PrimaryCDataType,
   MemoryVariableByteSize
 > = {
   ["unsigned char"]: 1,
@@ -24,8 +24,14 @@ export const scalarDataTypeSizes: Record<
   ["signed long"]: 8,
   ["float"]: 4,
   ["double"]: 8,
-  ["pointer"]: POINTER_SIZE
 };
+
+export function getSizeOfScalarDataType(dataType: ScalarCDataType) {
+  if (dataType === "pointer") {
+    return POINTER_SIZE
+  }
+  return primaryDataTypeSizes[dataType];
+}
 
 export function isSignedIntegerType(dataType: ScalarCDataType) {
   return (

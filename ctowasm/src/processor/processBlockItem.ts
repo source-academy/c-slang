@@ -6,16 +6,18 @@ import { SymbolTable } from "~src/processor/symbolTable";
 
 import { ProcessingError, toJson } from "~src/errors";
 
-import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
+import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { processCondition } from "~src/processor/util";
-import { convertFunctionCallToFunctionCallP, processFunctionReturnStatement } from "./processFunctionDefinition";
+import {
+  convertFunctionCallToFunctionCallP,
+  processFunctionReturnStatement,
+} from "./processFunctionDefinition";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
-import processExpression from "~src/processor/processExpression";
-import { BlockItem, Statement } from "~src/parser/c-ast/core";
+import { BlockItem } from "~src/parser/c-ast/core";
 import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
-import { processLocalVariableDeclaration } from "~src/processor/processDeclaration";
+import { processLocalDeclaration } from "~src/processor/processDeclaration";
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -28,7 +30,7 @@ import { processLocalVariableDeclaration } from "~src/processor/processDeclarati
 export default function processBlockItem(
   node: BlockItem,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP // reference to enclosing function, if any
+  enclosingFunc: FunctionDefinitionP
 ): StatementP[] {
   try {
     if (node.type === "Block") {
@@ -52,9 +54,17 @@ export default function processBlockItem(
       if (node.clause !== null && node.clause.type === "Declaration") {
         // create new scope for this declaration
         forLoopSymbolTable = new SymbolTable(symbolTable);
-        clause = processLocalVariableDeclaration(node.clause.value, forLoopSymbolTable, enclosingFunc);
+        clause = processLocalDeclaration(
+          node.clause.value,
+          forLoopSymbolTable,
+          enclosingFunc
+        );
       } else if (node.clause !== null && node.clause.type === "Expression") {
-        clause = processBlockItem(node.clause.value, forLoopSymbolTable, enclosingFunc);
+        clause = processBlockItem(
+          node.clause.value,
+          forLoopSymbolTable,
+          enclosingFunc
+        );
       } else {
         clause = [];
       }
@@ -97,26 +107,23 @@ export default function processBlockItem(
         ];
       }
 
-      if (enclosingFunc.returnMemoryDetails === null) {
-        throw new ProcessingError(
-          `Cannot return an expression from function with no defined return type`,
-          node.position
-        );
-      }
-
       // there is an expression to return, break up the return into series of memory stores of the expression
       // in the return memory object locations
       return processFunctionReturnStatement(
         node.value,
-        enclosingFunc.returnMemoryDetails,
-        symbolTable
+        symbolTable,
+        enclosingFunc
       );
     } else if (node.type === "SelectionStatement") {
       return [
         {
           type: "SelectionStatement",
           condition: processCondition(node.condition, symbolTable),
-          ifStatements: processBlockItem(node.ifStatement, symbolTable, enclosingFunc),
+          ifStatements: processBlockItem(
+            node.ifStatement,
+            symbolTable,
+            enclosingFunc
+          ),
           elseStatements: node.elseStatement
             ? processBlockItem(node.elseStatement, symbolTable, enclosingFunc)
             : null,
@@ -136,7 +143,7 @@ export default function processBlockItem(
       return getAssignmentMemoryStoreNodes(node, symbolTable);
     } else if (node.type === "FunctionCall") {
       // in this context, the return (if any) of the functionCall is ignored, as it is used as a statement
-      return [convertFunctionCallToFunctionCallP(node, symbolTable)]
+      return [convertFunctionCallToFunctionCallP(node, symbolTable)];
     } else if (
       node.type === "PrefixExpression" ||
       node.type === "PostfixExpression"
@@ -160,7 +167,7 @@ export default function processBlockItem(
       // all these expression statements can be safely ignored as they have no side effects
       return [];
     } else if (node.type === "Declaration") {
-      return processLocalVariableDeclaration(node, symbolTable, enclosingFunc);
+      return processLocalDeclaration(node, symbolTable, enclosingFunc);
     } else {
       throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);
     }

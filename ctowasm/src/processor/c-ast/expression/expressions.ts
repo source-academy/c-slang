@@ -15,7 +15,7 @@ export interface BinaryExpressionP extends ExpressionPBase {
 
 export interface UnaryExpressionP extends ExpressionPBase {
   type: "UnaryExpression";
-  operator: PrefixOperator;
+  operator: "-" | "~" | "!"; // only these operators will be handled in this node. Others are handled in other ways.
   expr: ExpressionP;
 }
 

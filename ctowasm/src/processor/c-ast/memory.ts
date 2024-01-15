@@ -18,7 +18,7 @@ export type Address = LocalAddress | DataSegmentAddress | DynamicAddress;
 //
 export interface LocalAddress extends ExpressionPBase {
   type: "LocalAddress";
-  offset: ExpressionP; // represents the number of bytes of this address from the the first byte of first local object (which will be function parameter if function has any)
+  offset: ExpressionP; 
 }
 
 // covers data segment (global) variables
@@ -53,7 +53,7 @@ export interface MemoryStore {
 // Special node for handling loading of return object in memory, since return object is not an lvalue.
 export interface FunctionReturnMemoryLoad extends ExpressionPBase {
   type: "FunctionReturnMemoryLoad";
-  offset: IntegerConstantP;
+  offset: IntegerConstantP; // number of  bytes from address of last byte + 1 of LAST return primary data type memory object
 }
 
 // Special node for handling storing of return in memory.

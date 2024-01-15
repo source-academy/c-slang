@@ -14,10 +14,16 @@ import {
 } from "~src/processor/expressionUtil";
 import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
-import { convertFunctionCallToFunctionCallP, processFunctionReturnType } from "./processFunctionDefinition";
+import {
+  convertFunctionCallToFunctionCallP,
+} from "./processFunctionDefinition";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processBlockItem from "~src/processor/processBlockItem";
-import { getDataTypeSize, isScalarType } from "~src/processor/dataTypeUtil";
+import {
+  getDataTypeSize,
+  isScalarType,
+  unpackDataType,
+} from "~src/processor/dataTypeUtil";
 import { IntegerDataType } from "~src/common/types";
 import processConstant from "~src/processor/processConstant";
 import { SIZE_OF_EXPR_RESULT_DATA_TYPE } from "~src/common/constants";
@@ -154,7 +160,10 @@ export default function processExpression(
         exprs: [processedConstant],
       };
     } else if (expr.type === "FunctionCall") {
-      const functionCallStatement = convertFunctionCallToFunctionCallP(expr, symbolTable);
+      const functionCallStatement = convertFunctionCallToFunctionCallP(
+        expr,
+        symbolTable
+      );
 
       let funcReturnType;
       if (expr.expr.type === "IdentifierExpression") {
@@ -173,12 +182,18 @@ export default function processExpression(
         throw new UnsupportedFeatureError("Function pointer not supported.");
       }
 
-      const returnObjectMemoryLoads: FunctionReturnMemoryLoad[] =
-        processFunctionReturnType(funcReturnType).map((returnObj) => ({
+      // start curr offset at negative of the size of the return obj
+      let currOffset = -getDataTypeSize(funcReturnType);
+      const returnObjectMemoryLoads: FunctionReturnMemoryLoad[] = [];
+
+      unpackDataType(funcReturnType).forEach((returnObj) => {
+        returnObjectMemoryLoads.push({
           type: "FunctionReturnMemoryLoad",
-          offset: createMemoryOffsetIntegerConstant(returnObj.offset),
+          offset: createMemoryOffsetIntegerConstant(currOffset),
           dataType: returnObj.dataType,
-        }));
+        });
+        currOffset += returnObj.offset;
+      });
 
       // regardless of return type, all function call expression have a preStatementExpression
       return {
@@ -245,15 +260,11 @@ export default function processExpression(
           },
           exprs: [
             {
-              type: "MemoryLoad",
-              address: {
-                type:
-                  symbolEntry.type === "globalVariable"
-                    ? "DataSegmentAddress"
-                    : "LocalAddress",
-                offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
-                dataType: "pointer",
-              },
+              type:
+                symbolEntry.type === "globalVariable"
+                  ? "DataSegmentAddress"
+                  : "LocalAddress",
+              offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
               dataType: "pointer",
             },
           ],

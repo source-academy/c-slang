@@ -3,77 +3,45 @@
  */
 
 import {
-  FunctionCall,
-  FunctionCallStatement,
-} from "~src/parser/c-ast/expression/functionCall";
-import {
   getFunctionCallStackFrameSetupStatements,
-  getFunctionStackFrameTeardownStatements,
+  getFunctionCallStackFrameTeardownStatements,
 } from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
-import { getTypeConversionWrapper } from "./dataTypeUtil";
-import { WasmModule } from "~src/translator/wasm-ast/core";
+import { WasmExpression } from "~src/translator/wasm-ast/core";
 import {
   WasmFunctionCall,
-  WasmFunctionCallStatement,
   WasmRegularFunctionCall,
-  WasmRegularFunctionCallStatement,
 } from "~src/translator/wasm-ast/functions";
-import { WasmSymbolTable } from "./symbolTable";
+import {
+  FunctionCallP,
+} from "~src/processor/c-ast/function";
+import { UnsupportedFeatureError } from "~src/errors";
 
 export default function translateFunctionCall(
-  wasmRoot: WasmModule,
-  symbolTable: WasmSymbolTable,
-  node: FunctionCall | FunctionCallStatement
-) {
-  const n = node as FunctionCallStatement;
-  if (n.expr in wasmRoot.importedFunctions) {
-    // special wasm module imported function call - will override any manually written functions that are written manually - TODO: emit warning/error
-    const functionBeingCalled = wasmRoot.importedFunctions[n.expr];
-    const functionArgs = [];
-    for (let i = 0; i < n.args.length; ++i) {
-      functionArgs.push(
-        getTypeConversionWrapper(
-          n.args[i].dataType,
-          functionBeingCalled.params[i],
-          translateExpression(wasmRoot, symbolTable, n.args[i])
-        )
-      );
-    }
+  node: FunctionCallP
+): WasmFunctionCall {
+
+  // translate the arguments
+  const functionArgs: WasmExpression[] = [];
+  for (let i = 0; i < node.calledFunction.functionDetails.parameters.length; ++i) {
+    functionArgs.push(
+      translateExpression(node.args[i], node.calledFunction.functionDetails.parameters[i].dataType)
+    );
+  }
+
+  if (node.calledFunction.type === "FunctionName") {
     return {
-      type:
-        node.type === "FunctionCall"
-          ? "RegularFunctionCall"
-          : "RegularFunctionCallStatement",
-      name: n.expr,
-      args: functionArgs,
-    } as WasmRegularFunctionCall | WasmRegularFunctionCallStatement;
-  } else {
-    const functionArgs = [];
-    const functionBeingCalled = wasmRoot.functions[n.expr];
-    for (let i = 0; i < n.args.length; ++i) {
-      functionArgs.push(
-        getTypeConversionWrapper(
-          n.args[i].dataType,
-          functionBeingCalled.params[i].dataType,
-          translateExpression(wasmRoot, symbolTable, n.args[i])
-        )
-      );
-    }
-    return {
-      type: node.type,
-      name: n.expr,
+      type: "FunctionCall",
+      name: node.calledFunction.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
-        wasmRoot.functions[n.expr],
+        node.calledFunction.functionDetails,
         functionArgs
       ),
-      stackFrameTearDown: getFunctionStackFrameTeardownStatements(
-        wasmRoot.functions[n.expr],
-        node.type === "FunctionCall" &&
-          wasmRoot.functions[n.expr].returnDataType !== null
-          ? true
-          : false
+      stackFrameTearDown: getFunctionCallStackFrameTeardownStatements(
+        node.calledFunction.functionDetails
       ),
-    } as WasmFunctionCall | WasmFunctionCallStatement;
+      };
+  } else {
+    throw new UnsupportedFeatureError("Function pointers not yet supported");
   }
 }

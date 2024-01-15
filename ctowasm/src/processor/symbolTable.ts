@@ -1,8 +1,8 @@
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
 import { Declaration } from "~src/parser/c-ast/declaration";
-import { Position } from "~src/parser/c-ast/misc";
-import { getDataTypeSize } from "~src/processor/dataTypeUtil";
+import { FunctionDetails } from "~src/processor/c-ast/function";
+import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
@@ -11,6 +11,7 @@ export type SymbolEntry = FunctionSymbolEntry | VariableSymbolEntry;
 export interface FunctionSymbolEntry {
   type: "function";
   dataType: FunctionDataType;
+  processedFunctionDetails: FunctionDetails; // process and save the function details
 }
 
 export interface VariableSymbolEntry {
@@ -42,14 +43,14 @@ export class SymbolTable {
   setExternalFunctions(externalFunctions: Record<string, FunctionDataType>) {
     this.externalFunctions = {};
     for (const funcName in externalFunctions) {
-      this.externalFunctions[funcName] = {type: "function", dataType: externalFunctions[funcName]};
+      this.addFunctionEntry(funcName, externalFunctions[funcName], true)
     }
+    return this.externalFunctions;
   }
 
   isExternalFunction(funcName: string) {
     return funcName in this.externalFunctions;
   }
-
 
   addEntry(declaration: Declaration): SymbolEntry {
     if (declaration.dataType.type === "function") {
@@ -81,18 +82,34 @@ export class SymbolTable {
       }
       return this.symbols[name] as VariableSymbolEntry;
     }
-    const entry: SymbolEntry = {
-      type: this.parentTable === null ? "globalVariable" : "localVariable",
-      dataType: dataType,
-      offset: this.currOffset.value,
-    };
-    this.symbols[name] = entry;
-    this.currOffset.value += getDataTypeSize(dataType);
-    return entry;
+
+    if (this.parentTable === null) {
+      // the offset grows inthe positive direction (low to high adress) for globals
+      const entry: SymbolEntry = {
+        type: "globalVariable",
+        dataType: dataType,
+        offset: this.currOffset.value,
+      };
+      this.currOffset.value += getDataTypeSize(dataType);
+      return entry;
+    } else {
+      // offset grows in negative direction (high to low adderss) for locals
+      this.currOffset.value -= getDataTypeSize(dataType);
+      const entry: SymbolEntry = {
+        type: "localVariable",
+        dataType: dataType,
+        offset: this.currOffset.value,
+      };
+      return entry;
+    }
   }
 
-  addFunctionEntry(name: string, dataType: FunctionDataType): FunctionSymbolEntry {
-    if (name in this.symbols) {
+  addFunctionEntry(
+    name: string,
+    dataType: FunctionDataType,
+    isExternalFunction?: boolean 
+  ): FunctionSymbolEntry {
+    if (!isExternalFunction && name in this.symbols) {
       // function was already declared before
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
@@ -123,12 +140,56 @@ export class SymbolTable {
 
       return this.symbols[name] as FunctionSymbolEntry;
     }
-    const entry = {
+
+    // Create function details
+    const functionDetails: FunctionDetails = {
+      sizeOfParams: 0,
+      sizeOfReturn: 0,
+      parameters: [],
+      returnObjects: null,
+    };
+
+    if (dataType.returnType !== null) {
+      if (dataType.returnType.type === "array") {
+        throw new ProcessingError(
+          "Array is not a valid return type from a function"
+        );
+      }
+
+      functionDetails.sizeOfReturn += getDataTypeSize(dataType.returnType);
+      // offset is relative to 1 byte past the last return object, thus negative (from high to low address)
+      functionDetails.returnObjects = unpackDataType(dataType.returnType).map(
+        (scalarDataType) => ({
+          dataType: scalarDataType.dataType,
+          offset: scalarDataType.offset - functionDetails.sizeOfReturn,
+        })
+      );
+    }
+
+    let offset = 0;
+    for (const param of dataType.parameters) {
+      const dataTypeSize = getDataTypeSize(param);
+      offset -= dataTypeSize;
+      functionDetails.sizeOfParams += dataTypeSize;
+      functionDetails.parameters.push(
+        ...(unpackDataType(param).map((scalarDataType) => ({
+          dataType: scalarDataType.dataType,
+          offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
+        })))
+      );
+    }
+
+    const entry: FunctionSymbolEntry = {
       type: "function",
       dataType,
-    } as FunctionSymbolEntry;
+      processedFunctionDetails: functionDetails
+    };
 
-    this.symbols[name] = entry;
+    if (isExternalFunction) {
+      this.externalFunctions[name] = entry
+    } else {
+      this.symbols[name] = entry;
+    }
     return entry;
   }
 

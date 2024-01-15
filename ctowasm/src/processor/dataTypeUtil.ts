@@ -5,22 +5,19 @@
 import { DataType } from "~src/parser/c-ast/dataTypes";
 
 import { POINTER_SIZE } from "~src/common/constants";
-import { scalarDataTypeSizes } from "~src/common/utils";
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { ScalarCDataType } from "~src/common/types";
-import { IntegerConstant } from "~src/parser/c-ast/expression/constant";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
-import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
+import { getSizeOfScalarDataType } from "~src/common/utils";
 
 /**
  * Returns the size in bytes of a data type.
  */
 export function getDataTypeSize(varType: DataType): number {
-  if (varType.type === "primary") {
-    return scalarDataTypeSizes[varType.primaryDataType];
-  } else if (varType.type === "pointer") {
-    return POINTER_SIZE;
+  if (varType.type === "primary" || varType.type === "pointer") {
+    return getSizeOfScalarDataType(
+      varType.type === "pointer" ? "pointer" : varType.primaryDataType
+    );
   } else if (varType.type === "array") {
     try {
       const numElementsConstant = evaluateCompileTimeExpression(

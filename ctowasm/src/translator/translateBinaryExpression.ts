@@ -2,8 +2,7 @@
  * Translate a binary expression into corresponding WAT AST nodes based on operator.
  */
 
-import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";
-import { BinaryOperator } from "~src/common/types";
+import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 import { ScalarDataType } from "~src/parser/c-ast/dataTypes";
 import { isUnsignedIntegerType, isSignedIntegerType } from "~src/common/utils";
 import { isScalarType } from "~src/processor/dataTypeUtil";
@@ -12,28 +11,14 @@ import { getTypeConversionWrapper } from "./dataTypeUtil";
 import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
 import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
 import { WasmModule } from "~src/translator/wasm-ast/core";
-import { WasmSymbolTable } from "./symbolTable";
 import { TranslationError } from "~src/errors";
+import { BinaryExpressionP } from "~src/processor/c-ast/expression/expressions";
+import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 
 export default function translateBinaryExpression(
-  wasmRoot: WasmModule,
-  symbolTable: WasmSymbolTable,
-  binaryExpr: BinaryExpression
+  binaryExpr: BinaryExpressionP,
+  enclosingLoopDetails?: EnclosingLoopDetails
 ): WasmBinaryExpression {
-  // binary expressions only work on scalar types
-  if (
-    !isScalarType(binaryExpr.leftExpr.dataType) ||
-    !isScalarType(binaryExpr.rightExpr.dataType)
-  ) {
-    // these operators can only run on scalar type
-    throw new TranslationError(
-      `translateBinaryExpression(): Non-scalar type used for ${binaryExpr.operator}`
-    );
-  }
-
-  const leftExprDataType = binaryExpr.dataType as ScalarDataType;
-  const rightExprDataType = binaryExpr.dataType as ScalarDataType;
-
   // special handling for && and || since wasm does not have native instructions for these operations
   if (binaryExpr.operator === "&&" || binaryExpr.operator === "||") {
     // need to convert the left and right expr to boolean expression (1 or 0) before doing bitwise AND or OR
@@ -41,35 +26,29 @@ export default function translateBinaryExpression(
       type: "BinaryExpression",
       leftExpr: {
         type: "BooleanExpression",
-        expr: translateExpression(wasmRoot, symbolTable, binaryExpr.leftExpr),
-        wasmDataType: convertScalarDataTypeToWasmType(leftExprDataType),
+        expr: translateExpression(binaryExpr.leftExpr, binaryExpr.leftExpr.dataType, enclosingLoopDetails),
+        wasmDataType: convertScalarDataTypeToWasmType(binaryExpr.leftExpr.dataType),
       },
       rightExpr: {
         type: "BooleanExpression",
-        expr: translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr),
-        wasmDataType: convertScalarDataTypeToWasmType(rightExprDataType),
+        expr: translateExpression(binaryExpr.rightExpr, binaryExpr.rightExpr.dataType, enclosingLoopDetails),
+        wasmDataType: convertScalarDataTypeToWasmType(binaryExpr.rightExpr.dataType),
       },
       instruction: getBinaryExpressionInstruction(
         binaryExpr.operator,
-        binaryExpr.dataType as ScalarDataType
+        binaryExpr.dataType
       ),
-      wasmDataType: "i32", // i32 since its just a boolean
-    } as WasmBinaryExpression;
+    };
   }
 
   return {
     type: "BinaryExpression",
     // perform implicit arithmetic type conversions
-    leftExpr: getTypeConversionWrapper(
-      leftExprDataType,
-      binaryExpr.dataType,
-      translateExpression(wasmRoot, symbolTable, binaryExpr.leftExpr)
-    ),
-    rightExpr: getTypeConversionWrapper(
-      rightExprDataType,
-      binaryExpr.dataType,
-      translateExpression(wasmRoot, symbolTable, binaryExpr.rightExpr)
-    ),
+    leftExpr: 
+      translateExpression(binaryExpr.leftExpr, binaryExpr.dataType, enclosingLoopDetails)
+    ,
+    rightExpr: 
+      translateExpression(binaryExpr.rightExpr, binaryExpr.dataType, enclosingLoopDetails),
     instruction: getBinaryExpressionInstruction(
       binaryExpr.operator,
       binaryExpr.dataType
@@ -111,7 +90,7 @@ function isOperationWithUnsignedSignedVariant(op: string) {
  */
 export function getBinaryExpressionInstruction(
   operator: BinaryOperator,
-  dataType: ScalarDataType
+  dataType: ScalarCDataType
 ) {
   const createBinaryInstruction = (op: string) => {
     const instruction = `${convertScalarDataTypeToWasmType(dataType)}.${op}`;

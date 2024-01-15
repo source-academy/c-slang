@@ -20,12 +20,24 @@ export default function process(
   externalFunctions?: Record<string, FunctionDataType>
 ) {
   const symbolTable = new SymbolTable();
-  symbolTable.setExternalFunctions(externalFunctions ?? {});
+  const processedExternalFunctions = symbolTable.setExternalFunctions(externalFunctions ?? {});
   const processedAst: CAstRootP = {
     type: "Root",
     functions: [],
     dataSegmentByteStr: "",
+    dataSegmentSizeInBytes: 0,
+    externalFunctions: {}
   };
+
+  // save the processed details of external functions
+  for (const externalFuncName in processedExternalFunctions) {
+    processedAst.externalFunctions[externalFuncName] = {
+      name: externalFuncName,
+      parameters: processedExternalFunctions[externalFuncName].processedFunctionDetails.parameters,
+      returnObjects: processedExternalFunctions[externalFuncName].processedFunctionDetails.returnObjects
+    }
+  }
+
   ast.children.forEach((child) => {
     // special handling for function definitions
     if (child.type === "FunctionDefinition") {
@@ -39,5 +51,6 @@ export default function process(
       ); // add the byte str used to initalize this variable to teh data segment byte string
     }
   });
+  processedAst.dataSegmentSizeInBytes = processedAst.dataSegmentByteStr.length / 3 // since each byte is written as "\\XX"
   return processedAst;
 }

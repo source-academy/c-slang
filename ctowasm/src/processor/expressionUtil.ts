@@ -4,13 +4,11 @@
 
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 
-import { ExpressionP } from "~src/processor/c-ast/core";
 import {
-  scalarDataTypeSizes,
+  priamryDataTypeSizes,
   isFloatType,
   isIntegerType,
 } from "~src/common/utils";
-import { Expression } from "~src/parser/c-ast/core";
 import {
   DataType,
   PointerDataType,
@@ -20,7 +18,6 @@ import {
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { ProcessingError } from "~src/errors";
 import {
-  PrimaryDataTypeMemoryObjectDetails,
   areDataTypesEqual,
   isArithmeticType,
   isScalarType,
@@ -102,8 +99,8 @@ export function determineDataTypeOfBinaryExpression(
   ) {
     // take more higher ranking float type
     if (
-      scalarDataTypeSizes[rightExprDataType.primaryDataType] >
-      scalarDataTypeSizes[leftExprDataType.primaryDataType]
+      priamryDataTypeSizes[rightExprDataType.primaryDataType] >
+      priamryDataTypeSizes[leftExprDataType.primaryDataType]
     ) {
       return leftExprDataType;
     } else {
@@ -122,8 +119,8 @@ export function determineDataTypeOfBinaryExpression(
     }
 
     if (
-      scalarDataTypeSizes[rightExprDataType.primaryDataType] >
-      scalarDataTypeSizes[leftExprDataType.primaryDataType]
+      priamryDataTypeSizes[rightExprDataType.primaryDataType] >
+      priamryDataTypeSizes[leftExprDataType.primaryDataType]
     ) {
       return rightExprDataType;
     } else {

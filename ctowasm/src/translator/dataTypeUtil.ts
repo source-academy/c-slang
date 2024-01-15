@@ -17,13 +17,13 @@ import {
 import {
   NumericConversionInstruction,
   WasmNumericConversionWrapper,
-} from "~src/translator/wasm-ast/misc";
+} from "./wasm-ast/numericConversion";
 
 /**
  * Mapping of C variable types to the Wasm variable type used to perform operations on it.
  */
 
-export const primaryCDataTypeToWasmType: Record<
+export const priamryCDataTypeToWasmType: Record<
   PrimaryCDataType,
   WasmDataType
 > = {
@@ -49,7 +49,7 @@ export function convertScalarDataTypeToWasmType(
   if (scalarType === "pointer") {
     return WASM_ADDR_TYPE;
   } else {
-    return primaryCDataTypeToWasmType[scalarType];
+    return priamryCDataTypeToWasmType[scalarType];
   }
 }
 function getNeededNumericConversionInstruction(
@@ -196,9 +196,8 @@ export function getTypeConversionWrapper(
         toWasmType,
         "unsigned"
       ),
-      wasmDataType: toWasmType,
       expr: translatedExpression,
-    } as WasmNumericConversionWrapper;
+    };
   } else if (isSignedIntegerType(from)) {
     return {
       type: "NumericWrapper",
@@ -207,9 +206,8 @@ export function getTypeConversionWrapper(
         toWasmType,
         "signed"
       ),
-      wasmDataType: toWasmType,
       expr: translatedExpression,
-    } as WasmNumericConversionWrapper;
+    };
   } else {
     // for float types, conversion should be signed
     return {
@@ -219,9 +217,8 @@ export function getTypeConversionWrapper(
         toWasmType,
         "signed"
       ),
-      wasmDataType: toWasmType,
       expr: translatedExpression,
-    } as WasmNumericConversionWrapper;
+    };
   }
 } /**
  * Converts a constant to a Wasm const.
@@ -231,7 +228,7 @@ export function convertConstantToWasmConst(constant: ConstantP): WasmConst {
   if (constant.type === "IntegerConstant") {
     return {
       type: "IntegerConst",
-      wasmDataType: primaryCDataTypeToWasmType[
+      wasmDataType: priamryCDataTypeToWasmType[
         constant.dataType
       ] as WasmIntType,
       value: constant.value,
@@ -239,7 +236,7 @@ export function convertConstantToWasmConst(constant: ConstantP): WasmConst {
   } else {
     return {
       type: "FloatConst",
-      wasmDataType: primaryCDataTypeToWasmType[
+      wasmDataType: priamryCDataTypeToWasmType[
         constant.dataType
       ] as WasmFloatType,
       value: constant.value,

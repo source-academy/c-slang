@@ -13,7 +13,7 @@ import {
 import {
   isSignedIntegerType,
   isUnsignedIntegerType,
-  scalarDataTypeSizes,
+  primaryDataTypeSizes,
 } from "~src/common/utils";
 import Constant from "~src/parser/c-ast/expression/constant";
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
@@ -55,13 +55,13 @@ export function getAdjustedIntValueAccordingToDataType(
  * Returns the maximum value of a signed int type.
  */
 function getMaxValueOfSignedIntType(val: SignedIntegerType): bigint {
-  return 2n ** (BigInt(scalarDataTypeSizes[val]) * 8n - 1n) - 1n;
+  return 2n ** (BigInt(primaryDataTypeSizes[val]) * 8n - 1n) - 1n;
 }
 function getMinValueOfSignedIntType(val: SignedIntegerType): bigint {
-  return -(2n ** (BigInt(scalarDataTypeSizes[val]) * 8n - 1n));
+  return -(2n ** (BigInt(primaryDataTypeSizes[val]) * 8n - 1n));
 }
 function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType): bigint {
-  return 2n ** (BigInt(scalarDataTypeSizes[val]) * 8n) - 1n;
+  return 2n ** (BigInt(primaryDataTypeSizes[val]) * 8n) - 1n;
 }
 /**
  * Logic for handling when the value of a constant is a very negative number that lies out of a range of a maxNegativeValue.
@@ -70,15 +70,15 @@ function getMaxValueOfUnsignedIntType(val: UnsignedIntegerType): bigint {
  */
 function capNegativeValue(value: bigint, integerType: IntegerDataType): bigint {
   const minNegativeValue =
-    -(2n ** (BigInt(scalarDataTypeSizes[integerType]) * 8n)) - 1n;
+    -(2n ** (BigInt(primaryDataTypeSizes[integerType]) * 8n)) - 1n;
   if (value >= minNegativeValue) {
     // no overflow
     return value;
   }
   const diff = minNegativeValue - value;
   return (
-    2n ** (BigInt(scalarDataTypeSizes[integerType]) * 8n - 1n) -
-    (diff % (2n ** BigInt(scalarDataTypeSizes[integerType]) * 8n))
+    2n ** (BigInt(primaryDataTypeSizes[integerType]) * 8n - 1n) -
+    (diff % (2n ** BigInt(primaryDataTypeSizes[integerType]) * 8n))
   );
 }
 /**
@@ -96,7 +96,7 @@ function handlePositiveSignedIntegerOverflow(
   const diff = value - maxVal;
   return (
     getMinValueOfSignedIntType(signedType) +
-    ((diff % 2n ** (BigInt(scalarDataTypeSizes[signedType]) * 8n)) - 1n)
+    ((diff % 2n ** (BigInt(primaryDataTypeSizes[signedType]) * 8n)) - 1n)
   );
 }
 /**

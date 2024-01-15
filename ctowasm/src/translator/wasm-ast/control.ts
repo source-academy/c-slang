@@ -3,15 +3,16 @@ import {
   WasmExpression,
   WasmStatement,
 } from "~src/translator/wasm-ast/core";
+import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
 
 /**
  * Definitions of wasm AST nodes to do with control flow instructions.
  */
-export interface WasmSelectStatement extends WasmAstNode {
+export interface WasmSelectionStatement extends WasmAstNode {
   type: "SelectionStatement";
-  condition: WasmExpression;
+  condition: WasmBooleanExpression;
   actions: WasmStatement[];
-  elseStatements: WasmStatement[];
+  elseStatements: WasmStatement[] | null ;
 }
 
 export interface WasmLoop extends WasmAstNode {

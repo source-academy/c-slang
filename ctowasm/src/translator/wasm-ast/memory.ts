@@ -4,7 +4,6 @@
 
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 import { WasmAstNode, WasmExpression } from "~src/translator/wasm-ast/core";
-import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export type MemoryVariableByteSize = 1 | 2 | 4 | 8;
 
@@ -15,12 +14,22 @@ export interface WasmMemoryLoad extends WasmAstNode {
   numOfBytes: MemoryVariableByteSize; // number of bytes to load
 }
 
-export interface WasmMemoryStore extends WasmAstNode {
-  type: "MemoryStore";
+interface WasmMemoryStoreBase extends WasmAstNode {
+  type: "MemoryStore" | "MemoryStoreFromWasmStack";
   addr: WasmExpression;
-  value: WasmExpression;
   wasmDataType: WasmDataType; // wasm var type for the store instruction
-  numOfBytes: MemoryVariableByteSize; // number of bytes to store
+  numOfBytes: MemoryVariableByteSize; // number of bytes to store 
+}
+
+// stores the result of a specific expression
+export interface WasmMemoryStore extends WasmMemoryStoreBase {
+  type: "MemoryStore";
+  value: WasmExpression;
+}
+
+// stores the given value already on wasm stack
+export interface WasmMemoryStoreFromWasmStack extends WasmMemoryStoreBase {
+  type: "MemoryStoreFromWasmStack";
 }
 
 export interface WasmMemoryGrow extends WasmAstNode {
@@ -32,20 +41,3 @@ export interface WasmMemorySize extends WasmAstNode {
   type: "MemorySize";
 }
 
-/**
- * A variable that is meant to be stored in memory.
- */
-export interface WasmMemoryVariable extends WasmAstNode {
-  type: "GlobalMemoryVariable" | "LocalMemoryVariable";
-  name: string;
-  dataType: DataType; // the original C variable type
-  offset: number; // offset from the start of the scope that this variable is in. This is address for globals, offset from BP for locals/params
-}
-
-/**
- * Defines the wasm node that represents the initializing of global variables in the data memory segment.
- */
-export interface WasmDataSegmentInitialization {
-  addr: number;
-  byteStr: string;
-}
