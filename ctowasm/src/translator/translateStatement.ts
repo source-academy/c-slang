@@ -23,6 +23,7 @@ import {
 } from "~src/translator/loopUtil";
 import { convertScalarDataTypeToWasmType } from "~src/translator/dataTypeUtil";
 import { getSizeOfScalarDataType } from "~src/common/utils";
+import { FUNCTION_BLOCK_LABEL } from "~src/translator/constants";
 
 /**
  * Visitor function for visting StatementP nodes and translating them to statements to add to enclosingBody.
@@ -196,8 +197,10 @@ export default function translateStatement(
       ],
     };
   } else if (statement.type === "ReturnStatement") {
+    // branch out of the block holding the function body
     return {
-      type: "ReturnStatement",
+      type: "Branch",
+      label: FUNCTION_BLOCK_LABEL
     };
   } else if (statement.type === "BreakStatement") {
     if (typeof enclosingLoopDetails === "undefined") {

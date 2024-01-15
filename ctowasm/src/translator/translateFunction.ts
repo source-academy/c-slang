@@ -3,8 +3,10 @@
  */
 
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
+import { FUNCTION_BLOCK_LABEL } from "~src/translator/constants";
 import { STACK_POINTER, convertPrimaryDataObjectDetailsToWasmDataObjectDetails, getPointerDecrementNode, getPointerIncrementNode, getStackSpaceAllocationCheckStatement } from "~src/translator/memoryUtil";
 import translateStatement from "~src/translator/translateStatement";
+import { WasmBlock } from "~src/translator/wasm-ast/control";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
 import { WasmFunction } from "~src/translator/wasm-ast/functions";
 
@@ -31,23 +33,25 @@ export default function translateFunction(
   //   addToSymbolTable(symbolTable, localVar);
   // });
 
-  const processedBody: WasmStatement[] = [];
-
+  const functionBody: WasmStatement[] = [];
   // add the space allocation statements for local variables to function body
-  processedBody.push(getStackSpaceAllocationCheckStatement(Cfunction.sizeOfLocals));
-  processedBody.push(getPointerDecrementNode(STACK_POINTER, Cfunction.sizeOfLocals));
-
-  // translate statements in function body
-  Cfunction.body.forEach((statement) =>
-    processedBody.push(translateStatement(statement))
-  );
+  functionBody.push(getStackSpaceAllocationCheckStatement(Cfunction.sizeOfLocals));
+  functionBody.push(getPointerDecrementNode(STACK_POINTER, Cfunction.sizeOfLocals));
+  
+  // create a block to hold all function body statements
+  // returns will branch out of this block, so that the cleanup of stack will proceed before func exits
+  functionBody.push({
+    type: "Block",
+    label: FUNCTION_BLOCK_LABEL,
+    body: Cfunction.body.map(statement => translateStatement(statement))
+  })
 
   // add the deallocation of locals
-  processedBody.push(getPointerIncrementNode(STACK_POINTER, Cfunction.sizeOfLocals));
-
+  functionBody.push(getPointerIncrementNode(STACK_POINTER, Cfunction.sizeOfLocals));
+ 
   return {
     type: "Function",
     name: Cfunction.name,
-    body: processedBody
+    body: functionBody
   };
 }

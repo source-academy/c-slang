@@ -35,6 +35,7 @@ export default function processImportedFunctions(
       ); // should not happen as imports are synchronized across modules
     }
     const externalCFunction = externalCFunctions[functionName];
+    
     functionImports.push({
       name: functionName + "_imported",
       importPath: [importedFunction.parentImportedObject, functionName],
@@ -97,7 +98,8 @@ export default function processImportedFunctions(
         })
       }
     }
-   
+
+    wrappedFunctions.push(functionWrapper);
   }
 
   return { functionImports, wrappedFunctions };
