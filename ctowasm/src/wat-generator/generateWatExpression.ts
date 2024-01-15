@@ -19,7 +19,7 @@ export default function generateWatExpression(node: WasmExpression): string {
   } else if (node.type === "LocalGet") {
     return `(local.get $${node.name}})`;
   } else if (node.type === "GlobalGet") {
-    return `(global.get $${node.name}})`;
+    return `(global.get $${node.name})`;
   } else if (node.type === "BinaryExpression") {
     return `(${node.instruction} ${generateWatExpression(
       node.leftExpr
