@@ -54,7 +54,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   }
 
   // add all the global variables (in linear memory) intiializations
-  module.dataSegmentByteStr = generateLine(
+  watStr += generateLine(
     `(data (i32.const 0) "${module.dataSegmentByteStr}")`,
     baseIndentation + 1
   );
