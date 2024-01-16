@@ -12,11 +12,10 @@ source_code = tokens:token* { return tokens.join("").trim(); }
 // wrap each possible token with whitespace, this way the C preprocessor functions something like a "lexer" to produce "tokens" in one single string
 token
 	= s:string_literal { return s + " "} // strings should be left untouched
-    / _* p:punctuator _* { return p + " "; }
-    / s:identifier_or_keyword { return s + " "; }
-	/ _+ { return ""; } // reduce consecutive separator characters to a single whitespace for simplicity
-    
-
+  / _* p:punctuator _* { return p + " "; }
+  / s:identifier_or_keyword { return s + " "; }
+  / _+ { return ""; } // reduce consecutive separator characters to a single whitespace for simplicity
+  
 
 string_literal
 	= '"' chars:string_char* '"' { return '"' + chars.join("") + '"'; }
@@ -36,9 +35,10 @@ backslash_newline
 whitespace
 	= [ \t\n\v\f]+
 
-// for use at end of program. There a single-line-comment need not end with newline
+// for use at end of program.
+// tehnically a single_line_comment should end with a newline, but the end of the program is allowed to have a single-line comment without ending with newline.
 single_line_comment
-  = "//" (!"\n" .)* "\n"
+  = "//" (!"\n" .)*
 
 multi_line_comment
   = "/*" (!"*/" .)* "*/"
