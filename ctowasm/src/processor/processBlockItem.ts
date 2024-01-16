@@ -6,7 +6,7 @@ import { SymbolTable } from "~src/processor/symbolTable";
 
 import { ProcessingError, toJson } from "~src/errors";
 
-import { StatementP } from "~src/processor/c-ast/core";
+import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { processCondition } from "~src/processor/util";
 import {
@@ -54,11 +54,10 @@ export default function processBlockItem(
       if (node.clause !== null && node.clause.type === "Declaration") {
         // create new scope for this declaration
         forLoopSymbolTable = new SymbolTable(symbolTable);
-        clause = processLocalDeclaration(
-          node.clause.value,
-          forLoopSymbolTable,
-          enclosingFunc
-        );
+        clause = [];
+        for (const declaration of node.clause.value) {
+          clause.push(...processLocalDeclaration(declaration, forLoopSymbolTable, enclosingFunc))
+        }
       } else if (node.clause !== null && node.clause.type === "Expression") {
         clause = processBlockItem(
           node.clause.value,
@@ -72,12 +71,12 @@ export default function processBlockItem(
       const processedForLoopNode: ForLoopP = {
         type: "ForLoop",
         clause,
-        condition: processCondition(node.condition, symbolTable),
-        update: processBlockItem(
+        condition: node.condition !== null ? processCondition(node.condition, forLoopSymbolTable) : null, 
+        update: node.update !== null ? processBlockItem(
           node.update,
           forLoopSymbolTable,
           enclosingFunc
-        ),
+        ) : [],
         body: processBlockItem(node.body, forLoopSymbolTable, enclosingFunc),
       };
 

@@ -8,16 +8,18 @@ export default IterationStatement;
  * Contain definition for AST node relating to loops in C.
  */
 interface IterationStatementBase extends CNodeBase {
-  condition: Expression;
+  condition: Expression | null; // condition is mandatory except for for loops
   body: Statement;
 }
 
 export interface DoWhileLoop extends IterationStatementBase {
   type: "DoWhileLoop";
+  condition: Expression
 }
 
 export interface WhileLoop extends IterationStatementBase {
   type: "WhileLoop";
+  condition: Expression
 }
 
 export interface ForLoop extends IterationStatementBase {
@@ -30,8 +32,8 @@ export interface ForLoop extends IterationStatementBase {
       }
     | {
         type: "Declaration";
-        value: Declaration;
+        value: Declaration[];
       }
     | null;
-  update: Expression;
+  update: Expression | null; // update expression is not mandatory
 }

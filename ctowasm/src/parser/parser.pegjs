@@ -446,8 +446,8 @@ expression_statement
 iteration_statement
   = "do" _ body:statement _ "while" _ "(" _ condition:expression _ ")" _ ";" { return generateNode("DoWhileLoop", { condition, body }); } // dowhile loops need to end with a ';'
   / "while" _ "(" _ condition:expression _ ")" _ body:statement { return generateNode("WhileLoop", { condition, body }); }
-  / "for" _ "(" _ clause:expression? _ ";" _ condition:expression? _ ";" update:(_ @expression)? _ ")" _ body:statement { return generateNode("ForLoop", { clause: clause === null ? null : { type: "Expression", value: clause }, condition, update, body }); }
-  / "for" _ "(" _ clause:declaration condition:(_ @expression)? _ ";" update:(_ @expression)? _ ")" _ body:statement { return generateNode("ForLoop", { clause: { type: "Declaration", value: clause }, condition, update, body }); }
+  / "for" _ "(" _ clause:(@expression _)? ";" _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return generateNode("ForLoop", { clause: clause === null ? null : { type: "Expression", value: clause }, condition, update, body }); }
+  / "for" _ "(" _ clause:declaration _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return generateNode("ForLoop", { clause: { type: "Declaration", value: clause }, condition, update, body }); }
 
 
 // ========== Selection Statement ===========

@@ -7,16 +7,18 @@ export type IterationStatementP = DoWhileLoopP | WhileLoopP | ForLoopP;
  */
 interface IterationStatementBase extends CNodePBase {
   type: "DoWhileLoop" | "WhileLoop" | "ForLoop";
-  condition: ExpressionP;
+  condition: ExpressionP | null;
   body: StatementP[];
 }
 
 export interface DoWhileLoopP extends IterationStatementBase {
   type: "DoWhileLoop";
+  condition: ExpressionP 
 }
 
 export interface WhileLoopP extends IterationStatementBase {
   type: "WhileLoop";
+  condition: ExpressionP 
 }
 
 export interface ForLoopP extends IterationStatementBase {
@@ -24,4 +26,5 @@ export interface ForLoopP extends IterationStatementBase {
   // statements that run before the condition and body
   clause: StatementP[];
   update: StatementP[];
+  condition: ExpressionP | null;
 }
