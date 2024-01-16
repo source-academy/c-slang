@@ -87,7 +87,7 @@ export default function translateStatement(
     const body: WasmStatement[] = statement.body.map((s) =>
       translateStatement(
         s,
-        createEnclosingLoopDetails(condition, enclosingLoopDetails)
+        createEnclosingLoopDetails(enclosingLoopDetails)
       )
     );
 
@@ -106,23 +106,25 @@ export default function translateStatement(
   } else if (statement.type === "WhileLoop") {
     const blockLabel = generateBlockLabel(enclosingLoopDetails);
     const loopLabel = generateLoopLabel(enclosingLoopDetails);
-    const condition = createWasmBooleanExpression(statement.condition);
+    const negatedCondition = createWasmBooleanExpression(statement.condition, true);
     const body: WasmStatement[] = [];
-    // add the branch if statement to start of loop body
+
+    // branch out of the loop if the condition is not met
     body.push({
       type: "BranchIf",
       label: blockLabel,
-      condition: condition,
+      condition: negatedCondition,
     });
 
     statement.body.forEach((s) =>
       body.push(
         translateStatement(
           s,
-          createEnclosingLoopDetails(condition, enclosingLoopDetails)
+          createEnclosingLoopDetails(enclosingLoopDetails)
         )
       )
     );
+
     // add the branching statement at end of loop body
     body.push({
       type: "Branch",
@@ -143,7 +145,7 @@ export default function translateStatement(
   } else if (statement.type === "ForLoop") {
     const blockLabel = generateBlockLabel(enclosingLoopDetails);
     const loopLabel = generateLoopLabel(enclosingLoopDetails);
-    const condition = createWasmBooleanExpression(statement.condition);
+    const negatedCondition = createWasmBooleanExpression(statement.condition, true);
     const body: WasmStatement[] = [];
 
     // add clause statements first
@@ -151,23 +153,23 @@ export default function translateStatement(
       body.push(
         translateStatement(
           s,
-          createEnclosingLoopDetails(condition, enclosingLoopDetails)
+          createEnclosingLoopDetails(enclosingLoopDetails)
         )
       )
     );
 
-    // add condition check
+    // branch out of loop if condition fails
     body.push({
       type: "BranchIf",
       label: blockLabel,
-      condition: condition,
+      condition: negatedCondition,
     });
 
     // add function body
     statement.body.forEach((s) =>
       translateStatement(
         s,
-        createEnclosingLoopDetails(condition, enclosingLoopDetails)
+        createEnclosingLoopDetails(enclosingLoopDetails)
       )
     );
 
@@ -175,7 +177,7 @@ export default function translateStatement(
     statement.update.forEach((s) =>
       translateStatement(
         s,
-        createEnclosingLoopDetails(condition, enclosingLoopDetails)
+        createEnclosingLoopDetails(enclosingLoopDetails)
       )
     );
 
@@ -220,9 +222,8 @@ export default function translateStatement(
       );
     }
     return  {
-        type: "BranchIf",
-        label: generateLoopLabel(enclosingLoopDetails),
-        condition: enclosingLoopDetails.condition,
+        type: "Branch",
+        label: generateLoopLabel(enclosingLoopDetails)
       }
   } else {
     throw new TranslationError("Unhandled statement");

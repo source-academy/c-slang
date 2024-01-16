@@ -1,23 +1,19 @@
 import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
 
 export interface EnclosingLoopDetails {
-  condition: WasmBooleanExpression;
   currLoopNumber: number; // loop label of the enclosing loop. branch to this label to restart loop. (continue / restart loop after condition still true)
   currBlockNumber: number; // block label of the enclosing loop. branch to this label to end the loop. (break)
 }
 
 export function createEnclosingLoopDetails(
-  condition: WasmBooleanExpression,
   prv?: EnclosingLoopDetails
 ): EnclosingLoopDetails {
   if (typeof prv !== "undefined") {
     return {
       ...prv,
-      condition,
     };
   } else {
     return {
-      condition,
       currLoopNumber: 0,
       currBlockNumber: 0,
     };
