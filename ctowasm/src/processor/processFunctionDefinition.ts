@@ -23,13 +23,18 @@ export default function processFunctionDefinition(
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
 
-  const paramSymbolTable = new SymbolTable(symbolTable);
-
   if (
     node.dataType.returnType !== null &&
     node.dataType.returnType.type === "array"
   ) {
     throw new ProcessingError("Arrays cannot be returned from a function");
+  }
+
+  const funcSymbolTable = new SymbolTable(symbolTable);
+
+  // add all the params to the symbol table
+  for (let i = 0; i < node.parameterNames.length; ++i) {
+    funcSymbolTable.addVariableEntry(node.parameterNames[i], node.dataType.parameters[i]);
   }
 
   const functionDefinitionNode: FunctionDefinitionP = {
@@ -39,10 +44,11 @@ export default function processFunctionDefinition(
     body: [],
     dataType: node.dataType,
   };
+
   // visit body
   const body = processBlockItem(
     node.body,
-    paramSymbolTable,
+    funcSymbolTable,
     functionDefinitionNode
   );
   functionDefinitionNode.body = body; // body is a Block, an array of StatementP will be returned
@@ -56,7 +62,6 @@ export default function processFunctionDefinition(
 export function processFunctionReturnStatement(
   expr: Expression,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP // details of the function within which the return statement is present
 ): StatementP[] {
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);

@@ -210,6 +210,6 @@ export class SymbolTable {
       return this.externalFunctions[name];
     }
 
-    throw new ProcessingError(`Symbol ${name} not found in symbol table`);
+    throw new ProcessingError(`Symbol '${name}' not found in symbol table`);
   }
 }

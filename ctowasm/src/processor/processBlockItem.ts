@@ -111,7 +111,6 @@ export default function processBlockItem(
       return processFunctionReturnStatement(
         node.value,
         symbolTable,
-        enclosingFunc
       );
     } else if (node.type === "SelectionStatement") {
       return [
