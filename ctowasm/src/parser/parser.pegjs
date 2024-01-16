@@ -651,15 +651,15 @@ character_constant
 // All the possible C characters that can be in a source file
 source_c_set
   = [a-z0-9!"#%&\'()*+,-./: ;<=>?\[\\\]^_{|}~ \n\t\v\f]i
-  / extended_c_char
+  / extended_c_char_set
 // 
 c_char
   = char:[a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i { return char.charCodeAt(0); }
-  / extended_c_char
+  / extended_c_char_set
   / escape_sequence
 
 // Characters not required to be in the basic character set, but should be supported.
-extended_c_char
+extended_c_char_set
   = char:[@] { return char.charCodeAt(0); }
 
 escape_sequence

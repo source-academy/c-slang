@@ -47,6 +47,10 @@ punctuator // non alphanumeric (and no underscore) characters, these will be sep
 // match on multi char punctuators first as per C standard of generating the longest possible lexeme (no backtracking)
   = multi_char_punctuator
   / $[!"#%&'()*+,\-./:;<=>?[\]^_{|}~]
+  / $extended_punctuator
+
+extended_punctuator
+  = "@"
 
 multi_char_punctuator 
   // specifically match specific operator chars together
