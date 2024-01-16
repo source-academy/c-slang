@@ -143,7 +143,7 @@ export function getDerefExpressionMemoryDetails(
   symbolTable: SymbolTable
 ): DerefExpressionMemoryDetails {
   // process the expression being dereferenced first
-  const derefedExpression = processExpression(expr, symbolTable);
+  const derefedExpression = processExpression(expr.expr, symbolTable);
 
   if (derefedExpression.originalDataType.type !== "pointer") {
     throw new ProcessingError(`Cannot dereference non-pointer type`);

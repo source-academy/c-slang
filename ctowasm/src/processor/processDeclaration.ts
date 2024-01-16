@@ -128,21 +128,23 @@ export function unpackLocalVariableInitializerAccordingToDataType(
         }
 
         dataType = dataType as PrimaryDataType | PointerDataType;
+        const scalarCDataType = dataType.type === "pointer"
+        ? "pointer"
+        : dataType.primaryDataType
 
         memoryStoreStatements.push({
           type: "MemoryStore",
           address: {
             type: "LocalAddress",
             offset: createMemoryOffsetIntegerConstant(currOffset), // offset of this primary data object = offset of variable it belongs to + offset within variable type
-            dataType:
-              dataType.type === "pointer"
-                ? "pointer"
-                : dataType.primaryDataType,
+            dataType: scalarCDataType
           },
           value: processedExpression.exprs[0],
           dataType:
             dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
         });
+
+        currOffset += getSizeOfScalarDataType(scalarCDataType); 
       } else {
         if (initalizer.type === "InitializerSingle") {
           throw new ProcessingError("Invalid initializer for aggregate type");
@@ -161,7 +163,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
 
           let i = 0;
           for (; i < initalizer.values.length; i++) {
-            helper(dataType.elementDataType, initalizer);
+            helper(dataType.elementDataType, initalizer.values[i]);
           }
           // zero out any uninitialized elements
           for (; i < numElements; ++i) {
@@ -264,7 +266,7 @@ function unpackDataSegmentInitializerAccordingToDataType(
           }
           let i = 0;
           for (; i < initalizer.values.length; i++) {
-            helper(dataType.elementDataType, initalizer);
+            helper(dataType.elementDataType, initalizer.values[i]);
           }
           // zero out any uninitialized elements
           for (; i < numElements; ++i) {

@@ -501,7 +501,7 @@ initializer
   / value:expression  { return createInitializerSingle(value); }
 
 list_initializer
-  = "{" _ list:(@initializer|.., _ "," _ | _)? ( _ "," )? _ "}" { return createInitializerList(list); } // list initializer can end with extra comma
+  = "{" _ list:(@initializer|.., _ "," _ | _)? ( "," _ )? "}" { return createInitializerList(list); } // list initializer can end with extra comma
 
 direct_declarator 
   = directDeclarator:direct_declarator_helper _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes); } 
