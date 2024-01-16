@@ -641,7 +641,7 @@ integer_constant
 	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U" / "ll" / "LL" / "") { return generateNode("IntegerConstant", { value: BigInt(value), suffix: suffix.length > 0 ? (suffix.toLowerCase() === "ll" ? "l" : suffix.toLowerCase()) : undefined }); } 
 
 character_constant
-  = "'" value:c_char "'" {return generateNode("IntegerConstant", { value }); } // value should already be a number
+  = "'" _ value:c_char _ "'" {return generateNode("IntegerConstant", { BigInt(value) }); } // value should already be a number
 
 
 
