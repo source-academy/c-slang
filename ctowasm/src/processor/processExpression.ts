@@ -37,11 +37,10 @@ export default function processExpression(
 ): ExpressionWrapperP {
   try {
     if (expr.type === "Assignment") {
-      // handle assignment
       const assignmentNodes = getAssignmentMemoryStoreNodes(expr, symbolTable);
 
       // visit the expresion being assigned to, get the memory load instructions
-      const processedExpr = processExpression(expr, symbolTable);
+      const processedExpr = processExpression(expr.lvalue, symbolTable);
 
       return {
         originalDataType: processedExpr.originalDataType,
