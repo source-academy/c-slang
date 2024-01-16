@@ -65,7 +65,7 @@ export default function processExpression(
         !isScalarType(processedRightExpr.originalDataType)
       ) {
         throw new ProcessingError(
-          `Non-scalar operand to ${expr.operator} binary expression`
+          `Non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExpr.originalDataType.type}, right operand: ${processedRightExpr.originalDataType.type}`
         );
       }
 
@@ -255,7 +255,7 @@ export default function processExpression(
         return {
           originalDataType: {
             type: "pointer",
-            pointeeType: symbolEntry.dataType,
+            pointeeType: symbolEntry.dataType.elementDataType,
           },
           exprs: [
             {
