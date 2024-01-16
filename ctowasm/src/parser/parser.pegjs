@@ -517,7 +517,7 @@ function_declarator_suffix
   / "(" _ ")" { return { type: "FunctionDeclarator", parameters: [], parameterNames: [] }; } 
 
 array_declarator_suffix
-  = "[" _ numElements:expression? _ "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
+  = "[" _ numElements:(@expression _)? "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
 
 parameter_list
   = parameters:parameter_declaration|1.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
@@ -609,13 +609,14 @@ postfix_expression
 // all the postfix operations
 postfix_operation
   = operator:("++" / "--") { return { type: "PostfixExpression", operator }; }
-  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; } 
+  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; }
+  / "(" _ ")" { return { type: "FunctionCall", args: [] }; }
   / "[" _ index:expression _ "]" { return { type: "ArrayElementExpr", index }; }
 //  / "." _ field:identifier { return } TODO: when doing structs
 //  / "->" _ TODO: when structs and pointers are done
 
 function_argument_list
-  = expression|.., _ "," _|
+  = expression|1.., _ "," _|
 
 primary_expression
   = "sizeof" _ "(" _ expr:primary_expression _ ")" { return generateNode("SizeOfExpression", { expr } ); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
