@@ -15,6 +15,7 @@ const testLog = {
     fn_return_1: {
       title: "Function return 1",
       expectedCode: false,
+      expectedValues: [1],
     },
     var_assign_1: {
       title: "Variable assignment 1",
@@ -397,11 +398,11 @@ const testLog = {
       title: "Test parsing of more complex declarations",
       expectedCode: false,
       expectedValues: [
-        1,
-        3
+        3,
+        1
       ], 
     },
-    pointers_addressof: {
+    pointers_address_of: {
       title: "Pointers tests - address of '&' operator",
       expectedCode: false,
       expectedValues: [

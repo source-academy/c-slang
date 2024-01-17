@@ -436,39 +436,25 @@ export function getFunctionCallStackFrameSetupStatements(
     numOfBytes: WASM_ADDR_SIZE,
   });
 
-  // set REG_1 to be SP - use it for setting param values later. This is the BP of the new stack frame.
-  // BP cannot be changed to new frame BP yet as we need it to reference the previous stack frame for function argument loading.
-  statements.push(getReg1SetNode(stackPointerGetNode));
 
-  // allocate space for params
-  statements.push(
-    getPointerDecrementNode(STACK_POINTER, functionDetails.sizeOfParams)
-  );
-
-  // set the values of all params
+  // allocate space for and set the values of each param
   // args are already in correct order for loading into the stack from high to low address
   for (let i = 0; i < functionDetails.parameters.length; ++i) {
+    statements.push(
+      getPointerDecrementNode(STACK_POINTER, getSizeOfScalarDataType(functionDetails.parameters[i].dataType))
+    );
     const param = functionDetails.parameters[i];
     statements.push({
       type: "MemoryStore",
-      addr: {
-        type: "BinaryExpression",
-        instruction: WASM_ADDR_ADD_INSTRUCTION,
-        leftExpr: reg1GetNode,
-        rightExpr: {
-          type: "IntegerConst",
-          wasmDataType: WASM_ADDR_TYPE,
-          value: BigInt(param.offset),
-        },
-      },
+      addr: stackPointerGetNode,
       value: functionArgs[i],
       wasmDataType: convertScalarDataTypeToWasmType(param.dataType),
       numOfBytes: getSizeOfScalarDataType(param.dataType),
     });
   }
 
-  // set BP to be reg 1
-  statements.push(getBasePointerSetNode(reg1GetNode));
+  // set BP to be sp + size of params
+  statements.push(getBasePointerSetNode(getRegisterPointerArithmeticNode("sp", "+", functionDetails.sizeOfParams)));
 
   return statements;
 }

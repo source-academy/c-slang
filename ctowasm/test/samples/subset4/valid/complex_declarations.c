@@ -25,6 +25,6 @@ int f2(int x, int y) {
 
 int main() {
   print_int(f(1,2));
-  print_int(f(3,2));
+  print_int(f2(3,2));
 }
 

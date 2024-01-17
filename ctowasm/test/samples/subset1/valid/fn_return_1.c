@@ -3,5 +3,5 @@ int f() {
 }
 
 int main() {
-  f();
+  print_int(f());
 }
