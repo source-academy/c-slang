@@ -48,7 +48,7 @@ export default function translateStatement(
         enclosingLoopDetails
       ),
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
-      numOfBytes: getSizeOfScalarDataType(statement.value.dataType),
+      numOfBytes: getSizeOfScalarDataType(statement.dataType),
     };
   } else if (statement.type === "FunctionReturnMemoryStore") {
     return {

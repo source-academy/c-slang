@@ -12,20 +12,24 @@ import {
   WasmFunctionCall,
   WasmRegularFunctionCall,
 } from "~src/translator/wasm-ast/functions";
-import {
-  FunctionCallP,
-} from "~src/processor/c-ast/function";
+import { FunctionCallP } from "~src/processor/c-ast/function";
 import { UnsupportedFeatureError } from "~src/errors";
 
 export default function translateFunctionCall(
   node: FunctionCallP
 ): WasmFunctionCall {
-
   // translate the arguments
   const functionArgs: WasmExpression[] = [];
-  for (let i = 0; i < node.calledFunction.functionDetails.parameters.length; ++i) {
+  for (
+    let i = 0;
+    i < node.calledFunction.functionDetails.parameters.length;
+    ++i
+  ) {
     functionArgs.push(
-      translateExpression(node.args[i], node.calledFunction.functionDetails.parameters[i].dataType)
+      translateExpression(
+        node.args[i],
+        node.calledFunction.functionDetails.parameters[i].dataType
+      )
     );
   }
 
@@ -40,7 +44,7 @@ export default function translateFunctionCall(
       stackFrameTearDown: getFunctionCallStackFrameTeardownStatements(
         node.calledFunction.functionDetails
       ),
-      };
+    };
   } else {
     throw new UnsupportedFeatureError("Function pointers not yet supported");
   }
