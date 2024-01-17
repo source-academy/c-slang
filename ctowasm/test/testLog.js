@@ -409,10 +409,10 @@ const testLog = {
         10,20
       ], 
     },
-    pointers_arithmetic: {
-      title: "Pointers tests - arithmetic",
+    pointers_arithmetic_1: {
+      title: "Pointers tests - arithmetic 1",
       expectedCode: false,
-      expectedValues: [3, 6, 2, 5]
+      expectedValues: [3, 6, 2, 5, 1, 2, 3, 4 ,5 ,6, 3 ,2 , 1, 6, 5, 4]
     }
   },
 };

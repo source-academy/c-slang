@@ -5,6 +5,7 @@
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 
 import {
+  getSizeOfScalarDataType,
   isFloatType,
   isIntegerType,
   primaryDataTypeSizes,
@@ -18,6 +19,7 @@ import {
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { ProcessingError } from "~src/errors";
 import {
+  getDataTypeSize,
   isArithmeticType,
   isScalarType,
   unpackDataType,
@@ -56,36 +58,40 @@ export function determineDataTypeOfBinaryExpression(
   leftExprDataType = leftExprDataType as PointerDataType | PrimaryDataType;
   rightExprDataType = rightExprDataType as PointerDataType | PrimaryDataType;
 
-  if (leftExprDataType.type === "pointer") {
-    if (operator !== "+" && operator !== "-") {
-      throw new ProcessingError(
-        `Left operand to binary '${operator}' expression cannot be a pointer`
-      );
-    }
+  if (
+    (leftExprDataType.type === "pointer" ||
+      rightExprDataType.type === "pointer") &&
+    operator !== "+" &&
+    operator !== "-" &&
+    operator !== "!=" &&
+    operator !== "<" &&
+    operator !== "<=" &&
+    operator !== "==" &&
+    operator !== ">=" &&
+    operator !== ">"
+  ) {
+    throw new ProcessingError(
+      `Cannot perform '${operator} binary operation on pointer type'`
+    );
+  }
+
+  if (leftExprDataType.type === "pointer" && rightExprDataType.type === "pointer") {
     if (operator === "+") {
-      if (rightExprDataType.type === "pointer") {
-        throw new ProcessingError("Addition between 2 pointers is not allowed");
-      } else if (!isIntegerType(rightExprDataType.primaryDataType)) {
-        throw new ProcessingError(
-          "Cannot add a non-integral type to a pointer"
-        );
-      }
-    } else {
-      // TODO: add pointer type check
+      throw new ProcessingError(`Cannot perform '${operator}' binary operation on 2 pointer type operands'`);
     }
+    // TODO: add pointer type check
     return leftExprDataType;
   }
 
-  if (rightExprDataType.type === "pointer") {
-    if (operator !== "+") {
-      throw new ProcessingError(
-        `Right operand of '${operator}' binary expression cannot be a pointer`
-      );
+  if (leftExprDataType.type === "pointer" || rightExprDataType.type === "pointer") {
+    if (operator !== "+" && operator !== "-") {
+      throw new ProcessingError(`Cannot perform '${operator}' binary operation on pointer type operand and other operand'`); 
     }
-    if (!isIntegerType(leftExprDataType.primaryDataType)) {
+    if (!(leftExprDataType.type === "primary" && isIntegerType(leftExprDataType.primaryDataType)) && !(rightExprDataType.type === "primary" && isIntegerType(rightExprDataType.primaryDataType))) {
       throw new ProcessingError("Cannot add a non-integral type to a pointer");
     }
-    return rightExprDataType;
+
+    return leftExprDataType.type === "pointer" ? leftExprDataType : rightExprDataType;
   }
 
   if (
@@ -153,40 +159,81 @@ export function getDerefExpressionMemoryDetails(
     throw new ProcessingError(`Cannot dereference void pointer`);
   }
 
-  const memoryDetails: DerefExpressionMemoryDetails = {
-    originalDataType: derefedExpression.originalDataType.pointeeType,
-    primaryMemoryObjectDetails: [],
-  };
-
-  // the expression being derefed cannot have more than 1 primary data expresssion as it is a pointer
-  // this shouldnt happen - just a sanity check
-  if (derefedExpression.exprs.length !== 1) {
-    throw new ProcessingError("Invalid dereference");
-  }
-
-  const unpackedDataType = unpackDataType(derefedExpression.originalDataType);
-
-  for (let i = 0; i < unpackedDataType.length; ++i) {
-    const primaryDataObject = unpackedDataType[i];
-    memoryDetails.primaryMemoryObjectDetails.push({
-      dataType: primaryDataObject.dataType,
-      address: {
-        type: "DynamicAddress",
-        address: {
-          type: "BinaryExpression",
-          leftExpr: derefedExpression.exprs[0],
-          rightExpr: createMemoryOffsetIntegerConstant(
-            primaryDataObject.offset
-          ),
-          dataType: "pointer",
-          operator: "+",
-        }, // add the offset of the original symbol
-        dataType: primaryDataObject.dataType,
+  if (
+    derefedExpression.originalDataType.pointeeType.type === "primary" ||
+    derefedExpression.originalDataType.pointeeType.type === "pointer"
+  ) {
+    return {
+      originalDataType: derefedExpression.originalDataType.pointeeType,
+      primaryMemoryObjectDetails: [
+        {
+          dataType: derefedExpression.exprs[0].dataType,
+          address: {
+            type: "DynamicAddress",
+            address: derefedExpression.exprs[0],
+            dataType: "pointer",
+          },
+        },
+      ],
+    };
+  } else if (derefedExpression.originalDataType.pointeeType.type === "array") {
+    // the resultant data type of the whole dereference expression should be pointer to the array element type, as arrays are treated as pointers
+    return {
+      originalDataType: {
+        type: "pointer",
+        pointeeType:
+          derefedExpression.originalDataType.pointeeType.elementDataType,
       },
-    });
-  }
+      primaryMemoryObjectDetails: [
+        {
+          dataType: "pointer",
+          address: {
+            type: "DynamicAddress",
+            address: derefedExpression.exprs[0],
+            dataType: "pointer",
+          },
+        },
+      ],
+    };
+  } else {
+    // if the derefed expression is a pointer to an array, then return pointer to the array element type (as arrays should be treated as pointers)
+    const memoryDetails: DerefExpressionMemoryDetails = {
+      originalDataType: derefedExpression.originalDataType.pointeeType,
+      primaryMemoryObjectDetails: [],
+    };
 
-  return memoryDetails;
+    // the expression being derefed cannot have more than 1 primary data expresssion as it is a pointer
+    // this shouldnt happen - just a sanity check
+    if (derefedExpression.exprs.length !== 1) {
+      throw new ProcessingError("Invalid dereference");
+    }
+
+    const unpackedDataType = unpackDataType(
+      derefedExpression.originalDataType.pointeeType
+    );
+
+    for (let i = 0; i < unpackedDataType.length; ++i) {
+      const primaryDataObject = unpackedDataType[i];
+      memoryDetails.primaryMemoryObjectDetails.push({
+        dataType: primaryDataObject.dataType,
+        address: {
+          type: "DynamicAddress",
+          address: {
+            type: "BinaryExpression",
+            leftExpr: derefedExpression.exprs[0], // value of the pointer being dereferenced
+            rightExpr: createMemoryOffsetIntegerConstant(
+              primaryDataObject.offset
+            ),
+            dataType: "pointer",
+            operator: "+",
+          }, // add the offset of the original symbol
+          dataType: "pointer",
+        },
+      });
+    }
+
+    return memoryDetails;
+  }
 }
 
 /**
@@ -201,13 +248,6 @@ export function getArithmeticPrePostfixExpressionNodes(
   let dataType: DataType;
 
   const binaryOperator = expr.operator === "++" ? "+" : "-";
-
-  // the integer constant with value 1 being used to perform increment/decrement
-  const oneConstant: IntegerConstantP = {
-    type: "IntegerConstant",
-    value: 1n,
-    dataType: "signed int", //TODO: check this type
-  };
 
   if (expr.expr.type === "IdentifierExpression") {
     const symbolEntry = symbolTable.getSymbolEntry(expr.expr.name);
@@ -241,6 +281,13 @@ export function getArithmeticPrePostfixExpressionNodes(
 
     dataType = symbolEntry.dataType;
 
+    if (
+      symbolEntry.dataType.type === "pointer" &&
+      symbolEntry.dataType.pointeeType === null
+    ) {
+      throw new ProcessingError("Cannot perform arithmetic on a void pointer");
+    }
+
     memoryStoreNodes.push({
       type: "MemoryStore",
       address: identifierAddress,
@@ -248,7 +295,16 @@ export function getArithmeticPrePostfixExpressionNodes(
       value: {
         type: "BinaryExpression",
         leftExpr: memoryLoad,
-        rightExpr: oneConstant,
+        rightExpr: {
+          type: "IntegerConstant",
+          value:
+            symbolEntry.dataType.type === "pointer"
+              ? BigInt(
+                  getDataTypeSize(symbolEntry.dataType.pointeeType as DataType)
+                )
+              : 1n,
+          dataType: "signed int", //TODO: check this type
+        },
         dataType: unpackedDataType[0].dataType,
         operator: binaryOperator,
       },
@@ -282,10 +338,11 @@ export function getArithmeticPrePostfixExpressionNodes(
         derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
     };
 
-    dataType = {
-      type: "pointer",
-      pointeeType: derefedExpressionMemoryDetails.originalDataType,
-    };
+    dataType = derefedExpressionMemoryDetails.originalDataType;
+
+    if (dataType.type === "pointer" && dataType.pointeeType === null) {
+      throw new ProcessingError("Cannot perform arithmetic on a void pointer");
+    }
 
     memoryStoreNodes.push({
       type: "MemoryStore",
@@ -296,7 +353,14 @@ export function getArithmeticPrePostfixExpressionNodes(
       value: {
         type: "BinaryExpression",
         leftExpr: memoryLoad,
-        rightExpr: oneConstant,
+        rightExpr: {
+          type: "IntegerConstant",
+          value:
+            dataType.type === "pointer"
+              ? BigInt(getDataTypeSize(dataType.pointeeType as DataType))
+              : 1n,
+          dataType: "signed int", //TODO: check this type
+        },
         dataType:
           derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
         operator: binaryOperator,

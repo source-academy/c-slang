@@ -19,4 +19,22 @@ int main() {
   // test pointer subtraction
   print_int(*(ap3 - 1));
   print_int(*(ap4 - 1));
+
+  // test pointer increment
+  print_int(*(ap++));
+  print_int(*(ap));
+  print_int(*(++ap));
+
+  print_int(*(ap2++));
+  print_int(*(ap2));
+  print_int(*(++ap2));
+
+  // test pointer decrement
+  print_int(*(ap3--));
+  print_int(*(ap3));
+  print_int(*(--ap3));
+
+  print_int(*(ap4--));
+  print_int(*(ap4));
+  print_int(*(--ap4));
 }
