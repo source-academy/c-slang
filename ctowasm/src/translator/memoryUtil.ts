@@ -462,7 +462,7 @@ export function getFunctionCallStackFrameSetupStatements(
         },
       },
       value: functionArgs[i],
-      wasmDataType: WASM_ADDR_TYPE,
+      wasmDataType: convertScalarDataTypeToWasmType(param.dataType),
       numOfBytes: getSizeOfScalarDataType(param.dataType),
     });
   }
