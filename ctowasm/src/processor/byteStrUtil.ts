@@ -11,7 +11,8 @@ import {
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
-import { isIntegerType, primaryDataTypeSizes } from "~src/common/utils";
+import { isFloatType, isIntegerType, primaryDataTypeSizes } from "~src/common/utils";
+import { FloatDataType, IntegerDataType, PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 
 export function getZeroInializerByteStrForDataType(dataType: DataType) {
   let byteStr = "";
@@ -42,13 +43,31 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
 
 /**
  * Converts a Constant into its byte string representation in little endian format.
+ * Takes into account the target data type.
  */
-export function convertConstantToByteStr(constant: ConstantP) {
-  if (isIntegerType(constant.dataType)) {
-    return convertIntegerConstantToByteString(constant as IntegerConstantP);
+export function convertConstantToByteStr(constant: ConstantP, targetDataType: ScalarCDataType) {
+  // shouldnt be assigning ints to pointer. THis is a constraint violation TODO: consider an error here to user based on a flag set on compiler
+  if (targetDataType === "pointer") {
+    targetDataType = "unsigned int"
+  }
+
+  if (isIntegerType(targetDataType)) {
+    targetDataType = targetDataType as IntegerDataType
+    if (constant.type === "FloatConstant") {
+      // need to truncate the value
+      return convertIntegerToByteString(BigInt(Math.trunc(constant.value)), primaryDataTypeSizes[targetDataType])
+    } else {
+      return convertIntegerToByteString(constant.value, primaryDataTypeSizes[targetDataType]);
+    }
   } else {
-    // need to get a float byte string
-    return convertFloatConstantToByteString(constant as FloatConstantP);
+    targetDataType = targetDataType as FloatDataType;
+    if (constant.type === "IntegerConstant") {
+      // Number will automatically handle converting to the next representable value TODO: check if this is next highest or lowest
+      return convertFloatNumberToByteString(Number(constant.value), targetDataType);
+    } else {
+      // need to get a float byte string
+      return convertFloatNumberToByteString(constant.value, targetDataType);
+    } 
   }
 }
 
@@ -69,39 +88,37 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
   for (let i = strSplit.length - 1; i >= 0; i = i - 2) {
     finalStr += "\\" + strSplit[i - 1] + strSplit[i];
   }
+
+  // fill up rest of the bytes with zeroes if the integer needs fewer bytes than numOfBytes to represent
   const goalSize = numOfBytes * 3;
   while (finalStr.length < goalSize) {
     finalStr += "\\00";
   }
-  return finalStr;
+
+  // truncate the integer by taking lowest numOfBytes bytes
+  return finalStr.slice(0, 3 * numOfBytes);
 }
 
-function convertIntegerConstantToByteString(integerConstant: IntegerConstantP) {
-  return convertIntegerToByteString(
-    integerConstant.value,
-    primaryDataTypeSizes[integerConstant.dataType]
-  );
-}
 
-function convertFloatConstantToByteString(floatConstant: FloatConstantP) {
-  const buffer = new ArrayBuffer(primaryDataTypeSizes[floatConstant.dataType]);
+function convertFloatNumberToByteString(floatValue: number, targetDataType: FloatDataType) {
+  const buffer = new ArrayBuffer(primaryDataTypeSizes[targetDataType]);
   let integerValue;
-  if (floatConstant.dataType === "float") {
+  if (targetDataType === "float") {
     const float32Arr = new Float32Array(buffer);
     const uint32Arr = new Uint32Array(buffer);
-    float32Arr[0] = floatConstant.value;
+    // if the floatValue is out of range, this will set it to infinity. Whereas if not exactly representable, it will also round up to next representable. 
+    float32Arr[0] = floatValue;
     integerValue = uint32Arr[0];
   } else {
-    // 64 bit float
     const float64Arr = new Float64Array(buffer);
     const uint64Arr = new BigUint64Array(buffer);
-    float64Arr[0] = floatConstant.value;
+    float64Arr[0] = floatValue;
     integerValue = uint64Arr[0];
   }
 
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    primaryDataTypeSizes[floatConstant.dataType]
+    primaryDataTypeSizes[targetDataType]
   );
 }

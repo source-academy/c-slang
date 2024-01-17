@@ -233,6 +233,8 @@ function unpackDataSegmentInitializerAccordingToDataType(
       byteStr += getZeroInializerByteStrForDataType(dataType);
     } else {
       if (isScalarType(dataType)) {
+        dataType = dataType as PrimaryDataType | PointerDataType;
+
         if (initalizer.type === "InitializerList") {
           throw new ProcessingError("Excess elements in scalar initializer");
         } // TODO: perhaps throw warning instead, although this is undefined behaviour
@@ -241,7 +243,7 @@ function unpackDataSegmentInitializerAccordingToDataType(
           const processedConstant = evaluateCompileTimeExpression(
             initalizer.value
           );
-          byteStr += convertConstantToByteStr(processedConstant);
+          byteStr += convertConstantToByteStr(processedConstant, dataType.type === "pointer" ? "pointer" : dataType.primaryDataType);
         } catch (e) {
           if (e instanceof ProcessingError) {
             throw new ProcessingError(

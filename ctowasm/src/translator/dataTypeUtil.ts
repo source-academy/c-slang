@@ -220,10 +220,11 @@ export function getTypeConversionWrapper(
       expr: translatedExpression,
     };
   }
-} /**
+} 
+
+/**
  * Converts a constant to a Wasm const.
  */
-
 export function convertConstantToWasmConst(constant: ConstantP): WasmConst {
   if (constant.type === "IntegerConstant") {
     return {

@@ -2,6 +2,7 @@
  * Test implicit integer conversions, both
  * those defined in the standard, and those that are implementation defined.
  */
+// TODO: add tests for global variables - they are handled differently
 
 int main() {
   // ====== signed to unsigned int ======
@@ -38,7 +39,7 @@ int main() {
   print_double(i);
 
   // ======= unsigned to unsigned overflow ========
-  // standard behaviour: wrap
+  // standard behaviour: wrap (take lowest bits)
   unsigned int _d = 12345;
   unsigned char j = _d;
   print_int_unsigned(j);
@@ -77,4 +78,6 @@ int main() {
   float _k = 1.4;
   float q = _k + _i; // _i should be implictly converted to float first
   print_float(q);
+
+  // ===== TODO: Add float to int =====
 }
