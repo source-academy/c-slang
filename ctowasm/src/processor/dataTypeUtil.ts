@@ -82,6 +82,7 @@ export function isArithmeticType(dataType: DataType) {
 //   return
 // }
 
+
 /**
  * Utlity function to generate data type string.
  * TODO: change the json generation to a proper string

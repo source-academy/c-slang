@@ -363,22 +363,22 @@ const testLog = {
       ],
     },
     bitwise_shift_1: {
-      title: "bitwise shift tests 1",
+      title: "Bitwise shift tests 1",
       expectedCode: false,
       expectedValues: [240, -1, 156, 8589934588],
     },
     bitwise_and_1: {
-      title: "bitwise and 1",
+      title: "Bitwise and 1",
       expectedCode: false,
       expectedValues: [0, 8],
     },
     bitwise_or_1: {
-      title: "bitwise or 1",
+      title: "Bitwise or 1",
       expectedCode: false,
       expectedValues: [30, 11],
     },
     bitwise_xor_1: {
-      title: "bitwise xor 1",
+      title: "Bitwise xor 1",
       expectedCode: false,
       expectedValues: [171817911, -1221345193, -6647, 1123130857],
     },
@@ -393,6 +393,14 @@ const testLog = {
         "18446744073709116381",
       ],
     },
+    complex_declarations: {
+      title: "Test parsing of more complex declarations",
+      expectedCode: false,
+      expectedValues: [
+        1,
+        3
+      ], 
+    }
   },
 };
 

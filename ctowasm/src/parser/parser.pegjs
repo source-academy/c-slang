@@ -490,11 +490,12 @@ init_declarator
   / declarator:declarator
 
 declarator 
-  = pointers:(@pointer _)? directDeclarator:direct_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directDeclarator) : directDeclarator; }
+  = pointers:pointer _ directDeclarator:direct_declarator { return createPointerDeclaratorNode(pointers, directDeclarator); }
+  / directDeclarator:direct_declarator { return directDeclarator; }
 
 // TODO: add type qualifiers to pointer
 pointer 
-  = "*"|.., _|
+  = "*"|1.., _|
 
 initializer
   = list_initializer
@@ -524,15 +525,18 @@ parameter_list
 
 parameter_declaration
   = declarationSpecifiers:declaration_specifiers _ declarator:declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, declarator); }
-  / declarationSpecifiers:declaration_specifiers abstractDeclarator:(_ @abstract_declarator)? { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); }// to support function declarations without explicit function paramter names 
+  / declarationSpecifiers:declaration_specifiers _ abstractDeclarator:abstract_declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); } 
+  / declarationSpecifiers:declaration_specifiers { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, null); }// to support function declarations without explicit function paramter names 
 
 // an abstract declarator is specifically for function declaration parameters that do not have names given to them
 abstract_declarator
-  = pointers:(@pointer _)? _ directAbstractDeclarator:direct_abstract_declarator { return pointers !== null ? createPointerDeclaratorNode(pointers, directAbstractDeclarator) : directAbstractDeclarator; }
-  / pointers:pointer { return createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }); };
+  = pointers:pointer _ directAbstractDeclarator:direct_abstract_declarator { return createPointerDeclaratorNode(pointers, directAbstractDeclarator); }
+  / pointers:pointer { return createPointerDeclaratorNode(pointers, { type: "AbstractDeclarator" }); }
+  / directAbstractDeclarator:direct_abstract_declarator { return directAbstractDeclarator; }
 
 direct_abstract_declarator
-  = directAbstractDeclarator:(@direct_abstract_declarator_helper _)? declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator !== null ? directAbstractDeclarator : { type: "AbstractDeclarator" }, declaratorSuffixes); }  
+  = directAbstractDeclarator:direct_abstract_declarator_helper _ declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes(directAbstractDeclarator, declaratorSuffixes); }  
+  / declaratorSuffixes:( function_declarator_suffix / array_declarator_suffix )|1.., _| { return evaluateDeclaratorSuffixes({ type: "AbstractDeclarator" }, declaratorSuffixes); }  
 
 direct_abstract_declarator_helper
   = "(" _ @abstract_declarator _ ")"

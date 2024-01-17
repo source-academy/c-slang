@@ -119,25 +119,31 @@ export class SymbolTable {
         );
       }
 
-      if (
-        toJson(
-          (this.symbols[name] as FunctionSymbolEntry).dataType.parameters
-        ) !== toJson(dataType.parameters.toString())
-      ) {
-        throw new ProcessingError(
-          `${name} redeclared as function with different signature: different parameters`
-        );
-      }
+      // TODO: add proper existing declaration type checking in future
+      // // if (
+      // //   toJson(
+      // //     (this.symbols[name] as FunctionSymbolEntry).dataType.parameters
+      // //   ) !== toJson(dataType.parameters.toString())
+      // // ) {
+      // //   throw new ProcessingError(
+      // //     `${name} redeclared as function with different signature: different parameters`
+      // //   );
+      
+      // // const existingEntry = this.symbols[name] as FunctionSymbolEntry
 
-      if (
-        toJson(
-          (this.symbols[name] as FunctionSymbolEntry).dataType.returnType
-        ) !== toJson(dataType.returnType)
-      ) {
-        throw new ProcessingError(
-          `${name} redeclared as function with different signature: different return type`
-        );
-      }
+      // // for (let i = 0; i < existingEntry.dataType.parameters.length; i++) {
+      // //   if ()
+      // // }
+
+      // if (
+      //   toJson(
+      //     (this.symbols[name] as FunctionSymbolEntry).dataType.returnType
+      //   ) !== toJson(dataType.returnType)
+      // ) {
+      //   throw new ProcessingError(
+      //     `${name} redeclared as function with different signature: different return type`
+      //   );
+      // }
 
       return this.symbols[name] as FunctionSymbolEntry;
     }
