@@ -400,6 +400,18 @@ const testLog = {
         1,
         3
       ], 
+    },
+    pointers_addressof: {
+      title: "Pointers tests - address of '&' operator",
+      expectedCode: false,
+      expectedValues: [
+        10,20
+      ], 
+    },
+    pointers_arithmetic: {
+      title: "Pointers tests - arithmetic",
+      expectedCode: false,
+      expectedValues: [3, 6, 2, 5]
     }
   },
 };

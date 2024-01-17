@@ -303,7 +303,7 @@ export default function processExpression(
           ],
         };
       } else if (expr.expr.type === "PointerDereference") {
-        return processExpression(expr.expr, symbolTable); // simply return the processed dereferenced expression (& cancels *)
+        return processExpression(expr.expr.expr, symbolTable); // simply return the expression within the deref expression (& cancels *)
       } else {
         throw new ProcessingError("lvalue required for unary '&' operand");
       }
