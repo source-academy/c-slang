@@ -133,13 +133,13 @@ export function getMaxIntConstant(intType: "i32" | "i64"): WasmIntegerConst {
   if (intType === "i32") {
     return {
       type: "IntegerConst",
-      value: 4294967296n,
+      value: 4294967295n,
       wasmDataType: "i32",
     };
   } else {
     return {
       type: "IntegerConst",
-      value: 9223372036854775808n,
+      value: 18446744073709551615n,
       wasmDataType: "i64",
     };
   }

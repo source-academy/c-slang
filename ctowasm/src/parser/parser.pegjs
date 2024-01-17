@@ -641,7 +641,7 @@ integer_constant
 	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U" / "ll" / "LL" / "") { return generateNode("IntegerConstant", { value: BigInt(value), suffix: suffix.length > 0 ? (suffix.toLowerCase() === "ll" ? "l" : suffix.toLowerCase()) : undefined }); } 
 
 character_constant
-  = "'" _ value:c_char _ "'" {return generateNode("IntegerConstant", { value: BigInt(value) }); }
+  = "'" value:c_char "'" {return generateNode("IntegerConstant", { value: BigInt(value) }); }
 
 
 
@@ -661,11 +661,8 @@ c_char
 // Characters not required to be in the basic character set, but should be supported.
 extended_c_char_set
   = char:[@] { return char.charCodeAt(0); }
-
-escape_sequence
-  = simple_escape_sequence
   
-simple_escape_sequence 
+escape_sequence 
   = "\\\'"  { return 39; } 
   / "\\\""  { return 34; }
   / "\\?"   { return 63; }

@@ -5,12 +5,12 @@
 import { isFloatType, isIntegerType } from "~src/common/utils";
 import { TranslationError } from "~src/errors";
 import translateExpression from "~src/translator/translateExpression";
-import { getMaxIntConstant } from "~src/translator/util";
-import { convertScalarDataTypeToWasmType, priamryCDataTypeToWasmType } from "./dataTypeUtil";
+import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
 import { WasmExpression } from "~src/translator/wasm-ast/core";
 
 import { UnaryExpressionP } from "~src/processor/c-ast/expression/expressions";
 import { EnclosingLoopDetails } from "~src/translator/loopUtil";
+import { getMaxIntConstant } from "~src/translator/util";
 
 /**
  * Translates a UnaryExpression into the nodes for that expression,
@@ -24,11 +24,27 @@ export default function translateUnaryExpression(
     if (isIntegerType(unaryExpr.dataType)) {
       return {
         type: "BinaryExpression",
-        instruction: "sub",
-        leftExpr: getMaxIntConstant(
-          convertScalarDataTypeToWasmType(unaryExpr.dataType) as "i32" | "i64"
-        ),
-        rightExpr: translateExpression(unaryExpr.expr, unaryExpr.dataType, enclosingLoopDetails),
+        instruction:
+          convertScalarDataTypeToWasmType(unaryExpr.dataType) + ".add",
+        leftExpr: {
+          type: "BinaryExpression",
+          instruction: convertScalarDataTypeToWasmType(unaryExpr.dataType) + ".sub",
+          leftExpr: getMaxIntConstant(
+            convertScalarDataTypeToWasmType(unaryExpr.dataType) as "i32" | "i64"
+          ),
+          rightExpr: translateExpression(
+            unaryExpr.expr,
+            unaryExpr.dataType,
+            enclosingLoopDetails
+          ),
+        },
+        rightExpr: {
+          type: "IntegerConst",
+          wasmDataType: convertScalarDataTypeToWasmType(unaryExpr.dataType) as
+            | "i32"
+            | "i64",
+          value: 1n,
+        },
       };
     } else if (isFloatType(unaryExpr.dataType)) {
       return {
@@ -36,7 +52,11 @@ export default function translateUnaryExpression(
         wasmDataType: convertScalarDataTypeToWasmType(unaryExpr.dataType) as
           | "f32"
           | "f64",
-        expr: translateExpression(unaryExpr.expr, unaryExpr.dataType, enclosingLoopDetails),
+        expr: translateExpression(
+          unaryExpr.expr,
+          unaryExpr.dataType,
+          enclosingLoopDetails
+        ),
       };
     } else {
       throw new TranslationError(
@@ -47,7 +67,11 @@ export default function translateUnaryExpression(
     return {
       type: "BooleanExpression",
       wasmDataType: "i32",
-      expr: translateExpression(unaryExpr.expr, unaryExpr.dataType, enclosingLoopDetails),
+      expr: translateExpression(
+        unaryExpr.expr,
+        unaryExpr.dataType,
+        enclosingLoopDetails
+      ),
       isNegated: true,
     };
   } else if (unaryExpr.operator === "~") {
@@ -67,7 +91,11 @@ export default function translateUnaryExpression(
           | "i64",
         value: -1n,
       },
-      rightExpr: translateExpression(unaryExpr.expr, unaryExpr.dataType, enclosingLoopDetails),
+      rightExpr: translateExpression(
+        unaryExpr.expr,
+        unaryExpr.dataType,
+        enclosingLoopDetails
+      ),
       instruction: `${convertScalarDataTypeToWasmType(unaryExpr.dataType)}.xor`,
     };
   } else {
