@@ -44,7 +44,7 @@ void mergesort(long arr[], int length) {
 }
 
 int main() {
-  long arr[5] = {1231, -5353, 12, 1231123, 234};
+  long arr[5] = {4294967296 ,-12, 123, 12, 32};
   mergesort(arr, 5);
   for (int i = 0; i < 5; ++i) {
     print_long(arr[i]);

@@ -100,7 +100,7 @@ export function getAssignmentMemoryStoreNodes(
             dataType: "pointer",
           },
           value: assignedExprs.exprs[0],
-          dataType: derefedExpression.exprs[0].dataType,
+          dataType: derefedExpression.originalDataType.pointeeType.type === "pointer" ? "pointer" : derefedExpression.originalDataType.pointeeType.primaryDataType, // storing of the pointee type
         });
       } else if (
         derefedExpression.originalDataType.pointeeType.type === "array"

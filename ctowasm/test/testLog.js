@@ -273,7 +273,7 @@ const testLog = {
     merge_sort: {
       title: "Overall test of array features using mergesort algorithm",
       expectedCode: false,
-      expectedValues: [2, 2, 4, 4, 5, 6, 7, 10, 23, 199],
+      expectedValues: [-2, 2, 4, 4, 5, 6, 7, 10, 23, 199],
     },
     array_indexing_1: {
       title: "Test more complicated array indexing 1",
@@ -300,7 +300,7 @@ const testLog = {
     signed_long_1: {
       title: "Signed long type - global and local initialization 1",
       expectedCode: false,
-      expectedValues: [-2147483646, 2147483648],
+      expectedValues: [-2147483646, 2147483648, 4294967296],
     },
     unsigned_ints_1: {
       title: "Test unsigned int types 1",
@@ -456,6 +456,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [2], 
     }, 
+    merge_sort_2: {
+      title: "Mergesort 2 - using long type local arrays passed as function parameters",
+      expectedCode: false,
+      expectedValues: [-12, 12, 32, 123, 4294967296], 
+    }
   },
 };
 

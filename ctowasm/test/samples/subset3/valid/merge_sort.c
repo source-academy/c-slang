@@ -3,7 +3,7 @@
  * Test of array features along with other features.
  */
 
-int arr[10] = {5, 23, 4, 7, 2, 199, 2, 4, 6, 10};
+int arr[10] = {5, 23, 4, 7, 2, 199, -2, 4, 6, 10};
 
 void merge(int start_a, int mid, int end_b) {
   int temp[10];
