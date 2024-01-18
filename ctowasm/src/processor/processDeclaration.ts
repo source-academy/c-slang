@@ -4,7 +4,7 @@ import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import {
   getDataTypeSize,
-  isScalarType,
+  isScalarDataType,
   unpackDataType,
 } from "~src/processor/dataTypeUtil";
 import { SymbolTable, VariableSymbolEntry } from "~src/processor/symbolTable";
@@ -111,7 +111,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
         currOffset += getSizeOfScalarDataType(primaryDataObject.dataType);
       }
     } else {
-      if (isScalarType(dataType)) {
+      if (isScalarDataType(dataType)) {
         if (initalizer.type === "InitializerList") {
           throw new ProcessingError("Excess elements in scalar initializer");
         } // TODO: perhaps throw warning instead, although this is undefined behaviour
@@ -128,23 +128,22 @@ export function unpackLocalVariableInitializerAccordingToDataType(
         }
 
         dataType = dataType as PrimaryDataType | PointerDataType;
-        const scalarCDataType = dataType.type === "pointer"
-        ? "pointer"
-        : dataType.primaryDataType
+        const scalarCDataType =
+          dataType.type === "pointer" ? "pointer" : dataType.primaryDataType;
 
         memoryStoreStatements.push({
           type: "MemoryStore",
           address: {
             type: "LocalAddress",
             offset: createMemoryOffsetIntegerConstant(currOffset), // offset of this primary data object = offset of variable it belongs to + offset within variable type
-            dataType: "pointer"
+            dataType: "pointer",
           },
           value: processedExpression.exprs[0],
           dataType:
             dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
         });
 
-        currOffset += getSizeOfScalarDataType(scalarCDataType); 
+        currOffset += getSizeOfScalarDataType(scalarCDataType);
       } else {
         if (initalizer.type === "InitializerSingle") {
           throw new ProcessingError("Invalid initializer for aggregate type");
@@ -189,33 +188,32 @@ export function processDataSegmentVariableDeclaration(
 ): string {
   try {
     const symbolEntry = symbolTable.addEntry(node);
-  if (node.dataType.type === "function") {
-    if (typeof node.initializer !== "undefined") {
+    if (node.dataType.type === "function") {
+      if (typeof node.initializer !== "undefined") {
+        throw new ProcessingError(
+          `Function ${node.name} is initialized like a variable`
+        );
+      }
+      return ""; // nothing to initalize function with
+    }
+
+    // sanity check
+    if (symbolEntry.type === "localVariable") {
       throw new ProcessingError(
-        `Function ${node.name} is initialized like a variable`
+        "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'"
       );
     }
-    return ""; // nothing to initalize function with
-  }
 
-  // sanity check
-  if (symbolEntry.type === "localVariable") {
-    throw new ProcessingError(
-      "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'"
+    return unpackDataSegmentInitializerAccordingToDataType(
+      node.dataType,
+      typeof node.initializer !== "undefined" ? node.initializer : null
     );
-  }
-
-  return unpackDataSegmentInitializerAccordingToDataType(
-    node.dataType,
-    typeof node.initializer !== "undefined" ? node.initializer : null
-  );
   } catch (e) {
     if (e instanceof ProcessingError) {
-      e.addPositionInfo(node.position)
+      e.addPositionInfo(node.position);
     }
-    throw e
+    throw e;
   }
-  
 }
 /**
  * Function to recursively go through the declaration data type and the intiializer to assign appropriately
@@ -232,7 +230,7 @@ function unpackDataSegmentInitializerAccordingToDataType(
       // indicaates that there is no initializer for this particualr data field
       byteStr += getZeroInializerByteStrForDataType(dataType);
     } else {
-      if (isScalarType(dataType)) {
+      if (isScalarDataType(dataType)) {
         dataType = dataType as PrimaryDataType | PointerDataType;
 
         if (initalizer.type === "InitializerList") {
@@ -243,7 +241,10 @@ function unpackDataSegmentInitializerAccordingToDataType(
           const processedConstant = evaluateCompileTimeExpression(
             initalizer.value
           );
-          byteStr += convertConstantToByteStr(processedConstant, dataType.type === "pointer" ? "pointer" : dataType.primaryDataType);
+          byteStr += convertConstantToByteStr(
+            processedConstant,
+            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
+          );
         } catch (e) {
           if (e instanceof ProcessingError) {
             throw new ProcessingError(

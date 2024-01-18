@@ -1,4 +1,4 @@
-import { determineDataTypeOfBinaryExpression } from "./expressionUtil";
+import { determineResultDataTypeOfBinaryExpression } from "./expressionUtil";
 import processConstant, {
   getAdjustedIntValueAccordingToDataType,
 } from "./processConstant";
@@ -114,19 +114,25 @@ export default function evaluateCompileTimeExpression(
       evaluatedRightExpr.value
     );
 
-    const dataType = determineDataTypeOfBinaryExpression(
-      {type: "primary" , primaryDataType: evaluatedLeftExpr.dataType},
-      {type: "primary", primaryDataType: evaluatedRightExpr.dataType},
+    const dataType = determineResultDataTypeOfBinaryExpression(
+      { type: "primary", primaryDataType: evaluatedLeftExpr.dataType },
+      { type: "primary", primaryDataType: evaluatedRightExpr.dataType },
       expr.operator
     );
 
     if (dataType.type !== "primary") {
-      throw new ProcessingError("Invalid compile-time expression", expr.position)
+      throw new ProcessingError(
+        "Invalid compile-time expression",
+        expr.position
+      );
     }
 
     if (isIntegerType(dataType.primaryDataType)) {
       // need to cap integer values correctly
-      value = getAdjustedIntValueAccordingToDataType(value as bigint, dataType.primaryDataType);
+      value = getAdjustedIntValueAccordingToDataType(
+        value as bigint,
+        dataType.primaryDataType
+      );
 
       return {
         type: "IntegerConstant",

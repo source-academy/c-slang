@@ -5,7 +5,6 @@
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 
 import {
-  getSizeOfScalarDataType,
   isFloatType,
   isIntegerType,
   primaryDataTypeSizes,
@@ -20,8 +19,9 @@ import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions"
 import { ProcessingError } from "~src/errors";
 import {
   getDataTypeSize,
-  isArithmeticType,
-  isScalarType,
+  isArithmeticDataType,
+  isIntegeralDataType,
+  isScalarDataType,
   unpackDataType,
 } from "~src/processor/dataTypeUtil";
 import {
@@ -38,63 +38,105 @@ import {
   MemoryStore,
 } from "~src/processor/c-ast/memory";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
-import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
+
+function isRelationalOperator(op: BinaryOperator) {
+  return (
+    op === "!=" ||
+    op === "<" ||
+    op === "<=" ||
+    op === "==" ||
+    op === ">=" ||
+    op === ">"
+  );
+}
 
 /**
- * Returns the correct varaible type for a binary expression accorsinf to rules of arithemetic conversion 6.3.1.8 in C17 standard.
- * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
+ * Checks that a given binary expression is valid based on the data types of operands and the operator used.
  */
-export function determineDataTypeOfBinaryExpression(
+export function checkBinaryExpressionDataTypesValidity(
   leftExprDataType: DataType,
   rightExprDataType: DataType,
   operator: BinaryOperator
-): ScalarDataType {
-  if (!isScalarType(leftExprDataType) || !isScalarType(rightExprDataType)) {
+) {
+  if (
+    !isScalarDataType(leftExprDataType) ||
+    !isScalarDataType(rightExprDataType)
+  ) {
     throw new ProcessingError(
       `'${operator}' expression cannot be performed on non-scalar type`
     );
   }
 
-  leftExprDataType = leftExprDataType as PointerDataType | PrimaryDataType;
-  rightExprDataType = rightExprDataType as PointerDataType | PrimaryDataType;
+  leftExprDataType = leftExprDataType as ScalarDataType;
+  rightExprDataType = rightExprDataType as ScalarDataType;
 
   if (
-    (leftExprDataType.type === "pointer" ||
-      rightExprDataType.type === "pointer") &&
-    operator !== "+" &&
-    operator !== "-" &&
-    operator !== "!=" &&
-    operator !== "<" &&
-    operator !== "<=" &&
-    operator !== "==" &&
-    operator !== ">=" &&
-    operator !== ">"
+    leftExprDataType.type === "pointer" &&
+    rightExprDataType.type === "pointer"
   ) {
-    throw new ProcessingError(
-      `Cannot perform '${operator} binary operation on pointer type'`
-    );
-  }
-
-  if (leftExprDataType.type === "pointer" && rightExprDataType.type === "pointer") {
-    if (operator === "+") {
-      throw new ProcessingError(`Cannot perform '${operator}' binary operation on 2 pointer type operands'`);
+    if (
+      leftExprDataType.pointeeType === null ||
+      rightExprDataType.pointeeType === null
+    ) {
+      throw new ProcessingError("Cannot perform arithmetic on void pointer");
     }
-    // TODO: add pointer type check
-    return leftExprDataType;
-  }
-
-  if (leftExprDataType.type === "pointer" || rightExprDataType.type === "pointer") {
+    if (operator !== "-" && !isRelationalOperator(operator)) {
+      throw new ProcessingError(
+        `Cannot perform '${operator}' binary operation on 2 pointer type operands'`
+      );
+    }
+  } else if (leftExprDataType.type === "pointer") {
+    if (leftExprDataType.pointeeType === null) {
+      throw new ProcessingError("Cannot perform arithmetic on void pointer");
+    }
     if (operator !== "+" && operator !== "-") {
-      throw new ProcessingError(`Cannot perform '${operator}' binary operation on pointer type operand and other operand'`); 
+      throw new ProcessingError(
+        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`
+      );
     }
-    if (!(leftExprDataType.type === "primary" && isIntegerType(leftExprDataType.primaryDataType)) && !(rightExprDataType.type === "primary" && isIntegerType(rightExprDataType.primaryDataType))) {
-      throw new ProcessingError("Cannot add a non-integral type to a pointer");
+    if (!isIntegeralDataType(rightExprDataType)) {
+      throw new ProcessingError(
+        `Cannot perform '${operator}' binary operation on pointer and non-integral type`
+      );
     }
-
-    return leftExprDataType.type === "pointer" ? leftExprDataType : rightExprDataType;
+  } else if (rightExprDataType.type === "pointer") {
+    if (rightExprDataType.pointeeType === null) {
+      throw new ProcessingError("Cannot perform arithmetic on void pointer");
+    }
+    if (operator !== "+" && operator !== "-") {
+      throw new ProcessingError(
+        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`
+      );
+    }
+    if (!isIntegeralDataType(leftExprDataType)) {
+      throw new ProcessingError(
+        `Cannot perform '${operator}' binary operation on pointer and non-integral type`
+      );
+    }
+  } else {
+    // TODO: add more data type checks here in future
   }
+}
 
+/**
+ * Determines the type that operands in a binary expression should be converted to before the operation,
+ * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
+ * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
+ *  The data type of all relational operator expressions is signed int, as per the standard.
+ */
+export function determineOperandTargetDataTypeOfBinaryExpression(
+  leftExprDataType: ScalarDataType,
+  rightExprDataType: ScalarDataType,
+  operator: BinaryOperator
+): ScalarDataType {
+  // if either data type are pointers, then target data type is pointer TODO: check this
   if (
+    leftExprDataType.type === "pointer"
+  ) {
+    return leftExprDataType;
+  } else if (rightExprDataType.type === "pointer") {
+    return rightExprDataType;
+  }else if (
     isFloatType(leftExprDataType.primaryDataType) &&
     isFloatType(rightExprDataType.primaryDataType)
   ) {
@@ -128,6 +170,30 @@ export function determineDataTypeOfBinaryExpression(
       return rightExprDataType;
     }
   }
+}
+
+/**
+ * Returns the correct varaible type for both the result of a binary expression,
+ * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
+ * This should be the same as the operand target data type, except for relational operators.
+ *
+ */
+export function determineResultDataTypeOfBinaryExpression(
+  leftExprDataType: ScalarDataType,
+  rightExprDataType: ScalarDataType,
+  operator: BinaryOperator
+): ScalarDataType {
+  if (isRelationalOperator(operator)) {
+    return {
+      type: "primary",
+      primaryDataType: "signed int",
+    };
+  }
+  return determineOperandTargetDataTypeOfBinaryExpression(
+    leftExprDataType,
+    rightExprDataType,
+    operator
+  );
 }
 
 /**
@@ -225,6 +291,7 @@ export function getDerefExpressionMemoryDetails(
               primaryDataObject.offset
             ),
             dataType: "pointer",
+            operandTargetDataType: "pointer",
             operator: "+",
           }, // add the offset of the original symbol
           dataType: "pointer",
@@ -306,6 +373,7 @@ export function getArithmeticPrePostfixExpressionNodes(
           dataType: "signed int", //TODO: check this type
         },
         dataType: unpackedDataType[0].dataType,
+        operandTargetDataType: unpackedDataType[0].dataType,
         operator: binaryOperator,
       },
     });
@@ -363,6 +431,8 @@ export function getArithmeticPrePostfixExpressionNodes(
         },
         dataType:
           derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
+        operandTargetDataType:
+          derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
         operator: binaryOperator,
       },
     });
@@ -410,7 +480,7 @@ export function processPrefixExpression(
     if (
       (prefixExpression.operator === "+" ||
         prefixExpression.operator === "-") &&
-      !isArithmeticType(processedExpression.originalDataType)
+      !isArithmeticDataType(processedExpression.originalDataType)
     ) {
       throw new ProcessingError(
         `Arithmetic operand required in prefix '${prefixExpression.operator}' expression`
@@ -425,7 +495,7 @@ export function processPrefixExpression(
       );
     } else if (
       prefixExpression.operator === "!" &&
-      !isScalarType(processedExpression.originalDataType)
+      !isScalarDataType(processedExpression.originalDataType)
     ) {
       throw new ProcessingError(
         `Scalar operand required in prefix '${prefixExpression.operator}' expression`

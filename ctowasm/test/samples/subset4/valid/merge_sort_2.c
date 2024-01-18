@@ -3,8 +3,8 @@
  * Test of array features along with other features.
  */
 
-void merge(int start_a, int mid, int end_b) {
-  int temp[10];
+void merge(long arr[], int start_a, int mid, int end_b) {
+  long temp[5];
   int curr_a = start_a;
   int curr_b = mid;
   int curr_temp = 0;
@@ -29,20 +29,24 @@ void merge(int start_a, int mid, int end_b) {
   }
 }
 
-void mergesort(int start, int end) {
+void mergesort_recursive_helper(long arr[], int start, int end) {
   if (end - start <= 1) {
     return;
   }
   int mid = (end + start) / 2;
-  mergesort(start, mid);
-  mergesort(mid, end);
-  merge(start, mid, end);
+  mergesort_recursive_helper(arr, start, mid);
+  mergesort_recursive_helper(arr, mid, end);
+  merge(arr, start, mid, end);
+}
+
+void mergesort(long arr[], int length) {
+  mergesort_recursive_helper(arr, 0, length);
 }
 
 int main() {
   long arr[5] = {1231, -5353, 12, 1231123, 234};
-  mergesort(&arr[0]);
-  for (int i = 0; i < 10; ++i) {
-    print_int(arr[i]);
+  mergesort(arr, 5);
+  for (int i = 0; i < 5; ++i) {
+    print_long(arr[i]);
   }
 }

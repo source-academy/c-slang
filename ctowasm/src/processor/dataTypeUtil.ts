@@ -2,12 +2,16 @@
  * Some utility functions used by the processor when working with data types.
  */
 
-import { DataType, PrimaryDataType } from "~src/parser/c-ast/dataTypes";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
-import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
-import { getSizeOfScalarDataType } from "~src/common/utils";
+import { ScalarCDataType } from "~src/common/types";
+import {
+  getSizeOfScalarDataType,
+  isFloatType,
+  isIntegerType,
+} from "~src/common/utils";
 
 /**
  * Returns the size in bytes of a data type.
@@ -54,11 +58,19 @@ export function getDataTypeSize(varType: DataType): number {
  * Only primary data types and pointers are scalar.
  */
 
-export function isScalarType(dataType: DataType) {
+export function isScalarDataType(dataType: DataType) {
   return dataType.type === "primary" || dataType.type === "pointer";
 }
 
-export function isArithmeticType(dataType: DataType) {
+export function isIntegeralDataType(dataType: DataType) {
+  return dataType.type === "primary" && isIntegerType(dataType.primaryDataType);
+}
+
+export function isFloatDataType(dataType: DataType) {
+  return dataType.type === "primary" && isFloatType(dataType.primaryDataType);
+}
+
+export function isArithmeticDataType(dataType: DataType) {
   return dataType.type === "primary";
 }
 
@@ -81,7 +93,6 @@ export function isArithmeticType(dataType: DataType) {
 // export function checkPrimaryDataTypeCompatibility(dataTypeA: PrimaryCDataType, dataTypeB: PrimaryCDataType) {
 //   return
 // }
-
 
 /**
  * Utlity function to generate data type string.

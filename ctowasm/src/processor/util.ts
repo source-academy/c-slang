@@ -11,14 +11,14 @@ import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
-import { isScalarType } from "~src/processor/dataTypeUtil";
+import { isScalarDataType } from "~src/processor/dataTypeUtil";
 
 export function processCondition(
   condition: Expression,
   symbolTable: SymbolTable
 ) {
   const processedCondition = processExpression(condition, symbolTable);
-  if (!isScalarType(processedCondition.originalDataType)) {
+  if (!isScalarDataType(processedCondition.originalDataType)) {
     throw new ProcessingError(
       `Cannot use ${processedCondition.originalDataType.type} where scalar is required`
     );

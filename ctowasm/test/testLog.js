@@ -429,6 +429,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: ['b', 4, 2]
     },
+    pointers_arithmetic_3: {
+      title: "Pointers tests - arithmetic 3",
+      expectedCode: false,
+      expectedValues: [2, -2]
+    },
     pointers_array_deref_test: {
       title: "Pointers tests - dereferencing pointer to array",
       expectedCode: false,
@@ -446,6 +451,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [1, 6, 8, 3], 
     },
+    arrays_function_parameters: {
+      title: "Arrays as function parameters - should be implicitly treated as pointers",
+      expectedCode: false,
+      expectedValues: [2], 
+    }, 
   },
 };
 

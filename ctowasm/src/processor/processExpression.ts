@@ -7,26 +7,27 @@ import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { FunctionReturnMemoryLoad } from "~src/processor/c-ast/memory";
 import {
-  determineDataTypeOfBinaryExpression,
+  checkBinaryExpressionDataTypesValidity,
+  determineOperandTargetDataTypeOfBinaryExpression,
+  determineResultDataTypeOfBinaryExpression,
   getDerefExpressionMemoryDetails,
   processPostfixExpression,
   processPrefixExpression,
 } from "~src/processor/expressionUtil";
 import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
-import {
-  createMemoryOffsetIntegerConstant,
-} from "~src/processor/util";
+import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processBlockItem from "~src/processor/processBlockItem";
 import {
   getDataTypeSize,
-  isScalarType,
+  isScalarDataType,
   unpackDataType,
 } from "~src/processor/dataTypeUtil";
 import { IntegerDataType } from "~src/common/types";
 import processConstant from "~src/processor/processConstant";
-import { SIZE_OF_EXPR_RESULT_DATA_TYPE } from "~src/common/constants";
+import { PTRDIFF_T, SIZE_T } from "~src/common/constants";
+import { DataType, ScalarDataType } from "~src/parser/c-ast/dataTypes";
 
 /**
  * Processes an Expression node in the context where value(s) are expected to be loaded from memory for use in a statement (action).
@@ -61,8 +62,8 @@ export default function processExpression(
 
       // Future work: add more specific type checking for binray expressions with different operators
       if (
-        !isScalarType(processedLeftExpr.originalDataType) ||
-        !isScalarType(processedRightExpr.originalDataType)
+        !isScalarDataType(processedLeftExpr.originalDataType) ||
+        !isScalarDataType(processedRightExpr.originalDataType)
       ) {
         throw new ProcessingError(
           `Non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExpr.originalDataType.type}, right operand: ${processedRightExpr.originalDataType.type}`
@@ -79,10 +80,8 @@ export default function processExpression(
         );
       }
 
-      let binaryExpressionDataType;
       try {
-        binaryExpressionDataType = determineDataTypeOfBinaryExpression(
-          // this function may throw some errors to do with binary expression constraint checks
+        checkBinaryExpressionDataTypesValidity(
           processedLeftExpr.originalDataType,
           processedRightExpr.originalDataType,
           expr.operator
@@ -95,46 +94,102 @@ export default function processExpression(
         throw e;
       }
 
+      const binaryExpressionDataType =
+        determineResultDataTypeOfBinaryExpression(
+          processedLeftExpr.originalDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
+          processedRightExpr.originalDataType as ScalarDataType,
+          expr.operator
+        );
+
+      const operandTargetDataType =
+        determineOperandTargetDataTypeOfBinaryExpression(
+          processedLeftExpr.originalDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
+          processedRightExpr.originalDataType as ScalarDataType,
+          expr.operator
+        );
+
       let leftExpr = processedLeftExpr.exprs[0];
       let rightExpr = processedRightExpr.exprs[0];
 
-
-      // account for pointer type arithmetic - already checked that it must be '+' or '-' determineDataTypeOfBinaryExpression
+      // account for pointer type arithmetic - already checked that it must be '+' or '-' in determineDataTypeOfBinaryExpression
       if (
         processedLeftExpr.originalDataType.type === "pointer" &&
         processedRightExpr.originalDataType.type === "primary"
       ) {
-        if (processedLeftExpr.originalDataType.pointeeType === null) {
-          throw new ProcessingError("Cannot perform arithmetic on void pointer");
-        }
         rightExpr = {
           type: "BinaryExpression",
           operator: "*",
           leftExpr: rightExpr,
           rightExpr: {
             type: "IntegerConstant",
-            value: BigInt(getDataTypeSize(processedLeftExpr.originalDataType.pointeeType)),
+            value: BigInt(
+              getDataTypeSize(
+                processedLeftExpr.originalDataType.pointeeType as DataType
+              )
+            ), // void pointer already checked for
             dataType: rightExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
           dataType: rightExpr.dataType,
+          operandTargetDataType: rightExpr.dataType,
         };
       } else if (
         processedRightExpr.originalDataType.type === "pointer" &&
         processedLeftExpr.originalDataType.type === "primary"
       ) {
-        if (processedRightExpr.originalDataType.pointeeType === null) {
-          throw new ProcessingError("Cannot perform arithmetic on void pointer");
-        } 
         leftExpr = {
           type: "BinaryExpression",
           operator: "*",
           leftExpr: leftExpr,
           rightExpr: {
             type: "IntegerConstant",
-            value: BigInt(getDataTypeSize(processedRightExpr.originalDataType.pointeeType)),
+            value: BigInt(
+              getDataTypeSize(
+                processedRightExpr.originalDataType.pointeeType as DataType
+              )
+            ),
             dataType: leftExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
           dataType: leftExpr.dataType,
+          operandTargetDataType: leftExpr.dataType,
+        };
+      }
+
+      if (
+        processedRightExpr.originalDataType.type === "pointer" &&
+        processedLeftExpr.originalDataType.type === "pointer" &&
+        expr.operator === "-"
+      ) {
+        // special handling for subtraction between pointers, need to divide result by underlying type size
+        return {
+          originalDataType: binaryExpressionDataType,
+          exprs: [
+            {
+              type: "BinaryExpression",
+              leftExpr: {
+                type: "BinaryExpression",
+                leftExpr,
+                rightExpr,
+                operator: expr.operator,
+                dataType:
+                  binaryExpressionDataType.type === "pointer"
+                    ? "pointer"
+                    : binaryExpressionDataType.primaryDataType,
+                operandTargetDataType: "pointer",
+              },
+              operator: "/",
+              rightExpr: {
+                type: "IntegerConstant",
+                value: BigInt(
+                  getDataTypeSize(
+                    processedRightExpr.originalDataType.pointeeType as DataType
+                  )
+                ),
+                dataType: PTRDIFF_T,
+              },
+              dataType: PTRDIFF_T,
+              operandTargetDataType: PTRDIFF_T,
+            },
+          ],
         };
       }
 
@@ -150,6 +205,10 @@ export default function processExpression(
               binaryExpressionDataType.type === "pointer"
                 ? "pointer"
                 : binaryExpressionDataType.primaryDataType,
+            operandTargetDataType:
+              operandTargetDataType.type === "pointer"
+                ? "pointer"
+                : operandTargetDataType.primaryDataType,
           },
         ],
       };
@@ -376,13 +435,13 @@ export default function processExpression(
       return {
         originalDataType: {
           type: "primary",
-          primaryDataType: SIZE_OF_EXPR_RESULT_DATA_TYPE,
+          primaryDataType: SIZE_T,
         },
         exprs: [
           {
             type: "IntegerConstant",
             value: BigInt(getDataTypeSize(exprDataType)),
-            dataType: SIZE_OF_EXPR_RESULT_DATA_TYPE,
+            dataType: SIZE_T,
           },
         ],
       };

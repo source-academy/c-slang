@@ -3,15 +3,10 @@
  */
 
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
-import { ScalarDataType } from "~src/parser/c-ast/dataTypes";
 import { isUnsignedIntegerType, isSignedIntegerType } from "~src/common/utils";
-import { isScalarType } from "~src/processor/dataTypeUtil";
 import translateExpression from "~src/translator/translateExpression";
-import { getTypeConversionWrapper } from "./dataTypeUtil";
 import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
 import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
-import { WasmModule } from "~src/translator/wasm-ast/core";
-import { TranslationError } from "~src/errors";
 import { BinaryExpressionP } from "~src/processor/c-ast/expression/expressions";
 import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 
@@ -58,20 +53,19 @@ export default function translateBinaryExpression(
     // perform implicit arithmetic type conversions
     leftExpr: translateExpression(
       binaryExpr.leftExpr,
-      binaryExpr.dataType,
+      binaryExpr.operandTargetDataType,
       enclosingLoopDetails
     ),
     rightExpr: translateExpression(
       binaryExpr.rightExpr,
-      binaryExpr.dataType,
+      binaryExpr.operandTargetDataType,
       enclosingLoopDetails
     ),
     instruction: getBinaryExpressionInstruction(
       binaryExpr.operator,
-      binaryExpr.dataType
+      binaryExpr.operandTargetDataType
     ),
-    wasmDataType: convertScalarDataTypeToWasmType(binaryExpr.dataType),
-  } as WasmBinaryExpression;
+  };
 }
 
 const binaryOperatorToInstructionMap: Record<BinaryOperator, string> = {
