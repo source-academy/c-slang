@@ -270,7 +270,7 @@ export function getArithmeticPrePostfixExpressionNodes(
           ? "LocalAddress"
           : "DataSegmentAddress",
       offset: createMemoryOffsetIntegerConstant(symbolEntry.offset), // add the offset of the original symbol
-      dataType: unpackedDataType[0].dataType,
+      dataType: "pointer",
     };
 
     memoryLoad = {

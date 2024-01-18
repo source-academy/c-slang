@@ -13,10 +13,10 @@ import {
   processPrefixExpression,
 } from "~src/processor/expressionUtil";
 import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import {
-  convertFunctionCallToFunctionCallP,
-} from "./processFunctionDefinition";
+  createMemoryOffsetIntegerConstant,
+} from "~src/processor/util";
+import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processBlockItem from "~src/processor/processBlockItem";
 import {
@@ -238,10 +238,7 @@ export default function processExpression(
                     ? "DataSegmentAddress"
                     : "LocalAddress",
                 offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
-                dataType:
-                  symbolEntry.dataType.type === "primary"
-                    ? symbolEntry.dataType.primaryDataType
-                    : "pointer",
+                dataType: "pointer",
               },
               dataType:
                 symbolEntry.dataType.type === "primary"
@@ -308,16 +305,62 @@ export default function processExpression(
         throw new ProcessingError("lvalue required for unary '&' operand");
       }
     } else if (expr.type === "PointerDereference") {
-      const { originalDataType, primaryMemoryObjectDetails } =
-        getDerefExpressionMemoryDetails(expr, symbolTable);
-      return {
-        originalDataType,
-        exprs: primaryMemoryObjectDetails.map((memObj) => ({
-          type: "MemoryLoad",
-          address: memObj.address,
-          dataType: memObj.dataType,
-        })),
-      };
+      // process the expression being dereferenced first
+      const derefedExpression = processExpression(expr.expr, symbolTable);
+
+      if (derefedExpression.originalDataType.type !== "pointer") {
+        throw new ProcessingError(`Cannot dereference non-pointer type`);
+      }
+
+      if (derefedExpression.originalDataType.pointeeType === null) {
+        throw new ProcessingError(`Cannot dereference void pointer`);
+      }
+
+      if (
+        derefedExpression.originalDataType.pointeeType.type === "primary" ||
+        derefedExpression.originalDataType.pointeeType.type === "pointer"
+      ) {
+        return {
+          originalDataType: derefedExpression.originalDataType.pointeeType,
+          exprs: [
+            {
+              type: "MemoryLoad",
+              address: {
+                type: "DynamicAddress",
+                address: derefedExpression.exprs[0],
+                dataType: "pointer",
+              },
+              dataType:
+                derefedExpression.originalDataType.pointeeType.type ===
+                "pointer"
+                  ? "pointer"
+                  : derefedExpression.originalDataType.pointeeType
+                      .primaryDataType,
+            },
+          ],
+        };
+      } else if (
+        derefedExpression.originalDataType.pointeeType.type === "array"
+      ) {
+        // the resultant data type of the whole dereference expression should be pointer to the array element type, as arrays are treated as pointers
+        return {
+          originalDataType: {
+            type: "pointer",
+            pointeeType:
+              derefedExpression.originalDataType.pointeeType.elementDataType,
+          },
+          exprs: [
+            {
+              type: "DynamicAddress",
+              address: derefedExpression.exprs[0],
+              dataType: "pointer",
+            },
+          ],
+        };
+      } else {
+        // TODO: support structs
+        throw new UnsupportedFeatureError("Structs not yet supported.");
+      }
     } else if (expr.type === "SizeOfExpression") {
       const exprDataType = processExpression(
         expr.expr,

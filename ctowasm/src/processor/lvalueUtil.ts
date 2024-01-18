@@ -2,7 +2,7 @@
  * Utility functions relating to the handling of variable related nodes.
  */
 
-import { ProcessingError } from "~src/errors";
+import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import { MemoryStore } from "~src/processor/c-ast/memory";
 import { SymbolTable } from "~src/processor/symbolTable";
@@ -67,48 +67,51 @@ export function getAssignmentMemoryStoreNodes(
             offset: createMemoryOffsetIntegerConstant(
               primaryDataObject.offset + symbolEntry.offset
             ), // add the offset of the original symbol
-            dataType: primaryDataObject.dataType,
+            dataType: "pointer",
           },
           value: assignedExprs.exprs[i],
           dataType: primaryDataObject.dataType,
         });
       }
     } else if (assignmentNode.lvalue.type === "PointerDereference") {
-      const derefedExpressionMemoryDetails = getDerefExpressionMemoryDetails(
-        assignmentNode.lvalue,
+      // TODO: data type check
+      const derefedExpression = processExpression(
+        assignmentNode.lvalue.expr,
         symbolTable
       );
 
-      // TODO: data type check
-      // if (
-      //   // void pointer is already checked for
-      //   !checkDataTypeCompatibility(
-      //     derefedExpressionMemoryDetails.originalDataType,
-      //     assignedExprs.originalDataType
-      //   )
-      // ) {
-      //   throw new ProcessingError(
-      //     `Invalid assignment expression - cannot assign ${stringifyDataType(
-      //       assignedExprs.originalDataType
-      //     )} to ${stringifyDataType(
-      //       derefedExpressionMemoryDetails.originalDataType
-      //     )}`
-      //   );
-      // }
+      if (derefedExpression.originalDataType.type !== "pointer") {
+        throw new ProcessingError(`Cannot dereference non-pointer type`);
+      }
 
-      for (
-        let i = 0;
-        i < derefedExpressionMemoryDetails.primaryMemoryObjectDetails.length;
-        ++i
+      if (derefedExpression.originalDataType.pointeeType === null) {
+        throw new ProcessingError(`Cannot dereference void pointer`);
+      }
+
+      if (
+        derefedExpression.originalDataType.pointeeType.type === "primary" ||
+        derefedExpression.originalDataType.pointeeType.type === "pointer"
       ) {
-        const primaryDataObject =
-          derefedExpressionMemoryDetails.primaryMemoryObjectDetails[i];
         memoryStoreStatements.push({
           type: "MemoryStore",
-          address: primaryDataObject.address,
-          value: assignedExprs.exprs[i],
-          dataType: primaryDataObject.dataType,
+          address: {
+            type: "DynamicAddress",
+            address: derefedExpression.exprs[0],
+            dataType: "pointer",
+          },
+          value: assignedExprs.exprs[0],
+          dataType: derefedExpression.exprs[0].dataType,
         });
+      } else if (
+        derefedExpression.originalDataType.pointeeType.type === "array"
+      ) {
+        throw new ProcessingError(
+          "Assignment to expression with array type",
+          assignmentNode.position
+        );
+      } else {
+        //TODO support structs
+        throw new UnsupportedFeatureError("Structs not yet supported");
       }
     } else {
       //TODO: add struct -> and . in future

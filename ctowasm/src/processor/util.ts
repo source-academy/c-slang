@@ -19,7 +19,9 @@ export function processCondition(
 ) {
   const processedCondition = processExpression(condition, symbolTable);
   if (!isScalarType(processedCondition.originalDataType)) {
-    throw new ProcessingError(`Cannot use ${processedCondition.originalDataType.type} where scalar is required`)
+    throw new ProcessingError(
+      `Cannot use ${processedCondition.originalDataType.type} where scalar is required`
+    );
   }
   return processedCondition.exprs[0];
 }

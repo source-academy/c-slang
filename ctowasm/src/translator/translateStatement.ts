@@ -39,7 +39,7 @@ export default function translateStatement(
       type: "MemoryStore",
       addr: translateExpression(
         statement.address,
-        statement.dataType,
+        statement.address.dataType,
         enclosingLoopDetails
       ),
       value: translateExpression(

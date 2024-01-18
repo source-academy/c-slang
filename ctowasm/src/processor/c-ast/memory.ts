@@ -14,20 +14,24 @@ import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
  */
 export type Address = LocalAddress | DataSegmentAddress | DynamicAddress;
 
+export interface AddressBase extends ExpressionPBase {
+  dataType: "pointer" // all addresses should have pointer type
+}
+
 // this covers local variables and parameters in a functions.
 //
-export interface LocalAddress extends ExpressionPBase {
+export interface LocalAddress extends AddressBase {
   type: "LocalAddress";
   offset: ExpressionP; 
 }
 
 // covers data segment (global) variables
-export interface DataSegmentAddress extends ExpressionPBase {
+export interface DataSegmentAddress extends AddressBase {
   type: "DataSegmentAddress";
   offset: ExpressionP; // represents the number of bytes of this address from the first byte of the first data segment object
 }
 
-export interface DynamicAddress extends ExpressionPBase {
+export interface DynamicAddress extends AddressBase {
   type: "DynamicAddress";
   address: ExpressionP; // represents the exact address itself
 }

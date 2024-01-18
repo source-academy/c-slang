@@ -102,7 +102,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           address: {
             type: "LocalAddress",
             offset: createMemoryOffsetIntegerConstant(currOffset), // offset of this primary data object = offset of variable it belongs to + offset within variable type
-            dataType: primaryDataObject.dataType,
+            dataType: "pointer",
           },
           value: zeroExpression,
           dataType: primaryDataObject.dataType,
@@ -137,7 +137,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           address: {
             type: "LocalAddress",
             offset: createMemoryOffsetIntegerConstant(currOffset), // offset of this primary data object = offset of variable it belongs to + offset within variable type
-            dataType: scalarCDataType
+            dataType: "pointer"
           },
           value: processedExpression.exprs[0],
           dataType:
