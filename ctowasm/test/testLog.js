@@ -460,6 +460,11 @@ const testLog = {
       title: "Mergesort 2 - using long type local arrays passed as function parameters",
       expectedCode: false,
       expectedValues: [-12, 12, 32, 123, 4294967296], 
+    },
+    for_loop_2: {
+      title: "For loop 2 - Variant of for loop with no declaration and empty expressions",
+      expectedCode: false,
+      expectedValues: [10, 5]
     }
   },
 };
