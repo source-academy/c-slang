@@ -103,7 +103,7 @@ export async function testFileCompilationSuccess(subset, testFileName) {
       // Test 2: checks that the file is runnable, and outputs the correct values
       try {
         const programOutput = [];
-        // set printed ints from program using print_int to go to this array instead of console.log
+        // set printed values from program using to go to this array instead of console.log
         setPrintFunction((val) => programOutput.push(val));
         try {
           // if there is a expectedValues for variables in the file, check that they are equal
@@ -112,16 +112,25 @@ export async function testFileCompilationSuccess(subset, testFileName) {
             testType: "assertCorrectness",
             testFileName,
           });
-          const expectedValues =
-            "expectedValues" in
-            testLog[`subset${subset.toString()}`][testFileName]
-              ? testLog[`subset${subset.toString()}`][
-                  testFileName
-                ].expectedValues.toString()
-              : [].toString();
-          const actualValues = programOutput.toString();
-          if (expectedValues !== actualValues) {
-            return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
+          if ("customTest" in
+          testLog[`subset${subset.toString()}`][testFileName]) {
+            // if a custom test has been defined for this test case, use that instead
+            if (!testLog[`subset${subset.toString()}`][testFileName].customTest(programOutput)) {
+              return `CUSTOM TEST FAILED. Actual values: ${programOutput.toString()}`
+            }
+          } else {
+            const actualValues = programOutput.toString();
+            const expectedValues =
+              "expectedValues" in
+              testLog[`subset${subset.toString()}`][testFileName]
+                ? testLog[`subset${subset.toString()}`][
+                    testFileName
+                  ].expectedValues.toString()
+                : [].toString();
+            
+            if (expectedValues !== actualValues) {
+              return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
+            }
           }
         } catch (e) {
           return "WASM EXECUTION ERROR:\n" + e;

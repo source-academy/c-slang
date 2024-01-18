@@ -1,5 +1,15 @@
 /**
  * This file exports a JS object containing information on all tests.
+ * 
+ * JS object schema + explanation:
+ * testLog : {
+ *    "testcase name": {
+ *      title: string // descriptive title of the testcase,
+ *      expectedCode: boolean // true if there is a precompiled WAT file within the /test/subset{subset of the testcase} folder to compare compiled code to
+ *      expectedValues: (string | number)[] // array of strings or numbers representing the expected output to stdout of the compiled testcase when run, to be compared to actual output
+ *      customTest: ((string | number)[]) => boolean // custom test to run on the actual output to stdout instead of comparing to expectedValues
+ *    }
+ * }
  */
 const testLog = {
   subset1: {
@@ -412,8 +422,25 @@ const testLog = {
     pointers_arithmetic_1: {
       title: "Pointers tests - arithmetic 1",
       expectedCode: false,
-      expectedValues: [3, 6, 2, 5, 1, 2, 3, 4 ,5 ,6, 3 ,2 , 1, 6, 5, 4]
-    }
+      expectedValues: [3, 6, 2, 5, 1, 2, 3, 4 ,5 ,6, 3 ,2 , 1, 6, 5, 4],
+    },
+    pointers_arithmetic_2: {
+      title: "Pointers tests - arithmetic 2",
+      expectedCode: false,
+      expectedValues: ['b', 4, 2]
+    },
+    pointers_array_deref_test: {
+      title: "Pointers tests - dereferencing pointer to array",
+      expectedCode: false,
+      customTest: (values) => {
+        return values[0] === "2" && values[1] === values[2] && values[1] === values[3];
+      }
+    },
+    multi_dim_array_1: {
+      title: "Multi dimensional arrays 1",
+      expectedCode: false,
+      expectedValues: [1, 6, 8, 3], 
+    },
   },
 };
 

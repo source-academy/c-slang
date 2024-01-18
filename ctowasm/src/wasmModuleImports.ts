@@ -160,6 +160,28 @@ export const wasmModuleImports: Record<string, ImportedFunction> = {
     },
     jsFunction: printFloatCStyle,
   },
+  // for printing the value of pointers. behaves the same as print_int_unsigned
+  print_address: {
+    parentImportedObject: defaultParentImportedObject,
+    functionType: {
+      type: "function",
+      parameters: [
+        {
+          type: "primary",
+          primaryDataType: "unsigned int",
+        },
+      ],
+      returnType: null,
+    },
+    jsFunction: (val: number) => {
+      // need to intepret val as unsigned 4 byte int
+      if (val < 0) {
+        print((val + Math.pow(2, 32)).toString());
+      } else {
+        print(val.toString());
+      }
+    },
+  },
 };
 
 // used to extract the details of imported functions in terms of C -> to be used by compiler

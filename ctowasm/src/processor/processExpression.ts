@@ -98,18 +98,22 @@ export default function processExpression(
       let leftExpr = processedLeftExpr.exprs[0];
       let rightExpr = processedRightExpr.exprs[0];
 
+
       // account for pointer type arithmetic - already checked that it must be '+' or '-' determineDataTypeOfBinaryExpression
       if (
         processedLeftExpr.originalDataType.type === "pointer" &&
         processedRightExpr.originalDataType.type === "primary"
       ) {
+        if (processedLeftExpr.originalDataType.pointeeType === null) {
+          throw new ProcessingError("Cannot perform arithmetic on void pointer");
+        }
         rightExpr = {
           type: "BinaryExpression",
           operator: "*",
           leftExpr: rightExpr,
           rightExpr: {
             type: "IntegerConstant",
-            value: BigInt(getDataTypeSize(processedLeftExpr.originalDataType)),
+            value: BigInt(getDataTypeSize(processedLeftExpr.originalDataType.pointeeType)),
             dataType: rightExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
           dataType: rightExpr.dataType,
@@ -118,13 +122,16 @@ export default function processExpression(
         processedRightExpr.originalDataType.type === "pointer" &&
         processedLeftExpr.originalDataType.type === "primary"
       ) {
+        if (processedRightExpr.originalDataType.pointeeType === null) {
+          throw new ProcessingError("Cannot perform arithmetic on void pointer");
+        } 
         leftExpr = {
           type: "BinaryExpression",
           operator: "*",
           leftExpr: leftExpr,
           rightExpr: {
             type: "IntegerConstant",
-            value: BigInt(getDataTypeSize(processedRightExpr.originalDataType)),
+            value: BigInt(getDataTypeSize(processedRightExpr.originalDataType.pointeeType)),
             dataType: leftExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
           dataType: leftExpr.dataType,
