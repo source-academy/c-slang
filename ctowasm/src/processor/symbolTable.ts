@@ -1,3 +1,4 @@
+import { POINTER_SIZE } from "~src/common/constants";
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
 import { Declaration } from "~src/parser/c-ast/declaration";
@@ -43,7 +44,7 @@ export class SymbolTable {
   setExternalFunctions(externalFunctions: Record<string, FunctionDataType>) {
     this.externalFunctions = {};
     for (const funcName of Object.keys(externalFunctions)) {
-      this.addFunctionEntry(funcName, externalFunctions[funcName], true)
+      this.addFunctionEntry(funcName, externalFunctions[funcName], true);
     }
     return this.externalFunctions;
   }
@@ -108,7 +109,7 @@ export class SymbolTable {
   addFunctionEntry(
     name: string,
     dataType: FunctionDataType,
-    isExternalFunction?: boolean 
+    isExternalFunction?: boolean
   ): FunctionSymbolEntry {
     if (!isExternalFunction && name in this.symbols) {
       // function was already declared before
@@ -128,7 +129,7 @@ export class SymbolTable {
       // //   throw new ProcessingError(
       // //     `${name} redeclared as function with different signature: different parameters`
       // //   );
-      
+
       // // const existingEntry = this.symbols[name] as FunctionSymbolEntry
 
       // // for (let i = 0; i < existingEntry.dataType.parameters.length; i++) {
@@ -175,25 +176,31 @@ export class SymbolTable {
 
     let offset = 0;
     for (const param of dataType.parameters) {
+      // sanity check, as parser should have converted all array params into pointers.
+      if (param.type === "array") {
+        throw new ProcessingError(
+          "Compiler error: The type of a function parameter should not be an array after parsing"
+        );
+      }
       const dataTypeSize = getDataTypeSize(param);
       offset -= dataTypeSize;
       functionDetails.sizeOfParams += dataTypeSize;
       functionDetails.parameters.push(
-        ...(unpackDataType(param).map((scalarDataType) => ({
+        ...unpackDataType(param).map((scalarDataType) => ({
           dataType: scalarDataType.dataType,
           offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
-        })))
+        }))
       );
     }
 
     const entry: FunctionSymbolEntry = {
       type: "function",
       dataType,
-      processedFunctionDetails: functionDetails
+      processedFunctionDetails: functionDetails,
     };
 
     if (isExternalFunction) {
-      this.externalFunctions[name] = entry
+      this.externalFunctions[name] = entry;
     } else {
       this.symbols[name] = entry;
     }

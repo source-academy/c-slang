@@ -226,7 +226,8 @@
   // Recursively traverses a tree of declarators to create a DataType object and extract the name of the symbol with this dataType,
   // returning the object with type: { name: string, dataType: DataType }
   // this function is able to evaluate declarators used in function declarations that do not have a symbol as well.
-  function convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType) {
+  // optionally takes a param @isFunctionParam that indicates that this declarator is used in a function parameter
+  function convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType, isFunctionParam) {
     const result = {};
     let currNode = result;
     // helper function to add datatype to currNode
@@ -304,6 +305,14 @@
 
     recursiveHelper(declarator);
     addDataType(typeSpecifierDataType);
+    
+    if (isFunctionParam && result.dataType.type === "array") {
+      // function parameters that are arrays are implictly converted into pointers to the underlying array element type
+      result.dataType = {
+        type: "pointer",
+        pointeeType: result.dataType.elementDataType
+      }
+    }
 
     return result;
   }
@@ -347,7 +356,7 @@
       // abstractDeclarator was null
       return { dataType: typeSpecifierDataType, name: null};
     }
-    return convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType);
+    return convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType, true);
   }
 
   // splits an array of parameter declartions which are objects: { dataType: DataType, name: string | null } into 2 separate arrays by field
