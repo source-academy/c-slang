@@ -114,7 +114,7 @@ export function getBinaryExpressionInstruction(
   const instruction = `${convertScalarDataTypeToWasmType(dataType)}.${op}`;
   if (isOperationWithUnsignedSignedVariant(op)) {
     // these instructions have unsigned vs signed variants for integers
-    if (isUnsignedIntegerType(dataType)) {
+    if (isUnsignedIntegerType(dataType) || dataType === "pointer") {
       return instruction + "_u";
     }
 

@@ -436,6 +436,11 @@ const testLog = {
         return values[0] === "2" && values[1] === values[2] && values[1] === values[3];
       }
     },
+    pointers_comparison: {
+      title: "Pointers tests - comparison operations",
+      expectedCode: false,
+      expectedValues: [1, 1, 1, 0, 0, 0]
+    },
     multi_dim_array_1: {
       title: "Multi dimensional arrays 1",
       expectedCode: false,
