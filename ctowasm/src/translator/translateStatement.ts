@@ -83,6 +83,7 @@ export default function translateStatement(
     };
   } else if (statement.type === "DoWhileLoop") {
     const loopLabel = generateLoopLabel(enclosingLoopDetails);
+    const blockLabel = generateBlockLabel(enclosingLoopDetails);
     const body: WasmStatement[] = statement.body.map((s) =>
       translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
     );
@@ -94,9 +95,15 @@ export default function translateStatement(
     });
 
     return {
-      type: "Loop",
-      label: loopLabel,
-      body,
+      type: "Block",
+      label: blockLabel,
+      body: [
+        {
+          type: "Loop",
+          label: loopLabel,
+          body,
+        },
+      ],
     };
   } else if (statement.type === "WhileLoop") {
     const blockLabel = generateBlockLabel(enclosingLoopDetails);
@@ -145,7 +152,7 @@ export default function translateStatement(
         ? createWasmBooleanExpression(statement.condition, true)
         : null;
     const loopBody: WasmStatement[] = [];
-    
+
     if (negatedCondition !== null) {
       loopBody.push({
         type: "BranchIf",
@@ -176,13 +183,17 @@ export default function translateStatement(
 
     const blockBody: WasmStatement[] = [];
     // push on the clause statements
-    statement.clause.forEach(s => blockBody.push(translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))))
-    
+    statement.clause.forEach((s) =>
+      blockBody.push(
+        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
+      )
+    );
+
     blockBody.push({
       type: "Loop",
       label: loopLabel,
       body: loopBody,
-    })
+    });
 
     return {
       type: "Block",

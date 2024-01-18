@@ -465,6 +465,16 @@ const testLog = {
       title: "For loop 2 - Variant of for loop with no declaration and empty expressions",
       expectedCode: false,
       expectedValues: [10, 5]
+    },
+    break_statement: {
+      title: "Break statement",
+      expectedCode: false,
+      expectedValues: [0],
+    },
+    continue_statement: {
+      title: "Continue statement",
+      expectedCode: false,
+      expectedValues: [0, 20]
     }
   },
 };
