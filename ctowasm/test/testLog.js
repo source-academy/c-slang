@@ -475,6 +475,11 @@ const testLog = {
       title: "Continue statement",
       expectedCode: false,
       expectedValues: [0, 20]
+    },
+    sizeof_expression_1: {
+      title: "Sizeof expression 1 - test sizeof expressions",
+      expectedCode: false,
+      expectedValues: [1,2,4,8,40,4,4,4,40,4]
     }
   },
 };
