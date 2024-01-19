@@ -8,6 +8,7 @@ int main() {
   int arr[2] = {1,2};
   int (*x)[2] = &arr;
   print_int((*x)[1]);
+  // the next few expressions should have the same value
   print_address(arr);
   print_address(x);
   print_address(*x);

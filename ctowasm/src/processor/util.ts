@@ -14,6 +14,7 @@ import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { isScalarDataType } from "~src/processor/dataTypeUtil";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
+import { PTRDIFF_T } from "~src/common/constants";
 
 export function processCondition(
   condition: Expression,
@@ -37,7 +38,7 @@ export function createMemoryOffsetIntegerConstant(
 ): IntegerConstantP {
   return {
     type: "IntegerConstant",
-    dataType: "signed int", // unsigned int should be appropriate type to give to IntegerConstant offsets since pointer size is 4 TODO: check this
+    dataType: PTRDIFF_T,
     value: BigInt(offset),
   };
 }

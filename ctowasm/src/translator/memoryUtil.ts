@@ -136,7 +136,6 @@ export function getPointerDecrementNode(
 
 /**
  * Returns the teardown statements for a function stack frame.
- * TODO: radical changes needed when structs are supported.
  */
 export function getFunctionCallStackFrameTeardownStatements(
   functionDetails: FunctionDetails

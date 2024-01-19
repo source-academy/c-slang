@@ -280,12 +280,12 @@
     const structDataType = {
       type: "struct",
       tag,
-      fields: {}
+      fields: []
     }
 
     // add the declarations of each field to the struct
     fieldDeclarations.forEach(declaration => {
-      structDataType.fields[declaration.name] = declaration.dataType;
+      structDataType.fields.push({ tag: declaration.name, dataType: declaration.dataType });
     })
 
     if (tag !== null) {

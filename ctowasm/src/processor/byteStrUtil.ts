@@ -32,8 +32,9 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
       byteStr += elementZeroStr;
     }
   } else if (dataType.type === "struct") {
-    // TODO: struct
-    throw new UnsupportedFeatureError("structs not yet supported");
+    dataType.fields.forEach(field => {
+      byteStr += getZeroInializerByteStrForDataType(field.dataType);
+    })
   } else if (dataType.type === "function") {
     throw new ProcessingError("Cannot initialize a function data type");
   }

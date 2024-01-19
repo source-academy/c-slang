@@ -12,5 +12,4 @@ struct {} b;
 struct { int x;} c = { 1 };
 struct { struct A aa;} d;
 int main() {
-
 }

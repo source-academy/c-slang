@@ -16,21 +16,21 @@ import {
 /**
  * Returns the size in bytes of a data type.
  */
-export function getDataTypeSize(varType: DataType): number {
-  if (varType.type === "primary" || varType.type === "pointer") {
+export function getDataTypeSize(dataType: DataType): number {
+  if (dataType.type === "primary" || dataType.type === "pointer") {
     return getSizeOfScalarDataType(
-      varType.type === "pointer" ? "pointer" : varType.primaryDataType
+      dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
     );
-  } else if (varType.type === "array") {
+  } else if (dataType.type === "array") {
     try {
       const numElementsConstant = evaluateCompileTimeExpression(
-        varType.numElements
+        dataType.numElements
       );
       if (numElementsConstant.type === "FloatConstant") {
         throw new ProcessingError("Array size must be an integer-type");
       }
       return (
-        getDataTypeSize(varType.elementDataType) *
+        getDataTypeSize(dataType.elementDataType) *
         Number(numElementsConstant.value)
       );
     } catch (e) {
@@ -42,14 +42,11 @@ export function getDataTypeSize(varType: DataType): number {
         throw e;
       }
     }
-  } else if (varType.type === "struct") {
-    // TODO: when structs supported
-    throw new UnsupportedFeatureError(
-      "getDataTypeSize(): structs not yet supported"
-    );
+  } else if (dataType.type === "struct") {
+    return dataType.fields.reduce((sum, field) => sum + getDataTypeSize(field.dataType), 0);
   } else {
     throw new Error(
-      `getDataTypeSize(): unhandled data type: ${toJson(varType)}`
+      `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`
     );
   }
 }
@@ -138,8 +135,9 @@ export function unpackDataType(
         recursiveHelper(dataType.elementDataType);
       }
     } else if (dataType.type === "struct") {
-      //TODO: handel when structs done
-      throw new UnsupportedFeatureError("Structs not supported");
+      for (const field of dataType.fields) {
+        recursiveHelper(field.dataType);
+      }
     } else {
       throw new ProcessingError(
         `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`
@@ -148,32 +146,4 @@ export function unpackDataType(
   }
   recursiveHelper(dataType);
   return memoryObjects;
-}
-
-/**
- * Unpacks a datatype into its memory object details, when it is used as expression.
- */
-export function unpackExpressionDataType(
-  dataType: DataType
-): PrimaryDataTypeMemoryObjectDetails[] {
-  const primaryDataTypes: PrimaryDataTypeMemoryObjectDetails[] = [];
-  if (dataType.type === "primary") {
-    primaryDataTypes.push({
-      offset: 0,
-      dataType: dataType.primaryDataType,
-    });
-  } else if (dataType.type === "pointer" || dataType.type === "array") {
-    // arrays are also interpreted as pointers
-    primaryDataTypes.push({
-      offset: 0,
-      dataType: "pointer",
-    });
-  } else if (dataType.type === "struct") {
-    // TODO: add struct handling
-    throw new UnsupportedFeatureError("Structs not yet supported");
-  } else if (dataType.type === "function") {
-    throw new ProcessingError("Cannot treat function as a variable");
-  }
-
-  return primaryDataTypes;
 }

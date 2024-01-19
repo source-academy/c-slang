@@ -161,7 +161,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           }
 
           let i = 0;
-          for (; i < initalizer.values.length; i++) {
+          for (; i < initalizer.values.length; ++i) {
             helper(dataType.elementDataType, initalizer.values[i]);
           }
           // zero out any uninitialized elements
@@ -169,8 +169,20 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             helper(dataType.elementDataType, null);
           }
         } else if (dataType.type === "struct") {
-          // TODO: structs
-          throw new UnsupportedFeatureError("Structs not suported yet");
+          if (initalizer.values.length > dataType.fields.length) {
+            throw new ProcessingError(
+              "Excess elements in aggregate initializer"
+            );
+          }
+
+          let i = 0;
+          for (; i < initalizer.values.length; ++i) {
+            helper(dataType.fields[i].dataType, initalizer.values[i]);
+          }
+
+          for (; i < dataType.fields.length; ++i) {
+            helper(dataType.fields[i].dataType, null);
+          }
         }
       }
     }
@@ -276,8 +288,20 @@ function unpackDataSegmentInitializerAccordingToDataType(
             helper(dataType.elementDataType, null);
           }
         } else if (dataType.type === "struct") {
-          // TODO: structs
-          throw new UnsupportedFeatureError("structs not suported yet");
+          if (initalizer.values.length > dataType.fields.length) {
+            throw new ProcessingError(
+              "Excess elements in aggregate initializer"
+            );
+          }
+
+          let i = 0;
+          for (; i < initalizer.values.length; ++i) {
+            helper(dataType.fields[i].dataType, initalizer.values[i]);
+          }
+
+          for (; i < dataType.fields.length; ++i) {
+            helper(dataType.fields[i].dataType, null);
+          }
         }
       }
     }

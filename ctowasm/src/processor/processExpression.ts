@@ -14,7 +14,10 @@ import {
   processPrefixExpression,
 } from "~src/processor/expressionUtil";
 import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
-import { createMemoryOffsetIntegerConstant, getDataTypeOfExpression } from "~src/processor/util";
+import {
+  createMemoryOffsetIntegerConstant,
+  getDataTypeOfExpression,
+} from "~src/processor/util";
 import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processBlockItem from "~src/processor/processBlockItem";
@@ -57,9 +60,15 @@ export default function processExpression(
       };
     } else if (expr.type === "BinaryExpression") {
       const processedLeftExpr = processExpression(expr.leftExpr, symbolTable);
-      const processedLeftExprDataType = getDataTypeOfExpression({expression: processedLeftExpr, convertArrayToPointer: true});
+      const processedLeftExprDataType = getDataTypeOfExpression({
+        expression: processedLeftExpr,
+        convertArrayToPointer: true,
+      });
       const processedRightExpr = processExpression(expr.rightExpr, symbolTable);
-      const processedRightExprDataType = getDataTypeOfExpression({expression: processedRightExpr, convertArrayToPointer: true});
+      const processedRightExprDataType = getDataTypeOfExpression({
+        expression: processedRightExpr,
+        convertArrayToPointer: true,
+      });
 
       // Future work: add more specific type checking for binray expressions with different operators
       if (
@@ -124,9 +133,7 @@ export default function processExpression(
           rightExpr: {
             type: "IntegerConstant",
             value: BigInt(
-              getDataTypeSize(
-                processedLeftExprDataType.pointeeType as DataType
-              )
+              getDataTypeSize(processedLeftExprDataType.pointeeType as DataType)
             ), // void pointer already checked for
             dataType: rightExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
@@ -283,6 +290,7 @@ export default function processExpression(
       if (!symbolEntry) {
         throw new ProcessingError(`'${expr.name}' undeclared`);
       }
+
       if (symbolEntry.type === "function") {
         // TODO: to handle when function pointers supported
         throw new UnsupportedFeatureError(
@@ -290,31 +298,7 @@ export default function processExpression(
         );
       }
 
-      if (
-        symbolEntry.dataType.type === "primary" ||
-        symbolEntry.dataType.type === "pointer"
-      ) {
-        return {
-          originalDataType: symbolEntry.dataType,
-          exprs: [
-            {
-              type: "MemoryLoad",
-              address: {
-                type:
-                  symbolEntry.type === "globalVariable"
-                    ? "DataSegmentAddress"
-                    : "LocalAddress",
-                offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
-                dataType: "pointer",
-              },
-              dataType:
-                symbolEntry.dataType.type === "primary"
-                  ? symbolEntry.dataType.primaryDataType
-                  : "pointer",
-            },
-          ],
-        };
-      } else if (symbolEntry.dataType.type === "array") {
+      if (symbolEntry.dataType.type === "array") {
         // arrays are treated as pointer
         return {
           originalDataType: symbolEntry.dataType,
@@ -329,11 +313,28 @@ export default function processExpression(
             },
           ],
         };
-      } else if (symbolEntry.dataType.type === "struct") {
-        // TODO: structs
-        throw new UnsupportedFeatureError("Structs not yet supported");
+      } else if (symbolEntry.dataType.type === "function") {
+        // TODO: when function pointer ssupported
+        throw new UnsupportedFeatureError("function pointer");
       } else {
-        throw new ProcessingError("Unknown data type");
+        const unpackedDataType = unpackDataType(symbolEntry.dataType);
+        return {
+          originalDataType: symbolEntry.dataType,
+          exprs: unpackedDataType.map((primaryDataObject) => ({
+            type: "MemoryLoad",
+            address: {
+              type:
+                symbolEntry.type === "globalVariable"
+                  ? "DataSegmentAddress"
+                  : "LocalAddress",
+              offset: createMemoryOffsetIntegerConstant(
+                symbolEntry.offset + primaryDataObject.offset
+              ),
+              dataType: "pointer",
+            },
+            dataType: primaryDataObject.dataType,
+          })),
+        };
       }
     } else if (expr.type === "AddressOfExpression") {
       if (expr.expr.type === "IdentifierExpression") {
@@ -371,7 +372,10 @@ export default function processExpression(
     } else if (expr.type === "PointerDereference") {
       // process the expression being dereferenced first
       const derefedExpression = processExpression(expr.expr, symbolTable);
-      const derefedExpressionDataType = getDataTypeOfExpression({expression: derefedExpression, convertArrayToPointer: true})
+      const derefedExpressionDataType = getDataTypeOfExpression({
+        expression: derefedExpression,
+        convertArrayToPointer: true,
+      });
 
       if (derefedExpressionDataType.type !== "pointer") {
         throw new ProcessingError(`Cannot dereference non-pointer type`);
@@ -396,17 +400,13 @@ export default function processExpression(
                 dataType: "pointer",
               },
               dataType:
-                derefedExpressionDataType.pointeeType.type ===
-                "pointer"
+                derefedExpressionDataType.pointeeType.type === "pointer"
                   ? "pointer"
-                  : derefedExpressionDataType.pointeeType
-                      .primaryDataType,
+                  : derefedExpressionDataType.pointeeType.primaryDataType,
             },
           ],
         };
-      } else if (
-        derefedExpressionDataType.pointeeType.type === "array"
-      ) {
+      } else if (derefedExpressionDataType.pointeeType.type === "array") {
         // the resultant data type of the whole dereference expression should be pointer to the array element type, as arrays are treated as pointers
         return {
           originalDataType: derefedExpressionDataType.pointeeType,
@@ -419,8 +419,26 @@ export default function processExpression(
           ],
         };
       } else {
-        // TODO: support structs
-        throw new UnsupportedFeatureError("Structs not yet supported.");
+        const unpackedStruct = unpackDataType(derefedExpressionDataType.pointeeType);
+        return {
+          originalDataType: derefedExpressionDataType.pointeeType,
+          exprs: unpackedStruct.map(primaryDataObject => ({
+            type: "MemoryLoad",
+            address: {
+              type: "DynamicAddress",
+              address: {
+                type: "BinaryExpression",
+                leftExpr: derefedExpression.exprs[0], // value of dereferenced expression (starting address of the pointed to struct)
+                rightExpr: createMemoryOffsetIntegerConstant(primaryDataObject.offset), // offset of particular primary data object in struct
+                operator: "+",
+                operandTargetDataType: "pointer",
+                dataType: "pointer"
+              },
+              dataType: "pointer",
+            },
+            dataType: primaryDataObject.dataType, 
+          }))
+        }
       }
     } else if (expr.type === "SizeOfExpression") {
       let dataTypeToGetSizeOf;
@@ -432,9 +450,9 @@ export default function processExpression(
         ).originalDataType;
       } else {
         // sizeof used on datatype
-        dataTypeToGetSizeOf = expr.dataType
+        dataTypeToGetSizeOf = expr.dataType;
       }
-      
+
       return {
         originalDataType: {
           type: "primary",

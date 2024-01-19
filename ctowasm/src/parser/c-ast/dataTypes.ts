@@ -41,6 +41,11 @@ export interface FunctionDataType {
 export interface StructDataType {
   type: "struct";
   tag: string | null; // tag of this struct. May be null for anonymous structs. Essential for determining struct compatibility.
-  fields: Record<string, DataType>;
+  fields: StructField[];
+}
+
+interface StructField {
+  tag: string;
+  dataType: DataType;
 }
 

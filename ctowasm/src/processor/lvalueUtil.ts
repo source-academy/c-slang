@@ -6,7 +6,10 @@ import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import { MemoryStore } from "~src/processor/c-ast/memory";
 import { SymbolTable } from "~src/processor/symbolTable";
-import { createMemoryOffsetIntegerConstant, getDataTypeOfExpression } from "~src/processor/util";
+import {
+  createMemoryOffsetIntegerConstant,
+  getDataTypeOfExpression,
+} from "~src/processor/util";
 import processExpression from "~src/processor/processExpression";
 import { unpackDataType } from "~src/processor/dataTypeUtil";
 
@@ -79,14 +82,30 @@ export function getAssignmentMemoryStoreNodes(
         symbolTable
       );
 
-      const derefedExpressionDataType = getDataTypeOfExpression({expression: derefedExpression, convertArrayToPointer: true})
+      const derefedExpressionDataType = getDataTypeOfExpression({
+        expression: derefedExpression,
+        convertArrayToPointer: true,
+      });
 
+      // perform some checks
       if (derefedExpressionDataType.type !== "pointer") {
         throw new ProcessingError(`Cannot dereference non-pointer type`);
       }
 
       if (derefedExpressionDataType.pointeeType === null) {
         throw new ProcessingError(`Cannot dereference void pointer`);
+      }
+
+      if (derefedExpressionDataType.pointeeType.type === "function") {
+        throw new ProcessingError(
+          "lvalue required as left operand of assignment",
+          assignmentNode.position
+        );
+      } else if (derefedExpressionDataType.pointeeType.type === "array") {
+        throw new ProcessingError(
+          "Assignment to expression with array type",
+          assignmentNode.position
+        );
       }
 
       if (
@@ -101,18 +120,37 @@ export function getAssignmentMemoryStoreNodes(
             dataType: "pointer",
           },
           value: assignedExprs.exprs[0],
-          dataType: derefedExpressionDataType.pointeeType.type === "pointer" ? "pointer" : derefedExpressionDataType.pointeeType.primaryDataType, // storing of the pointee type
+          dataType:
+            derefedExpressionDataType.pointeeType.type === "pointer"
+              ? "pointer"
+              : derefedExpressionDataType.pointeeType.primaryDataType, // storing of the pointee type
         });
-      } else if (
-        derefedExpressionDataType.pointeeType.type === "array"
-      ) {
-        throw new ProcessingError(
-          "Assignment to expression with array type",
-          assignmentNode.position
+      } else if (derefedExpressionDataType.pointeeType.type === "struct") {
+        const unpackedStruct = unpackDataType(
+          derefedExpressionDataType.pointeeType
         );
-      } else {
-        //TODO support structs
-        throw new UnsupportedFeatureError("Structs not yet supported");
+        for (let i = 0; i < unpackedStruct.length; ++i) {
+          const primaryDataObject = unpackedStruct[i];
+          memoryStoreStatements.push({
+            type: "MemoryStore",
+            address: {
+              type: "DynamicAddress",
+              address: {
+                type: "BinaryExpression",
+                leftExpr: derefedExpression.exprs[0], // value of the pointer being derefeerenced (starting adderss of the struct)
+                rightExpr: createMemoryOffsetIntegerConstant(
+                  primaryDataObject.offset
+                ), // offset of this particular primary data object in the struct
+                operator: "+",
+                dataType: "pointer",
+                operandTargetDataType: "pointer",
+              },
+              dataType: "pointer",
+            },
+            value: assignedExprs.exprs[0],
+            dataType: primaryDataObject.dataType,
+          });
+        }
       }
     } else {
       //TODO: add struct -> and . in future
