@@ -197,113 +197,6 @@ export function determineResultDataTypeOfBinaryExpression(
 }
 
 /**
- * Details of the memory of the pointer expression that is being dereferenced.
- */
-interface DerefExpressionMemoryDetails {
-  originalDataType: DataType; // data type after dereferencing
-  primaryMemoryObjectDetails: {
-    dataType: ScalarCDataType;
-    address: DynamicAddress;
-  }[];
-}
-
-/**
- * Get the details of the primary memory objects of a dereferenced expression.
- */
-export function getDerefExpressionMemoryDetails(
-  expr: PointerDereference,
-  symbolTable: SymbolTable
-): DerefExpressionMemoryDetails {
-  // process the expression being dereferenced first
-  const derefedExpression = processExpression(expr.expr, symbolTable);
-
-  if (derefedExpression.originalDataType.type !== "pointer") {
-    throw new ProcessingError(`Cannot dereference non-pointer type`);
-  }
-
-  if (derefedExpression.originalDataType.pointeeType === null) {
-    throw new ProcessingError(`Cannot dereference void pointer`);
-  }
-
-  if (
-    derefedExpression.originalDataType.pointeeType.type === "primary" ||
-    derefedExpression.originalDataType.pointeeType.type === "pointer"
-  ) {
-    return {
-      originalDataType: derefedExpression.originalDataType.pointeeType,
-      primaryMemoryObjectDetails: [
-        {
-          dataType: derefedExpression.exprs[0].dataType,
-          address: {
-            type: "DynamicAddress",
-            address: derefedExpression.exprs[0],
-            dataType: "pointer",
-          },
-        },
-      ],
-    };
-  } else if (derefedExpression.originalDataType.pointeeType.type === "array") {
-    // the resultant data type of the whole dereference expression should be pointer to the array element type, as arrays are treated as pointers
-    return {
-      originalDataType: {
-        type: "pointer",
-        pointeeType:
-          derefedExpression.originalDataType.pointeeType.elementDataType,
-      },
-      primaryMemoryObjectDetails: [
-        {
-          dataType: "pointer",
-          address: {
-            type: "DynamicAddress",
-            address: derefedExpression.exprs[0],
-            dataType: "pointer",
-          },
-        },
-      ],
-    };
-  } else {
-    // if the derefed expression is a pointer to an array, then return pointer to the array element type (as arrays should be treated as pointers)
-    const memoryDetails: DerefExpressionMemoryDetails = {
-      originalDataType: derefedExpression.originalDataType.pointeeType,
-      primaryMemoryObjectDetails: [],
-    };
-
-    // the expression being derefed cannot have more than 1 primary data expresssion as it is a pointer
-    // this shouldnt happen - just a sanity check
-    if (derefedExpression.exprs.length !== 1) {
-      throw new ProcessingError("Invalid dereference");
-    }
-
-    const unpackedDataType = unpackDataType(
-      derefedExpression.originalDataType.pointeeType
-    );
-
-    for (let i = 0; i < unpackedDataType.length; ++i) {
-      const primaryDataObject = unpackedDataType[i];
-      memoryDetails.primaryMemoryObjectDetails.push({
-        dataType: primaryDataObject.dataType,
-        address: {
-          type: "DynamicAddress",
-          address: {
-            type: "BinaryExpression",
-            leftExpr: derefedExpression.exprs[0], // value of the pointer being dereferenced
-            rightExpr: createMemoryOffsetIntegerConstant(
-              primaryDataObject.offset
-            ),
-            dataType: "pointer",
-            operandTargetDataType: "pointer",
-            operator: "+",
-          }, // add the offset of the original symbol
-          dataType: "pointer",
-        },
-      });
-    }
-
-    return memoryDetails;
-  }
-}
-
-/**
  * Get the MemoryStore and MemoryLoad nodes needed for a increment/decrement of an lvalue of appropriate type.
  */
 export function getArithmeticPrePostfixExpressionNodes(
@@ -379,34 +272,32 @@ export function getArithmeticPrePostfixExpressionNodes(
     });
   } else if (expr.expr.type === "PointerDereference") {
     // process the expression being dereferenced first
-    const derefedExpressionMemoryDetails = getDerefExpressionMemoryDetails(
-      expr.expr,
+    const derefedExpression = processExpression(
+      expr.expr.expr,
       symbolTable
     );
 
-    if (
-      derefedExpressionMemoryDetails.originalDataType.type !== "pointer" &&
-      derefedExpressionMemoryDetails.originalDataType.type !== "primary"
-    ) {
-      throw new ProcessingError(
-        "wrong type argument in increment or decrement expression"
-      );
+    if (derefedExpression.originalDataType.type !== "pointer") {
+      throw new ProcessingError(`Cannot dereference non-pointer type`);
     }
 
-    // sanity check - derefedExpressionMemoryDetails should only have one primary memory object as it is scalar type
-    if (derefedExpressionMemoryDetails.primaryMemoryObjectDetails.length > 1) {
-      throw new ProcessingError("Invalid increment/decrement expression");
+    if (derefedExpression.originalDataType.pointeeType === null) {
+      throw new ProcessingError(`Cannot dereference void pointer`);
     }
+
+    const address: DynamicAddress = { // address being dereferenced
+      type: "DynamicAddress",
+      address: derefedExpression.exprs[0], // derefed expression should only have one primary expression
+      dataType: "pointer",
+    } 
 
     memoryLoad = {
       type: "MemoryLoad",
-      address:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].address,
-      dataType:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
+      address,
+      dataType: derefedExpression.exprs[0].dataType,
     };
 
-    dataType = derefedExpressionMemoryDetails.originalDataType;
+    dataType = derefedExpression.originalDataType;
 
     if (dataType.type === "pointer" && dataType.pointeeType === null) {
       throw new ProcessingError("Cannot perform arithmetic on a void pointer");
@@ -414,10 +305,8 @@ export function getArithmeticPrePostfixExpressionNodes(
 
     memoryStoreNodes.push({
       type: "MemoryStore",
-      address:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].address,
-      dataType:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
+      address: address,
+      dataType: derefedExpression.exprs[0].dataType,
       value: {
         type: "BinaryExpression",
         leftExpr: memoryLoad,
@@ -429,10 +318,8 @@ export function getArithmeticPrePostfixExpressionNodes(
               : 1n,
           dataType: "signed int", //TODO: check this type
         },
-        dataType:
-          derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
-        operandTargetDataType:
-          derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
+        dataType: derefedExpression.exprs[0].dataType,
+        operandTargetDataType: derefedExpression.exprs[0].dataType,
         operator: binaryOperator,
       },
     });

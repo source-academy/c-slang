@@ -10,7 +10,6 @@ import {
   checkBinaryExpressionDataTypesValidity,
   determineOperandTargetDataTypeOfBinaryExpression,
   determineResultDataTypeOfBinaryExpression,
-  getDerefExpressionMemoryDetails,
   processPostfixExpression,
   processPrefixExpression,
 } from "~src/processor/expressionUtil";

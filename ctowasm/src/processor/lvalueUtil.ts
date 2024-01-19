@@ -9,7 +9,6 @@ import { SymbolTable } from "~src/processor/symbolTable";
 import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
 import processExpression from "~src/processor/processExpression";
 import { unpackDataType } from "~src/processor/dataTypeUtil";
-import { getDerefExpressionMemoryDetails } from "~src/processor/expressionUtil";
 
 /**
  * Handles the processing of assignment to a variable.
