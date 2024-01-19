@@ -23,6 +23,7 @@ import SizeOfExpression from "~src/parser/c-ast/expression/sizeof";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import Block from "~src/parser/c-ast/statement/compoundStatement";
 import IdentifierExpression from "~src/parser/c-ast/expression/identifierExpr";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export interface CNodeBase {
   type: string;
@@ -35,6 +36,7 @@ export type CNode = Statement | FunctionDefinition;
 export interface CAstRoot extends CNodeBase {
   type: "Root";
   children: (Declaration | FunctionDefinition)[];
+  userDefinedDataTypes: Record<string, DataType> // Complete datatypes are resolved during parsing - however incomplete types are allowed for the types pointed by pointers, which need to be resolved at processing time, thus the need for this field
 }
 
 /**

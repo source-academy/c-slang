@@ -15,6 +15,31 @@
     };
   }
 
+  const userDefinedDataTypes = {} // Record<string, DataType> object to hold user defined types using typedef and struct
+
+  function getUserDefinedDataType(typeName) {
+    if (typeName in userDefinedDataTypes) {
+      return userDefinedDataTypes[typeName];
+    }
+    return { type: "incomplete", typeName }; // typeName was not found. just return incomplete type for now.
+  }
+
+  function addUserDefinedDataType(typeName, dataType) {
+    if (typeName in userDefinedDataTypes) {
+      error(`Redefinition of '${typeName}'`);
+    }
+    userDefinedDataTypes[typeName] = dataType;
+  }
+
+  function processDeclarationWithoutDeclarator(declarationSpecifiers) {
+    // TODO: add typedef specifier logic later
+    const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
+    if (typeSpecifierDataType.type !== "struct") {
+      warning("useless type name in empty declaration");
+    }
+    return null;
+  }
+
   const C_Keywords = new Set([
     "auto", "float", "break", "short", "switch", "void", "const", "if", "else", "for", "long", "signed", "typedef", "int", "continue", "volatile", "enum", "while", "rigester", "static", "union", "case", "sizeof", "goto", "extern", "double", "return", "struct ", "unsigned", "char", "do", "default"
   ])
@@ -220,8 +245,25 @@
     return typeSpecifierDataType;
   }
 
+  function generateStructDataType(fieldDeclarations, tag) {
+    const structDataType = {
+      type: "struct",
+      tag,
+      fields: {}
+    }
 
-  
+    // add the declarations of each field to the struct
+    fieldDeclarations.forEach(declaration => {
+      structDataType.fields[declaration.name] = declaration.dataType;
+    })
+
+    if (tag !== null) {
+      // if the tag of the struct was provided, it defines a new user defined type
+      addUserDefinedDataType(`struct ${tag}`, structDataType);
+    }
+    return structDataType;
+  }
+
 
   // Recursively traverses a tree of declarators to create a DataType object and extract the name of the symbol with this dataType,
   // returning the object with type: { name: string, dataType: DataType }
@@ -233,11 +275,14 @@
     // helper function to add datatype to currNode
     function addDataType(dataTypeToAdd) {
       // only pointers and functions can have null type specifier - void type
-      if (dataTypeToAdd === null) {
+      if (dataTypeToAdd.type === "void") {
         if (typeof currNode.type === "undefined" || currNode.type === "primary") {
           error(`Variable or field declared as void`, location());
         } else if (currNode.type === "array") {
           error(`Declaration of array of voids`, location());
+        } else if (currNode.type === "function") {
+          currNode.returnType = null;
+          return;
         }
       }
       if (currNode.type === "array") {
@@ -304,6 +349,12 @@
     }
 
     recursiveHelper(declarator);
+
+    // Only pointers can point to incomplete types
+    if (typeSpecifierDataType.type === "incomplete" && currNode.type !== "pointer") {
+      error(`Unknown type name '${typeSpecifierDataType.typeName}'`)
+    }
+
     addDataType(typeSpecifierDataType);
     
     if (isFunctionParam && result.dataType.type === "array") {
@@ -319,7 +370,6 @@
 
   // evaluates the return of init_declarator or declarator with the given array of declaration specifiers, to return a declaration
   // TODO: edit this function when more specifiers are supported
-  // TODO: edit this function to support structs
   function evaluateDeclarator(declarationSpecifiers, declarator) {
     const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
     const dataTypeAndSymbolName = convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType);
@@ -386,11 +436,14 @@
     }
   }
 
-    // Unpacks an array containing declarations which may consist of multiple declaratons
-  function unpackDeclarations(blockItems) {
+  // Unpacks an array containing declarations which may consist of multiple declaratons and other nodes 
+  // also removes nulls from teh array
+  function unpack(blockItems) {
     const unpackedItems = [];
     blockItems.forEach(item => {
-      if (Array.isArray(item)) {
+      if (item === null) {
+        return;
+      } else if (Array.isArray(item)) {
         unpackedItems.push(...item);
       } else {
         unpackedItems.push(item);
@@ -402,12 +455,12 @@
 
 // ======== Beginning of Grammar rules =========
 
-program = children:translation_unit  { return generateNode("Root", { children }); }
+program = children:translation_unit  { return generateNode("Root", { children, userDefinedDataTypes }); }
 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = items:(function_definition / declaration)|.., _| { return unpackDeclarations(items); } //TODO: come back here for ;
+  = items:(function_definition / declaration)|.., _| { return unpack(items); } //TODO: come back here for ;
    
 function_definition
 	= declarationSpecifiers:declaration_specifiers _ declarator:declarator _ body:compound_statement { return generateFunctionDefinitionNode(declarationSpecifiers, declarator, body); }
@@ -430,7 +483,7 @@ compound_statement "block"
   / "{" _ "}" { return generateNode("Block", { statements: [] }); }
     
 block_item_list
-  = items:block_item|1.., _| { return unpackDeclarations(items); } // unpack any arrays, as declarations can declare multiple symbols in one declarations which equates to multiple declaration nodes
+  = items:block_item|1.., _| { return unpack(items); } // unpack any arrays, as declarations can declare multiple symbols in one declarations which equates to multiple declaration nodes
 
 block_item
   = declaration
@@ -472,18 +525,19 @@ selection_statement
 // declaration returns an array of declaration nodes
 declaration
   = declarationSpecifiers:declaration_specifiers _ initDeclarators:init_declarator_list _ ";" { return initDeclarators.map(initDeclarator => evaluateDeclarator(declarationSpecifiers, initDeclarator) ); }
+  / declarationSpecifiers:declaration_specifiers _ ";" { return processDeclarationWithoutDeclarator(declarationSpecifiers); } // TODO: this rule supports declarations of structs and typedef where nothing is being declared, merely a type
 
 declaration_specifiers
   = declaration_specifier|1.., _|
 
 // TODO: add more specifiers
 declaration_specifier
-  = dataType:type_specifier { return { type: "TypeSpecifier", dataType } }
+  = dataType:type_specifier { return { type: "TypeSpecifier", dataType }; }
 
 // type specifier should return a DataType
 type_specifier
-	=  primaryDataType:primary_type_specifier { return primaryDataType === "void" ? null : { type: "primary", primaryDataType }; }
-  // TODO: add struct and typedef later
+	=  primaryDataType:primary_type_specifier { return primaryDataType === "void" ? { type: "void" } : { type: "primary", primaryDataType }; }
+  /  struct_specifier
 
 primary_type_specifier
   = float_type // check for float type first, due to "long double" needing to be checked before "long" by itself
@@ -529,6 +583,35 @@ function_declarator_suffix
 array_declarator_suffix
   = "[" _ numElements:(@expression _)? "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
 
+// ========= Struct related rules =========
+
+struct_specifier
+  = "struct" _ tag:(@identifier _)? "{" _ fieldDeclarations:struct_declaration_list _ "}" { return generateStructDataType(fieldDeclarations, tag); }
+  / "struct" _ tag:(@identifier _)? "{" _ "}" { return generateStructDataType([], tag); } 
+  / "struct" _ structName:identifier { return getUserDefinedDataType(`struct ${structName}`); } // this struct is defined elsewhere, just retrieve it
+
+struct_declaration_list 
+  = declarations:struct_declaration|1.., _| { return unpack(declarations); } ; // unpack declarations
+
+struct_declaration 
+  = specifiers:specifier_qualifier_list _ fieldDeclarators:struct_declarator_list _ ";" { return fieldDeclarators.map(declarator => evaluateDeclarator(specifiers, declarator)); }
+
+specifier_qualifier_list 
+  = specifier_qualifier_list_item|1.., _| // TODO: add type qualifiers in future 
+
+specifier_qualifier_list_item
+  = dataType:type_specifier { return { type: "TypeSpecifier", dataType }; }
+
+struct_declarator_list
+  = struct_declarator|1.., _ "," _|
+
+struct_declarator
+  = declarator 
+
+// =======================================
+
+// ============ Function parameter declarations ============
+
 parameter_list
   = parameters:parameter_declaration|1.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
 
@@ -550,7 +633,7 @@ direct_abstract_declarator
 direct_abstract_declarator_helper
   = "(" _ @abstract_declarator _ ")"
 
-
+// ===========================================================
 
 
 

@@ -29,7 +29,13 @@ export interface ArrayDataType {
 export interface PointerDataType {
   type: "pointer";
   // type of the object being pointed to
-  pointeeType: DataType | null; // when this is null it represents a void pointer
+  pointeeType: DataType | IncompleteDataType | null; // when this is null it represents a void pointer
+}
+
+// Represents a type which has not been defined yet. Only pointers can point to incomplete types. They cannot be used elsewhere.
+interface IncompleteDataType {
+  type: "incomplete";
+  typeName: string;
 }
 
 export interface FunctionDataType {
@@ -40,4 +46,7 @@ export interface FunctionDataType {
 
 export interface StructDataType {
   type: "struct";
+  tag: string | null; // tag of this struct. May be null for anonymous structs. Essential for determining struct compatibility.
+  fields: Record<string, DataType>;
 }
+

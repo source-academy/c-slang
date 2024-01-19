@@ -5,7 +5,7 @@ import wasmModuleImports, {
   ImportedFunction,
   extractImportedFunctionCDetails,
 } from "~src/wasmModuleImports";
-import parse from "./parser/parser";
+import parse from "./parser";
 import process from "./processor";
 import { generateWat } from "./wat-generator";
 import { compileWatToWasm } from "./wat-to-wasm";
