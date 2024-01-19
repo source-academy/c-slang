@@ -423,11 +423,18 @@ export default function processExpression(
         throw new UnsupportedFeatureError("Structs not yet supported.");
       }
     } else if (expr.type === "SizeOfExpression") {
-      const exprDataType = processExpression(
-        expr.expr,
-        symbolTable
-      ).originalDataType;
-
+      let dataTypeToGetSizeOf;
+      if (expr.subtype === "expression") {
+        // sizeof used on expression
+        dataTypeToGetSizeOf = processExpression(
+          expr.expr,
+          symbolTable
+        ).originalDataType;
+      } else {
+        // sizeof used on datatype
+        dataTypeToGetSizeOf = expr.dataType
+      }
+      
       return {
         originalDataType: {
           type: "primary",
@@ -436,7 +443,7 @@ export default function processExpression(
         exprs: [
           {
             type: "IntegerConstant",
-            value: BigInt(getDataTypeSize(exprDataType)),
+            value: BigInt(getDataTypeSize(dataTypeToGetSizeOf)),
             dataType: SIZE_T,
           },
         ],

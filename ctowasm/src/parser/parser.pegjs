@@ -15,6 +15,19 @@
     };
   }
 
+  const C_Keywords = new Set([
+    "auto", "float", "break", "short", "switch", "void", "const", "if", "else", "for", "long", "signed", "typedef", "int", "continue", 
+    "volatile", "enum", "while", "rigester", "static", "union", "case", "sizeof", "goto", "extern", 
+    "double", "return", "struct ", "unsigned", "char", "do", "default"
+  ])
+
+  /**
+   * Needed to handle ambiguity between identifier and keyword.
+   */
+  function isStringAKeyword(str) {
+    return C_Keywords.has(str);
+  }
+
   const userDefinedDataTypes = {} // Record<string, DataType> object to hold user defined types using typedef and struct
 
   function getUserDefinedDataType(typeName) {
@@ -40,9 +53,6 @@
     return null;
   }
 
-  const C_Keywords = new Set([
-    "auto", "float", "break", "short", "switch", "void", "const", "if", "else", "for", "long", "signed", "typedef", "int", "continue", "volatile", "enum", "while", "rigester", "static", "union", "case", "sizeof", "goto", "extern", "double", "return", "struct ", "unsigned", "char", "do", "default"
-  ])
 
   /**
    * Builds and returns a tree of binary operations which involves the 2 operaands (left and right expressions), and a operator
@@ -409,6 +419,19 @@
     return convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType, true);
   }
 
+  /**
+   * Used to generate the DataType for type_name rule.
+   * Functionally very similar to convertParameterDeclarationToDataTypeAndSymbolName.
+   */
+  function generateDataTypeFromSpecifierAndAbstractDeclarators(declarationSpecifiers, declarator) {
+    const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
+    if (declarator === null) {
+      // abstractDeclarator was null
+      return typeSpecifierDataType;
+    }
+    return convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType).dataType;
+  }
+
   // splits an array of parameter declartions which are objects: { dataType: DataType, name: string | null } into 2 separate arrays by field
   function splitParameterDataTypesAndNames(paramDataTypeAndNames) {
     const dataTypes = [];
@@ -696,7 +719,7 @@ prefix_operation
   / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator }; }
   / operator:("*") { return { type: "PointerDereference" }; }
   / "&" { return { type: "AddressOfExpression" }; }
-  / "sizeof" { return { type: "SizeOfExpression"}; }
+  / "sizeof" { return { type: "SizeOfExpression", subtype: "expression" }; }
 
 postfix_expression
   = firstExpr:primary_expression operations:(_ @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }
@@ -715,13 +738,13 @@ function_argument_list
   = expression|1.., _ "," _|
 
 primary_expression
-  = "sizeof" _ "(" _ expr:primary_expression _ ")" { return generateNode("SizeOfExpression", { expr } ); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
+  = "sizeof" _ "(" _ dataType:type_name _ ")" { return generateNode("SizeOfExpression", { type: "SizeOfExpression", subtype: "dataType", dataType }); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
   / name:identifier { return generateNode("IdentifierExpression", { name }); } // for variables 
   / constant
   / "(" _ @expression _ ")"
 
-
-
+type_name
+  = specifiers:specifier_qualifier_list declarator:(_ @abstract_declarator)? { return generateDataTypeFromSpecifierAndAbstractDeclarators(specifiers, declarator); } 
 
 //=========== Constants =============
 
@@ -823,7 +846,7 @@ fractional_constant
 // identifiers must not start with a digit
 // can only contain letters, digits or underscore
 identifier
-	= $([a-z_]i[a-z0-9_]i*)
+	= str:$([a-z_]i[a-z0-9_]i*) &{ return isStringAKeyword(str) ? false : true; } { return str; } 
 
 integer
   = $[0-9]+

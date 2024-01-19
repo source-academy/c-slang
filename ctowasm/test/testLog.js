@@ -477,11 +477,18 @@ const testLog = {
       expectedValues: [0, 20]
     },
     sizeof_expression_1: {
-      title: "Sizeof expression 1 - test sizeof expressions",
+      title: "Sizeof expression 1 - test sizeof operator on expressions",
       expectedCode: false,
       expectedValues: [1,2,4,8,40,4,4,4,40,4]
     }
   },
+  subset5: {
+    sizeof_expression_2: {
+      title: "Sizeof expression 2 - test sizeof operator on datatypes",
+      expectedCode: false,
+      expectedValues: [1,2,4,8,4,160] 
+    }
+  }
 };
 
 export default testLog;
