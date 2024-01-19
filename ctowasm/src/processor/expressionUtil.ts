@@ -37,7 +37,7 @@ import {
   MemoryLoad,
   MemoryStore,
 } from "~src/processor/c-ast/memory";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
+import { createMemoryOffsetIntegerConstant, getDataTypeOfExpression } from "~src/processor/util";
 
 function isRelationalOperator(op: BinaryOperator) {
   return (
@@ -130,13 +130,11 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
   operator: BinaryOperator
 ): ScalarDataType {
   // if either data type are pointers, then target data type is pointer TODO: check this
-  if (
-    leftExprDataType.type === "pointer"
-  ) {
+  if (leftExprDataType.type === "pointer") {
     return leftExprDataType;
   } else if (rightExprDataType.type === "pointer") {
     return rightExprDataType;
-  }else if (
+  } else if (
     isFloatType(leftExprDataType.primaryDataType) &&
     isFloatType(rightExprDataType.primaryDataType)
   ) {
@@ -272,24 +270,26 @@ export function getArithmeticPrePostfixExpressionNodes(
     });
   } else if (expr.expr.type === "PointerDereference") {
     // process the expression being dereferenced first
-    const derefedExpression = processExpression(
-      expr.expr.expr,
-      symbolTable
-    );
+    const derefedExpression = processExpression(expr.expr.expr, symbolTable);
 
-    if (derefedExpression.originalDataType.type !== "pointer") {
+    const derefedExpressionDataType = getDataTypeOfExpression({expression: derefedExpression, convertArrayToPointer: true});
+
+    if (derefedExpressionDataType.type !== "pointer") {
       throw new ProcessingError(`Cannot dereference non-pointer type`);
     }
 
-    if (derefedExpression.originalDataType.pointeeType === null) {
+    if (
+      derefedExpressionDataType.pointeeType === null
+    ) {
       throw new ProcessingError(`Cannot dereference void pointer`);
     }
 
-    const address: DynamicAddress = { // address being dereferenced
+    const address: DynamicAddress = {
+      // address being dereferenced
       type: "DynamicAddress",
       address: derefedExpression.exprs[0], // derefed expression should only have one primary expression
       dataType: "pointer",
-    } 
+    };
 
     memoryLoad = {
       type: "MemoryLoad",
@@ -297,7 +297,7 @@ export function getArithmeticPrePostfixExpressionNodes(
       dataType: derefedExpression.exprs[0].dataType,
     };
 
-    dataType = derefedExpression.originalDataType;
+    dataType = derefedExpressionDataType;
 
     if (dataType.type === "pointer" && dataType.pointeeType === null) {
       throw new ProcessingError("Cannot perform arithmetic on a void pointer");
@@ -316,7 +316,7 @@ export function getArithmeticPrePostfixExpressionNodes(
             dataType.type === "pointer"
               ? BigInt(getDataTypeSize(dataType.pointeeType as DataType))
               : 1n,
-          dataType: "signed int", //TODO: check this type
+          dataType: "signed int",
         },
         dataType: derefedExpression.exprs[0].dataType,
         operandTargetDataType: derefedExpression.exprs[0].dataType,

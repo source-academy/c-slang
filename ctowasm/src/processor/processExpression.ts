@@ -14,7 +14,7 @@ import {
   processPrefixExpression,
 } from "~src/processor/expressionUtil";
 import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
+import { createMemoryOffsetIntegerConstant, getDataTypeOfExpression } from "~src/processor/util";
 import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
 import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
 import processBlockItem from "~src/processor/processBlockItem";
@@ -57,15 +57,17 @@ export default function processExpression(
       };
     } else if (expr.type === "BinaryExpression") {
       const processedLeftExpr = processExpression(expr.leftExpr, symbolTable);
+      const processedLeftExprDataType = getDataTypeOfExpression({expression: processedLeftExpr, convertArrayToPointer: true});
       const processedRightExpr = processExpression(expr.rightExpr, symbolTable);
+      const processedRightExprDataType = getDataTypeOfExpression({expression: processedRightExpr, convertArrayToPointer: true});
 
       // Future work: add more specific type checking for binray expressions with different operators
       if (
-        !isScalarDataType(processedLeftExpr.originalDataType) ||
-        !isScalarDataType(processedRightExpr.originalDataType)
+        !isScalarDataType(processedLeftExprDataType) ||
+        !isScalarDataType(processedRightExprDataType)
       ) {
         throw new ProcessingError(
-          `Non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExpr.originalDataType.type}, right operand: ${processedRightExpr.originalDataType.type}`
+          `Non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExprDataType.type}, right operand: ${processedRightExprDataType.type}`
         );
       }
 
@@ -81,8 +83,8 @@ export default function processExpression(
 
       try {
         checkBinaryExpressionDataTypesValidity(
-          processedLeftExpr.originalDataType,
-          processedRightExpr.originalDataType,
+          processedLeftExprDataType,
+          processedRightExprDataType,
           expr.operator
         );
       } catch (e) {
@@ -95,15 +97,15 @@ export default function processExpression(
 
       const binaryExpressionDataType =
         determineResultDataTypeOfBinaryExpression(
-          processedLeftExpr.originalDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
-          processedRightExpr.originalDataType as ScalarDataType,
+          processedLeftExprDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
+          processedRightExprDataType as ScalarDataType,
           expr.operator
         );
 
       const operandTargetDataType =
         determineOperandTargetDataTypeOfBinaryExpression(
-          processedLeftExpr.originalDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
-          processedRightExpr.originalDataType as ScalarDataType,
+          processedLeftExprDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
+          processedRightExprDataType as ScalarDataType,
           expr.operator
         );
 
@@ -112,8 +114,8 @@ export default function processExpression(
 
       // account for pointer type arithmetic - already checked that it must be '+' or '-' in determineDataTypeOfBinaryExpression
       if (
-        processedLeftExpr.originalDataType.type === "pointer" &&
-        processedRightExpr.originalDataType.type === "primary"
+        processedLeftExprDataType.type === "pointer" &&
+        processedRightExprDataType.type === "primary"
       ) {
         rightExpr = {
           type: "BinaryExpression",
@@ -123,7 +125,7 @@ export default function processExpression(
             type: "IntegerConstant",
             value: BigInt(
               getDataTypeSize(
-                processedLeftExpr.originalDataType.pointeeType as DataType
+                processedLeftExprDataType.pointeeType as DataType
               )
             ), // void pointer already checked for
             dataType: rightExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
@@ -132,8 +134,8 @@ export default function processExpression(
           operandTargetDataType: rightExpr.dataType,
         };
       } else if (
-        processedRightExpr.originalDataType.type === "pointer" &&
-        processedLeftExpr.originalDataType.type === "primary"
+        processedRightExprDataType.type === "pointer" &&
+        processedLeftExprDataType.type === "primary"
       ) {
         leftExpr = {
           type: "BinaryExpression",
@@ -143,7 +145,7 @@ export default function processExpression(
             type: "IntegerConstant",
             value: BigInt(
               getDataTypeSize(
-                processedRightExpr.originalDataType.pointeeType as DataType
+                processedRightExprDataType.pointeeType as DataType
               )
             ),
             dataType: leftExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
@@ -154,8 +156,8 @@ export default function processExpression(
       }
 
       if (
-        processedRightExpr.originalDataType.type === "pointer" &&
-        processedLeftExpr.originalDataType.type === "pointer" &&
+        processedRightExprDataType.type === "pointer" &&
+        processedLeftExprDataType.type === "pointer" &&
         expr.operator === "-"
       ) {
         // special handling for subtraction between pointers, need to divide result by underlying type size
@@ -180,7 +182,7 @@ export default function processExpression(
                 type: "IntegerConstant",
                 value: BigInt(
                   getDataTypeSize(
-                    processedRightExpr.originalDataType.pointeeType as DataType
+                    processedRightExprDataType.pointeeType as DataType
                   )
                 ),
                 dataType: PTRDIFF_T,
@@ -315,10 +317,7 @@ export default function processExpression(
       } else if (symbolEntry.dataType.type === "array") {
         // arrays are treated as pointer
         return {
-          originalDataType: {
-            type: "pointer",
-            pointeeType: symbolEntry.dataType.elementDataType,
-          },
+          originalDataType: symbolEntry.dataType,
           exprs: [
             {
               type:
@@ -372,21 +371,22 @@ export default function processExpression(
     } else if (expr.type === "PointerDereference") {
       // process the expression being dereferenced first
       const derefedExpression = processExpression(expr.expr, symbolTable);
+      const derefedExpressionDataType = getDataTypeOfExpression({expression: derefedExpression, convertArrayToPointer: true})
 
-      if (derefedExpression.originalDataType.type !== "pointer") {
+      if (derefedExpressionDataType.type !== "pointer") {
         throw new ProcessingError(`Cannot dereference non-pointer type`);
       }
 
-      if (derefedExpression.originalDataType.pointeeType === null) {
+      if (derefedExpressionDataType.pointeeType === null) {
         throw new ProcessingError(`Cannot dereference void pointer`);
       }
 
       if (
-        derefedExpression.originalDataType.pointeeType.type === "primary" ||
-        derefedExpression.originalDataType.pointeeType.type === "pointer"
+        derefedExpressionDataType.pointeeType.type === "primary" ||
+        derefedExpressionDataType.pointeeType.type === "pointer"
       ) {
         return {
-          originalDataType: derefedExpression.originalDataType.pointeeType,
+          originalDataType: derefedExpressionDataType.pointeeType,
           exprs: [
             {
               type: "MemoryLoad",
@@ -396,24 +396,20 @@ export default function processExpression(
                 dataType: "pointer",
               },
               dataType:
-                derefedExpression.originalDataType.pointeeType.type ===
+                derefedExpressionDataType.pointeeType.type ===
                 "pointer"
                   ? "pointer"
-                  : derefedExpression.originalDataType.pointeeType
+                  : derefedExpressionDataType.pointeeType
                       .primaryDataType,
             },
           ],
         };
       } else if (
-        derefedExpression.originalDataType.pointeeType.type === "array"
+        derefedExpressionDataType.pointeeType.type === "array"
       ) {
         // the resultant data type of the whole dereference expression should be pointer to the array element type, as arrays are treated as pointers
         return {
-          originalDataType: {
-            type: "pointer",
-            pointeeType:
-              derefedExpression.originalDataType.pointeeType.elementDataType,
-          },
+          originalDataType: derefedExpressionDataType.pointeeType,
           exprs: [
             {
               type: "DynamicAddress",
@@ -431,6 +427,7 @@ export default function processExpression(
         expr.expr,
         symbolTable
       ).originalDataType;
+
       return {
         originalDataType: {
           type: "primary",

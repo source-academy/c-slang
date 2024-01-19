@@ -6,7 +6,7 @@ import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import { MemoryStore } from "~src/processor/c-ast/memory";
 import { SymbolTable } from "~src/processor/symbolTable";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
+import { createMemoryOffsetIntegerConstant, getDataTypeOfExpression } from "~src/processor/util";
 import processExpression from "~src/processor/processExpression";
 import { unpackDataType } from "~src/processor/dataTypeUtil";
 
@@ -79,17 +79,19 @@ export function getAssignmentMemoryStoreNodes(
         symbolTable
       );
 
-      if (derefedExpression.originalDataType.type !== "pointer") {
+      const derefedExpressionDataType = getDataTypeOfExpression({expression: derefedExpression, convertArrayToPointer: true})
+
+      if (derefedExpressionDataType.type !== "pointer") {
         throw new ProcessingError(`Cannot dereference non-pointer type`);
       }
 
-      if (derefedExpression.originalDataType.pointeeType === null) {
+      if (derefedExpressionDataType.pointeeType === null) {
         throw new ProcessingError(`Cannot dereference void pointer`);
       }
 
       if (
-        derefedExpression.originalDataType.pointeeType.type === "primary" ||
-        derefedExpression.originalDataType.pointeeType.type === "pointer"
+        derefedExpressionDataType.pointeeType.type === "primary" ||
+        derefedExpressionDataType.pointeeType.type === "pointer"
       ) {
         memoryStoreStatements.push({
           type: "MemoryStore",
@@ -99,10 +101,10 @@ export function getAssignmentMemoryStoreNodes(
             dataType: "pointer",
           },
           value: assignedExprs.exprs[0],
-          dataType: derefedExpression.originalDataType.pointeeType.type === "pointer" ? "pointer" : derefedExpression.originalDataType.pointeeType.primaryDataType, // storing of the pointee type
+          dataType: derefedExpressionDataType.pointeeType.type === "pointer" ? "pointer" : derefedExpressionDataType.pointeeType.primaryDataType, // storing of the pointee type
         });
       } else if (
-        derefedExpression.originalDataType.pointeeType.type === "array"
+        derefedExpressionDataType.pointeeType.type === "array"
       ) {
         throw new ProcessingError(
           "Assignment to expression with array type",
