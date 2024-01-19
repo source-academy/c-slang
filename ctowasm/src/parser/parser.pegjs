@@ -28,6 +28,8 @@
     return C_Keywords.has(str);
   }
 
+  const incompletePointers = [] // will hold an array of pointer DataType objects which point to complete types
+
   const userDefinedDataTypes = {} // Record<string, DataType> object to hold user defined types using typedef and struct
 
   function getUserDefinedDataType(typeName) {
@@ -42,6 +44,25 @@
       error(`Redefinition of '${typeName}'`);
     }
     userDefinedDataTypes[typeName] = dataType;
+  }
+
+  /**
+   * Creates the Root node. Since Root node is created at the top of the parse tree, this function is run after the whole proram is parsed.
+   * Thus any cleanup/extra logic that requires information which is only completely available after parsing can be done here.
+   */
+  function createRootNode(children) {
+    // fill in all the incomplete pointer DataTypes
+    for (const incompletePointer of incompletePointers) {
+      // the typename of the incomplete pointer would have been saved in pointeetype
+      const typeName = incompletePointer.pointeeType.typeName; 
+      incompletePointer.pointeeType = getUserDefinedDataType(typeName);
+      if (incompletePointer.pointeeType.type === "incomplete") {
+        // if still incomplete, then the type was never defined
+        error(`Unknown type name '${typeName}'`);
+      }
+    }
+
+    return generateNode("Root", { children });
   }
 
   function processDeclarationWithoutDeclarator(declarationSpecifiers) {
@@ -361,8 +382,13 @@
     recursiveHelper(declarator);
 
     // Only pointers can point to incomplete types
-    if (typeSpecifierDataType.type === "incomplete" && currNode.type !== "pointer") {
-      error(`Unknown type name '${typeSpecifierDataType.typeName}'`)
+    if (typeSpecifierDataType.type === "incomplete") {
+      if (currNode.type !== "pointer") {
+        error(`Unknown type name '${typeSpecifierDataType.typeName}'`);
+      } else {
+        // keep track that this pointer datatype as incomplete
+        incompletePointers.push(currNode);
+      }
     }
 
     addDataType(typeSpecifierDataType);
@@ -478,7 +504,7 @@
 
 // ======== Beginning of Grammar rules =========
 
-program = children:translation_unit  { return generateNode("Root", { children, userDefinedDataTypes }); }
+program = children:translation_unit  { return createRootNode(children); }
 
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions

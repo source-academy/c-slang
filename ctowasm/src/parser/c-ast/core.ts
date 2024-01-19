@@ -36,7 +36,6 @@ export type CNode = Statement | FunctionDefinition;
 export interface CAstRoot extends CNodeBase {
   type: "Root";
   children: (Declaration | FunctionDefinition)[];
-  userDefinedDataTypes: Record<string, DataType> // Complete datatypes are resolved during parsing - however incomplete types are allowed for the types pointed by pointers, which need to be resolved at processing time, thus the need for this field
 }
 
 /**
