@@ -154,6 +154,16 @@
             operator: "+"
           }
         }
+      } else if (operation.type === "StructPointerMemberAccess") {
+        // similar to array element expr, a->x is equivalent to *a.x
+        currNode = {
+          type: "StructMemberAccess",
+          expr: {
+            type: "PointerDereference",
+            expr: currNode
+          },
+          fieldTag: operation.fieldTag
+        }
       } else {
         currNode = {
           ...operation,
@@ -757,8 +767,8 @@ postfix_operation
   / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; }
   / "(" _ ")" { return { type: "FunctionCall", args: [] }; }
   / "[" _ index:expression _ "]" { return { type: "ArrayElementExpr", index }; }
-//  / "." _ field:identifier { return } TODO: when doing structs
-//  / "->" _ TODO: when structs and pointers are done
+  / "." _ fieldTag:identifier { return { type: "StructMemberAccess", fieldTag }; }
+  / "->" _ fieldTag:identifier { return { type: "StructPointerMemberAccess", fieldTag }; }
 
 function_argument_list
   = expression|1.., _ "," _|

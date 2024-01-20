@@ -6,7 +6,7 @@ import { SymbolTable } from "~src/processor/symbolTable";
 
 import { ProcessingError, toJson } from "~src/errors";
 
-import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
+import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { processCondition } from "~src/processor/util";
 import {
@@ -14,7 +14,7 @@ import {
   processFunctionReturnStatement,
 } from "./processFunctionDefinition";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
-import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
+import { getAssignmentNodes } from "~src/processor/lvalueUtil";
 import { BlockItem } from "~src/parser/c-ast/core";
 import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
 import { processLocalDeclaration } from "~src/processor/processDeclaration";
@@ -56,7 +56,13 @@ export default function processBlockItem(
         forLoopSymbolTable = new SymbolTable(symbolTable);
         clause = [];
         for (const declaration of node.clause.value) {
-          clause.push(...processLocalDeclaration(declaration, forLoopSymbolTable, enclosingFunc))
+          clause.push(
+            ...processLocalDeclaration(
+              declaration,
+              forLoopSymbolTable,
+              enclosingFunc
+            )
+          );
         }
       } else if (node.clause !== null && node.clause.type === "Expression") {
         clause = processBlockItem(
@@ -71,12 +77,14 @@ export default function processBlockItem(
       const processedForLoopNode: ForLoopP = {
         type: "ForLoop",
         clause,
-        condition: node.condition !== null ? processCondition(node.condition, forLoopSymbolTable) : null, 
-        update: node.update !== null ? processBlockItem(
-          node.update,
-          forLoopSymbolTable,
-          enclosingFunc
-        ) : [],
+        condition:
+          node.condition !== null
+            ? processCondition(node.condition, forLoopSymbolTable)
+            : null,
+        update:
+          node.update !== null
+            ? processBlockItem(node.update, forLoopSymbolTable, enclosingFunc)
+            : [],
         body: processBlockItem(node.body, forLoopSymbolTable, enclosingFunc),
       };
 
@@ -108,10 +116,7 @@ export default function processBlockItem(
 
       // there is an expression to return, break up the return into series of memory stores of the expression
       // in the return memory object locations
-      return processFunctionReturnStatement(
-        node.value,
-        symbolTable,
-      );
+      return processFunctionReturnStatement(node.value, symbolTable);
     } else if (node.type === "SelectionStatement") {
       return [
         {
@@ -138,7 +143,7 @@ export default function processBlockItem(
       ];
       // start of processing Expression nodes which may have side effects
     } else if (node.type === "Assignment") {
-      return getAssignmentMemoryStoreNodes(node, symbolTable);
+      return getAssignmentNodes(node, symbolTable).memoryStoreStatements;
     } else if (node.type === "FunctionCall") {
       // in this context, the return (if any) of the functionCall is ignored, as it is used as a statement
       return [convertFunctionCallToFunctionCallP(node, symbolTable)];

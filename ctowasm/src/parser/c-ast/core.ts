@@ -2,7 +2,7 @@
  * Definitions of core C AST nodes.
  */
 
-import {
+import UnaryExpression, {
   FunctionCall,
   PostfixExpression,
   PrefixExpression,
@@ -19,7 +19,6 @@ import {
   PointerDereference,
 } from "./expression/unaryExpression";
 import IterationStatement from "~src/parser/c-ast/statement/iterationStatement";
-import SizeOfExpression from "~src/parser/c-ast/expression/sizeof";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import Block from "~src/parser/c-ast/statement/compoundStatement";
 import IdentifierExpression from "~src/parser/c-ast/expression/identifierExpr";
@@ -54,10 +53,5 @@ export type Expression =
   | Assignment
   | BinaryExpression
   | Constant
-  | FunctionCall
   | IdentifierExpression
-  | SizeOfExpression
-  | PrefixExpression
-  | PostfixExpression
-  | PointerDereference
-  | AddressOfExpression;
+  | UnaryExpression

@@ -4,8 +4,18 @@
 
 import { PostfixOperator, PrefixOperator } from "~src/common/types";
 import { CNodeBase, Expression } from "~src/parser/c-ast/core";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
+type UnaryExpression =
+  | PostfixExpression
+  | PrefixExpression
+  | FunctionCall
+  | StructMemberAccess
+  | PointerDereference
+  | AddressOfExpression
+  | SizeOfExpression;
 
+export default UnaryExpression;
 // All unary expressions should inherit this (like function calls)
 // "expr" represents the expression being operated on
 export interface UnaryExpressionBase extends CNodeBase {
@@ -31,6 +41,12 @@ export interface FunctionCall extends UnaryExpressionBase {
   args: Expression[];
 }
 
+export interface StructMemberAccess extends UnaryExpressionBase {
+  type: "StructMemberAccess";
+  expr: Expression; // the struct being accessed
+  fieldTag: string; // tag of the field being accessed
+}
+
 /**
  * Special variants of PrefixExpression.
  */
@@ -45,3 +61,17 @@ export interface AddressOfExpression extends CNodeBase {
   expr: Expression; // the expression whose address is being dereferenced. Must be an lvalue.
 }
 
+export type SizeOfExpression = SizeOfExpressionExpression | SizeOfDataTypeExpression;
+
+interface SizeOfExpressionBase extends CNodeBase {
+  type: "SizeOfExpression";
+  subtype: "expression" | "dataType"; // whether this sizeof is of a data type or an expression
+}
+interface SizeOfExpressionExpression extends SizeOfExpressionBase {
+  subtype: "expression";
+  expr: Expression;
+}
+interface SizeOfDataTypeExpression extends SizeOfExpressionBase {
+  subtype: "dataType";
+  dataType: DataType;
+}

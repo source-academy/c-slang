@@ -9,7 +9,10 @@ struct A {
   long arr[12];
 } a;
 struct {} b;
-struct { int x;} c = { 1 };
+struct C { int x;} c = { 1 };
 struct { struct A aa;} d;
 int main() {
+  struct C *p = &c;
+  int x = c.x;
+  int y = p->x;
 }

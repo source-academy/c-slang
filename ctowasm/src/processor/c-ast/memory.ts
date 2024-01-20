@@ -22,13 +22,13 @@ export interface AddressBase extends ExpressionPBase {
 //
 export interface LocalAddress extends AddressBase {
   type: "LocalAddress";
-  offset: ExpressionP; 
+  offset: IntegerConstantP; 
 }
 
 // covers data segment (global) variables
 export interface DataSegmentAddress extends AddressBase {
   type: "DataSegmentAddress";
-  offset: ExpressionP; // represents the number of bytes of this address from the first byte of the first data segment object
+  offset: IntegerConstantP; // represents the number of bytes of this address from the first byte of the first data segment object
 }
 
 export interface DynamicAddress extends AddressBase {

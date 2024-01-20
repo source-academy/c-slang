@@ -2,10 +2,13 @@
  * Definition of function to process Expression expr s.
  */
 
-import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
+import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
-import { FunctionReturnMemoryLoad } from "~src/processor/c-ast/memory";
+import {
+  FunctionReturnMemoryLoad,
+  MemoryLoad,
+} from "~src/processor/c-ast/memory";
 import {
   checkBinaryExpressionDataTypesValidity,
   determineOperandTargetDataTypeOfBinaryExpression,
@@ -19,9 +22,9 @@ import {
   getDataTypeOfExpression,
 } from "~src/processor/util";
 import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
-import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
-import processBlockItem from "~src/processor/processBlockItem";
+import { getAssignmentNodes } from "~src/processor/lvalueUtil";
 import {
+  determineIndexAndDataTypeOfFieldInStruct,
   getDataTypeSize,
   isScalarDataType,
   unpackDataType,
@@ -30,6 +33,7 @@ import { IntegerDataType } from "~src/common/types";
 import processConstant from "~src/processor/processConstant";
 import { PTRDIFF_T, SIZE_T } from "~src/common/constants";
 import { DataType, ScalarDataType } from "~src/parser/c-ast/dataTypes";
+import { getSizeOfScalarDataType } from "~src/common/utils";
 
 /**
  * Processes an Expression node in the context where value(s) are expected to be loaded from memory for use in a statement (action).
@@ -40,22 +44,19 @@ export default function processExpression(
 ): ExpressionWrapperP {
   try {
     if (expr.type === "Assignment") {
-      const assignmentNodes = getAssignmentMemoryStoreNodes(expr, symbolTable);
-
-      // visit the expresion being assigned to, get the memory load instructions
-      const processedExpr = processExpression(expr.lvalue, symbolTable);
+      const { memoryStoreStatements, memoryLoadExpressions, dataType } = getAssignmentNodes(expr, symbolTable);
 
       return {
-        originalDataType: processedExpr.originalDataType,
+        originalDataType: dataType,
         exprs: [
           // first expr has all the assignment nodes TODO: see if any better way
           {
             type: "PreStatementExpression",
-            statements: assignmentNodes,
-            expr: processedExpr.exprs[0],
-            dataType: processedExpr.exprs[0].dataType,
+            statements: memoryStoreStatements,
+            expr: memoryLoadExpressions[0],
+            dataType: memoryLoadExpressions[0].dataType,
           },
-          ...processedExpr.exprs.slice(1),
+          ...memoryLoadExpressions.slice(1),
         ],
       };
     } else if (expr.type === "BinaryExpression") {
@@ -419,26 +420,30 @@ export default function processExpression(
           ],
         };
       } else {
-        const unpackedStruct = unpackDataType(derefedExpressionDataType.pointeeType);
+        const unpackedStruct = unpackDataType(
+          derefedExpressionDataType.pointeeType
+        );
         return {
           originalDataType: derefedExpressionDataType.pointeeType,
-          exprs: unpackedStruct.map(primaryDataObject => ({
+          exprs: unpackedStruct.map((primaryDataObject) => ({
             type: "MemoryLoad",
             address: {
               type: "DynamicAddress",
               address: {
                 type: "BinaryExpression",
                 leftExpr: derefedExpression.exprs[0], // value of dereferenced expression (starting address of the pointed to struct)
-                rightExpr: createMemoryOffsetIntegerConstant(primaryDataObject.offset), // offset of particular primary data object in struct
+                rightExpr: createMemoryOffsetIntegerConstant(
+                  primaryDataObject.offset
+                ), // offset of particular primary data object in struct
                 operator: "+",
                 operandTargetDataType: "pointer",
-                dataType: "pointer"
+                dataType: "pointer",
               },
               dataType: "pointer",
             },
-            dataType: primaryDataObject.dataType, 
-          }))
-        }
+            dataType: primaryDataObject.dataType,
+          })),
+        };
       }
     } else if (expr.type === "SizeOfExpression") {
       let dataTypeToGetSizeOf;
@@ -466,6 +471,64 @@ export default function processExpression(
           },
         ],
       };
+    } else if (expr.type === "StructMemberAccess") {
+      const processedExpr = processExpression(expr, symbolTable);
+      const dataTypeOfExpr = getDataTypeOfExpression({
+        expression: processedExpr,
+      });
+      if (dataTypeOfExpr.type !== "struct") {
+        throw new ProcessingError(
+          `request for member '${expr.fieldTag}' in something that is not a structure or union`
+        );
+      }
+      const { fieldIndex, fieldDataType } =
+        determineIndexAndDataTypeOfFieldInStruct(dataTypeOfExpr, expr.fieldTag);
+
+      if (fieldDataType.type === "array") {
+        // treat array field as just a pointer
+        return {
+          originalDataType: {
+            type: "pointer",
+            pointeeType: fieldDataType.elementDataType,
+          },
+          exprs: [
+            {
+              type: "DynamicAddress",
+              address: processedExpr.exprs[fieldIndex],
+              dataType: "pointer",
+            },
+          ],
+        };
+      } else if (fieldDataType.type === "function") {
+        // TODO: handle function pointer in future
+        throw new UnsupportedFeatureError(
+          "Function pointers not yet supported"
+        );
+      } else {
+        // procssedExpr already consists of accessing the whole struct (all primary memory object loads)
+        // just use field index to access the right ones
+        const memoryLoadExprs: MemoryLoad[] = [];
+        let totalBytesLoaded = 0;
+        let currLoadIndex = fieldIndex;
+        while (totalBytesLoaded < getDataTypeSize(fieldDataType)) {
+          if (processedExpr.exprs[currLoadIndex].type !== "MemoryLoad") {
+            // only "MemoryLoads" can possibly indicate an lvalue
+            throw new ProcessingError(
+              `request for member '${expr.fieldTag}' in something that is not a structure or union`
+            );
+          }
+          totalBytesLoaded += getSizeOfScalarDataType(
+            (processedExpr.exprs[currLoadIndex] as MemoryLoad).dataType
+          );
+          memoryLoadExprs.push(
+            processedExpr.exprs[currLoadIndex++] as MemoryLoad
+          );
+        }
+        return {
+          originalDataType: fieldDataType,
+          exprs: memoryLoadExprs,
+        };
+      }
     } else {
       // this should not happen
       throw new ProcessingError("Unhandled Expression");

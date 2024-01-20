@@ -2,7 +2,7 @@
  * Some utility functions used by the processor when working with data types.
  */
 
-import { DataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
@@ -146,4 +146,20 @@ export function unpackDataType(
   }
   recursiveHelper(dataType);
   return memoryObjects;
+}
+
+/**
+ * Determines the index of the given field tag in a struct based in terms of the index in the unpacked primary data objects 
+ * that is returned by running unpackDataType on the whole struct,
+ * as well as the datatype of the field.
+ */
+export function determineIndexAndDataTypeOfFieldInStruct(structDataType: StructDataType,  fieldTag: string): { fieldIndex: number, fieldDataType: DataType } {
+  let currIndex = 0;
+  for (const field of structDataType.fields) {
+    if (fieldTag === field.tag) {
+      return { fieldIndex: currIndex, fieldDataType: field.dataType };
+    }
+    currIndex += getDataTypeSize(field.dataType);
+  }
+  throw new ProcessingError(`Struct${structDataType.tag !== null ? " " + structDataType.tag : ""} has no member named '${fieldTag}'`)
 }
