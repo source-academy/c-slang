@@ -472,7 +472,7 @@ export default function processExpression(
         ],
       };
     } else if (expr.type === "StructMemberAccess") {
-      const processedExpr = processExpression(expr, symbolTable);
+      const processedExpr = processExpression(expr.expr, symbolTable); // process the underlying expression being operated on
       const dataTypeOfExpr = getDataTypeOfExpression({
         expression: processedExpr,
       });
