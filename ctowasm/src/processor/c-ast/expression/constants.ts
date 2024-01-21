@@ -1,4 +1,5 @@
 import { FloatDataType, IntegerDataType } from "~src/common/types";
+import { PointerDataType } from "~src/parser/c-ast/dataTypes";
 import { ExpressionPBase } from "~src/processor/c-ast/core";
 
 export type ConstantP = IntegerConstantP | FloatConstantP;

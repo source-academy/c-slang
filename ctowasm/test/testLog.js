@@ -487,6 +487,26 @@ const testLog = {
       title: "Sizeof expression 2 - test sizeof operator on datatypes",
       expectedCode: false,
       expectedValues: [1,2,4,8,4,160] 
+    },
+    structs_1: {
+      title: "Struct tests 1 - declarations and simple member access via . and ->",
+      expectedCode: false,
+      expectedValues: [1, 1]
+    },
+    complex_initializers: {
+      title: "Test complex initializer list expressions - proof of working recursive rules as per 6.7.9 constraint 20 of C17 standard",
+      expectedCode: false,
+      expectedValues: [1,2,6,1,2,3,0,1,2,6,1,2,3,0]
+    },
+    incomplete_pointers: {
+      title: "Test the ability to declare pointers to incomplete types, as long as the type is subsequently defined later in the program.",
+      expectedCode: false,
+      expectedValues: [2, 0]
+    },
+    structs_arrays: {
+      title: "Test working with arrays of structs, and structs with fields that are arrays.",
+      expectedCode: false,
+      expectedValues: [1, 2, 4, 1, 6]
     }
   }
 };

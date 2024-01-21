@@ -2,7 +2,7 @@
  * Definition of function to process Expression expr s.
  */
 
-import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
+import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import {
@@ -483,7 +483,6 @@ export default function processExpression(
       }
       const { fieldIndex, fieldDataType } =
         determineIndexAndDataTypeOfFieldInStruct(dataTypeOfExpr, expr.fieldTag);
-
       if (fieldDataType.type === "array") {
         // treat array field as just a pointer
         return {
@@ -494,7 +493,7 @@ export default function processExpression(
           exprs: [
             {
               type: "DynamicAddress",
-              address: processedExpr.exprs[fieldIndex],
+              address: (processedExpr.exprs[fieldIndex] as MemoryLoad).address,
               dataType: "pointer",
             },
           ],

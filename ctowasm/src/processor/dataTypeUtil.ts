@@ -149,6 +149,42 @@ export function unpackDataType(
 }
 
 /**
+ * Returns the number of primary objects that compose a data type.
+ */
+function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
+  if (dataType.type === "primary" || dataType.type === "pointer") {
+    return 1;
+  } else if (dataType.type === "array") {
+    try {
+      const numElementsConstant = evaluateCompileTimeExpression(
+        dataType.numElements
+      );
+      if (numElementsConstant.type === "FloatConstant") {
+        throw new ProcessingError("Array size must be an integer-type");
+      }
+      return (
+        getDataTypeNumberOfPrimaryObjects(dataType.elementDataType) *
+        Number(numElementsConstant.value)
+      );
+    } catch (e) {
+      if (e instanceof ProcessingError) {
+        throw new ProcessingError(
+          "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
+        );
+      } else {
+        throw e;
+      }
+    }
+  } else if (dataType.type === "struct") {
+    return dataType.fields.reduce((sum, field) => sum + getDataTypeNumberOfPrimaryObjects(field.dataType), 0);
+  } else {
+    throw new Error(
+      `getDataTypeNumberOfPrimaryObjects(): unhandled data type: ${toJson(dataType)}`
+    );
+  }
+}
+
+/**
  * Determines the index of the given field tag in a struct based in terms of the index in the unpacked primary data objects 
  * that is returned by running unpackDataType on the whole struct,
  * as well as the datatype of the field.
@@ -159,7 +195,7 @@ export function determineIndexAndDataTypeOfFieldInStruct(structDataType: StructD
     if (fieldTag === field.tag) {
       return { fieldIndex: currIndex, fieldDataType: field.dataType };
     }
-    currIndex += getDataTypeSize(field.dataType);
+    currIndex += getDataTypeNumberOfPrimaryObjects(field.dataType);
   }
   throw new ProcessingError(`Struct${structDataType.tag !== null ? " " + structDataType.tag : ""} has no member named '${fieldTag}'`)
 }

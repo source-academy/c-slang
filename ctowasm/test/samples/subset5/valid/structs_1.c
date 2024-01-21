@@ -1,5 +1,7 @@
 /**
- * Test a few ways of declaring structs.
+ * Structs test 1
+ * - test struct declarations
+ * - test basic struct member access 
  * 
  */
 struct A {

@@ -91,5 +91,5 @@ export function toJson(obj: any) {
     }
   }
   recursionHelper(obj);
-  return JSON.stringify(obj);
+  return JSON.stringify(obj, null, 2);
 }
