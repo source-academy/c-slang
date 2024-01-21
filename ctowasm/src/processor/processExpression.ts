@@ -283,6 +283,7 @@ export default function processExpression(
             dataType: returnObjectMemoryLoads[0].dataType,
             expr: returnObjectMemoryLoads[0],
           },
+          ...returnObjectMemoryLoads.slice(1)
         ],
       };
     } else if (expr.type === "PrefixExpression") {
@@ -487,6 +488,7 @@ export default function processExpression(
       const { fieldIndex, fieldDataType } =
         determineIndexAndDataTypeOfFieldInStruct(dataTypeOfExpr, expr.fieldTag);
       if (fieldDataType.type === "array") {
+
         // treat array field as just a pointer
         return {
           originalDataType: {
