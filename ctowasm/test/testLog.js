@@ -514,6 +514,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [1, 2, 4, 1, 6],
     },
+    structs_2: {
+      title: "Test initializing and assignning more complicated structs",
+      expectedCode: false,
+      expectedValues: [200, 220, 2, 40, 200, 2]
+    }
   },
 };
 
