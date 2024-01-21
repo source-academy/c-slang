@@ -184,11 +184,13 @@ export class SymbolTable {
       const dataTypeSize = getDataTypeSize(param);
       offset -= dataTypeSize;
       functionDetails.sizeOfParams += dataTypeSize;
+      const unpackedParam = unpackDataType(param).map((scalarDataType) => ({
+        dataType: scalarDataType.dataType,
+        offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
+      }));
+      // need to load unpacked param in reverse order, as in stack frame creation, the highest address subobject of an aggregate type gets loaded first as the stack frame grows from high to low address
       functionDetails.parameters.push(
-        ...unpackDataType(param).map((scalarDataType) => ({
-          dataType: scalarDataType.dataType,
-          offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
-        })),
+        ...(unpackedParam.reverse())
       );
     }
 

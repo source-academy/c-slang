@@ -440,6 +440,7 @@ export function getFunctionCallStackFrameSetupStatements(
       ),
     );
     const param = functionDetails.parameters[i];
+
     statements.push({
       type: "MemoryStore",
       addr: stackPointerGetNode,
