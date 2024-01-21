@@ -186,7 +186,7 @@ export const wasmModuleImports: Record<string, ImportedFunction> = {
 
 // used to extract the details of imported functions in terms of C -> to be used by compiler
 export function extractImportedFunctionCDetails(
-  wasmModuleImports: Record<string, ImportedFunction>
+  wasmModuleImports: Record<string, ImportedFunction>,
 ) {
   const importedFunctionCDetails: Record<string, FunctionDataType> = {};
   Object.keys(wasmModuleImports).forEach((importedFuncName) => {

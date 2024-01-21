@@ -1,4 +1,4 @@
-import { BinaryOperator, PrefixOperator, ScalarCDataType } from "~src/common/types";
+import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import {
   ExpressionP,
@@ -11,7 +11,7 @@ export interface BinaryExpressionP extends ExpressionPBase {
   leftExpr: ExpressionP;
   rightExpr: ExpressionP;
   operator: BinaryOperator;
-  operandTargetDataType: ScalarCDataType // the data type to convert the operands to before the binary operation
+  operandTargetDataType: ScalarCDataType; // the data type to convert the operands to before the binary operation
 }
 
 export interface UnaryExpressionP extends ExpressionPBase {
@@ -54,5 +54,5 @@ export interface PostStatementExpressionP extends ExpressionPBase {
  */
 export interface ExpressionWrapperP {
   originalDataType: DataType;
-  exprs: ExpressionP[] // the resultant processed ExpressionP
+  exprs: ExpressionP[]; // the resultant processed ExpressionP
 }

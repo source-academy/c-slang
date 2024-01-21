@@ -14,10 +14,7 @@ import {
   WasmFloatType,
   WasmIntType,
 } from "~src/translator/wasm-ast/dataTypes";
-import {
-  NumericConversionInstruction,
-  WasmNumericConversionWrapper,
-} from "./wasm-ast/numericConversion";
+import { NumericConversionInstruction } from "./wasm-ast/numericConversion";
 
 /**
  * Mapping of C variable types to the Wasm variable type used to perform operations on it.
@@ -44,7 +41,7 @@ export const priamryCDataTypeToWasmType: Record<
  */
 
 export function convertScalarDataTypeToWasmType(
-  scalarType: ScalarCDataType
+  scalarType: ScalarCDataType,
 ): WasmDataType {
   if (scalarType === "pointer") {
     return WASM_ADDR_TYPE;
@@ -55,12 +52,12 @@ export function convertScalarDataTypeToWasmType(
 function getNeededNumericConversionInstruction(
   from: WasmDataType,
   to: WasmDataType,
-  signage: "unsigned" | "signed"
+  signage: "unsigned" | "signed",
 ): NumericConversionInstruction {
   if (from === "i32" && to === "i64") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from i32 to i64"
+        "Missing sign information for numeric conversion from i32 to i64",
       );
     } else if (signage === "signed") {
       return "i64.extend_i32_s";
@@ -76,7 +73,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i32" && to === "f32") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from i32 to f32"
+        "Missing sign information for numeric conversion from i32 to f32",
       );
     } else if (signage === "signed") {
       return "f32.convert_i32_s";
@@ -86,7 +83,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i64" && to === "f32") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from i64 to f32"
+        "Missing sign information for numeric conversion from i64 to f32",
       );
     } else if (signage === "signed") {
       return "f32.convert_i64_s";
@@ -96,7 +93,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i32" && to === "f64") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from i32 to f64"
+        "Missing sign information for numeric conversion from i32 to f64",
       );
     } else if (signage === "signed") {
       return "f64.convert_i32_s";
@@ -106,7 +103,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "i64" && to === "f64") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from i64 to f64"
+        "Missing sign information for numeric conversion from i64 to f64",
       );
     } else if (signage === "signed") {
       return "f64.convert_i64_s";
@@ -116,7 +113,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f32" && to === "i32") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from f32 to i32"
+        "Missing sign information for numeric conversion from f32 to i32",
       );
     } else if (signage === "signed") {
       return "i32.trunc_f32_s";
@@ -126,7 +123,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f64" && to === "i32") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from f64 to i32"
+        "Missing sign information for numeric conversion from f64 to i32",
       );
     } else if (signage === "signed") {
       return "i32.trunc_f64_s";
@@ -136,7 +133,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f32" && to === "i64") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from f32 to i64"
+        "Missing sign information for numeric conversion from f32 to i64",
       );
     } else if (signage === "signed") {
       return "i64.trunc_f32_s";
@@ -146,7 +143,7 @@ function getNeededNumericConversionInstruction(
   } else if (from === "f64" && to === "i64") {
     if (typeof signage === "undefined") {
       throw new TranslationError(
-        "Missing sign information for numeric conversion from f64 to i64"
+        "Missing sign information for numeric conversion from f64 to i64",
       );
     } else if (signage === "signed") {
       return "i64.trunc_f64_s";
@@ -156,7 +153,7 @@ function getNeededNumericConversionInstruction(
   } else {
     // should not happen
     throw new TranslationError(
-      `Unhandled numeric conversion between wasm types: ${from} to ${to}`
+      `Unhandled numeric conversion between wasm types: ${from} to ${to}`,
     );
   }
 }
@@ -166,7 +163,7 @@ function getNeededNumericConversionInstruction(
 export function getTypeConversionWrapper(
   from: ScalarCDataType, // the C variable type of value being assigned
   to: ScalarCDataType, // the C variable type of variable being assigned to
-  translatedExpression: WasmExpression // the translated expression being assiged to the variable
+  translatedExpression: WasmExpression, // the translated expression being assiged to the variable
 ): WasmExpression {
   const fromWasmType = convertScalarDataTypeToWasmType(from);
   const toWasmType = convertScalarDataTypeToWasmType(to);
@@ -174,12 +171,12 @@ export function getTypeConversionWrapper(
   // sanity checks
   if (typeof toWasmType === "undefined") {
     throw new TranslationError(
-      `getTypeConversionWrapper: undefined variableWasmType: original type: ${to}`
+      `getTypeConversionWrapper: undefined variableWasmType: original type: ${to}`,
     );
   }
   if (typeof fromWasmType === "undefined") {
     throw new TranslationError(
-      `getTypeConversionWrapper: undefined valueWasmType: original type: ${from}`
+      `getTypeConversionWrapper: undefined valueWasmType: original type: ${from}`,
     );
   }
 
@@ -194,7 +191,7 @@ export function getTypeConversionWrapper(
       instruction: getNeededNumericConversionInstruction(
         fromWasmType,
         toWasmType,
-        "unsigned"
+        "unsigned",
       ),
       expr: translatedExpression,
     };
@@ -204,7 +201,7 @@ export function getTypeConversionWrapper(
       instruction: getNeededNumericConversionInstruction(
         fromWasmType,
         toWasmType,
-        "signed"
+        "signed",
       ),
       expr: translatedExpression,
     };
@@ -215,12 +212,12 @@ export function getTypeConversionWrapper(
       instruction: getNeededNumericConversionInstruction(
         fromWasmType,
         toWasmType,
-        "signed"
+        "signed",
       ),
       expr: translatedExpression,
     };
   }
-} 
+}
 
 /**
  * Converts a constant to a Wasm const.

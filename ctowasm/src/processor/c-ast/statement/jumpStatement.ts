@@ -1,6 +1,9 @@
 import { CNodePBase } from "~src/processor/c-ast/core";
 
-export type JumpStatementP = ReturnStatementP | BreakStatementP | ContinueStatementP
+export type JumpStatementP =
+  | ReturnStatementP
+  | BreakStatementP
+  | ContinueStatementP;
 
 export interface ReturnStatementP extends CNodePBase {
   type: "ReturnStatement";

@@ -2,17 +2,17 @@
  * Some utility functions for converting variable intializers into byte strings.
  */
 
-import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
-import {
-  ConstantP,
-  FloatConstantP,
-  IntegerConstantP,
-} from "~src/processor/c-ast/expression/constants";
+import { ProcessingError } from "~src/errors";
+import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
-import { isFloatType, isIntegerType, primaryDataTypeSizes } from "~src/common/utils";
-import { FloatDataType, IntegerDataType, PrimaryCDataType, ScalarCDataType } from "~src/common/types";
+import { isIntegerType, primaryDataTypeSizes } from "~src/common/utils";
+import {
+  FloatDataType,
+  IntegerDataType,
+  ScalarCDataType,
+} from "~src/common/types";
 
 export function getZeroInializerByteStrForDataType(dataType: DataType) {
   let byteStr = "";
@@ -23,18 +23,18 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
     }
   } else if (dataType.type === "array") {
     const numElements = evaluateCompileTimeExpression(
-      dataType.numElements
+      dataType.numElements,
     ).value;
     const elementZeroStr = getZeroInializerByteStrForDataType(
-      dataType.elementDataType
+      dataType.elementDataType,
     );
     for (let i = 0; i < numElements; i++) {
       byteStr += elementZeroStr;
     }
   } else if (dataType.type === "struct") {
-    dataType.fields.forEach(field => {
+    dataType.fields.forEach((field) => {
       byteStr += getZeroInializerByteStrForDataType(field.dataType);
-    })
+    });
   } else if (dataType.type === "function") {
     throw new ProcessingError("Cannot initialize a function data type");
   }
@@ -46,29 +46,41 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
  * Converts a Constant into its byte string representation in little endian format.
  * Takes into account the target data type.
  */
-export function convertConstantToByteStr(constant: ConstantP, targetDataType: ScalarCDataType) {
+export function convertConstantToByteStr(
+  constant: ConstantP,
+  targetDataType: ScalarCDataType,
+) {
   // shouldnt be assigning ints to pointer. THis is a constraint violation TODO: consider an error here to user based on a flag set on compiler
   if (targetDataType === "pointer") {
-    targetDataType = "unsigned int"
+    targetDataType = "unsigned int";
   }
 
   if (isIntegerType(targetDataType)) {
-    targetDataType = targetDataType as IntegerDataType
+    targetDataType = targetDataType as IntegerDataType;
     if (constant.type === "FloatConstant") {
       // need to truncate the value
-      return convertIntegerToByteString(BigInt(Math.trunc(constant.value)), primaryDataTypeSizes[targetDataType])
+      return convertIntegerToByteString(
+        BigInt(Math.trunc(constant.value)),
+        primaryDataTypeSizes[targetDataType],
+      );
     } else {
-      return convertIntegerToByteString(constant.value, primaryDataTypeSizes[targetDataType]);
+      return convertIntegerToByteString(
+        constant.value,
+        primaryDataTypeSizes[targetDataType],
+      );
     }
   } else {
     targetDataType = targetDataType as FloatDataType;
     if (constant.type === "IntegerConstant") {
       // Number will automatically handle converting to the next representable value TODO: check if this is next highest or lowest
-      return convertFloatNumberToByteString(Number(constant.value), targetDataType);
+      return convertFloatNumberToByteString(
+        Number(constant.value),
+        targetDataType,
+      );
     } else {
       // need to get a float byte string
       return convertFloatNumberToByteString(constant.value, targetDataType);
-    } 
+    }
   }
 }
 
@@ -100,14 +112,16 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
   return finalStr.slice(0, 3 * numOfBytes);
 }
 
-
-function convertFloatNumberToByteString(floatValue: number, targetDataType: FloatDataType) {
+function convertFloatNumberToByteString(
+  floatValue: number,
+  targetDataType: FloatDataType,
+) {
   const buffer = new ArrayBuffer(primaryDataTypeSizes[targetDataType]);
   let integerValue;
   if (targetDataType === "float") {
     const float32Arr = new Float32Array(buffer);
     const uint32Arr = new Uint32Array(buffer);
-    // if the floatValue is out of range, this will set it to infinity. Whereas if not exactly representable, it will also round up to next representable. 
+    // if the floatValue is out of range, this will set it to infinity. Whereas if not exactly representable, it will also round up to next representable.
     float32Arr[0] = floatValue;
     integerValue = uint32Arr[0];
   } else {
@@ -120,6 +134,6 @@ function convertFloatNumberToByteString(floatValue: number, targetDataType: Floa
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    primaryDataTypeSizes[targetDataType]
+    primaryDataTypeSizes[targetDataType],
   );
 }

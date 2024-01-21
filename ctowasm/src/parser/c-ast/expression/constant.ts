@@ -17,7 +17,7 @@ export interface IntegerConstant extends CNodeBase {
   suffix?: IntegerConstantSuffix;
 }
 
-export interface FloatConstant  extends CNodeBase{
+export interface FloatConstant extends CNodeBase {
   type: "FloatConstant";
   value: number;
   suffix?: FloatConstantSuffix;

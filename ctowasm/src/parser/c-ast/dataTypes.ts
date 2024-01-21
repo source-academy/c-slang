@@ -48,4 +48,3 @@ interface StructField {
   tag: string;
   dataType: DataType;
 }
-

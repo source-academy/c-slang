@@ -12,7 +12,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   // add the memory import
   watStr += generateLine(
     `(import "js" "mem" (memory ${module.memorySize}))`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add the imported functions
@@ -35,7 +35,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
               .join(" ")
           : ""
       }))`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -49,16 +49,15 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
           ? generateWatExpression(global.initializerValue)
           : ""
       })`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
   // add all the global variables (in linear memory) intiializations
   watStr += generateLine(
     `(data (i32.const 0) "${module.dataSegmentByteStr}")`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
-  
 
   // add all the function definitions
   for (const functionName of Object.keys(module.functions)) {
@@ -67,7 +66,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
     for (const statement of func.body) {
       watStr += generateLine(
         generateWatStatement(statement),
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

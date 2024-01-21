@@ -52,9 +52,9 @@ export async function compileAndRun(program: string) {
 }
 
 export function generate_processed_C_AST(program: string) {
-  return original_generate_processed_C_AST(program, wasmModuleImports)
+  return original_generate_processed_C_AST(program, wasmModuleImports);
 }
 
 export function generate_C_AST(program: string) {
-  return original_generate_C_AST(program)
+  return original_generate_C_AST(program);
 }

@@ -1,4 +1,3 @@
-import { POINTER_SIZE } from "~src/common/constants";
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
 import { Declaration } from "~src/parser/c-ast/declaration";
@@ -70,7 +69,7 @@ export class SymbolTable {
       }
       if (this.symbols[name].type === "function") {
         throw new ProcessingError(
-          `${name} redeclared as variable instead of function`
+          `${name} redeclared as variable instead of function`,
         );
       }
 
@@ -78,7 +77,7 @@ export class SymbolTable {
         throw new ProcessingError(
           `Conflicting types for ${name}:  redeclared as ${
             this.symbols[name].dataType
-          } instead of ${toJson(dataType)}`
+          } instead of ${toJson(dataType)}`,
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
@@ -109,14 +108,14 @@ export class SymbolTable {
   addFunctionEntry(
     name: string,
     dataType: FunctionDataType,
-    isExternalFunction?: boolean
+    isExternalFunction?: boolean,
   ): FunctionSymbolEntry {
     if (!isExternalFunction && name in this.symbols) {
       // function was already declared before
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
         throw new ProcessingError(
-          `${name} redeclared as different kind of symbol: function instead of variable`
+          `${name} redeclared as different kind of symbol: function instead of variable`,
         );
       }
 
@@ -160,7 +159,7 @@ export class SymbolTable {
     if (dataType.returnType !== null) {
       if (dataType.returnType.type === "array") {
         throw new ProcessingError(
-          "Array is not a valid return type from a function"
+          "Array is not a valid return type from a function",
         );
       }
 
@@ -170,7 +169,7 @@ export class SymbolTable {
         (scalarDataType) => ({
           dataType: scalarDataType.dataType,
           offset: scalarDataType.offset - functionDetails.sizeOfReturn,
-        })
+        }),
       );
     }
 
@@ -179,7 +178,7 @@ export class SymbolTable {
       // sanity check, as parser should have converted all array params into pointers.
       if (param.type === "array") {
         throw new ProcessingError(
-          "Compiler error: The type of a function parameter should not be an array after parsing"
+          "Compiler error: The type of a function parameter should not be an array after parsing",
         );
       }
       const dataTypeSize = getDataTypeSize(param);
@@ -189,7 +188,7 @@ export class SymbolTable {
         ...unpackDataType(param).map((scalarDataType) => ({
           dataType: scalarDataType.dataType,
           offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
-        }))
+        })),
       );
     }
 

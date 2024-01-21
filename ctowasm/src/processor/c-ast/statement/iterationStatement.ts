@@ -13,12 +13,12 @@ interface IterationStatementBase extends CNodePBase {
 
 export interface DoWhileLoopP extends IterationStatementBase {
   type: "DoWhileLoop";
-  condition: ExpressionP 
+  condition: ExpressionP;
 }
 
 export interface WhileLoopP extends IterationStatementBase {
   type: "WhileLoop";
-  condition: ExpressionP 
+  condition: ExpressionP;
 }
 
 export interface ForLoopP extends IterationStatementBase {

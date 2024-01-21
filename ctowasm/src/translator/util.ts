@@ -14,14 +14,11 @@ import {
   WASM_ADDR_TYPE,
 } from "~src/translator/memoryUtil";
 
-import {
-  MemoryVariableByteSize,
-} from "~src/translator/wasm-ast/memory";
+import { MemoryVariableByteSize } from "~src/translator/wasm-ast/memory";
 import { ArithemeticUnaryOperator } from "~src/common/types";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import { priamryCDataTypeToWasmType } from "./dataTypeUtil";
 import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
-import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { TranslationError, toJson } from "~src/errors";
 import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
 import { ExpressionP } from "~src/processor/c-ast/core";
@@ -32,7 +29,7 @@ import translateExpression from "~src/translator/translateExpression";
  */
 export function arithmeticUnaryOperatorToInstruction(
   op: ArithemeticUnaryOperator,
-  dataType: DataType
+  dataType: DataType,
 ) {
   if (dataType.type === "primary") {
     return `${priamryCDataTypeToWasmType[dataType.primaryDataType]}.${
@@ -44,8 +41,8 @@ export function arithmeticUnaryOperatorToInstruction(
     // arithmetic is not defined for non ints or non pointers
     throw new TranslationError(
       `arithmeticUnaryOperatorToInstruction(): Unsupported variable type: ${toJson(
-        dataType
-      )}`
+        dataType,
+      )}`,
     );
   }
 }
@@ -66,7 +63,7 @@ export const wasmTypeToSize: Record<WasmDataType, MemoryVariableByteSize> = {
  */
 export function setPseudoRegisters(
   wasmRoot: WasmModule,
-  dataSegmentSize: number
+  dataSegmentSize: number,
 ) {
   wasmRoot.globalWasmVariables.push({
     type: "GlobalVariable",
@@ -148,11 +145,14 @@ export function getMaxIntConstant(intType: "i32" | "i64"): WasmIntegerConst {
 /**
  * Translate an expression that is expected to be a boolean value.
  */
-export function createWasmBooleanExpression(expression: ExpressionP, isNegated?: boolean): WasmBooleanExpression {
+export function createWasmBooleanExpression(
+  expression: ExpressionP,
+  isNegated?: boolean,
+): WasmBooleanExpression {
   return {
     type: "BooleanExpression",
     expr: translateExpression(expression, "signed int"),
     wasmDataType: "i32",
-    isNegated
-  }
+    isNegated,
+  };
 }

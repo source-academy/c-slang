@@ -1,8 +1,7 @@
-import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
+import { ProcessingError } from "~src/errors";
 import {
   Declaration,
   Initializer,
-  InitializerList,
   InitializerSingle,
 } from "~src/parser/c-ast/declaration";
 import { StatementP } from "~src/processor/c-ast/core";
@@ -16,20 +15,14 @@ import {
 import { SymbolTable, VariableSymbolEntry } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { FloatDataType, IntegerDataType } from "~src/common/types";
-import { getSizeOfScalarDataType, isFloatType } from "~src/common/utils";
+import { getSizeOfScalarDataType } from "~src/common/utils";
 import { MemoryStore } from "~src/processor/c-ast/memory";
 import {
   createMemoryOffsetIntegerConstant,
   getDataTypeOfExpression,
 } from "~src/processor/util";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
-import {
-  ArrayDataType,
-  DataType,
-  PointerDataType,
-  PrimaryDataType,
-  StructDataType,
-} from "~src/parser/c-ast/dataTypes";
+import { DataType, PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import {
   convertConstantToByteStr,
@@ -44,7 +37,7 @@ import { POINTER_TYPE } from "~src/common/constants";
 export function processLocalDeclaration(
   node: Declaration,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP // reference to enclosing function, if any
+  enclosingFunc: FunctionDefinitionP, // reference to enclosing function, if any
 ): StatementP[] {
   try {
     let symbolEntry = symbolTable.addEntry(node);
@@ -55,7 +48,7 @@ export function processLocalDeclaration(
     // sanity check, symbol table entry must be localVariable
     if (symbolEntry.type === "globalVariable") {
       throw new ProcessingError(
-        "processLocalVariableDeclaration: symbol entry became global variable entry"
+        "processLocalVariableDeclaration: symbol entry became global variable entry",
       );
     }
 
@@ -69,7 +62,7 @@ export function processLocalDeclaration(
       return unpackLocalVariableInitializerAccordingToDataType(
         symbolEntry,
         node.initializer,
-        symbolTable
+        symbolTable,
       );
     } else {
       return [];
@@ -92,7 +85,7 @@ function runInitializerChecks(dataType: DataType, initalizer: Initializer) {
     }
   } else if (dataType.type === "function") {
     throw new ProcessingError(
-      `A function cannot be initialized like a variable`
+      `A function cannot be initialized like a variable`,
     );
   } else if (initalizer.type === "InitializerSingle") {
     throw new ProcessingError("Invalid intializer for aggregate type");
@@ -102,7 +95,7 @@ function runInitializerChecks(dataType: DataType, initalizer: Initializer) {
 export function unpackLocalVariableInitializerAccordingToDataType(
   variableSymbolEntry: VariableSymbolEntry, // the symbol entry of the the variable being initialized
   initializer: Initializer,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): MemoryStore[] {
   const memoryStoreStatements: MemoryStore[] = [];
   let currOffset = variableSymbolEntry.offset; // offset to use for address in memory store statements
@@ -112,7 +105,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
   function helper(
     dataType: DataType,
     initializer: Initializer,
-    offset: number
+    offset: number,
   ): number {
     if (dataType.type === "primary" || dataType.type === "pointer") {
       if (initializer.type === "InitializerSingle") {
@@ -228,7 +221,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
         throw new ProcessingError("Invalid initializer for aggregate type");
       }
       const numElements = evaluateCompileTimeExpression(
-        dataType.numElements
+        dataType.numElements,
       ).value;
       for (let i = 0; i < numElements; i++) {
         if (
@@ -245,7 +238,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             // special handling in case the current initializer at offset is a struct expression
             const processedExpr = processExpression(
               (initializer.values[offset] as InitializerSingle).value,
-              symbolTable
+              symbolTable,
             );
             const dataTypeOfExpr = getDataTypeOfExpression({
               expression: processedExpr,
@@ -267,7 +260,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
                   dataType: primaryMemoryObj.dataType,
                 });
                 currOffset += getSizeOfScalarDataType(
-                  primaryMemoryObj.dataType
+                  primaryMemoryObj.dataType,
                 );
               }
               ++offset;
@@ -343,14 +336,14 @@ export function unpackLocalVariableInitializerAccordingToDataType(
  */
 export function processDataSegmentVariableDeclaration(
   node: Declaration,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): string {
   try {
     const symbolEntry = symbolTable.addEntry(node);
     if (node.dataType.type === "function") {
       if (typeof node.initializer !== "undefined") {
         throw new ProcessingError(
-          `Function ${node.name} is initialized like a variable`
+          `Function ${node.name} is initialized like a variable`,
         );
       }
       return ""; // nothing to initalize function with
@@ -359,13 +352,13 @@ export function processDataSegmentVariableDeclaration(
     // sanity check
     if (symbolEntry.type === "localVariable") {
       throw new ProcessingError(
-        "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'"
+        "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'",
       );
     }
 
     return unpackDataSegmentInitializerAccordingToDataType(
       node.dataType,
-      typeof node.initializer === "undefined" ? null : node.initializer
+      typeof node.initializer === "undefined" ? null : node.initializer,
     );
   } catch (e) {
     if (e instanceof ProcessingError) {
@@ -381,7 +374,7 @@ export function processDataSegmentVariableDeclaration(
  */
 function unpackDataSegmentInitializerAccordingToDataType(
   dataType: DataType,
-  initalizer: Initializer | null
+  initalizer: Initializer | null,
 ): string {
   let byteStr = "";
   // function helper2(dataType: DataType, initalizer: Initializer | null) {
@@ -457,22 +450,22 @@ function unpackDataSegmentInitializerAccordingToDataType(
   function helper(
     dataType: DataType,
     initializer: Initializer,
-    offset: number
+    offset: number,
   ): number {
     if (dataType.type === "primary" || dataType.type === "pointer") {
       if (initializer.type === "InitializerSingle") {
         try {
           const processedConstant = evaluateCompileTimeExpression(
-            initializer.value
+            initializer.value,
           );
           byteStr += convertConstantToByteStr(
             processedConstant,
-            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
+            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
           );
         } catch (e) {
           if (e instanceof ProcessingError) {
             throw new ProcessingError(
-              "Initializer element is not compile-time constant"
+              "Initializer element is not compile-time constant",
             );
           }
           throw e;
@@ -493,11 +486,11 @@ function unpackDataSegmentInitializerAccordingToDataType(
             firstInitializer = firstInitializer.values[0];
           }
           const processedConstant = evaluateCompileTimeExpression(
-            firstInitializer.value
+            firstInitializer.value,
           );
           byteStr += convertConstantToByteStr(
             processedConstant,
-            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
+            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
           );
         }
       }
@@ -507,7 +500,7 @@ function unpackDataSegmentInitializerAccordingToDataType(
         throw new ProcessingError("Invalid initializer for aggregate type");
       }
       const numElements = evaluateCompileTimeExpression(
-        dataType.numElements
+        dataType.numElements,
       ).value;
       for (let i = 0; i < numElements; i++) {
         if (

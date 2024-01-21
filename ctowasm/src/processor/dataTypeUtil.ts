@@ -4,7 +4,7 @@
 
 import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
-import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
+import { ProcessingError, toJson } from "~src/errors";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { ScalarCDataType } from "~src/common/types";
 import {
@@ -19,12 +19,12 @@ import {
 export function getDataTypeSize(dataType: DataType): number {
   if (dataType.type === "primary" || dataType.type === "pointer") {
     return getSizeOfScalarDataType(
-      dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
+      dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
     );
   } else if (dataType.type === "array") {
     try {
       const numElementsConstant = evaluateCompileTimeExpression(
-        dataType.numElements
+        dataType.numElements,
       );
       if (numElementsConstant.type === "FloatConstant") {
         throw new ProcessingError("Array size must be an integer-type");
@@ -36,17 +36,20 @@ export function getDataTypeSize(dataType: DataType): number {
     } catch (e) {
       if (e instanceof ProcessingError) {
         throw new ProcessingError(
-          "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
+          "Array size must be compile-time constant expression (Variable Length Arrays not supported)",
         );
       } else {
         throw e;
       }
     }
   } else if (dataType.type === "struct") {
-    return dataType.fields.reduce((sum, field) => sum + getDataTypeSize(field.dataType), 0);
+    return dataType.fields.reduce(
+      (sum, field) => sum + getDataTypeSize(field.dataType),
+      0,
+    );
   } else {
     throw new Error(
-      `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`
+      `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`,
     );
   }
 }
@@ -110,7 +113,7 @@ export interface PrimaryDataTypeMemoryObjectDetails {
  * Unpacks an data type into its constituent primary data types (including multi dim arrays and structs)
  */
 export function unpackDataType(
-  dataType: DataType
+  dataType: DataType,
 ): PrimaryDataTypeMemoryObjectDetails[] {
   let currOffset = 0;
   const memoryObjects: PrimaryDataTypeMemoryObjectDetails[] = [];
@@ -129,7 +132,7 @@ export function unpackDataType(
       currOffset += getDataTypeSize(dataType);
     } else if (dataType.type === "array") {
       const numElements = evaluateCompileTimeExpression(
-        dataType.numElements
+        dataType.numElements,
       ).value;
       for (let i = 0; i < numElements; ++i) {
         recursiveHelper(dataType.elementDataType);
@@ -140,7 +143,7 @@ export function unpackDataType(
       }
     } else {
       throw new ProcessingError(
-        `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`
+        `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`,
       );
     }
   }
@@ -157,7 +160,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
   } else if (dataType.type === "array") {
     try {
       const numElementsConstant = evaluateCompileTimeExpression(
-        dataType.numElements
+        dataType.numElements,
       );
       if (numElementsConstant.type === "FloatConstant") {
         throw new ProcessingError("Array size must be an integer-type");
@@ -169,27 +172,35 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
     } catch (e) {
       if (e instanceof ProcessingError) {
         throw new ProcessingError(
-          "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
+          "Array size must be compile-time constant expression (Variable Length Arrays not supported)",
         );
       } else {
         throw e;
       }
     }
   } else if (dataType.type === "struct") {
-    return dataType.fields.reduce((sum, field) => sum + getDataTypeNumberOfPrimaryObjects(field.dataType), 0);
+    return dataType.fields.reduce(
+      (sum, field) => sum + getDataTypeNumberOfPrimaryObjects(field.dataType),
+      0,
+    );
   } else {
     throw new Error(
-      `getDataTypeNumberOfPrimaryObjects(): unhandled data type: ${toJson(dataType)}`
+      `getDataTypeNumberOfPrimaryObjects(): unhandled data type: ${toJson(
+        dataType,
+      )}`,
     );
   }
 }
 
 /**
- * Determines the index of the given field tag in a struct based in terms of the index in the unpacked primary data objects 
+ * Determines the index of the given field tag in a struct based in terms of the index in the unpacked primary data objects
  * that is returned by running unpackDataType on the whole struct,
  * as well as the datatype of the field.
  */
-export function determineIndexAndDataTypeOfFieldInStruct(structDataType: StructDataType,  fieldTag: string): { fieldIndex: number, fieldDataType: DataType } {
+export function determineIndexAndDataTypeOfFieldInStruct(
+  structDataType: StructDataType,
+  fieldTag: string,
+): { fieldIndex: number; fieldDataType: DataType } {
   let currIndex = 0;
   for (const field of structDataType.fields) {
     if (fieldTag === field.tag) {
@@ -197,5 +208,9 @@ export function determineIndexAndDataTypeOfFieldInStruct(structDataType: StructD
     }
     currIndex += getDataTypeNumberOfPrimaryObjects(field.dataType);
   }
-  throw new ProcessingError(`Struct${structDataType.tag !== null ? " " + structDataType.tag : ""} has no member named '${fieldTag}'`)
+  throw new ProcessingError(
+    `Struct${
+      structDataType.tag !== null ? " " + structDataType.tag : ""
+    } has no member named '${fieldTag}'`,
+  );
 }

@@ -28,7 +28,7 @@ export const primaryDataTypeSizes: Record<
 
 export function getSizeOfScalarDataType(dataType: ScalarCDataType) {
   if (dataType === "pointer") {
-    return POINTER_SIZE
+    return POINTER_SIZE;
   }
   return primaryDataTypeSizes[dataType];
 }

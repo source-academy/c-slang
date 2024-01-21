@@ -2,7 +2,7 @@
  * Utility functions for processing C functions.
  */
 
-import { toJson, ProcessingError } from "~src/errors";
+import { ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import {
@@ -19,7 +19,7 @@ import { getSizeOfScalarDataType } from "~src/common/utils";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
 
@@ -34,7 +34,10 @@ export default function processFunctionDefinition(
 
   // add all the params to the symbol table
   for (let i = 0; i < node.parameterNames.length; ++i) {
-    funcSymbolTable.addVariableEntry(node.parameterNames[i], node.dataType.parameters[i]);
+    funcSymbolTable.addVariableEntry(
+      node.parameterNames[i],
+      node.dataType.parameters[i],
+    );
   }
 
   const functionDefinitionNode: FunctionDefinitionP = {
@@ -49,7 +52,7 @@ export default function processFunctionDefinition(
   const body = processBlockItem(
     node.body,
     funcSymbolTable,
-    functionDefinitionNode
+    functionDefinitionNode,
   );
   functionDefinitionNode.body = body; // body is a Block, an array of StatementP will be returned
   return functionDefinitionNode;
@@ -103,14 +106,14 @@ export function processFunctionReturnStatement(
  */
 export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): FunctionCallP {
   if (node.expr.type === "IdentifierExpression") {
     const symbolEntry = symbolTable.getSymbolEntry(node.expr.name);
     if (symbolEntry.type !== "function") {
       // TODO: add function pointer check later on
       throw new ProcessingError(
-        `Called object '${node.expr.name}' is neither a function nor function pointer`
+        `Called object '${node.expr.name}' is neither a function nor function pointer`,
       );
     }
     // TODO: type check params and args
@@ -131,13 +134,13 @@ export function convertFunctionCallToFunctionCallP(
         // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
         (prv, expr) =>
           prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
-        [] as ExpressionP[]
+        [] as ExpressionP[],
       ),
     };
   } else {
     throw new ProcessingError(
       `Called expression is neither a function nor function pointer`,
-      node.position
+      node.position,
     );
   }
   //TODO: add function pointer support

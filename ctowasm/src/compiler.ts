@@ -1,7 +1,7 @@
 /**
  * Compiler for C to webassembly
  */
-import wasmModuleImports, {
+import {
   ImportedFunction,
   extractImportedFunctionCDetails,
 } from "~src/wasmModuleImports";
@@ -19,7 +19,7 @@ export interface CompilationResult {
 
 export async function compile(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ImportedFunction>
+  wasmModuleImports?: Record<string, ImportedFunction>,
 ): Promise<CompilationResult> {
   try {
     const CAst = parse(cSourceCode);
@@ -27,7 +27,7 @@ export async function compile(
       CAst,
       wasmModuleImports
         ? extractImportedFunctionCDetails(wasmModuleImports)
-        : undefined
+        : undefined,
     );
     const wasmModule = translate(processedCAst, wasmModuleImports);
     const initialMemory = wasmModule.memorySize; // save the initial memory in pages needed for the module
@@ -46,7 +46,7 @@ export async function compile(
 
 export function compileToWat(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ImportedFunction>
+  wasmModuleImports?: Record<string, ImportedFunction>,
 ) {
   try {
     const CAst = parse(cSourceCode);
@@ -54,7 +54,7 @@ export function compileToWat(
       CAst,
       wasmModuleImports
         ? extractImportedFunctionCDetails(wasmModuleImports)
-        : undefined
+        : undefined,
     );
     const wasmModule = translate(processedCAst, wasmModuleImports);
     const output = generateWat(wasmModule);
@@ -81,7 +81,7 @@ export function generate_C_AST(cSourceCode: string) {
 
 export function generate_processed_C_AST(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ImportedFunction>
+  wasmModuleImports?: Record<string, ImportedFunction>,
 ) {
   try {
     const CAst = parse(cSourceCode);
@@ -89,7 +89,7 @@ export function generate_processed_C_AST(
       CAst,
       wasmModuleImports
         ? extractImportedFunctionCDetails(wasmModuleImports)
-        : undefined
+        : undefined,
     );
     return toJson(processedCAst);
   } catch (e) {
@@ -102,19 +102,16 @@ export function generate_processed_C_AST(
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ImportedFunction>
+  wasmModuleImports?: Record<string, ImportedFunction>,
 ) {
   const CAst = parse(cSourceCode);
   const processedCAst = process(
     CAst,
     wasmModuleImports
       ? extractImportedFunctionCDetails(wasmModuleImports)
-      : undefined
+      : undefined,
   );
   //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
-  const wasmAst = translate(
-    processedCAst,
-    wasmModuleImports
-  );
+  const wasmAst = translate(processedCAst, wasmModuleImports);
   return toJson(wasmAst);
 }

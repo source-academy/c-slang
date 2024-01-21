@@ -2,7 +2,11 @@
  * Definitions of wasm AST nodes to do with expressions.
  */
 
-import { WasmAstNode, WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
+import {
+  WasmAstNode,
+  WasmExpression,
+  WasmStatement,
+} from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 
 export interface WasmBinaryExpression extends WasmAstNode {

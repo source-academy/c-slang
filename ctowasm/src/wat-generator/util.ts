@@ -31,7 +31,7 @@ export function generateBlock(block: string, indentation: number) {
  */
 export function getWasmMemoryLoadInstruction(
   varType: WasmDataType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -44,7 +44,7 @@ export function getWasmMemoryLoadInstruction(
 
 export function getWasmMemoryStoreInstruction(
   varType: WasmDataType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -71,8 +71,6 @@ export function generateArgString(exprs: WasmExpression[]) {
 /**
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
-export function generateStatementsList(
-  statements: WasmStatement[]
-) {
+export function generateStatementsList(statements: WasmStatement[]) {
   return statements.map((s) => generateWatStatement(s)).join(" ");
 }

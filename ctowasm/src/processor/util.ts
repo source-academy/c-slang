@@ -2,15 +2,11 @@
  * Definitions of various utility functions.
  */
 
-import { SymbolEntry, SymbolTable } from "~src/processor/symbolTable";
+import { SymbolTable } from "~src/processor/symbolTable";
 import { ProcessingError } from "~src/errors";
-import { Position } from "~src/parser/c-ast/misc";
-import { ExpressionP, StatementP } from "~src/processor/c-ast/core";
-import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { isScalarDataType } from "~src/processor/dataTypeUtil";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
@@ -18,7 +14,7 @@ import { PTRDIFF_T } from "~src/common/constants";
 
 export function processCondition(
   condition: Expression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ) {
   const processedCondition = processExpression(condition, symbolTable);
   const dataTypeOfConditionExpression = getDataTypeOfExpression({
@@ -27,14 +23,14 @@ export function processCondition(
   });
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
-      `Cannot use ${dataTypeOfConditionExpression.type} where scalar is required`
+      `Cannot use ${dataTypeOfConditionExpression.type} where scalar is required`,
     );
   }
   return processedCondition.exprs[0];
 }
 
 export function createMemoryOffsetIntegerConstant(
-  offset: number
+  offset: number,
 ): IntegerConstantP {
   return {
     type: "IntegerConstant",

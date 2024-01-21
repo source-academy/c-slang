@@ -112,11 +112,16 @@ export async function testFileCompilationSuccess(subset, testFileName) {
             testType: "assertCorrectness",
             testFileName,
           });
-          if ("customTest" in
-          testLog[`subset${subset.toString()}`][testFileName]) {
+          if (
+            "customTest" in testLog[`subset${subset.toString()}`][testFileName]
+          ) {
             // if a custom test has been defined for this test case, use that instead
-            if (!testLog[`subset${subset.toString()}`][testFileName].customTest(programOutput)) {
-              return `CUSTOM TEST FAILED. Actual values: ${programOutput.toString()}`
+            if (
+              !testLog[`subset${subset.toString()}`][testFileName].customTest(
+                programOutput,
+              )
+            ) {
+              return `CUSTOM TEST FAILED. Actual values: ${programOutput.toString()}`;
             }
           } else {
             const actualValues = programOutput.toString();
@@ -127,7 +132,7 @@ export async function testFileCompilationSuccess(subset, testFileName) {
                     testFileName
                   ].expectedValues.toString()
                 : [].toString();
-            
+
             if (expectedValues !== actualValues) {
               return `VALUES OF VARIABLES DO NOT MATCH EXPECTED\nExpected values: ${expectedValues}\nActual values: ${actualValues}`;
             }

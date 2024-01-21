@@ -12,7 +12,7 @@ import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 
 export default function translateBinaryExpression(
   binaryExpr: BinaryExpressionP,
-  enclosingLoopDetails?: EnclosingLoopDetails
+  enclosingLoopDetails?: EnclosingLoopDetails,
 ): WasmBinaryExpression {
   // special handling for && and || since wasm does not have native instructions for these operations
   if (binaryExpr.operator === "&&" || binaryExpr.operator === "||") {
@@ -24,10 +24,10 @@ export default function translateBinaryExpression(
         expr: translateExpression(
           binaryExpr.leftExpr,
           binaryExpr.leftExpr.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
         wasmDataType: convertScalarDataTypeToWasmType(
-          binaryExpr.leftExpr.dataType
+          binaryExpr.leftExpr.dataType,
         ),
       },
       rightExpr: {
@@ -35,15 +35,15 @@ export default function translateBinaryExpression(
         expr: translateExpression(
           binaryExpr.rightExpr,
           binaryExpr.rightExpr.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
         wasmDataType: convertScalarDataTypeToWasmType(
-          binaryExpr.rightExpr.dataType
+          binaryExpr.rightExpr.dataType,
         ),
       },
       instruction: getBinaryExpressionInstruction(
         binaryExpr.operator,
-        binaryExpr.dataType
+        binaryExpr.dataType,
       ),
     };
   }
@@ -54,16 +54,16 @@ export default function translateBinaryExpression(
     leftExpr: translateExpression(
       binaryExpr.leftExpr,
       binaryExpr.operandTargetDataType,
-      enclosingLoopDetails
+      enclosingLoopDetails,
     ),
     rightExpr: translateExpression(
       binaryExpr.rightExpr,
       binaryExpr.operandTargetDataType,
-      enclosingLoopDetails
+      enclosingLoopDetails,
     ),
     instruction: getBinaryExpressionInstruction(
       binaryExpr.operator,
-      binaryExpr.operandTargetDataType
+      binaryExpr.operandTargetDataType,
     ),
   };
 }
@@ -101,7 +101,7 @@ function isOperationWithUnsignedSignedVariant(op: string) {
  */
 export function getBinaryExpressionInstruction(
   operator: BinaryOperator,
-  dataType: ScalarCDataType
+  dataType: ScalarCDataType,
 ) {
   const op = binaryOperatorToInstructionMap[operator];
 

@@ -1,6 +1,5 @@
 import { WatGeneratorError, toJson } from "~src/errors";
 import { WasmExpression } from "~src/translator/wasm-ast/core";
-import generateWatStatement from "~src/wat-generator/generateWatStatement";
 import {
   generateStatementsList,
   getWasmMemoryLoadInstruction,
@@ -22,7 +21,7 @@ export default function generateWatExpression(node: WasmExpression): string {
     return `(global.get $${node.name})`;
   } else if (node.type === "BinaryExpression") {
     return `(${node.instruction} ${generateWatExpression(
-      node.leftExpr
+      node.leftExpr,
     )} ${generateWatExpression(node.rightExpr)})`;
   } else if (node.type === "BooleanExpression") {
     if (node.isNegated) {
@@ -39,7 +38,7 @@ export default function generateWatExpression(node: WasmExpression): string {
   } else if (node.type === "MemoryLoad") {
     return `(${getWasmMemoryLoadInstruction(
       node.wasmDataType,
-      node.numOfBytes
+      node.numOfBytes,
     )} ${generateWatExpression(node.addr)})`;
   } else if (node.type === "NumericWrapper") {
     return `(${node.instruction} ${generateWatExpression(node.expr)})`;
@@ -47,11 +46,11 @@ export default function generateWatExpression(node: WasmExpression): string {
     return `(${node.wasmDataType}.neg ${node.expr})`;
   } else if (node.type === "PostStatementExpression") {
     return `${generateWatExpression(node.expr)} ${generateStatementsList(
-      node.statements
+      node.statements,
     )}`;
   } else if (node.type === "PreStatementExpression") {
     return `${generateStatementsList(node.statements)} ${generateWatExpression(
-      node.expr
+      node.expr,
     )}`;
   } else {
     throw new WatGeneratorError(`Unhandled WAT AST node: ${toJson(node)}`);

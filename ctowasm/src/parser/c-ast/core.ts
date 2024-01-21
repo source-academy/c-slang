@@ -2,11 +2,7 @@
  * Definitions of core C AST nodes.
  */
 
-import UnaryExpression, {
-  FunctionCall,
-  PostfixExpression,
-  PrefixExpression,
-} from "~src/parser/c-ast/expression/unaryExpression";
+import UnaryExpression from "~src/parser/c-ast/expression/unaryExpression";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import JumpStatement from "./statement/jumpStatement";
 import { SelectionStatement } from "~src/parser/c-ast/statement/selectionStatement";
@@ -14,15 +10,11 @@ import { Position } from "~src/parser/c-ast/misc";
 import { Declaration } from "./declaration";
 import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";
 import Constant from "~src/parser/c-ast/expression/constant";
-import {
-  AddressOfExpression,
-  PointerDereference,
-} from "./expression/unaryExpression";
+
 import IterationStatement from "~src/parser/c-ast/statement/iterationStatement";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import Block from "~src/parser/c-ast/statement/compoundStatement";
 import IdentifierExpression from "~src/parser/c-ast/expression/identifierExpr";
-import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export interface CNodeBase {
   type: string;
@@ -54,4 +46,4 @@ export type Expression =
   | BinaryExpression
   | Constant
   | IdentifierExpression
-  | UnaryExpression
+  | UnaryExpression;

@@ -3,11 +3,7 @@
  */
 
 import { WasmMemoryLoad } from "~src/translator/wasm-ast/memory";
-import {
-  WasmStatement,
-  WasmAstNode,
-  WasmExpression,
-} from "~src/translator/wasm-ast/core";
+import { WasmStatement, WasmAstNode } from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 
 export type WasmFunctionBodyLine = WasmStatement;
@@ -43,7 +39,6 @@ export interface WasmRegularFunctionCall extends WasmAstNode {
   name: string;
   args: WasmMemoryLoad[];
 }
-
 
 export interface WasmReturnStatement extends WasmAstNode {
   type: "ReturnStatement";

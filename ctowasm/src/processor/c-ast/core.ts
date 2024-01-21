@@ -45,7 +45,7 @@ export type StatementP =
   | FunctionCallP
   | JumpStatementP
   | MemoryStore
-  | FunctionReturnMemoryStore
+  | FunctionReturnMemoryStore;
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =
@@ -67,7 +67,7 @@ export interface ExpressionPBase extends CNodePBase {
 
 export interface ExternalFunction {
   name: string;
-  parameters: PrimaryDataTypeMemoryObjectDetails[],
+  parameters: PrimaryDataTypeMemoryObjectDetails[];
   returnObjects: PrimaryDataTypeMemoryObjectDetails[] | null;
 }
 
@@ -76,5 +76,5 @@ export interface CAstRootP extends CNodePBase {
   functions: FunctionDefinitionP[];
   dataSegmentByteStr: string; // the string of bytes (each byte is in the form "\\XX" where X is a digit in base-16) to initialize the data segment with, determined by processing initializers for data segment variables.
   dataSegmentSizeInBytes: number;
-  externalFunctions: Record<string, ExternalFunction>
+  externalFunctions: Record<string, ExternalFunction>;
 }

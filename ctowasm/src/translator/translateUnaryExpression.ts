@@ -18,7 +18,7 @@ import { getMaxIntConstant } from "~src/translator/util";
  */
 export default function translateUnaryExpression(
   unaryExpr: UnaryExpressionP,
-  enclosingLoopDetails?: EnclosingLoopDetails
+  enclosingLoopDetails?: EnclosingLoopDetails,
 ): WasmExpression {
   if (unaryExpr.operator === "-") {
     if (isIntegerType(unaryExpr.dataType)) {
@@ -28,14 +28,17 @@ export default function translateUnaryExpression(
           convertScalarDataTypeToWasmType(unaryExpr.dataType) + ".add",
         leftExpr: {
           type: "BinaryExpression",
-          instruction: convertScalarDataTypeToWasmType(unaryExpr.dataType) + ".sub",
+          instruction:
+            convertScalarDataTypeToWasmType(unaryExpr.dataType) + ".sub",
           leftExpr: getMaxIntConstant(
-            convertScalarDataTypeToWasmType(unaryExpr.dataType) as "i32" | "i64"
+            convertScalarDataTypeToWasmType(unaryExpr.dataType) as
+              | "i32"
+              | "i64",
           ),
           rightExpr: translateExpression(
             unaryExpr.expr,
             unaryExpr.dataType,
-            enclosingLoopDetails
+            enclosingLoopDetails,
           ),
         },
         rightExpr: {
@@ -55,12 +58,12 @@ export default function translateUnaryExpression(
         expr: translateExpression(
           unaryExpr.expr,
           unaryExpr.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
       };
     } else {
       throw new TranslationError(
-        "'-' prefix operator is only valid on arithmetic types"
+        "'-' prefix operator is only valid on arithmetic types",
       );
     }
   } else if (unaryExpr.operator === "!") {
@@ -70,7 +73,7 @@ export default function translateUnaryExpression(
       expr: translateExpression(
         unaryExpr.expr,
         unaryExpr.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
       isNegated: true,
     };
@@ -78,7 +81,7 @@ export default function translateUnaryExpression(
     if (!isIntegerType(unaryExpr.dataType)) {
       // bitwise complement is undefined on non integral types
       throw new TranslationError(
-        `Wrong type argument to bitwise-complement - type used: ${unaryExpr.dataType}`
+        `Wrong type argument to bitwise-complement - type used: ${unaryExpr.dataType}`,
       );
     }
 
@@ -94,13 +97,13 @@ export default function translateUnaryExpression(
       rightExpr: translateExpression(
         unaryExpr.expr,
         unaryExpr.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
       instruction: `${convertScalarDataTypeToWasmType(unaryExpr.dataType)}.xor`,
     };
   } else {
     throw new TranslationError(
-      `translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`
+      `translateUnaryExpression error: unknown unary operator: ${unaryExpr.operator}`,
     );
   }
 }

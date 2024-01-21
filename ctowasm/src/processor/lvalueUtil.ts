@@ -18,28 +18,31 @@ import { DataType } from "~src/parser/c-ast/dataTypes";
  */
 export function getAssignmentNodes(
   assignmentNode: Assignment,
-  symbolTable: SymbolTable
-): { memoryStoreStatements: MemoryStore[], memoryLoadExpressions: MemoryLoad[], dataType: DataType } {
+  symbolTable: SymbolTable,
+): {
+  memoryStoreStatements: MemoryStore[];
+  memoryLoadExpressions: MemoryLoad[];
+  dataType: DataType;
+} {
   try {
-
     // the memory load instructions from processing the expression being assigned to as an expression
     const assignedMemoryLoadExprs = processExpression(
       assignmentNode.lvalue,
-      symbolTable
+      symbolTable,
     );
     const assigneeExprs = processExpression(assignmentNode.expr, symbolTable);
-    
+
     const result = {
       memoryStoreStatements: [] as MemoryStore[],
       memoryLoadExpressions: assignedMemoryLoadExprs.exprs as MemoryLoad[],
-      dataType: assignedMemoryLoadExprs.originalDataType
+      dataType: assignedMemoryLoadExprs.originalDataType,
     };
 
     // TODO: do dataType checks
     // assigned and assignee number of primary data expression should match in length
     console.assert(
       assignedMemoryLoadExprs.exprs.length === assigneeExprs.exprs.length,
-      "getAssignmentMemoryStoreNodes: assigned and assignee number of primary data expression should match in length"
+      "getAssignmentMemoryStoreNodes: assigned and assignee number of primary data expression should match in length",
     );
 
     // merely need to convert each memoryload into a store of the corresponding assignee expression
@@ -49,7 +52,7 @@ export function getAssignmentNodes(
       if (memoryLoadExpr.type !== "MemoryLoad") {
         throw new ProcessingError(
           "lvalue required as left operand of assignment",
-          assignmentNode.position
+          assignmentNode.position,
         );
       }
       result.memoryStoreStatements.push({

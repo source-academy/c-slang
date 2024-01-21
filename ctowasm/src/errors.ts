@@ -29,7 +29,11 @@ export class SourceCodeError extends Error {
     if (typeof this.position !== "undefined") {
       this.message = `\n${this.message}\n${this.position.start.line} | `;
       let currLine = this.position.start.line;
-      for (let i = this.position.start.offset; i < this.position.end.offset; ++i) {
+      for (
+        let i = this.position.start.offset;
+        i < this.position.end.offset;
+        ++i
+      ) {
         if (sourceCode[i] === "\n") {
           this.message += `\n${++currLine} | `;
         } else {

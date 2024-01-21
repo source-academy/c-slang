@@ -30,7 +30,7 @@ import { processLocalDeclaration } from "~src/processor/processDeclaration";
 export default function processBlockItem(
   node: BlockItem,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP
+  enclosingFunc: FunctionDefinitionP,
 ): StatementP[] {
   try {
     if (node.type === "Block") {
@@ -60,15 +60,15 @@ export default function processBlockItem(
             ...processLocalDeclaration(
               declaration,
               forLoopSymbolTable,
-              enclosingFunc
-            )
+              enclosingFunc,
+            ),
           );
         }
       } else if (node.clause !== null && node.clause.type === "Expression") {
         clause = processBlockItem(
           node.clause.value,
           forLoopSymbolTable,
-          enclosingFunc
+          enclosingFunc,
         );
       } else {
         clause = [];
@@ -102,7 +102,7 @@ export default function processBlockItem(
       if (typeof enclosingFunc === "undefined") {
         throw new ProcessingError(
           "Return statement is not valid outside of a function",
-          node.position
+          node.position,
         );
       }
 
@@ -125,7 +125,7 @@ export default function processBlockItem(
           ifStatements: processBlockItem(
             node.ifStatement,
             symbolTable,
-            enclosingFunc
+            enclosingFunc,
           ),
           elseStatements: node.elseStatement
             ? processBlockItem(node.elseStatement, symbolTable, enclosingFunc)

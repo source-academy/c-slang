@@ -21,12 +21,12 @@ import { ConstantP } from "~src/processor/c-ast/expression/constants";
 export function performBinaryOperation<T extends number | bigint>(
   a: T,
   operator: BinaryOperator,
-  b: T
+  b: T,
 ): T;
 export function performBinaryOperation(
   a: any,
   operator: BinaryOperator,
-  b: any
+  b: any,
 ) {
   switch (operator) {
     // arithmetic operators
@@ -74,7 +74,7 @@ export function performBinaryOperation(
 
 export function performUnaryOperation<T extends number | bigint>(
   a: T,
-  operator: UnaryOperator
+  operator: UnaryOperator,
 ): T;
 export function performUnaryOperation(a: any, operator: UnaryOperator) {
   switch (operator) {
@@ -99,7 +99,7 @@ export function performUnaryOperation(a: any, operator: UnaryOperator) {
  * Evaluates a compile time expression.
  */
 export default function evaluateCompileTimeExpression(
-  expr: Expression
+  expr: Expression,
 ): ConstantP {
   if (expr.type === "FloatConstant" || expr.type === "IntegerConstant") {
     // alerady a constant
@@ -111,19 +111,19 @@ export default function evaluateCompileTimeExpression(
     let value = performBinaryOperation(
       evaluatedLeftExpr.value,
       expr.operator,
-      evaluatedRightExpr.value
+      evaluatedRightExpr.value,
     );
 
     const dataType = determineResultDataTypeOfBinaryExpression(
       { type: "primary", primaryDataType: evaluatedLeftExpr.dataType },
       { type: "primary", primaryDataType: evaluatedRightExpr.dataType },
-      expr.operator
+      expr.operator,
     );
 
     if (dataType.type !== "primary") {
       throw new ProcessingError(
         "Invalid compile-time expression",
-        expr.position
+        expr.position,
       );
     }
 
@@ -131,7 +131,7 @@ export default function evaluateCompileTimeExpression(
       // need to cap integer values correctly
       value = getAdjustedIntValueAccordingToDataType(
         value as bigint,
-        dataType.primaryDataType
+        dataType.primaryDataType,
       );
 
       return {
@@ -174,7 +174,7 @@ export default function evaluateCompileTimeExpression(
     }
   } else {
     throw new ProcessingError(
-      "Cannot evaluate non compile-time constant type at compile-time"
+      "Cannot evaluate non compile-time constant type at compile-time",
     );
   }
 }

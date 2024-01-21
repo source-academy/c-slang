@@ -8,15 +8,12 @@ import {
 } from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
 import { WasmExpression } from "~src/translator/wasm-ast/core";
-import {
-  WasmFunctionCall,
-  WasmRegularFunctionCall,
-} from "~src/translator/wasm-ast/functions";
+import { WasmFunctionCall } from "~src/translator/wasm-ast/functions";
 import { FunctionCallP } from "~src/processor/c-ast/function";
 import { UnsupportedFeatureError } from "~src/errors";
 
 export default function translateFunctionCall(
-  node: FunctionCallP
+  node: FunctionCallP,
 ): WasmFunctionCall {
   // translate the arguments
   const functionArgs: WasmExpression[] = [];
@@ -28,8 +25,8 @@ export default function translateFunctionCall(
     functionArgs.push(
       translateExpression(
         node.args[i],
-        node.calledFunction.functionDetails.parameters[i].dataType
-      )
+        node.calledFunction.functionDetails.parameters[i].dataType,
+      ),
     );
   }
 
@@ -39,10 +36,10 @@ export default function translateFunctionCall(
       name: node.calledFunction.name,
       stackFrameSetup: getFunctionCallStackFrameSetupStatements(
         node.calledFunction.functionDetails,
-        functionArgs
+        functionArgs,
       ),
       stackFrameTearDown: getFunctionCallStackFrameTeardownStatements(
-        node.calledFunction.functionDetails
+        node.calledFunction.functionDetails,
       ),
     };
   } else {

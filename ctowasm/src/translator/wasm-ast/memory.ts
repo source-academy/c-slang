@@ -18,7 +18,7 @@ interface WasmMemoryStoreBase extends WasmAstNode {
   type: "MemoryStore" | "MemoryStoreFromWasmStack";
   addr: WasmExpression;
   wasmDataType: WasmDataType; // wasm var type for the store instruction
-  numOfBytes: MemoryVariableByteSize; // number of bytes to store 
+  numOfBytes: MemoryVariableByteSize; // number of bytes to store
 }
 
 // stores the result of a specific expression
@@ -40,4 +40,3 @@ export interface WasmMemoryGrow extends WasmAstNode {
 export interface WasmMemorySize extends WasmAstNode {
   type: "MemorySize";
 }
-

@@ -61,7 +61,9 @@ export interface AddressOfExpression extends CNodeBase {
   expr: Expression; // the expression whose address is being dereferenced. Must be an lvalue.
 }
 
-export type SizeOfExpression = SizeOfExpressionExpression | SizeOfDataTypeExpression;
+export type SizeOfExpression =
+  | SizeOfExpressionExpression
+  | SizeOfDataTypeExpression;
 
 interface SizeOfExpressionBase extends CNodeBase {
   type: "SizeOfExpression";

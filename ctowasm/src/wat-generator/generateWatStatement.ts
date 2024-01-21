@@ -2,8 +2,11 @@ import { WatGeneratorError, toJson } from "~src/errors";
 import { WasmSelectionStatement } from "~src/translator/wasm-ast/control";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";
-import { generateStatementsList, generateArgString, getWasmMemoryStoreInstruction } from "~src/wat-generator/util";
-
+import {
+  generateStatementsList,
+  generateArgString,
+  getWasmMemoryStoreInstruction,
+} from "~src/wat-generator/util";
 
 /**
  * Generates the WAT from given AST node. Only to be used for nodes within a function body.
@@ -15,7 +18,7 @@ export default function generateWatStatement(node: WasmStatement): string {
     return `(local.set $${node.name} ${generateWatExpression(node.value)})`;
   } else if (node.type === "FunctionCall") {
     return `(call $${node.name} ${generateStatementsList(
-      node.stackFrameSetup
+      node.stackFrameSetup,
     )}) ${generateStatementsList(node.stackFrameTearDown)}`;
   } else if (node.type === "RegularFunctionCall") {
     return `(call $${node.name} ${generateArgString(node.args)})`;
@@ -55,16 +58,16 @@ export default function generateWatStatement(node: WasmStatement): string {
   } else if (node.type === "MemoryStore") {
     return `(${getWasmMemoryStoreInstruction(
       node.wasmDataType,
-      node.numOfBytes
+      node.numOfBytes,
     )} ${generateWatExpression(node.addr)} ${generateWatExpression(
-      node.value
+      node.value,
     )})`;
   } else if (node.type === "MemoryStoreFromWasmStack") {
     return `(${getWasmMemoryStoreInstruction(
       node.wasmDataType,
-      node.numOfBytes
+      node.numOfBytes,
     )} ${generateWatExpression(node.addr)})`;
-    } else {
-      throw new WatGeneratorError(`Unhandled statement: ${toJson(node)}`)
-    }
+  } else {
+    throw new WatGeneratorError(`Unhandled statement: ${toJson(node)}`);
   }
+}

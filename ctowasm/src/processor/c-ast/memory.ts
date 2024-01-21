@@ -3,10 +3,7 @@
  */
 
 import { ScalarCDataType } from "~src/common/types";
-import {
-  ExpressionP,
-  ExpressionPBase,
-} from "~src/processor/c-ast/core";
+import { ExpressionP, ExpressionPBase } from "~src/processor/c-ast/core";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 
 /**
@@ -15,14 +12,14 @@ import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 export type Address = LocalAddress | DataSegmentAddress | DynamicAddress;
 
 export interface AddressBase extends ExpressionPBase {
-  dataType: "pointer" // all addresses should have pointer type
+  dataType: "pointer"; // all addresses should have pointer type
 }
 
 // this covers local variables and parameters in a functions.
 //
 export interface LocalAddress extends AddressBase {
   type: "LocalAddress";
-  offset: IntegerConstantP; 
+  offset: IntegerConstantP;
 }
 
 // covers data segment (global) variables

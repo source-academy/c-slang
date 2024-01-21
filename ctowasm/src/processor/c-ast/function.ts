@@ -1,6 +1,5 @@
-import { ScalarCDataType } from "~src/common/types";
 import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
-import { CNodePBase, ExpressionP, ExpressionPBase, StatementP } from "~src/processor/c-ast/core";
+import { CNodePBase, ExpressionP, StatementP } from "~src/processor/c-ast/core";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 
 /**
@@ -22,7 +21,7 @@ export interface FunctionDefinitionP extends CNodePBase {
 export type Callable = FunctionName;
 
 export interface FunctionDetails {
-  parameters: PrimaryDataTypeMemoryObjectDetails[] // the parameters of the function in terms of primary data types, as they would appear in memory (high to low address order)
+  parameters: PrimaryDataTypeMemoryObjectDetails[]; // the parameters of the function in terms of primary data types, as they would appear in memory (high to low address order)
   returnObjects: PrimaryDataTypeMemoryObjectDetails[] | null;
   sizeOfParams: number;
   sizeOfReturn: number;
@@ -34,7 +33,7 @@ export interface FunctionDetails {
 export interface FunctionName {
   type: "FunctionName";
   name: string;
-  functionDetails: FunctionDetails
+  functionDetails: FunctionDetails;
 }
 
 /**

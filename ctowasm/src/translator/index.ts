@@ -10,7 +10,7 @@ import processImportedFunctions from "~src/translator/processImportedFunctions";
 
 export default function translate(
   CAstRoot: CAstRootP,
-  imports: Record<string, ImportedFunction> = {}
+  imports: Record<string, ImportedFunction> = {},
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -21,22 +21,22 @@ export default function translate(
     importedFunctions: [],
   };
 
-  const processedImportedFunctions = processImportedFunctions(imports, CAstRoot.externalFunctions);
+  const processedImportedFunctions = processImportedFunctions(
+    imports,
+    CAstRoot.externalFunctions,
+  );
 
   wasmRoot.importedFunctions = processedImportedFunctions.functionImports;
   // add function wrappers of imported functions
-  processedImportedFunctions.wrappedFunctions.forEach(wrappedFunction => {
-    wasmRoot.functions[wrappedFunction.name] = wrappedFunction
-  })
+  processedImportedFunctions.wrappedFunctions.forEach((wrappedFunction) => {
+    wasmRoot.functions[wrappedFunction.name] = wrappedFunction;
+  });
 
   CAstRoot.functions.forEach((func) => {
     wasmRoot.functions[func.name] = translateFunction(func);
   });
 
-  setPseudoRegisters(
-    wasmRoot,
-    CAstRoot.dataSegmentSizeInBytes
-  );
+  setPseudoRegisters(wasmRoot, CAstRoot.dataSegmentSizeInBytes);
 
   return wasmRoot;
 }

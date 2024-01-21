@@ -1,20 +1,11 @@
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { TranslationError } from "~src/errors";
-import { ReturnStatement } from "~src/parser/c-ast/statement/jumpStatement";
 import { StatementP } from "~src/processor/c-ast/core";
-import {
-  getRegisterPointerArithmeticNode,
-  BASE_POINTER,
-} from "~src/translator/memoryUtil";
+import { getRegisterPointerArithmeticNode } from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
-import {
-  createWasmBooleanExpression,
-  wasmTypeToSize,
-} from "~src/translator/util";
-import { WasmSelectionStatement } from "~src/translator/wasm-ast/control";
+import { createWasmBooleanExpression } from "~src/translator/util";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
-import { WasmBooleanExpression } from "./wasm-ast/expressions";
 import {
   EnclosingLoopDetails,
   createEnclosingLoopDetails,
@@ -32,7 +23,7 @@ import { FUNCTION_BLOCK_LABEL } from "~src/translator/constants";
  */
 export default function translateStatement(
   statement: StatementP,
-  enclosingLoopDetails?: EnclosingLoopDetails // the loop labelname of the loop enclosing this statement Used to translate break statements.
+  enclosingLoopDetails?: EnclosingLoopDetails, // the loop labelname of the loop enclosing this statement Used to translate break statements.
 ): WasmStatement {
   if (statement.type === "MemoryStore") {
     return {
@@ -40,12 +31,12 @@ export default function translateStatement(
       addr: translateExpression(
         statement.address,
         statement.address.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
       value: translateExpression(
         statement.value,
         statement.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
       numOfBytes: getSizeOfScalarDataType(statement.dataType),
@@ -56,14 +47,14 @@ export default function translateStatement(
       addr: getRegisterPointerArithmeticNode(
         "bp",
         "+",
-        WASM_ADDR_SIZE + Number(statement.offset.value)
+        WASM_ADDR_SIZE + Number(statement.offset.value),
       ),
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
       numOfBytes: getSizeOfScalarDataType(statement.dataType),
       value: translateExpression(
         statement.value,
         statement.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
     };
   } else if (statement.type === "FunctionCall") {
@@ -73,11 +64,11 @@ export default function translateStatement(
       type: "SelectionStatement",
       condition: createWasmBooleanExpression(statement.condition),
       actions: statement.ifStatements.map((s) =>
-        translateStatement(s, enclosingLoopDetails)
+        translateStatement(s, enclosingLoopDetails),
       ),
       elseStatements: statement.elseStatements
         ? statement.elseStatements.map((s) =>
-            translateStatement(s, enclosingLoopDetails)
+            translateStatement(s, enclosingLoopDetails),
           )
         : [],
     };
@@ -85,7 +76,7 @@ export default function translateStatement(
     const loopLabel = generateLoopLabel(enclosingLoopDetails);
     const blockLabel = generateBlockLabel(enclosingLoopDetails);
     const body: WasmStatement[] = statement.body.map((s) =>
-      translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
+      translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails)),
     );
 
     body.push({
@@ -110,7 +101,7 @@ export default function translateStatement(
     const loopLabel = generateLoopLabel(enclosingLoopDetails);
     const negatedCondition = createWasmBooleanExpression(
       statement.condition,
-      true
+      true,
     );
     const body: WasmStatement[] = [];
 
@@ -123,8 +114,8 @@ export default function translateStatement(
 
     statement.body.forEach((s) =>
       body.push(
-        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
-      )
+        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails)),
+      ),
     );
 
     // add the branching statement at end of loop body
@@ -164,15 +155,15 @@ export default function translateStatement(
     // add function body
     statement.body.forEach((s) =>
       loopBody.push(
-        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
-      )
+        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails)),
+      ),
     );
 
     // add the for loop update expression
     statement.update.forEach((s) =>
       loopBody.push(
-        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
-      )
+        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails)),
+      ),
     );
 
     // add the branching statement at end of loop body
@@ -185,8 +176,8 @@ export default function translateStatement(
     // push on the clause statements
     statement.clause.forEach((s) =>
       blockBody.push(
-        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails))
-      )
+        translateStatement(s, createEnclosingLoopDetails(enclosingLoopDetails)),
+      ),
     );
 
     blockBody.push({
@@ -209,7 +200,7 @@ export default function translateStatement(
   } else if (statement.type === "BreakStatement") {
     if (typeof enclosingLoopDetails === "undefined") {
       throw new TranslationError(
-        "Break statement cannot be present outside a loop or switch body"
+        "Break statement cannot be present outside a loop or switch body",
       );
     }
     return {
@@ -219,7 +210,7 @@ export default function translateStatement(
   } else if (statement.type === "ContinueStatement") {
     if (typeof enclosingLoopDetails === "undefined") {
       throw new TranslationError(
-        "Continue statement cannot be present outside a loop body"
+        "Continue statement cannot be present outside a loop body",
       );
     }
     return {

@@ -1,6 +1,6 @@
 /**
  * This file exports a JS object containing information on all tests.
- * 
+ *
  * JS object schema + explanation:
  * testLog : {
  *    "testcase name": {
@@ -407,64 +407,66 @@ const testLog = {
     complex_declarations: {
       title: "Test parsing of more complex declarations",
       expectedCode: false,
-      expectedValues: [
-        3,
-        1
-      ], 
+      expectedValues: [3, 1],
     },
     pointers_address_of: {
       title: "Pointers tests - address of '&' operator",
       expectedCode: false,
-      expectedValues: [
-        10,20
-      ], 
+      expectedValues: [10, 20],
     },
     pointers_arithmetic_1: {
       title: "Pointers tests - arithmetic 1",
       expectedCode: false,
-      expectedValues: [3, 6, 2, 5, 1, 2, 3, 4 ,5 ,6, 3 ,2 , 1, 6, 5, 4],
+      expectedValues: [3, 6, 2, 5, 1, 2, 3, 4, 5, 6, 3, 2, 1, 6, 5, 4],
     },
     pointers_arithmetic_2: {
       title: "Pointers tests - arithmetic 2",
       expectedCode: false,
-      expectedValues: ['b', 4, 2]
+      expectedValues: ["b", 4, 2],
     },
     pointers_arithmetic_3: {
       title: "Pointers tests - arithmetic 3",
       expectedCode: false,
-      expectedValues: [2, -2]
+      expectedValues: [2, -2],
     },
     pointers_array_deref_test: {
       title: "Pointers tests - dereferencing pointer to array",
       expectedCode: false,
       customTest: (values) => {
-        return values[0] === "2" && values[1] === values[2] && values[1] === values[3];
-      }
+        return (
+          values[0] === "2" &&
+          values[1] === values[2] &&
+          values[1] === values[3]
+        );
+      },
     },
     pointers_comparison: {
       title: "Pointers tests - comparison operations",
       expectedCode: false,
-      expectedValues: [1, 1, 1, 0, 0, 0]
+      expectedValues: [1, 1, 1, 0, 0, 0],
     },
     multi_dim_array_1: {
       title: "Multi dimensional arrays 1",
       expectedCode: false,
-      expectedValues: [1, 6, 8, 3], 
+      expectedValues: [1, 6, 8, 3],
     },
     arrays_function_parameters: {
-      title: "Arrays as function parameters - should be implicitly treated as pointers",
+      title:
+        "Arrays as function parameters - should be implicitly treated as pointers",
       expectedCode: false,
-      expectedValues: [2], 
-    }, 
+      expectedValues: [2],
+    },
     merge_sort_2: {
-      title: "Mergesort 2 - using long type local arrays passed as function parameters",
+      title:
+        "Mergesort 2 - using long type local arrays passed as function parameters",
       expectedCode: false,
-      expectedValues: [-12, 12, 32, 123, 4294967296], 
+      expectedValues: [-12, 12, 32, 123, 4294967296],
     },
     for_loop_2: {
-      title: "For loop 2 - Variant of for loop with no declaration and empty expressions",
+      title:
+        "For loop 2 - Variant of for loop with no declaration and empty expressions",
       expectedCode: false,
-      expectedValues: [10, 5]
+      expectedValues: [10, 5],
     },
     break_statement: {
       title: "Break statement",
@@ -474,41 +476,45 @@ const testLog = {
     continue_statement: {
       title: "Continue statement",
       expectedCode: false,
-      expectedValues: [0, 20]
+      expectedValues: [0, 20],
     },
     sizeof_expression_1: {
       title: "Sizeof expression 1 - test sizeof operator on expressions",
       expectedCode: false,
-      expectedValues: [1,2,4,8,40,4,4,4,40,4]
-    }
+      expectedValues: [1, 2, 4, 8, 40, 4, 4, 4, 40, 4],
+    },
   },
   subset5: {
     sizeof_expression_2: {
       title: "Sizeof expression 2 - test sizeof operator on datatypes",
       expectedCode: false,
-      expectedValues: [1,2,4,8,4,160] 
+      expectedValues: [1, 2, 4, 8, 4, 160],
     },
     structs_1: {
-      title: "Struct tests 1 - declarations and simple member access via . and ->",
+      title:
+        "Struct tests 1 - declarations and simple member access via . and ->",
       expectedCode: false,
-      expectedValues: [1, 1]
+      expectedValues: [1, 1],
     },
     complex_initializers: {
-      title: "Test complex initializer list expressions - proof of working recursive rules as per 6.7.9 constraint 20 of C17 standard",
+      title:
+        "Test complex initializer list expressions - proof of working recursive rules as per 6.7.9 constraint 20 of C17 standard",
       expectedCode: false,
-      expectedValues: [1,2,6,1,2,3,0,1,2,6,1,2,3,0]
+      expectedValues: [1, 2, 6, 1, 2, 3, 0, 1, 2, 6, 1, 2, 3, 0],
     },
     incomplete_pointers: {
-      title: "Test the ability to declare pointers to incomplete types, as long as the type is subsequently defined later in the program.",
+      title:
+        "Test the ability to declare pointers to incomplete types, as long as the type is subsequently defined later in the program.",
       expectedCode: false,
-      expectedValues: [2, 0]
+      expectedValues: [2, 0],
     },
     structs_arrays: {
-      title: "Test working with arrays of structs, and structs with fields that are arrays.",
+      title:
+        "Test working with arrays of structs, and structs with fields that are arrays.",
       expectedCode: false,
-      expectedValues: [1, 2, 4, 1, 6]
-    }
-  }
+      expectedValues: [1, 2, 4, 1, 6],
+    },
+  },
 };
 
 export default testLog;
