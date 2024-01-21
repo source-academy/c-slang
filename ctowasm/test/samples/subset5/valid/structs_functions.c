@@ -12,6 +12,10 @@ struct B {
   struct A a;
 };
 
+struct C {
+  int arr[2][2][2];
+};
+
 // test passing struct as param
 void f(struct A a, struct B b) {
   print_int(a.x);
@@ -29,6 +33,11 @@ struct A create(int x, int y, int arr1, int arr2) {
   return a;
 }
 
+struct C createC() {
+  struct C c = {1, 2, 3, 4, 5, 6, 7, 8};
+  return c;
+}
+
 int main() {
   struct A a = {1, 2, 3, 4};
   struct B b = {10, {20, 30, 40, 50}};
@@ -36,10 +45,16 @@ int main() {
   f(a, b);
 
   struct A c = create(5, 6, 7, 8);
-  // print_int(c.x);
-  // print_int(c.y);
-  // print_int(c.arr[0]);
-  // print_int(c.arr[1]);
+  print_int(c.x);
+  print_int(c.y);
+  print_int(c.arr[0]);
+  print_int(c.arr[1]);
   
-  // print_int(create(9, 10, 11, 12).arr[0]);
+  // test
+  print_int(create(9, 10, 11, 12).x);
+  print_int(create(9, 10, 11, 12).y);
+  print_int(create(9, 10, 11, 12).arr[0]);
+  print_int(create(9, 10, 11, 12).arr[1]);
+
+  print_int(createC().arr[1][0][1]);
 }

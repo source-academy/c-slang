@@ -20,8 +20,6 @@ import {
 import { IterationStatementP } from "~src/processor/c-ast/statement/iterationStatement";
 import {
   Address,
-  FunctionReturnMemoryLoad,
-  FunctionReturnMemoryStore,
   MemoryLoad,
   MemoryStore,
 } from "~src/processor/c-ast/memory";
@@ -45,7 +43,6 @@ export type StatementP =
   | FunctionCallP
   | JumpStatementP
   | MemoryStore
-  | FunctionReturnMemoryStore;
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =
@@ -56,7 +53,6 @@ export type ExpressionP =
   | UnaryExpressionP
   | Address
   | MemoryLoad
-  | FunctionReturnMemoryLoad;
 
 /**
  * All expressions should inherit this, as all expressions should have a primary data type.

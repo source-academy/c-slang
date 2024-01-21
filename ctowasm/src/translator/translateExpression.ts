@@ -2,6 +2,7 @@
  * Defines functions for evaluating C AST expression nodes and converting them to corresponding WAT AST nodes.
  */
 
+import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { ScalarCDataType } from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import { TranslationError, toJson } from "~src/errors";
@@ -14,6 +15,7 @@ import {
 import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 import {
   basePointerGetNode,
+  getRegisterPointerArithmeticNode,
   stackPointerGetNode,
 } from "~src/translator/memoryUtil";
 import translateBinaryExpression, {
@@ -90,6 +92,16 @@ export default function translateExpression(
         expr.address.dataType,
         enclosingLoopDetails,
       );
+    } else if (expr.type === "ReturnObjectAddress") {
+      if (expr.subtype === "store") {
+        return getRegisterPointerArithmeticNode(
+          "bp",
+          "+",
+          WASM_ADDR_SIZE + Number(expr.offset.value),
+        )
+      } else {
+        return getRegisterPointerArithmeticNode("sp", "+",Number(expr.offset.value))
+      }
     } else if (expr.type === "MemoryLoad") {
       return {
         type: "MemoryLoad",
@@ -98,22 +110,6 @@ export default function translateExpression(
           expr.address.dataType,
           enclosingLoopDetails,
         ),
-        wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
-        numOfBytes: getSizeOfScalarDataType(expr.dataType),
-      };
-    } else if (expr.type === "FunctionReturnMemoryLoad") {
-      return {
-        type: "MemoryLoad",
-        addr: {
-          type: "BinaryExpression",
-          leftExpr: stackPointerGetNode,
-          rightExpr: translateExpression(
-            expr.offset,
-            expr.offset.dataType,
-            enclosingLoopDetails,
-          ),
-          instruction: getBinaryExpressionInstruction("+", "pointer"),
-        },
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
         numOfBytes: getSizeOfScalarDataType(expr.dataType),
       };

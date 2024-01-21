@@ -87,10 +87,15 @@ export function processFunctionReturnStatement(
   let currOffset = 0;
   processedExpr.exprs.forEach((expr) => {
     statements.push({
-      type: "FunctionReturnMemoryStore",
+      type: "MemoryStore",
       value: expr,
       dataType: expr.dataType,
-      offset: createMemoryOffsetIntegerConstant(currOffset),
+      address: {
+        type: "ReturnObjectAddress",
+        subtype: "store",
+        offset: createMemoryOffsetIntegerConstant(currOffset),
+        dataType: "pointer"
+      }
     });
     currOffset += getSizeOfScalarDataType(expr.dataType);
   });

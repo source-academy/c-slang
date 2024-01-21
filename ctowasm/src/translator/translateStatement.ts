@@ -41,23 +41,7 @@ export default function translateStatement(
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
       numOfBytes: getSizeOfScalarDataType(statement.dataType),
     };
-  } else if (statement.type === "FunctionReturnMemoryStore") {
-    return {
-      type: "MemoryStore",
-      addr: getRegisterPointerArithmeticNode(
-        "bp",
-        "+",
-        WASM_ADDR_SIZE + Number(statement.offset.value),
-      ),
-      wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
-      numOfBytes: getSizeOfScalarDataType(statement.dataType),
-      value: translateExpression(
-        statement.value,
-        statement.dataType,
-        enclosingLoopDetails,
-      ),
-    };
-  } else if (statement.type === "FunctionCall") {
+  }  else if (statement.type === "FunctionCall") {
     return translateFunctionCall(statement);
   } else if (statement.type === "SelectionStatement") {
     return {

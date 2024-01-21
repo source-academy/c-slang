@@ -515,9 +515,18 @@ const testLog = {
       expectedValues: [1, 2, 4, 1, 6],
     },
     structs_2: {
-      title: "Test initializing and assignning more complicated structs",
+      title:
+        "Structs 2 - Test initializing and assignning more complicated structs",
       expectedCode: false,
       expectedValues: [200, 220, 2, 40, 200, 2],
+    },
+    structs_functions: {
+      title:
+        "Structs - Functions - Test using structs as parameters and returning structs (accessing the struct fields directly from return expressions as well)",
+      expectedCode: false,
+      expectedValues: [
+        50, 1, 2, 4, 10, 20, 30, 40, 50, 5, 6, 7, 8, 9, 10, 11, 12, 6,
+      ],
     },
   },
 };

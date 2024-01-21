@@ -9,7 +9,7 @@ import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 /**
  * Types of addresses. Each address represents the address of a specific primary data type object in memory.
  */
-export type Address = LocalAddress | DataSegmentAddress | DynamicAddress;
+export type Address = LocalAddress | DataSegmentAddress | DynamicAddress | ReturnObjectAddress;
 
 export interface AddressBase extends ExpressionPBase {
   dataType: "pointer"; // all addresses should have pointer type
@@ -33,6 +33,28 @@ export interface DynamicAddress extends AddressBase {
   address: ExpressionP; // represents the exact address itself
 }
 
+// represents the address of a primary data object that is part of a return object of a function
+// this is not an lvalue
+export type ReturnObjectAddress = ReturnObjectAddressStore | ReturnObjectAddressLoad;
+
+interface ReturnObjectAddressBase extends AddressBase {
+  type: "ReturnObjectAddress",
+  subtype: "store" | "load" // represents the context that the return address is being use in - this is needed as this determines how the actual adderss is calcualted (from which psuedo register) 
+  offset: IntegerConstantP
+}
+
+// calculated relative to Base Pointer in the translator (BP + AddressSize + offset) -> offset will be positive
+interface ReturnObjectAddressStore extends ReturnObjectAddressBase {
+  subtype: "store" 
+}
+
+// calculated relative to Stack Pointer in the translator (SP - offset) -> offset will be negative
+interface ReturnObjectAddressLoad extends ReturnObjectAddressBase {
+  subtype: "load"
+}
+
+
+
 /**
  * Nodes that represent interactions with objects in memory.
  */
@@ -47,20 +69,6 @@ export interface MemoryLoad extends ExpressionPBase {
 export interface MemoryStore {
   type: "MemoryStore";
   address: Address;
-  value: ExpressionP;
-  dataType: ScalarCDataType;
-}
-
-// Special node for handling loading of return object in memory, since return object is not an lvalue.
-export interface FunctionReturnMemoryLoad extends ExpressionPBase {
-  type: "FunctionReturnMemoryLoad";
-  offset: IntegerConstantP; // number of  bytes from address of last byte + 1 of LAST return primary data type memory object
-}
-
-// Special node for handling storing of return in memory.
-export interface FunctionReturnMemoryStore {
-  type: "FunctionReturnMemoryStore";
-  offset: IntegerConstantP; // number of bytes from first byte of first return primary data type memory object (since an entire return object may be broken into multiple primary data types eg for returning structs)
   value: ExpressionP;
   dataType: ScalarCDataType;
 }
