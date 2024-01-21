@@ -16,7 +16,6 @@ import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 import {
   basePointerGetNode,
   getRegisterPointerArithmeticNode,
-  stackPointerGetNode,
 } from "~src/translator/memoryUtil";
 import translateBinaryExpression, {
   getBinaryExpressionInstruction,
@@ -98,9 +97,13 @@ export default function translateExpression(
           "bp",
           "+",
           WASM_ADDR_SIZE + Number(expr.offset.value),
-        )
+        );
       } else {
-        return getRegisterPointerArithmeticNode("sp", "+",Number(expr.offset.value))
+        return getRegisterPointerArithmeticNode(
+          "sp",
+          "+",
+          Number(expr.offset.value),
+        );
       }
     } else if (expr.type === "MemoryLoad") {
       return {

@@ -18,11 +18,7 @@ import {
   FunctionDefinitionP,
 } from "~src/processor/c-ast/function";
 import { IterationStatementP } from "~src/processor/c-ast/statement/iterationStatement";
-import {
-  Address,
-  MemoryLoad,
-  MemoryStore,
-} from "~src/processor/c-ast/memory";
+import { Address, MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
 import { SelectionStatementP } from "~src/processor/c-ast/statement/selectionStatement";
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
@@ -42,7 +38,7 @@ export type StatementP =
   | IterationStatementP
   | FunctionCallP
   | JumpStatementP
-  | MemoryStore
+  | MemoryStore;
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =
@@ -52,7 +48,7 @@ export type ExpressionP =
   | PostStatementExpressionP
   | UnaryExpressionP
   | Address
-  | MemoryLoad
+  | MemoryLoad;
 
 /**
  * All expressions should inherit this, as all expressions should have a primary data type.

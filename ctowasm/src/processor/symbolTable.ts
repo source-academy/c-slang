@@ -189,9 +189,7 @@ export class SymbolTable {
         offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
       }));
       // need to load unpacked param in reverse order, as in stack frame creation, the highest address subobject of an aggregate type gets loaded first as the stack frame grows from high to low address
-      functionDetails.parameters.push(
-        ...(unpackedParam.reverse())
-      );
+      functionDetails.parameters.push(...unpackedParam.reverse());
     }
 
     const entry: FunctionSymbolEntry = {

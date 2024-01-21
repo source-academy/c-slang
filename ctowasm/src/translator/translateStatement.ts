@@ -1,7 +1,5 @@
-import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { TranslationError } from "~src/errors";
 import { StatementP } from "~src/processor/c-ast/core";
-import { getRegisterPointerArithmeticNode } from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
 import { createWasmBooleanExpression } from "~src/translator/util";
@@ -41,7 +39,7 @@ export default function translateStatement(
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
       numOfBytes: getSizeOfScalarDataType(statement.dataType),
     };
-  }  else if (statement.type === "FunctionCall") {
+  } else if (statement.type === "FunctionCall") {
     return translateFunctionCall(statement);
   } else if (statement.type === "SelectionStatement") {
     return {

@@ -94,8 +94,8 @@ export function processFunctionReturnStatement(
         type: "ReturnObjectAddress",
         subtype: "store",
         offset: createMemoryOffsetIntegerConstant(currOffset),
-        dataType: "pointer"
-      }
+        dataType: "pointer",
+      },
     });
     currOffset += getSizeOfScalarDataType(expr.dataType);
   });
