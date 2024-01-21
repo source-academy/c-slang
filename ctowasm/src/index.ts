@@ -1,4 +1,4 @@
-import wasmModuleImports from "~src/wasmModuleImports";
+import wasmModuleImports, { setMemory } from "~src/wasmModuleImports";
 import {
   compile as originalCompile,
   compileToWat as originalCompileToWat,
@@ -18,6 +18,7 @@ export async function runWasm(wasm: Uint8Array, initialMemory: number) {
     (funcName) =>
       (moduleImports[funcName] = wasmModuleImports[funcName].jsFunction),
   );
+  setMemory(memory);
   await WebAssembly.instantiate(wasm, {
     imports: moduleImports,
     js: { mem: memory },

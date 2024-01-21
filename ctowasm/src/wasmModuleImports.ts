@@ -17,11 +17,18 @@ export interface ImportedFunction {
 
 // default print to stdout is to console.log
 let print = (str: string) => console.log(str);
-
 // set the print function to use for printing to stdout
 export function setPrintFunction(printFunc: (str: string) => void) {
   print = printFunc;
 }
+
+// the memory used by the wasm module
+let memory: WebAssembly.Memory;
+export function setMemory(mem: WebAssembly.Memory) {
+  memory = mem;
+}
+
+
 
 export const wasmModuleImports: Record<string, ImportedFunction> = {
   // prints a signed int (4 bytes and smaller)
@@ -182,6 +189,34 @@ export const wasmModuleImports: Record<string, ImportedFunction> = {
       }
     },
   },
+  // print a C style string
+  print_string: {
+    parentImportedObject: defaultParentImportedObject,
+    functionType: {
+      type: "function",
+      parameters: [
+        {
+          type: "pointer",
+          pointeeType: {
+            type: "primary",
+            primaryDataType: "signed char",
+          }
+        },
+      ],
+      returnType: null,
+    },
+    jsFunction: (strAddress: number) => {
+      // need to intepret val as unsigned 4 byte int
+      const uInt8Arr = new Uint8Array(memory.buffer);
+      let str = "";
+      let i = strAddress;
+      while (uInt8Arr[i] !== 0) {
+        // keep recording chars until null terminator
+        str += String.fromCharCode(uInt8Arr[i++]);
+      }
+      print(str);
+    }, 
+  }
 };
 
 // used to extract the details of imported functions in terms of C -> to be used by compiler
