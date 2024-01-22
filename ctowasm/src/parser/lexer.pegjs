@@ -48,10 +48,7 @@ constant
 // ====================== Integer Constants ======================
 
 integer_constant
-  = decimal_constant integer_suffix?
-  / octal_constant integer_suffix?
-  / hexadecimal_constant integer_suffix?
-  / "0" // special case for just zero (avoid intefering with octal constant definition)
+  = ( decimal_constant / octal_constant / hexadecimal_constant / "0" ) integer_suffix?
 
 decimal_constant 
   = nonzero_digit digit*
@@ -98,7 +95,6 @@ long_long_suffix
 
 floating_constant 
   = decimal_floating_constant 
-  / hexadecimal_floating_constant 
 
 decimal_floating_constant
   = fractional_constant exponent_part? floating_suffix?
@@ -113,17 +109,6 @@ exponent_part
 
 floating_suffix 
   = [fl]i
-
-hexadecimal_floating_constant
-  = hexadecimal_prefix hexadecimal_fractional_constant binary_exponent_part floating_suffix?
-  / hexadecimal_prefix hexadecimal_digit+ binary_exponent_part floating_suffix?
-
-hexadecimal_fractional_constant
-  = hexadecimal_digit* "." hexadecimal_digit+
-  / hexadecimal_digit+ "."
-
-binary_exponent_part
-  = ("p" / "P") ("+" / "-")? digit+
 
 // =======================================================
 

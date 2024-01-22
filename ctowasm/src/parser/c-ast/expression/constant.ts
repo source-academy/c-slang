@@ -14,11 +14,11 @@ export default Constant;
 export interface IntegerConstant extends CNodeBase {
   type: "IntegerConstant";
   value: bigint; // needs to be big int to support all possible values
-  suffix?: IntegerConstantSuffix;
+  suffix: IntegerConstantSuffix | null;
 }
 
 export interface FloatConstant extends CNodeBase {
   type: "FloatConstant";
   value: number;
-  suffix?: FloatConstantSuffix;
+  suffix: FloatConstantSuffix | null;
 }

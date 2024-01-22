@@ -63,6 +63,29 @@
     return generateNode("Root", { children });
   }
 
+  function generateIntegerConstant(value, suffix) {
+    let correctedSuffix;
+    if (suffix.length > 0) {
+      correctedSuffix = suffix.toLowerCase();
+      if (correctedSuffix.contains("ll")) {
+        // in this implementation long long and long are identical
+        if (correctedSuffix.contains("u")) {
+          correctedSuffix = "ul";
+        } else {
+          correctedSuffix = "l"; 
+        }
+      }
+    } else {
+      correctedSuffix = null;
+    }
+     
+    return generateNode("IntegerConstant", { value: BigInt(value), suffix: correctedSuffix });
+  }
+
+  function generateFloatConstant(value, suffix) {
+    return generateNode("FloatConstant", { value: Number(value), suffix: suffix === "f" || suffix === "F" ? "f" : null }); 
+  }
+
   function processDeclarationWithoutDeclarator(declarationSpecifiers) {
     // TODO: add typedef specifier logic later
     const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
@@ -514,6 +537,12 @@
 
 program = children:translation_unit  { return createRootNode(children); }
 
+// this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
+// it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.
+// Otherwise, the optional setting does not affect anything, as it is guaranteed by the preprocesser that all tokens are delimited by whitespaces
+_ "token separator"
+  = " "
+
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
@@ -780,56 +809,6 @@ primary_expression
 type_name
   = specifiers:specifier_qualifier_list declarator:(_ @abstract_declarator)? { return generateDataTypeFromSpecifierAndAbstractDeclarators(specifiers, declarator); } 
 
-//=========== Constants =============
-
-constant
-	= floating_constant // must come first as floating and integer constant both can start with digit, but float more specific
-  / integer_constant
-  / character_constant
-    
-floating_constant
-  = value:decimal_floating_constant suffix:("f" / "F" / "l" / "L" / "") { return generateNode("FloatConstant", { value: Number(value), suffix: suffix === "f" || suffix === "F" ? "f" : undefined }); }
-
-integer_constant
-	= value:integer suffix:("ul" / "Ul" / "UL" / "uL" / "l" / "L" / "u" / "U" / "ll" / "LL" / "") { return generateNode("IntegerConstant", { value: BigInt(value), suffix: suffix.length > 0 ? (suffix.toLowerCase() === "ll" ? "l" : suffix.toLowerCase()) : undefined }); } 
-
-character_constant
-  = "'" value:c_char "'" {return generateNode("IntegerConstant", { value: BigInt(value) }); }
-
-
-
-
-//=========== Characters ============
-
-// All the possible C characters that can be in a source file
-source_c_set
-  = [a-z0-9!"#%&\'()*+,-./: ;<=>?\[\\\]^_{|}~ \n\t\v\f]i
-  / extended_c_char_set
-// 
-c_char
-  = char:[a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i { return char.charCodeAt(0); }
-  / extended_c_char_set
-  / escape_sequence
-
-// Characters not required to be in the basic character set, but should be supported.
-extended_c_char_set
-  = char:[@] { return char.charCodeAt(0); }
-  
-escape_sequence 
-  = "\\\'"  { return 39; } 
-  / "\\\""  { return 34; }
-  / "\\?"   { return 63; }
-  / "\\\\"  { return 92; }
-  / "\\a"   { return 7; }
-  / "\\b"   { return 8; }
-  / "\\f"   { return 12; }
-  / "\\n"   { return 10; }
-  / "\\t"   { return 9; }
-  / "\\v"   { return 11; }
-  / "\\0"   { return 0; }
-
-
-
 
 // =========== Types ================
 
@@ -855,38 +834,169 @@ long_type
 float_type
   = "float"
   / ("double" / "long double") { return "double"; }
-    
 
 
 
-// =============== Floating constant related rules ===============
+
+// ======================================================
+// ================= LEXICAL GRAMMAR ====================
+// ======================================================
+
+source_character_set
+  = $[a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i 
+  / extended_source_character_set
+
+// some additional characters to support
+extended_source_character_set
+  = "@"
+
+token
+  = keyword 
+  / identifier
+  / constant 
+  / string_literal 
+  / punctuator 
+
+keyword  // must be ordered in descending order of length, as longer keywords take precedence in matching
+  = "_Static_assert"/"_Thread_local"/"_Imaginary"/"_Noreturn"/"continue"/"register"/"restrict"/"unsigned"/"volatile"/"_Alignas"/"_Alignof"/"_Complex"/"_Generic"/"default"/"typedef"/"_Atomic"/"extern"/"inline"/"double"/"return"/"signed"/"sizeof"/"static"/"struct"/"switch"/"break"/"float"/"const"/"short"/"union"/"while"/"_Bool"/"auto"/"case"/"char"/"goto"/"long"/"else"/"enum"/"void"/"for"/"int"/"if"/"do"
+
+identifier
+  = str:$([a-z_]i[a-z0-9_]i*)  &{ return isStringAKeyword(str) ? false : true; } { return str; } // predicate prevents matching a keyword as an identifier, which can be possible in complex rules
+
+// ====================== Constants ======================
+// =======================================================
+
+constant
+  = floating_constant // floating constant must come first as it is more specific (longer match takes precedence, and start of float_constant can be an integer_constant.
+  / integer_constant
+  / enumeration_constant 
+  / character_constant 
+
+// ====================== Integer Constants ======================
+
+integer_constant
+  = value:$( decimal_constant / octal_constant / hexadecimal_constant / "0" ) suffix:$integer_suffix? { return generateIntegerConstant(value, suffix); }
+
+decimal_constant 
+  = nonzero_digit digit*
+
+nonzero_digit
+  = $[1-9]
+
+digit 
+  = $[0-9]
+
+octal_constant
+  = "0" octal_digit+
+
+octal_digit
+  = $[0-7]
+
+hexadecimal_constant 
+  = hexadecimal_prefix hexadecimal_digit+
+
+hexadecimal_prefix 
+  = "0x" / "0X"
+
+hexadecimal_digit 
+  = $[0-9A-F]i
+
+integer_suffix
+  = unsigned_suffix long_long_suffix // must come first to be as long_long_suffix is more specific than long_suffix
+  / unsigned_suffix long_suffix?
+  / long_long_suffix unsigned_suffix?
+  / long_suffix unsigned_suffix?
+
+unsigned_suffix
+  = "u" / "U"
+
+long_suffix 
+  = "l" / "L"
+
+long_long_suffix 
+  = "ll" / "LL"
+
+// =======================================================
+
+// ================== Floating Constants =================
+
+floating_constant 
+  = decimal_floating_constant
 
 decimal_floating_constant
-  = scientific_notation_floating_constant
-  / fractional_constant
-
-scientific_notation_floating_constant
-  = $(fractional_constant ("E" / "e") ("+" / "-" / "") [0-9]+)
-  / $([0-9]+ ("E" / "e") ("+" / "-" / "") [0-9]+)
+  = value:$(fractional_constant exponent_part?) suffix:$floating_suffix? { return generateFloatConstant(value, suffix); }
+  / value:$(digit+ exponent_part) suffix:floating_suffix? { return generateFloatConstant(value, suffix); }
 
 fractional_constant
-  = $([0-9]* "." $[0-9]+)
+  = digit* "." digit+ 
+  / digit+ "."
+
+exponent_part
+  = ("e" / "E") ("+" / "-")? digit+
+
+floating_suffix 
+  = [fl]i
+
+// =======================================================
+
+enumeration_constant
+  = identifier
+
+// ================== Character Constants =================
+
+character_constant
+  = "'" value:c_char "'" { return generateNode("IntegerConstant", { value: BigInt(value) }); }
+
+c_char 
+  = char:[a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i { return char.charCodeAt(0); } // any member of source character set except ', \ and newline
+  / char:extended_source_character_set { return char.charCodeAt(0); }
+  / escape_sequence
+
+escape_sequence
+  = simple_escape_sequence
+  / octal_escape_sequence
+  / hexadecimal_escape_sequence
+
+simple_escape_sequence
+  = "\\\'"  { return 39; } 
+  / "\\\""  { return 34; }
+  / "\\?"   { return 63; }
+  / "\\\\"  { return 92; }
+  / "\\a"   { return 7; }
+  / "\\b"   { return 8; }
+  / "\\f"   { return 12; }
+  / "\\r"   { return 13; }
+  / "\\n"   { return 10; }
+  / "\\t"   { return 9; }
+  / "\\v"   { return 11; }
+
+octal_escape_sequence
+  = "\\" value:$octal_digit|1..3| { return parseInt(value, 8); }
+
+hexadecimal_escape_sequence
+  = "\\x" value:$hexadecimal_digit|1..2| { return parseInt(value, 16); }
+
+// ======================================================
+  
+// ================== String Literals ===================
+
+string_literal
+  = '"' s_char* '"'
+
+s_char
+  = [a-z0-9!'#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i // any member of source character set except ", \ and newline 
+  / escape_sequence
+
+// ======================================================
+
+punctuator // ordered by number of chars in the punctuator, as longer punctuators must take precedence in matching
+  = "%:%:"
+  / "..." / "<<=" / ">>=" 
+  / "++" / "--" / "+=" / "-=" / "*=" / "/=" / "%="  / "&=" / "^=" 
+  / "|=" / "==" / "!=" / "<=" / ">=" / ">>" / "<<" / "->" / "&&" / "||"
+  / "##" / "%:" / "<:" / ":>" / "<%" / "%>"
+  / "[" / "]" / "(" / ")" / "{" / "}" / "." / "&" / "*" / "+" / "-" / "~" 
+  / "!" / "/" / "%" / "<" / ">" / "^" / "|" / "?" / ":" / ";" / "=" / "," / "#"
 
 
 
-
-// ======== Lexical Elements =======
-
-// identifiers must not start with a digit
-// can only contain letters, digits or underscore
-identifier
-	= str:$([a-z_]i[a-z0-9_]i*) &{ return isStringAKeyword(str) ? false : true; } { return str; } 
-
-integer
-  = $[0-9]+
-
-// this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
-// it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.
-// Otherwise, the optional setting does not affect anything, as it is guaranteed by the preprocesser that all tokens are delimited by whitespaces
-_ "token separator"
-  = " "
