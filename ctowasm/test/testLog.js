@@ -538,6 +538,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [18, 487424, 291, 1911],
     },
+    string_literal: {
+      title: "Test string literal",
+      expectedCode: false,
+      expectedValues: ["hello world", "Hello World"]
+    }
   },
 };
 

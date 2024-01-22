@@ -95,7 +95,6 @@
     return null;
   }
 
-
   /**
    * Builds and returns a tree of binary operations which involves the 2 operaands (left and right expressions), and a operator
    * @param firstExpr first expression in the operation expression e.g. "2" in "2 + 3 + 4"
@@ -435,6 +434,24 @@
     return result;
   }
 
+  /**
+   * Creates intiializer list from string literal.
+   * @param chars characters in the string, already in numeric form
+   */
+  function generateInitializerListFromStringLiteral(chars) {
+    return {
+      type: "InitializerList",
+      values: chars.map(char => ({
+        type: "InitializerSingle",
+        value: {
+          type: "IntegerConstant",
+          value: BigInt(char),
+          suffix: null
+        },
+      }))
+    }
+  }
+
   // evaluates the return of init_declarator or declarator with the given array of declaration specifiers, to return a declaration
   // TODO: edit this function when more specifiers are supported
   function evaluateDeclarator(declarationSpecifiers, declarator) {
@@ -450,11 +467,15 @@
     if (declarationNode.dataType.type === "array") {
       if (typeof declarationNode.initializer !== "undefined") {
         if (declarationNode.initializer.type !== "InitializerList") {
-          error("Invalid initializer for array", location());
+          if (declarationNode.initializer.value.type === "StringLiteral") {
+            declarationNode.initializer = generateInitializerListFromStringLiteral(declarationNode.initializer.value.chars)
+          } else {
+            error("Invalid initializer for array", location());
+          }
         }
         // Array size deduction based on initializer list size
         if (typeof declarationNode.dataType.numElements === "undefined") {
-          declarationNode.dataType.numElements = generateNode("IntegerConstant", { value: BigInt(declarator.initializer.values.length) });
+          declarationNode.dataType.numElements = generateNode("IntegerConstant", { value: BigInt(declarationNode.initializer.values.length) });
         }
       } else if (typeof declarationNode.dataType.numElements === "undefined") {
         // no intializer provided, if numElements not defined, then it is set to 1 - TODO: provide warning to user
@@ -804,6 +825,7 @@ primary_expression
   = "sizeof" _ "(" _ dataType:type_name _ ")" { return generateNode("SizeOfExpression", { type: "SizeOfExpression", subtype: "dataType", dataType }); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
   / name:identifier { return generateNode("IdentifierExpression", { name }); } // for variables 
   / constant
+  / string_literal
   / "(" _ @expression _ ")"
 
 type_name
@@ -843,7 +865,7 @@ float_type
 // ======================================================
 
 source_character_set
-  = $[a-z0-9!"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i 
+  = $[a-z0-9!'"#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i 
   / extended_source_character_set
 
 // some additional characters to support
@@ -981,10 +1003,10 @@ hexadecimal_escape_sequence
 // ================== String Literals ===================
 
 string_literal
-  = '"' s_char* '"'
+  = '"' chars:s_char* '"' { chars.push(0); return generateNode("StringLiteral", { chars }); };
 
 s_char
-  = [a-z0-9!'#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i // any member of source character set except ", \ and newline 
+  = char:[a-z0-9!'#%&()*+,-./: ;<=>?\[\]^_{|}~\t\v\f]i { return char.charCodeAt(0); } // any member of source character set except ", \ and newline 
   / escape_sequence
 
 // ======================================================

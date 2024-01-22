@@ -2,7 +2,7 @@
  * Definition of function to process Expression expr s.
  */
 
-import { ProcessingError, UnsupportedFeatureError } from "~src/errors";
+import { ProcessingError, UnsupportedFeatureError, toJson } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import {
   ExpressionWrapperP,
@@ -609,7 +609,7 @@ export default function processExpression(
       }
     } else {
       // this should not happen
-      throw new ProcessingError("Unhandled Expression");
+      throw new ProcessingError(`Unhandled Expression: ${toJson(expr)}`);
     }
   } catch (e) {
     if (e instanceof ProcessingError) {
