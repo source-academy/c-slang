@@ -528,6 +528,16 @@ const testLog = {
         50, 1, 2, 4, 10, 20, 30, 40, 50, 5, 6, 7, 8, 9, 10, 11, 12, 6,
       ],
     },
+    octal_constants: {
+      title: "Test parsing of octal constants",
+      expectedCode: false,
+      expectedValues: [10, 32256, 83, 511],
+    },
+    hexadecimal_constants: {
+      title: "Test parsing of hexidecimal constants",
+      expectedCode: false,
+      expectedValues: [18, 487424, 291, 1911],
+    },
   },
 };
 

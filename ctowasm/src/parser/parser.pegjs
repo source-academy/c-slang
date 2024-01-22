@@ -875,7 +875,7 @@ constant
 // ====================== Integer Constants ======================
 
 integer_constant
-  = value:$( decimal_constant / octal_constant / hexadecimal_constant / "0" ) suffix:$integer_suffix? { return generateIntegerConstant(value, suffix); }
+  = value:( $decimal_constant / octal_constant / $hexadecimal_constant / "0" ) suffix:$integer_suffix? { return generateIntegerConstant(value, suffix); }
 
 decimal_constant 
   = nonzero_digit digit*
@@ -887,7 +887,7 @@ digit
   = $[0-9]
 
 octal_constant
-  = "0" octal_digit+
+  = "0" value:$octal_digit+ { return "0o" + value; } // add the '0o' before value for JS to treat the string as octal
 
 octal_digit
   = $[0-7]
