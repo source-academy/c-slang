@@ -16,9 +16,7 @@
   }
 
   const C_Keywords = new Set([
-    "auto", "float", "break", "short", "switch", "void", "const", "if", "else", "for", "long", "signed", "typedef", "int", "continue", 
-    "volatile", "enum", "while", "rigester", "static", "union", "case", "sizeof", "goto", "extern", 
-    "double", "return", "struct ", "unsigned", "char", "do", "default"
+    "auto","extern","break","float","case","for","char","goto","const","if","continue","inline","default","int","do","long","double","register","else","restrict","enum","return","short","signed","sizeof","static","struct","switch","typedef","union","unsigned","void","volatile","while","_Alignas","_Alignof","_Atomic","_Bool","_Complex","_Generic","_Imaginary","_Noreturn","_Static_assert","_Thread_local"
   ])
 
   /**

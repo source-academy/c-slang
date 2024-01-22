@@ -1,5 +1,6 @@
-import parsingGrammar from "bundle-text:./parser.pegjs";
 import preprocessingGrammar from "bundle-text:./preprocessor.pegjs";
+import lexerGrammar from "bundle-text:./lexer.pegjs";
+import parsingGrammar from "bundle-text:./parser.pegjs";
 import peggy, { LocationRange, Stage } from "peggy";
 
 /**
@@ -18,10 +19,16 @@ function warningCallback(
 }
 
 const preprocessor = peggy.generate(preprocessingGrammar as string, {
-  allowedStartRules: ["source_code"],
+  allowedStartRules: ["program"],
   cache: true,
   warning: warningCallback,
 });
+
+const lexer = peggy.generate(lexerGrammar as string, {
+  allowedStartRules: ["program"],
+  cache: true,
+  warning: warningCallback,
+})
 
 const parser = peggy.generate(parsingGrammar as string, {
   allowedStartRules: ["program"],
@@ -30,5 +37,5 @@ const parser = peggy.generate(parsingGrammar as string, {
 });
 
 export default function parse(sourceCode: string) {
-  return parser.parse(preprocessor.parse(sourceCode));
+  return parser.parse(lexer.parse(preprocessor.parse(sourceCode)));
 }
