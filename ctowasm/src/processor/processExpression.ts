@@ -38,6 +38,9 @@ import {
   ScalarDataType,
 } from "~src/parser/c-ast/dataTypes";
 import { getSizeOfScalarDataType } from "~src/common/utils";
+import processBlockItem from "~src/processor/processBlockItem";
+import { FunctionDefinitionP } from "~src/processor/c-ast/function";
+import { StatementP } from "~src/processor/c-ast/core";
 
 /**
  * Processes an Expression node in the context where value(s) are expected to be loaded from memory for use in a statement (action).
@@ -45,6 +48,7 @@ import { getSizeOfScalarDataType } from "~src/common/utils";
 export default function processExpression(
   expr: Expression,
   symbolTable: SymbolTable,
+  enclosingFunc?: FunctionDefinitionP
 ): ExpressionWrapperP {
   try {
     if (expr.type === "Assignment") {
@@ -606,6 +610,26 @@ export default function processExpression(
           originalDataType: fieldDataType,
           exprs: memoryLoadExprs,
         };
+      }
+    } else if (expr.type === "CommaSeparatedExpressions") {
+      // only last expression becomes a true Expression (one where a value is expected)
+      // process the first expressions as statements
+      const processedLastExpr = processExpression(expr.expressions[expr.expressions.length - 1], symbolTable);
+      const precedingExpressionsAsStatements: StatementP[] = [];
+      for (let i = 0; i < expr.expressions.length - 1; ++i) {
+        precedingExpressionsAsStatements.push(...processBlockItem(expr.expressions[i], symbolTable, enclosingFunc as FunctionDefinitionP));
+      }
+      return {
+        originalDataType: processedLastExpr.originalDataType,
+        exprs: [
+          {
+            type: "PreStatementExpression",
+            statements: precedingExpressionsAsStatements,
+            expr: processedLastExpr.exprs[0],
+            dataType: processedLastExpr.exprs[0].dataType
+          },
+          ...processedLastExpr.exprs.slice(1)
+        ],
       }
     } else {
       // this should not happen

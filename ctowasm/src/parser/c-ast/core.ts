@@ -46,4 +46,10 @@ export type Expression =
   | BinaryExpression
   | Constant
   | IdentifierExpression
-  | UnaryExpression;
+  | UnaryExpression
+  | CommaSeparatedExpressions;
+
+export interface CommaSeparatedExpressions extends CNodeBase {
+  type: "CommaSeparatedExpressions",
+  expressions: Expression[];
+}

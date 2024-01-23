@@ -542,7 +542,13 @@ const testLog = {
       title: "Test string literal",
       expectedCode: false,
       expectedValues: ["hello world", "Hello World"]
+    },
+    comma_separated_expressions: {
+      title: "Test comma separated expressions",
+      expectedCode: false,
+      expectedValues: [10, 1, 7, 4]
     }
+
   },
 };
 

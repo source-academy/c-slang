@@ -669,7 +669,7 @@ pointer
 
 initializer
   = list_initializer
-  / value:expression  { return createInitializerSingle(value); }
+  / value:assignment_expression  { return createInitializerSingle(value); }
 
 list_initializer
   = "{" _ list:(@initializer|.., _ "," _ | _)? ( "," _ )? "}" { return createInitializerList(list); } // list initializer can end with extra comma
@@ -688,7 +688,7 @@ function_declarator_suffix
   / "(" _ ")" { return { type: "FunctionDeclarator", parameters: [], parameterNames: [] }; } 
 
 array_declarator_suffix
-  = "[" _ numElements:(@expression _)? "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
+  = "[" _ numElements:(@assignment_expression _)? "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
 
 // ========= Struct related rules =========
 
@@ -747,9 +747,10 @@ direct_abstract_declarator_helper
 // ========== Expressions ========
 
 expression
-  = assignment
+  = expressions:assignment_expression|2.., _ "," _| { return generateNode("CommaSeparatedExpressions", { expressions }); }
+  / assignment_expression
 
-assignment
+assignment_expression
   = assignmentOperations:(@logical_or_expression _ @("+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / "&=" / "^=" / "|=" / "=") _ )+ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
   / logical_or_expression
 
@@ -819,7 +820,7 @@ postfix_operation
   / "->" _ fieldTag:identifier { return { type: "StructPointerMemberAccess", fieldTag }; }
 
 function_argument_list
-  = expression|1.., _ "," _|
+  = assignment_expression|1.., _ "," _|
 
 primary_expression
   = "sizeof" _ "(" _ dataType:type_name _ ")" { return generateNode("SizeOfExpression", { type: "SizeOfExpression", subtype: "dataType", dataType }); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
