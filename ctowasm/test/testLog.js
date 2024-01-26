@@ -547,6 +547,20 @@ const testLog = {
       title: "Test comma separated expressions",
       expectedCode: false,
       expectedValues: [10, 1, 7, 4]
+    },
+    declarations_test: {
+      title: "Test various declarations all in one file - structs, enums, typedef",
+      expectedCode: false
+    },
+    typedef_ambiguity: {
+      title: "Test that the compiler correctly deals with the C typedef ambiguity problem",
+      expectedCode: false, 
+      expectedValues: [200]
+    },
+    enums_1: {
+      title: "Test enum declaration and enumerator usage",
+      expectedCode: false,
+      expectedValues: [20, 200, 0, 10, 389]
     }
 
   },

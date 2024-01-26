@@ -11,8 +11,9 @@ import {
   getSizeOfScalarDataType,
   isFloatType,
   isIntegerType,
+  primaryDataTypeSizes,
 } from "~src/common/utils";
-import { POINTER_SIZE } from "~src/common/constants";
+import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
 
 /**
  * Returns the size in bytes of a data type.
@@ -48,6 +49,8 @@ export function getDataTypeSize(dataType: DataType | StructSelfPointer): number 
       (sum, field) => sum + (field.dataType.type === "struct self pointer"? POINTER_SIZE : getDataTypeSize(field.dataType)),
       0,
     );
+  } else if (dataType.type === "enum") {
+    return primaryDataTypeSizes[ENUM_DATA_TYPE];
   } else {
     throw new Error(
       `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`,
@@ -60,11 +63,11 @@ export function getDataTypeSize(dataType: DataType | StructSelfPointer): number 
  */
 
 export function isScalarDataType(dataType: DataType) {
-  return dataType.type === "primary" || dataType.type === "pointer";
+  return dataType.type === "primary" || dataType.type === "pointer" || dataType.type === "enum"; // enums are signed ints, thus scalar
 }
 
 export function isIntegeralDataType(dataType: DataType) {
-  return dataType.type === "primary" && isIntegerType(dataType.primaryDataType);
+  return (dataType.type === "primary" && isIntegerType(dataType.primaryDataType)) || dataType.type === "enum";
 }
 
 export function isFloatDataType(dataType: DataType) {
@@ -72,7 +75,7 @@ export function isFloatDataType(dataType: DataType) {
 }
 
 export function isArithmeticDataType(dataType: DataType) {
-  return dataType.type === "primary";
+  return dataType.type === "primary" || dataType.type === "enum";
 }
 
 // /**
@@ -151,6 +154,12 @@ export function unpackDataType(
           recursiveHelper(field.dataType);
         }
       }
+    } else if (dataType.type === "enum") {
+      memoryObjects.push({
+        dataType: ENUM_DATA_TYPE,
+        offset: currOffset,
+      });
+      currOffset += getDataTypeSize(dataType); 
     } else {
       throw new ProcessingError(
         `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`,
@@ -165,7 +174,7 @@ export function unpackDataType(
  * Returns the number of primary objects that compose a data type.
  */
 function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
-  if (dataType.type === "primary" || dataType.type === "pointer") {
+  if (dataType.type === "primary" || dataType.type === "pointer" || dataType.type === "enum") {
     return 1;
   } else if (dataType.type === "array") {
     try {

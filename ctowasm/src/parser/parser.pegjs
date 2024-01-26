@@ -1135,7 +1135,6 @@
         }
       });
     }
-
     declarators.forEach((declarator) => {
       const { declaration, incompletePointer } = evaluateDeclarator(
         declarationSpecifiers,

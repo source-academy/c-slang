@@ -12,6 +12,7 @@ export type DataType =
   | ArrayDataType
   | StructDataType
   | FunctionDataType
+  | EnumDataType;
 
 export type ScalarDataType = PrimaryDataType | PointerDataType;
 

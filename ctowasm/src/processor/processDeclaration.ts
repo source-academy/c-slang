@@ -15,7 +15,12 @@ import {
 } from "~src/processor/dataTypeUtil";
 import { SymbolTable, VariableSymbolEntry } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
-import { FloatDataType, IntegerDataType } from "~src/common/types";
+import {
+  FloatDataType,
+  IntegerDataType,
+  PrimaryCDataType,
+  ScalarCDataType,
+} from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import { MemoryStore } from "~src/processor/c-ast/memory";
 import {
@@ -29,7 +34,7 @@ import {
   convertConstantToByteStr,
   getZeroInializerByteStrForDataType,
 } from "~src/processor/byteStrUtil";
-import { POINTER_TYPE } from "~src/common/constants";
+import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
 import processEnumDeclaration from "~src/processor/processEnumDeclaration";
 
 /**
@@ -47,20 +52,20 @@ export function processLocalDeclaration(
       if (declaration.dataType.type === "function") {
         return [];
       }
-  
+
       // sanity check, symbol table entry must be localVariable
       if (symbolEntry.type === "globalVariable") {
         throw new ProcessingError(
           "processLocalVariableDeclaration: symbol entry became global variable entry"
         );
       }
-  
+
       if (typeof enclosingFunc !== "undefined") {
         enclosingFunc.sizeOfLocals += getDataTypeSize(declaration.dataType);
       }
-  
+
       symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
-  
+
       if (typeof declaration.initializer !== "undefined") {
         return unpackLocalVariableInitializerAccordingToDataType(
           symbolEntry,
@@ -70,14 +75,13 @@ export function processLocalDeclaration(
       } else {
         return [];
       }
-    } else if (declaration.type === "EnumDeclaration"){
+    } else if (declaration.type === "EnumDeclaration") {
       processEnumDeclaration(declaration, symbolTable);
       return [];
     } else {
       console.assert(false, "Unknown declaration type");
       return [];
     }
-    
   } catch (e) {
     if (e instanceof ProcessingError) {
       e.addPositionInfo(declaration.position);
@@ -121,7 +125,19 @@ export function unpackLocalVariableInitializerAccordingToDataType(
     initializer: Initializer,
     offset: number
   ): number {
-    if (dataType.type === "primary" || dataType.type === "pointer") {
+    if (
+      dataType.type === "primary" ||
+      dataType.type === "pointer" ||
+      dataType.type === "enum"
+    ) {
+      let scalarDataType: ScalarCDataType;
+      if (dataType.type === "pointer") {
+        scalarDataType = "pointer";
+      } else if (dataType.type === "enum") {
+        scalarDataType = ENUM_DATA_TYPE;
+      } else {
+        scalarDataType = dataType.primaryDataType;
+      }
       if (initializer.type === "InitializerSingle") {
         memoryStoreStatements.push({
           type: "MemoryStore",
@@ -131,8 +147,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             dataType: "pointer",
           },
           value: processExpression(initializer.value, symbolTable).exprs[0],
-          dataType:
-            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
+          dataType: scalarDataType,
         });
         currOffset += getDataTypeSize(dataType);
       } else {
@@ -152,6 +167,8 @@ export function unpackLocalVariableInitializerAccordingToDataType(
               dataType:
                 dataType.type === "pointer"
                   ? POINTER_TYPE
+                  : dataType.type === "enum"
+                  ? ENUM_DATA_TYPE
                   : (dataType.primaryDataType as IntegerDataType),
             };
           }
@@ -163,10 +180,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
               dataType: "pointer",
             },
             value: zeroExpression,
-            dataType:
-              dataType.type === "pointer"
-                ? "pointer"
-                : dataType.primaryDataType,
+            dataType: scalarDataType,
           });
           currOffset += getDataTypeSize(dataType);
         } else {
@@ -191,6 +205,8 @@ export function unpackLocalVariableInitializerAccordingToDataType(
                   dataType:
                     dataType.type === "pointer"
                       ? POINTER_TYPE
+                      : dataType.type === "enum"
+                      ? ENUM_DATA_TYPE
                       : (dataType.primaryDataType as IntegerDataType),
                 };
               }
@@ -202,10 +218,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
                   dataType: "pointer",
                 },
                 value: zeroExpression,
-                dataType:
-                  dataType.type === "pointer"
-                    ? "pointer"
-                    : dataType.primaryDataType,
+                dataType: scalarDataType,
               });
               currOffset += getDataTypeSize(dataType);
               return offset;
@@ -221,10 +234,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             },
             value: processExpression(firstInitializer.value, symbolTable)
               .exprs[0],
-            dataType:
-              dataType.type === "pointer"
-                ? "pointer"
-                : dataType.primaryDataType,
+            dataType: scalarDataType,
           });
           currOffset += getDataTypeSize(dataType);
         }
@@ -372,7 +382,10 @@ export function unpackLocalVariableInitializerAccordingToDataType(
   return memoryStoreStatements;
 }
 
-export function processGlobalScopeDeclaration(declaration: Declaration, symbolTable: SymbolTable): string {
+export function processGlobalScopeDeclaration(
+  declaration: Declaration,
+  symbolTable: SymbolTable
+): string {
   if (declaration.type === "Declaration") {
     return processDataSegmentVariableDeclaration(declaration, symbolTable);
   } else if (declaration.type === "EnumDeclaration") {
@@ -430,21 +443,33 @@ function unpackDataSegmentInitializerAccordingToDataType(
   initalizer: Initializer | null
 ): string {
   let byteStr = "";
-
   function helper(
     dataType: DataType,
     initializer: Initializer,
     offset: number
   ): number {
-    if (dataType.type === "primary" || dataType.type === "pointer") {
+    if (
+      dataType.type === "primary" ||
+      dataType.type === "pointer" ||
+      dataType.type === "enum"
+    ) {
+      let scalarDataType: ScalarCDataType;
+      if (dataType.type === "pointer") {
+        scalarDataType = "pointer";
+      } else if (dataType.type === "enum") {
+        scalarDataType = ENUM_DATA_TYPE;
+      } else {
+        scalarDataType = dataType.primaryDataType;
+      }
       if (initializer.type === "InitializerSingle") {
         try {
           const processedConstant = evaluateCompileTimeExpression(
             initializer.value
           );
+
           byteStr += convertConstantToByteStr(
             processedConstant,
-            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
+            scalarDataType
           );
         } catch (e) {
           if (e instanceof ProcessingError) {
@@ -474,7 +499,7 @@ function unpackDataSegmentInitializerAccordingToDataType(
           );
           byteStr += convertConstantToByteStr(
             processedConstant,
-            dataType.type === "pointer" ? "pointer" : dataType.primaryDataType
+            scalarDataType
           );
         }
       }

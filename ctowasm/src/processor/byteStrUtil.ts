@@ -17,7 +17,7 @@ import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
 
 export function getZeroInializerByteStrForDataType(dataType: DataType) {
   let byteStr = "";
-  if (dataType.type === "primary" || dataType.type === "pointer") {
+  if (dataType.type === "primary" || dataType.type === "pointer" || dataType.type === "enum") {
     const numOfBytes = getDataTypeSize(dataType);
     for (let i = 0; i < numOfBytes; ++i) {
       byteStr += "\\00";
