@@ -6,7 +6,7 @@ import { CAstRoot } from "~src/parser/c-ast/core";
 import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processFunctionDefinition from "~src/processor/processFunctionDefinition";
-import { processDataSegmentVariableDeclaration } from "~src/processor/processDeclaration";
+import { processDataSegmentVariableDeclaration, processGlobalScopeDeclaration } from "~src/processor/processDeclaration";
 import { SymbolTable } from "~src/processor/symbolTable";
 
 /**
@@ -51,7 +51,7 @@ export default function process(
         processFunctionDefinition(child, symbolTable),
       );
     } else {
-      processedAst.dataSegmentByteStr += processDataSegmentVariableDeclaration(
+      processedAst.dataSegmentByteStr += processGlobalScopeDeclaration(
         child,
         symbolTable,
       ); // add the byte str used to initalize this variable to teh data segment byte string

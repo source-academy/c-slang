@@ -1,17 +1,31 @@
+import { ENUM_DATA_TYPE } from "~src/common/constants";
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
-import { Declaration } from "~src/parser/c-ast/declaration";
+import { VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
 import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
  */
-export type SymbolEntry = FunctionSymbolEntry | VariableSymbolEntry;
+export type SymbolEntry =
+  | FunctionSymbolEntry
+  | VariableSymbolEntry
+  | EnumeratorSymbolEntry;
 export interface FunctionSymbolEntry {
   type: "function";
   dataType: FunctionDataType;
   processedFunctionDetails: FunctionDetails; // process and save the function details
+}
+
+/**
+ * Represent an enumerators present within Enum declarations.
+ * Such enumerators can be used like constants.
+ */
+export interface EnumeratorSymbolEntry {
+  type: "enumerator";
+  dataType: { type: "primary", primaryDataType: typeof ENUM_DATA_TYPE } // in this compiler implementation enums directly correspond to signed ints
+  value: bigint;
 }
 
 export interface VariableSymbolEntry {
@@ -52,7 +66,7 @@ export class SymbolTable {
     return funcName in this.externalFunctions;
   }
 
-  addEntry(declaration: Declaration): SymbolEntry {
+  addEntry(declaration: VariableDeclaration): SymbolEntry {
     if (declaration.dataType.type === "function") {
       return this.addFunctionEntry(declaration.name, declaration.dataType);
     } else {
@@ -60,24 +74,39 @@ export class SymbolTable {
     }
   }
 
+  addEnumeratorEntry(
+    enumeratorName: string,
+    enumeratorValue: bigint
+  ): EnumeratorSymbolEntry {
+    const entry: EnumeratorSymbolEntry = {
+      type: "enumerator",
+      dataType: { type: "primary", primaryDataType: ENUM_DATA_TYPE },
+      value: enumeratorValue,
+    };
+    this.symbols[enumeratorName] = entry;
+    return entry;
+  }
+
   addVariableEntry(name: string, dataType: DataType): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
       // multiple declarations only allowed outside of function bodies
       if (this.parentTable !== null) {
-        throw new ProcessingError(`${name} redeclared in scope.`);
+        throw new ProcessingError(`${name} redeclared`);
       }
-      if (this.symbols[name].type === "function") {
-        throw new ProcessingError(
-          `${name} redeclared as variable instead of function`
-        );
+      const symbolEntry = this.symbols[name];
+      if (
+        symbolEntry.type === "function" ||
+        symbolEntry.type === "enumerator"
+      ) {
+        throw new ProcessingError(`${name} redeclared`);
       }
 
-      if (toJson(this.symbols[name].dataType) !== toJson(dataType)) {
+      if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
-          `Conflicting types for ${name}:  redeclared as ${
-            this.symbols[name].dataType
-          } instead of ${toJson(dataType)}`
+          `Conflicting types for ${name}:  redeclared as ${symbolEntry} instead of ${toJson(
+            dataType
+          )}`
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;

@@ -7,7 +7,7 @@ import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import JumpStatement from "./statement/jumpStatement";
 import { SelectionStatement } from "~src/parser/c-ast/statement/selectionStatement";
 import { Position } from "~src/parser/c-ast/misc";
-import { Declaration } from "./declaration";
+import { VariableDeclaration, EnumDeclaration, Declaration } from "./declaration";
 import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";
 import Constant from "~src/parser/c-ast/expression/constant";
 

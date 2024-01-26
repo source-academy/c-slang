@@ -773,7 +773,7 @@
         }
       }
 
-      if (!primaryDataTypeSpecifier) {
+      if (!primaryDataTypeSpecifier && !lengthSpecifier && !intSpecifier) {
         error("Type specifier required in declaration specifiers");
       }
 
@@ -788,15 +788,16 @@
         }
         return { dataType: createPrimaryDataType(primaryDataTypeSpecifier) };
       } else if (primaryDataTypeSpecifier === "char") {
-        const intSignPrefix = intSignSpecifier ? intSignSpecifier + " " : "";
+        const intSignPrefix = intSignSpecifier ? intSignSpecifier + " " : "signed "; // integral types are signed by default
         if (lengthSpecifier) {
           error(
             `Both '${lengthSpecifier}' and '${primaryDataTypeSpecifier}' in declaration specifiers`
           );
         }
         return { dataType: createPrimaryDataType(intSignPrefix + "char") };
-      } else if (primaryDataTypeSpecifier === "int") {
-        const intSignPrefix = intSignSpecifier ? intSignSpecifier + " " : "";
+      } else {
+        // default primary data type is int
+        const intSignPrefix = intSignSpecifier ? intSignSpecifier + " " : "signed "; // integral types are signed by default
         if (lengthSpecifier) {
           return {
             dataType: createPrimaryDataType(intSignPrefix + lengthSpecifier),
@@ -868,12 +869,14 @@
     };
 
     // add the declarations of each field to the struct
-    unpackedFieldDeclarations.declarations.forEach((declaration) => {
-      structDataType.fields.push({
-        tag: declaration.name,
-        dataType: declaration.dataType,
+    if (unpackedFieldDeclarations.declarations) {
+      unpackedFieldDeclarations.declarations.forEach((declaration) => {
+        structDataType.fields.push({
+          tag: declaration.name,
+          dataType: declaration.dataType,
+        });
       });
-    });
+    }
 
     // resolve all incomplete pointers which can be resolved
     const incompletePointers = [];
@@ -916,6 +919,19 @@
       enumDeclarations: unpackedFieldDeclarations.enumDeclarations,
       tagDefinitions,
     };
+  }
+
+  function createEmptyStructSpecifier(tag) {
+    return {
+      dataType: {
+        type: "struct",
+        tag,
+        fields: [], 
+      },
+      incompletePointers: [],
+      enumDeclarations: [],
+      tagDefinitions: [],
+    }; 
   }
 
   // Recursively traverses a tree of declarators to create a DataType object and extract the name of the symbol with this dataType,
@@ -1058,16 +1074,29 @@
     parameterNames
   ) {
     // remove all struct/enum tags
+    const removedTags = new Set();
     for (const tagDefinition of tagDefinitions) {
+      if (removedTags.has(tagDefinition.name)) {
+        error(`Redefinition of '${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}'`);
+      }
+      removedTags.add(tagDefinition.name);
       removeTagSymbolEntry(tagDefinition.name);
     }
+
+    const removedIdentifiers = new Set();
     // remove all enumerator identifiers defined in params
     for (const enumDeclaration of enumDeclarations) {
       enumDeclaration.enumerators.forEach((e) => {
+        if (removedIdentifiers.has(e.name)) {
+          error(`'${e.name}' redeclared as different kind of symbol`)
+        }
+        removedIdentifiers.add(e.name);
         removeIdentifierSymbolEntry(e.name);
       });
     }
-    // remove all parameter identifiers
+    
+
+    // remove all parameter identifiers, no need check for redefintion as it was done in unpackParameters() already
     for (const paramName of parameterNames) {
       if (paramName !== null) {
         removeIdentifierSymbolEntry(paramName);
@@ -1078,7 +1107,7 @@
   /**
    * Processes declarations.
    * Returns the declarations, as well as the dataType objects that are pointers to incomplete types
-   * @returns { type: "Declaration", declarations: Declaration[], incompletePointers: PointerDataType[], tagDefinitions, identifierDefinitions}
+   * @returns { type: "Declaration", declarations: Declaration[], incompletePointers: PointerDataType[], tagDefinitions: { name: string, tagSymbolEntry: { type: "struct" | "enum", dataType: DataType } }[], identifierDefinitions: { name: string, symbolEntry: { type: "type" | "variable", dataType: DataType } }[] }
    * identifierDefinitions is { name: string, symbolEntry: SymbolEntry } that represents each declared identifier
    * tagDefinitions is { name: string, symbolEntry: SymbolEntry } that represents each declared tag
    */
@@ -1327,18 +1356,32 @@
     const enumDeclarations = [];
     const tagDefinitions = [];
     const incompletePointers = [];
-    const setOfNames = new Set();
+    const setOfIdentifiers = new Set();
+    const setOfTags = new Set(); 
     parameterDeclarations.forEach((paramDeclaration) => {
-      if (setOfNames.has(paramDeclaration.name)) {
+      if (paramDeclaration.name !== null && setOfIdentifiers.has(paramDeclaration.name)) {
         error(`Redefinition of parameter '${paramDeclaration.name}'`)
       }
       dataTypes.push(paramDeclaration.dataType);
       names.push(paramDeclaration.name);
-      setOfNames.add(paramDeclaration.name);
+      setOfIdentifiers.add(paramDeclaration.name);
       if (paramDeclaration.enumDeclarations) {
+        enumDeclarations.forEach(enumDeclaration => {
+          enumDeclaration.enumerators.forEach(enumerator => {
+            if (setOfIdentifiers.has(enumerator.name)) {
+              error(`'${enumerator.name}' redeclared as different kind of symbol`) 
+            }
+            setOfIdentifiers.add(enumerator.name);
+          });
+        });
         enumDeclarations.push(...paramDeclaration.enumDeclarations);
       }
       if (paramDeclaration.tagDefinitions) {
+        tagDefinitions.forEach(tagDefinition => {
+          if (setOfTags.has(tagDefinition.name)) {
+            error(`Redefinition of '${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}'`);
+          } 
+        });
         tagDefinitions.push(...paramDeclaration.tagDefinitions);
       }
       if (paramDeclaration.incompletePointers) {
@@ -1388,6 +1431,46 @@
       parameterNames: functionDefinitionInfo.parameterNames,
       incompletePointers
     });
+  }
+
+  /**
+   * Used to create a ForLoop node whose clause is a declaration.
+   */
+  function createDeclarationForLoopNode(declaration, condition, update, body) {
+    const { declarations, incompletePointers, identifierDefinitions, tagDefinitions } = declaration;
+    // tagDefinitions not allowed in for loop
+    if (tagDefinitions) {
+      for (const tagDefinition of tagDefinitions) {
+        error(`'${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}' declared in 'for' loop initialization`)
+      }
+    }
+    // no need to handle incmplete pointers since there is no possibility of declaring them in a tag 
+
+    // checks on declarations
+    for (const declaration of declarations) {
+      if (declaration.type === "EnumDeclaration") {
+        // enum declarations not allowed in for loop clause
+        for (const enumerator of declaration.enumerators) {
+          error(`Declaration of non-variable '${enumerator.name}' in for loop initial declaration`);
+        }
+      } else if (declaration.storageClass !== "auto" && declaration.storageClass !== "register") { // as per standard, for loop variable can only be "auto" or "register" 
+        error(`Declaration of ${declaration.storageClass} variable '${declaration.name}' in for loop initial declaration`);
+      }
+    }
+
+    // remove all identifiers that were declared in for loop clause
+    const removedIdentifiers = new Set();
+    for (const identifierDefinition of identifierDefinitions) {
+      if (identifierDefinition.name !== null) {
+        if (removedIdentifiers.has(identifierDefinition.name)) {
+          error(`Redefinition of variable ${identifierDefinition.name}`)
+        }
+        removedIdentifiers.add(identifierDefinition.name);
+        removeIdentifierSymbolEntry(identifierDefinition.name);
+      }
+    }
+
+    return generateNode("ForLoop", { clause: { type: "Declaration", value: declarations }, condition, update, body });
   }
 }
 // ======== Beginning of Grammar rules =========
@@ -1452,7 +1535,7 @@ iteration_statement
   = "do" _ body:statement _ "while" _ "(" _ condition:expression _ ")" _ ";" { return generateNode("DoWhileLoop", { condition, body }); } // dowhile loops need to end with a ';'
   / "while" _ "(" _ condition:expression _ ")" _ body:statement { return generateNode("WhileLoop", { condition, body }); }
   / "for" _ "(" _ clause:(@expression _)? ";" _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return generateNode("ForLoop", { clause: clause === null ? null : { type: "Expression", value: clause }, condition, update, body }); }
-  / "for" _ "(" _ clause:declaration _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return generateNode("ForLoop", { clause: { type: "Declaration", value: clause }, condition, update, body }); }
+  / "for" _ "(" _ clause:declaration _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return createDeclarationForLoopNode(clause, condition, update, body);  }
 
 
 // ========== Selection Statement ===========
@@ -1558,7 +1641,7 @@ array_declarator_suffix
 
 struct_specifier
   = "struct" _ tag:(@identifier _)? "{" _ fieldDeclarations:struct_declaration_list _ "}" { return generateNode(tag === null ? "AnonymousStruct" : "NamedStructDefinition", createStructSpecifier(fieldDeclarations, tag)); }
-  / "struct" _ tag:(@identifier _)? "{" _ "}" { return generateNode(tag === null ? "AnonymousStruct" : "NamedStructDefinition", createStructSpecifier([], tag)); } 
+  / "struct" _ tag:(@identifier _)? "{" _ "}" { return generateNode(tag === null ? "AnonymousStruct" : "NamedStructDefinition", createEmptyStructSpecifier(tag)); } 
   / "struct" _ tag:identifier { return generateNode("NamedStructReference", { tag } ); } // this struct is defined elsewhere
 
 struct_declaration_list 

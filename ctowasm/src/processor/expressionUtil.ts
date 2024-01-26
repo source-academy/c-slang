@@ -217,6 +217,10 @@ export function getArithmeticPrePostfixExpressionNodes(
       );
     }
 
+    if (symbolEntry.type === "enumerator") {
+      throw new ProcessingError("lvalue required as operand");
+    }
+
     const unpackedDataType = unpackDataType(symbolEntry.dataType); // will only have 1 element in array since primary/pointer type
 
     const identifierAddress: Address = {

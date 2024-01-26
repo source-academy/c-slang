@@ -1,5 +1,6 @@
 import { CNodeBase, Expression } from "~src/parser/c-ast/core";
 import { DataType } from "~src/parser/c-ast/dataTypes";
+import { IntegerConstant } from "~src/parser/c-ast/expression/constant";
 
 export type Initializer = InitializerList | InitializerSingle;
 
@@ -13,13 +14,7 @@ export interface InitializerSingle extends CNodeBase {
   value: Expression;
 }
 
-export type Declaration = TypeDeclaration | VariableDeclaration | EnumDeclaration;
-
-export interface TypeDeclaration extends CNodeBase {
-  type: "TypeDeclaration";
-  identifier: string;
-  dataType: DataType;
-}
+export type Declaration = VariableDeclaration | EnumDeclaration;
 
 export interface VariableDeclaration extends CNodeBase {
   type: "Declaration";
@@ -34,5 +29,5 @@ export interface VariableDeclaration extends CNodeBase {
  */
 export interface EnumDeclaration extends CNodeBase {
   type: "EnumDeclaration",
-  enumerators: { name: string, value?: number }[]
+  enumerators: { name: string, value?: Expression }[]
 }

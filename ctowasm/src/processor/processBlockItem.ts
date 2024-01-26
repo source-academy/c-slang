@@ -174,7 +174,7 @@ export default function processBlockItem(
     ) {
       // all these expression statements can be safely ignored as they have no side effects
       return [];
-    } else if (node.type === "Declaration") {
+    } else if (node.type === "Declaration" || node.type === "EnumDeclaration") {
       return processLocalDeclaration(node, symbolTable, enclosingFunc);
     } else {
       throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);

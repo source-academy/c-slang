@@ -7,7 +7,7 @@ struct A {
   int x;
 };
 
-struct B *p;
+struct B *pp;
 
 enum E *ep;
 

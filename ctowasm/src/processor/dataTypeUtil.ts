@@ -2,7 +2,7 @@
  * Some utility functions used by the processor when working with data types.
  */
 
-import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, StructDataType, StructSelfPointer } from "~src/parser/c-ast/dataTypes";
 
 import { ProcessingError, toJson } from "~src/errors";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
@@ -12,14 +12,15 @@ import {
   isFloatType,
   isIntegerType,
 } from "~src/common/utils";
+import { POINTER_SIZE } from "~src/common/constants";
 
 /**
  * Returns the size in bytes of a data type.
  */
-export function getDataTypeSize(dataType: DataType): number {
-  if (dataType.type === "primary" || dataType.type === "pointer") {
+export function getDataTypeSize(dataType: DataType | StructSelfPointer): number {
+  if (dataType.type === "primary" || dataType.type === "pointer" || dataType.type === "struct self pointer") {
     return getSizeOfScalarDataType(
-      dataType.type === "pointer" ? "pointer" : dataType.primaryDataType,
+      dataType.type === "pointer" || dataType.type === "struct self pointer" ? "pointer" : dataType.primaryDataType,
     );
   } else if (dataType.type === "array") {
     try {
@@ -44,7 +45,7 @@ export function getDataTypeSize(dataType: DataType): number {
     }
   } else if (dataType.type === "struct") {
     return dataType.fields.reduce(
-      (sum, field) => sum + getDataTypeSize(field.dataType),
+      (sum, field) => sum + (field.dataType.type === "struct self pointer"? POINTER_SIZE : getDataTypeSize(field.dataType)),
       0,
     );
   } else {
@@ -139,7 +140,16 @@ export function unpackDataType(
       }
     } else if (dataType.type === "struct") {
       for (const field of dataType.fields) {
-        recursiveHelper(field.dataType);
+        if (field.dataType.type === "struct self pointer") {
+          // pointer to the struct itself
+          memoryObjects.push({
+            dataType: "pointer",
+            offset: currOffset,
+          });
+          currOffset += getDataTypeSize(dataType); 
+        } else {
+          recursiveHelper(field.dataType);
+        }
       }
     } else {
       throw new ProcessingError(
@@ -180,7 +190,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
     }
   } else if (dataType.type === "struct") {
     return dataType.fields.reduce(
-      (sum, field) => sum + getDataTypeNumberOfPrimaryObjects(field.dataType),
+      (sum, field) => sum + (field.dataType.type === "struct self pointer" ? 1 : getDataTypeNumberOfPrimaryObjects(field.dataType)),
       0,
     );
   } else {
@@ -200,13 +210,13 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
 export function determineIndexAndDataTypeOfFieldInStruct(
   structDataType: StructDataType,
   fieldTag: string,
-): { fieldIndex: number; fieldDataType: DataType } {
+): { fieldIndex: number; fieldDataType: DataType | StructSelfPointer } {
   let currIndex = 0;
   for (const field of structDataType.fields) {
     if (fieldTag === field.tag) {
       return { fieldIndex: currIndex, fieldDataType: field.dataType };
     }
-    currIndex += getDataTypeNumberOfPrimaryObjects(field.dataType);
+    currIndex +=  field.dataType.type === "struct self pointer" ? 1 : getDataTypeNumberOfPrimaryObjects(field.dataType);
   }
   throw new ProcessingError(
     `Struct${

@@ -67,6 +67,6 @@ interface StructField {
  * This separation from the generic PointerDataType prevents the creation of a cyclic AST structure where the pointeeType
  * of the PointerDataType is equal to the StructDataType which contains the pointer as one of its fields.
  */
-interface StructSelfPointer {
-  type: "struct self pointer"
+export interface StructSelfPointer {
+  type: "struct self pointer",
 }

@@ -8,3 +8,4 @@ export const POINTER_SIZE = WASM_ADDR_SIZE; // size of a pointer in bytes - shou
 export const SIZE_T = "unsigned int"; // implmentation-defined
 export const PTRDIFF_T = "signed int"; // defined type for difference between pointers
 export const POINTER_TYPE = "unsigned int"; // type equivalent to pointer TODO: check this
+export const ENUM_DATA_TYPE = "signed int"; // the datatype that enum directly corresponds to in this compiler implementation

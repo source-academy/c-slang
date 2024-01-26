@@ -1,8 +1,9 @@
-import { ProcessingError } from "~src/errors";
+import { ProcessingError, toJson } from "~src/errors";
 import {
-  Declaration,
+  VariableDeclaration,
   Initializer,
   InitializerSingle,
+  Declaration,
 } from "~src/parser/c-ast/declaration";
 import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
@@ -29,47 +30,57 @@ import {
   getZeroInializerByteStrForDataType,
 } from "~src/processor/byteStrUtil";
 import { POINTER_TYPE } from "~src/common/constants";
+import processEnumDeclaration from "~src/processor/processEnumDeclaration";
 
 /**
  * Processes a Declaration node that is found within a function.
  * Adds the symbol to the symbolTable, and returns any memory store nodes needed for initialization, if any.
  */
 export function processLocalDeclaration(
-  node: Declaration,
+  declaration: Declaration,
   symbolTable: SymbolTable,
   enclosingFunc: FunctionDefinitionP // reference to enclosing function, if any
 ): StatementP[] {
   try {
-    let symbolEntry = symbolTable.addEntry(node);
-    if (node.dataType.type === "function") {
+    if (declaration.type === "Declaration") {
+      let symbolEntry = symbolTable.addEntry(declaration);
+      if (declaration.dataType.type === "function") {
+        return [];
+      }
+  
+      // sanity check, symbol table entry must be localVariable
+      if (symbolEntry.type === "globalVariable") {
+        throw new ProcessingError(
+          "processLocalVariableDeclaration: symbol entry became global variable entry"
+        );
+      }
+  
+      if (typeof enclosingFunc !== "undefined") {
+        enclosingFunc.sizeOfLocals += getDataTypeSize(declaration.dataType);
+      }
+  
+      symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
+  
+      if (typeof declaration.initializer !== "undefined") {
+        return unpackLocalVariableInitializerAccordingToDataType(
+          symbolEntry,
+          declaration.initializer,
+          symbolTable
+        );
+      } else {
+        return [];
+      }
+    } else if (declaration.type === "EnumDeclaration"){
+      processEnumDeclaration(declaration, symbolTable);
       return [];
-    }
-
-    // sanity check, symbol table entry must be localVariable
-    if (symbolEntry.type === "globalVariable") {
-      throw new ProcessingError(
-        "processLocalVariableDeclaration: symbol entry became global variable entry"
-      );
-    }
-
-    if (typeof enclosingFunc !== "undefined") {
-      enclosingFunc.sizeOfLocals += getDataTypeSize(node.dataType);
-    }
-
-    symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
-
-    if (typeof node.initializer !== "undefined") {
-      return unpackLocalVariableInitializerAccordingToDataType(
-        symbolEntry,
-        node.initializer,
-        symbolTable
-      );
     } else {
+      console.assert(false, "Unknown declaration type");
       return [];
     }
+    
   } catch (e) {
     if (e instanceof ProcessingError) {
-      e.addPositionInfo(node.position);
+      e.addPositionInfo(declaration.position);
     }
     throw e;
   }
@@ -361,11 +372,23 @@ export function unpackLocalVariableInitializerAccordingToDataType(
   return memoryStoreStatements;
 }
 
+export function processGlobalScopeDeclaration(declaration: Declaration, symbolTable: SymbolTable): string {
+  if (declaration.type === "Declaration") {
+    return processDataSegmentVariableDeclaration(declaration, symbolTable);
+  } else if (declaration.type === "EnumDeclaration") {
+    processEnumDeclaration(declaration, symbolTable);
+    return "";
+  } else {
+    console.assert(false, "Unknown declaration type");
+    return "";
+  }
+}
+
 /**
  * Processes a data segment variable declaration, returns the byte string to intialize that data segment with.
  */
 export function processDataSegmentVariableDeclaration(
-  node: Declaration,
+  node: VariableDeclaration,
   symbolTable: SymbolTable
 ): string {
   try {
