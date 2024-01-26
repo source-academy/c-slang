@@ -50,6 +50,6 @@ export type Expression =
   | CommaSeparatedExpressions;
 
 export interface CommaSeparatedExpressions extends CNodeBase {
-  type: "CommaSeparatedExpressions",
+  type: "CommaSeparatedExpressions";
   expressions: Expression[];
 }

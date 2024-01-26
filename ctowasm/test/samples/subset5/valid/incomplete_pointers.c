@@ -7,11 +7,23 @@ struct A {
   int x;
 };
 
-struct B {
-  struct B *p;
+struct B *p;
+
+enum E *ep;
+
+enum E {
+  a
 };
 
+struct B {
+  struct B *p;
+} b;
+
 int main() {
+  struct C *pp;
+  struct C {
+    char x;
+  };
   struct A a = {2};
   p = &a;
   print_int(p->x);

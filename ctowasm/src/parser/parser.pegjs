@@ -1,5 +1,5 @@
 {
-  /**
+    /**
    * Helper function to create and return a Node with position and type information
    */
   function generateNode(type, data) {
@@ -9,15 +9,213 @@
       position: {
         start: loc.start,
         end: loc.end,
-        offset: loc.offset
+        offset: loc.offset,
       },
-      ...data
+      ...data,
     };
   }
 
   const C_Keywords = new Set([
-    "auto","extern","break","float","case","for","char","goto","const","if","continue","inline","default","int","do","long","double","register","else","restrict","enum","return","short","signed","sizeof","static","struct","switch","typedef","union","unsigned","void","volatile","while","_Alignas","_Alignof","_Atomic","_Bool","_Complex","_Generic","_Imaginary","_Noreturn","_Static_assert","_Thread_local"
-  ])
+    "auto",
+    "extern",
+    "break",
+    "float",
+    "case",
+    "for",
+    "char",
+    "goto",
+    "const",
+    "if",
+    "continue",
+    "inline",
+    "default",
+    "int",
+    "do",
+    "long",
+    "double",
+    "register",
+    "else",
+    "restrict",
+    "enum",
+    "return",
+    "short",
+    "signed",
+    "sizeof",
+    "static",
+    "struct",
+    "switch",
+    "typedef",
+    "union",
+    "unsigned",
+    "void",
+    "volatile",
+    "while",
+    "_Alignas",
+    "_Alignof",
+    "_Atomic",
+    "_Bool",
+    "_Complex",
+    "_Generic",
+    "_Imaginary",
+    "_Noreturn",
+    "_Static_assert",
+    "_Thread_local",
+  ]);
+
+  const warnings = [];
+  // add a warning to warnings
+  function warn(message) {
+    warnings.push(message);
+  }
+  // this object is used to keep track of symbols, and identify whether they represent a variable/function or type (defined by struct/enum/typedef)
+  // this is critical for identifying if an identifier is a typename defined by typedef or a variable -> needed for resolving "typedef ambiguity"
+
+  // it is also used for resolving pointes to incomplete types (pointing to structs that are not yet defined)
+  let symbolTable = {
+    // 2 separate namespaces as per 6.2.3 of C17 standard
+    identifiers: {}, // namespace for identifiers (regular variables/functions and types) // a symbol entry is defined as such: { type: "type" | "variable", dataType: DataType }
+    tags: {}, // namespace for struct/enum tags // a symbol entry is defined as such: { type: "enum" | "struct", dataType: DataType }
+  };
+
+  function addIdentifierToSymbolTable(name, symbolEntry) {
+    if (name in symbolTable.identifiers) {
+      symbolTable.identifiers[name].push(symbolEntry);
+    } else {
+      symbolTable.identifiers[name] = [symbolEntry];
+    }
+    return { name, symbolEntry }; // returns details of the added symbol, to be removed at end of scope
+  }
+
+  function addTagToSymbolTable(name, symbolEntry) {
+    if (name in symbolTable.tags) {
+      symbolTable.tags[name].push(symbolEntry);
+    } else {
+      symbolTable.tags[name] = [symbolEntry];
+    }
+    return { name, symbolEntry }; // returns details of the added symbol, to be removed at end of scope
+  }
+
+  function isIdentifierAType(name) {
+    if (!(name in symbolTable.identifiers)) {
+      return false;
+    }
+    const entries = symbolTable.identifiers[name];
+    return entries[entries.length - 1].type === "type";
+  }
+
+  function getIdentifierSymbolEntry(name) {
+    if (!(name in symbolTable.identifiers)) {
+      error(`Symbol '${name}' not declared`);
+    }
+    const entries = symbolTable.identifiers[name];
+    return entries[entries.length - 1];
+  }
+
+  function isTagDefined(name) {
+    return name in symbolTable.tags;
+  }
+
+  function getTagSymbolEntry(name) {
+    if (!(name in symbolTable.tags)) {
+      error(`Symbol '${name}' not declared`);
+    }
+    const entries = symbolTable.tags[name];
+    return entries[entries.length - 1];
+  }
+
+  // pop off the latest symbol entry for a symbol (to be done at end of scopes)
+  function removeIdentifierSymbolEntry(name) {
+    if (!(name in symbolTable.identifiers)) {
+      error(`Symbol '${name}' not declared`);
+    }
+    symbolTable.identifiers[name].pop();
+  }
+
+  function removeTagSymbolEntry(name) {
+    if (!(name in symbolTable.tags)) {
+      error(`Symbol '${name}' not declared`);
+    }
+    symbolTable.tags[name].pop();
+  }
+
+  /**
+   * Remove the identifiers and tags that a given declaration created.
+   * Also resolves incomplete pointers if the declaration resolves them. (declaration defines an incomplete type that a incomplete pointer points to)
+   * Returns any remainig unresolved incomplete pointers.
+   * 
+   * Also checks for redeclaration using alreadyRemovedIdentifiers, alreadyRemovedTags which refers to the identifiers/tags in the same scope respectively that were already removed.
+   * To be called at the end of a scope.
+   * @param alreadyRemovedIdentifiers Set of identifier strings that were already removed from the scope.
+   */
+  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers, alreadyRemovedIdentifiers, alreadyRemovedTags) {
+    const unresolvedIncompletePointers = []; 
+    const incompletePointers = existingIncompletePointers ?? [];
+    if (declaration.incompletePointers) {
+      // add the incomplet pointers from the declaration itself
+      incompletePointers.push(...(declaration.incompletePointers));
+    }
+    if (incompletePointers) {
+      for (const incompletePointer of incompletePointers) {
+        if (isTagDefined(incompletePointer.pointeeType.tag)) {
+          // incomplete pointee type was defined - now complete
+          incompletePointer.pointeeType = getTagSymbolEntry(
+            incompletePointer.pointeeType.tag
+          ).dataType;
+
+        } else {
+          // incomplete pointee type still not defined
+          unresolvedIncompletePointers.push(incompletePointer);
+        }
+      }
+    }
+    // remove identifiers
+    for (const identifierDefinition of declaration.identifierDefinitions) {
+      if (alreadyRemovedIdentifiers.has(identifierDefinition.name)) {
+        error(`Redeclaration of '${identifierDefinition.name}'`);
+      }
+      alreadyRemovedIdentifiers.add(identifierDefinition.name);
+      removeIdentifierSymbolEntry(identifierDefinition.name);
+    }
+    // remove tags
+    if (declaration.tagDefinitions) {
+      for (const tagDefinition of declaration.tagDefinitions) {
+        if (alreadyRemovedTags.has(tagDefinition.name)) {
+          error(`Redefinition of '${tagDefinition.name}'`);
+        }
+        alreadyRemovedTags.add(tagDefinition.name);
+        removeTagSymbolEntry(tagDefinition.name);
+      }
+    }
+
+    return unresolvedIncompletePointers;
+  }
+
+  function processBlock(statements) {
+    // remove the declarations that were made in this block from the scope and unpack declarations
+    const unpackedStatements = [];
+    let unresolvedIncompletePointers = [];
+    const removedIdentifiers = new Set();
+    const removedTags = new Set();
+    for (const statement of statements) {
+      if (statement.type === "Declaration") {
+        unpackedStatements.push(...(statement.declarations));
+        // add any incompletepointers from the declaration
+        unresolvedIncompletePointers = removeDeclarationIdentifiersAndTags(
+          statement,
+          unresolvedIncompletePointers,
+          removedIdentifiers,
+          removedTags
+        );
+      } else {
+        unpackedStatements.push(statement);
+      }
+    }
+
+    return generateNode("Block", {
+      statements: unpackedStatements,
+      incompletePointers: unresolvedIncompletePointers,
+    });
+  }
 
   /**
    * Needed to handle ambiguity between identifier and keyword.
@@ -26,22 +224,15 @@
     return C_Keywords.has(str);
   }
 
-  const incompletePointers = [] // will hold an array of pointer DataType objects which point to complete types
-
-  const userDefinedDataTypes = {} // Record<string, DataType> object to hold user defined types using typedef and struct
-
-  function getUserDefinedDataType(typeName) {
-    if (typeName in userDefinedDataTypes) {
-      return userDefinedDataTypes[typeName];
-    }
-    return { type: "incomplete", typeName }; // typeName was not found. just return incomplete type for now.
-  }
-
-  function addUserDefinedDataType(typeName, dataType) {
-    if (typeName in userDefinedDataTypes) {
-      error(`Redefinition of '${typeName}'`);
-    }
-    userDefinedDataTypes[typeName] = dataType;
+  /**
+   * Create a datatype that represents an incomplete type - a struct/enum that has not yet been defined, but has been referenced in a pointer.
+   */
+  function createIncompleteDataType(type, name) {
+    return {
+      type: "incomplete",
+      subtype: type,
+      tag: name,
+    };
   }
 
   /**
@@ -49,18 +240,31 @@
    * Thus any cleanup/extra logic that requires information which is only completely available after parsing can be done here.
    */
   function createRootNode(children) {
-    // fill in all the incomplete pointer DataTypes
-    for (const incompletePointer of incompletePointers) {
-      // the typename of the incomplete pointer would have been saved in pointeetype
-      const typeName = incompletePointer.pointeeType.typeName; 
-      incompletePointer.pointeeType = getUserDefinedDataType(typeName);
-      if (incompletePointer.pointeeType.type === "incomplete") {
-        // if still incomplete, then the type was never defined
-        error(`Unknown type name '${typeName}'`);
+    const unpackedChildren = [];
+    let unresolvedIncompletePointers = [];
+    const removedIdentifiers = new Set();
+    const removedTags = new Set();
+    for (const child of children) {
+      if (child.type === "Declaration") {
+        unpackedChildren.push(...child.declarations);
+        unresolvedIncompletePointers = removeDeclarationIdentifiersAndTags(
+          child,
+          unresolvedIncompletePointers,
+          removedIdentifiers,
+          removedTags
+        );
+      } else if (child.type === "FunctionDefinition") {
+        if (child.incompletePointers) {
+          unresolvedIncompletePointers.push(...(child.incompletePointers));
+        }
+        delete child.incompletePointers;
+        unpackedChildren.push(child);
+      } else {
+        // shoudlnt happen
+        error("Unknown child in root node");
       }
     }
-
-    return generateNode("Root", { children });
+    return generateNode("Root", { children: unpackedChildren, warnings });
   }
 
   function generateIntegerConstant(value, suffix) {
@@ -72,27 +276,64 @@
         if (correctedSuffix.contains("u")) {
           correctedSuffix = "ul";
         } else {
-          correctedSuffix = "l"; 
+          correctedSuffix = "l";
         }
       }
     } else {
       correctedSuffix = null;
     }
-     
-    return generateNode("IntegerConstant", { value: BigInt(value), suffix: correctedSuffix });
+
+    return generateNode("IntegerConstant", {
+      value: BigInt(value),
+      suffix: correctedSuffix,
+    });
   }
 
   function generateFloatConstant(value, suffix) {
-    return generateNode("FloatConstant", { value: Number(value), suffix: suffix === "f" || suffix === "F" ? "f" : null }); 
+    return generateNode("FloatConstant", {
+      value: Number(value),
+      suffix: suffix === "f" || suffix === "F" ? "f" : null,
+    });
   }
 
+  /**
+   * Process declarations that do not have a declarator - i.e they should be declaring a struct/enum type.
+   */
   function processDeclarationWithoutDeclarator(declarationSpecifiers) {
-    // TODO: add typedef specifier logic later
-    const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
-    if (typeSpecifierDataType.type !== "struct") {
-      warning("useless type name in empty declaration");
+    const { enumDeclarations, tagDefinitions, storageClass, incompletePointers } =
+      unpackDeclarationSpecifiers(declarationSpecifiers);
+    const identifierDefinitions = [];
+    const declarations = [];
+    if (storageClass) {
+      warn("Useless storage class in type defintion");
     }
-    return null;
+    if (typeof tagDefinitions === "undefined" || tagDefinitions.length === 0) {
+      warn("Useless type name in empty declaration");
+    }
+
+    // add all enum variables that could have been defined in enum specifier
+    if (typeof enumDeclarations !== "undefined") {
+      enumDeclarations.forEach((enumDeclaration) => {
+        enumDeclaration.enumerators.forEach((enumerator) => {
+          identifierDefinitions.push(
+            addIdentifierToSymbolTable(enumerator.name, {
+              type: "variable",
+              dataType: createPrimaryDataType("signed int"),
+            })
+          );
+        });
+
+        declarations.push(enumDeclaration);
+      });
+    }
+
+    return {
+      type: "Declaration",
+      declarations,
+      tagDefinitions,
+      identifierDefinitions,
+      incompletePointers,
+    };
   }
 
   /**
@@ -100,60 +341,73 @@
    * @param firstExpr first expression in the operation expression e.g. "2" in "2 + 3 + 4"
    * @param exprsWithOperatorArr an array of arrays of size 2 which contain an operator in first index and the expr in 2nd index. e.g: [["+", 3], ["+", 4]]
    */
-  function createLeftToRightBinaryExpressionTree(firstExpr, exprsWithOperatorArr) {
+  function createLeftToRightBinaryExpressionTree(
+    firstExpr,
+    exprsWithOperatorArr
+  ) {
     let currNode = firstExpr;
     for (const operation of exprsWithOperatorArr) {
       // create a new operation node
       currNode = generateNode("BinaryExpression", {
         leftExpr: currNode,
         rightExpr: operation[1],
-        operator: operation[0]
-      })
+        operator: operation[0],
+      });
     }
-    return currNode
+    return currNode;
   }
 
   function createUnaryExpressionNode(expr, operator) {
     // special handling for negated constants, just negate the value of constant
-    if (operator === "-" && (expr.type === "IntegerConstant" || expr.type === "FloatConstant")) {
+    if (
+      operator === "-" &&
+      (expr.type === "IntegerConstant" || expr.type === "FloatConstant")
+    ) {
       return {
         ...expr,
-        value: -expr.value
-      }
+        value: -expr.value,
+      };
     }
 
     return generateNode("UnaryExpression", {
       operator,
-      expression: expr
-    })
+      expression: expr,
+    });
   }
 
   // Creates a PrimaryDataType object.
   function createPrimaryDataType(primaryDataType) {
     return {
       type: "primary",
-      primaryDataType
+      primaryDataType,
     };
-  } 
+  }
+
+  function createEnumDataType(tag) {
+    return {
+      type: "enum",
+      tag
+    }
+  }
 
   function createArrayDataType(elementDataType, numElements) {
     return {
       type: "array",
       elementDataType: elementDataType,
-      numElements
-    }
+      numElements,
+    };
   }
 
   function createInitializerList(values) {
     values = values ?? [];
     return generateNode("InitializerList", {
-      values
+      values,
     });
   }
 
   function createInitializerSingle(value) {
     return generateNode("InitializerSingle", {
-      value
+      value,
     });
   }
 
@@ -171,24 +425,24 @@
             type: "BinaryExpression",
             leftExpr: currNode,
             rightExpr: operation.index,
-            operator: "+"
-          }
-        }
+            operator: "+",
+          },
+        };
       } else if (operation.type === "StructPointerMemberAccess") {
         // similar to array element expr, a->x is equivalent to *a.x
         currNode = {
           type: "StructMemberAccess",
           expr: {
             type: "PointerDereference",
-            expr: currNode
+            expr: currNode,
           },
-          fieldTag: operation.fieldTag
-        }
+          fieldTag: operation.fieldTag,
+        };
       } else {
         currNode = {
           ...operation,
-          expr: currNode
-        }
+          expr: currNode,
+        };
       }
     }
     return currNode;
@@ -202,12 +456,12 @@
     let currNode = firstExpr;
     for (let i = operations.length - 1; i >= 0; --i) {
       currNode = {
-        ...(operations[i]),
-        expr: currNode
-      }
+        ...operations[i],
+        expr: currNode,
+      };
     }
     return currNode;
-  } 
+  }
 
   /**
    * Evaluates a string of assignment expressions from right to left.
@@ -218,7 +472,7 @@
   function createAssignmentTree(firstExpr, assignmentOperations) {
     let currNode = firstExpr;
     for (let i = assignmentOperations.length - 1; i >= 0; --i) {
-      const operation = assignmentOperations[i]
+      const operation = assignmentOperations[i];
       // check if operator is null
       if (operation[1].length > 1) {
         // compound assignment
@@ -229,18 +483,18 @@
             type: "BinaryExpression",
             leftExpr: operation[0],
             rightExpr: currNode,
-            operator: operation[1][0]
-          }
-        }
+            operator: operation[1][0],
+          },
+        };
       } else {
         currNode = {
           type: "Assignment",
           lvalue: operation[0],
-          expr: currNode
-        }
+          expr: currNode,
+        };
       }
     }
-    return currNode; 
+    return currNode;
   }
 
   /**
@@ -251,15 +505,43 @@
     for (const pointer of pointers) {
       currNode = {
         type: "PointerDeclarator",
-        directDeclarator: currNode
-      }
+        isConst: pointer.isConst,
+        directDeclarator: currNode,
+      };
+    }
+    if (directDeclarator.functionDefinitionInfo) {
+      currNode.functionDefinitionInfo = directDeclarator.functionDefinitionInfo; 
+      delete directDeclarator.functionDefinitionInfo; 
     }
     return currNode;
   }
 
+  function createFunctionDeclarator(parameterDeclarations) {
+    if (typeof parameterDeclarations === "undefined") {
+      return generateNode("FunctionDeclarator", {
+        parameters: [],
+        functionDefinitionInfo: {
+          parameterNames: [],
+          enumDeclarations: [],
+          tagDefinitions: [],
+          incompletePointers: [],
+        }, // information that is only relevant to function definitions
+      });
+    }
+    return generateNode("FunctionDeclarator", {
+      parameters: parameterDeclarations.dataTypes,
+      functionDefinitionInfo: {
+        parameterNames: parameterDeclarations.names,
+        enumDeclarations: parameterDeclarations.enumDeclarations,
+        tagDefinitions: parameterDeclarations.tagDefinitions,
+        incompletePointers: parameterDeclarations.incompletePointers,
+      }, // information that is only relevant to function definitions
+    });
+  }
+
   // evaluate the delclarator suffixes of direct_declarator
   // this is used to evaluate declarators which have [] or () suffixes which indicate
-  // that they are array of function suffixs respectively
+  // that they are array or function suffixes respectively
   function evaluateDeclaratorSuffixes(directDeclarator, declaratorSuffixes) {
     let currNode = directDeclarator;
     for (const suffix of declaratorSuffixes) {
@@ -286,52 +568,366 @@
     return currNode;
   }
 
-  // Return the type specifier data type from a list of declarationspecifiers
-  function getTypeSpecifierDataType(declarationSpecifiers) {
-    let typeSpecifierDataType;
-    let numberOfTypeSpecifiers = 0;
-    declarationSpecifiers.forEach(specifier => {
-      if (specifier.type === "TypeSpecifier") {
-        typeSpecifierDataType = specifier.dataType;
-        numberOfTypeSpecifiers++;
+  /**
+   * Unpack and process declaration specifiers
+   * @returns { dataType: DataType | { type: "void" }, enumDeclarations?: { type: "EnumDeclaration", enumerators: { name: string, value?: Expression }[]}[], tagDefinition?: { name: string, dataType: DataType }, storageClass: "auto" | "static", hasTypeDefSpecifier: boolean, incompletePointers?: PointerDataType[]}
+   */
+  function unpackDeclarationSpecifiers(declarationSpecifiers) {
+    const typeSpecifiers = [];
+    let storageClass;
+    let isConst = false; // only type qualifier that is supported
+    let hasTypeDefSpecifier = false;
+    declarationSpecifiers.forEach((specifier) => {
+      switch (specifier.type) {
+        case "TypeSpecifier":
+          typeSpecifiers.push(specifier.specifier);
+          break;
+        case "TypeQualifier":
+          if (specifier.qualifier !== "const") {
+            // should not happen
+            error(`Unknown type qualifier '${specifier.qualifier}'`);
+          }
+          isConst = true;
+          break;
+        case "StorageClassSpecifier":
+          if (storageClass) {
+            // a storage class specifier already specified
+            error(
+              `Multiple storage class specifiers: '${storageClass}' and '${specifier.specifier}'`
+            );
+          }
+          if (hasTypeDefSpecifier) {
+            error("Multiple storage class specifier in declaration specifiers");
+          }
+          storageClass = specifier.specifier;
+          break;
+        case "TypeDefSpecifier":
+          if (storageClass) {
+            error("Multiple storage class specifier in declaration specifiers");
+          }
+          if (hasTypeDefSpecifier) {
+            error("duplicate 'typedef'");
+          }
+          hasTypeDefSpecifier = true;
       }
-    })
+    });
 
-    if (numberOfTypeSpecifiers === 0) {
-      error("Type specifier required in declaration specifiers", location());
-    } else if (numberOfTypeSpecifiers > 1) {
-      error(`${numberOfTypeSpecifiers} type specifiers present in declaration specifiers, should only have 1`, location());
+    const { dataType, enumDeclarations, tagDefinitions, incompletePointers } =
+      processTypeSpecifiers(typeSpecifiers);
+    if (isConst) {
+      dataType.isConst = true;
     }
 
-    return typeSpecifierDataType;
+    return {
+      dataType,
+      enumDeclarations,
+      tagDefinitions,
+      incompletePointers,
+      storageClass,
+      hasTypeDefSpecifier,
+    };
   }
 
-  function generateStructDataType(fieldDeclarations, tag) {
+  /**
+   * Processes a list of typeSpecifiers, to extract a dataType that they represent, as well as any enum variable definitions, and struct/enum type definitions
+   * @returns { dataType: DataType | { type: "void" }, enumDeclarations?: { type: "EnumDeclaration" enumerators: { name: string, value?: Expression }[] }[], tagDefinitions?: { name: string, tagSymbolEntry: { type: "struct" | "enum", dataType: DataType} } }
+   * dataType is the datatype indicated by the typespecifiers
+   * enumDeclarations are any enum variables declared with the enum specifiers
+   * tagDefinitions are any structs that are being
+   */
+  function processTypeSpecifiers(typeSpecifiers) {
+    if (typeSpecifiers.length < 1) {
+      error("Type specifier required in declaration specifiers");
+    }
+    const firstTypeSpecifier = typeSpecifiers[0];
+    if (
+      firstTypeSpecifier.type === "StructTypeSpecifier" ||
+      firstTypeSpecifier.type === "EnumTypeSpecifier" ||
+      firstTypeSpecifier.type === "VoidTypeSpecifier" ||
+      firstTypeSpecifier.type === "UserNamedTypeSpecifier"
+    ) {
+      if (typeSpecifiers.length > 1) {
+        // cannot have any more specifiers
+        error("Two or more data types in declaration specifiers");
+      }
+
+      if (firstTypeSpecifier.type === "StructTypeSpecifier") {
+        const structSpecifier = firstTypeSpecifier.specifier;
+        if (structSpecifier.type === "AnonymousStruct") {
+          // a struct may have an enum declared within it
+          return {
+            dataType: structSpecifier.dataType,
+            enumDeclarations: structSpecifier.enumDeclarations,
+            tagDefinitions: structSpecifier.tagDefinitions,
+            incompletePointers: structSpecifier.incompletePointers,
+          };
+        } else if (structSpecifier.type === "NamedStructDefinition") {
+          // within the struct there may have been more struct/enum tags defined
+          // tag has already been added within createStructSpecifier()
+          return {
+            dataType: structSpecifier.dataType,
+            tagDefinitions: structSpecifier.tagDefinitions,
+            enumDeclarations: structSpecifier.enumDeclarations,
+            incompletePointers: structSpecifier.incompletePointers,
+          };
+        } else if (structSpecifier.type === "NamedStructReference") {
+          // retrieve type from symbol table if it exists
+          if (isTagDefined(structSpecifier.tag)) {
+            const symbolEntry = getTagSymbolEntry(structSpecifier.tag);
+            if (symbolEntry.type !== "struct") {
+              error(
+                `'${structSpecifier.tag}' defined as wrong type of tag`
+              );
+            }
+            return { dataType: symbolEntry.dataType };
+          } else {
+            return {
+              dataType: createIncompleteDataType(
+                "struct",
+                structSpecifier.tag
+              ),
+            }; // incomplete type for now, to be resolved later when struct is defined
+          }
+        }
+      } else if (firstTypeSpecifier.type === "EnumTypeSpecifier") {
+        const enumSpecifier = firstTypeSpecifier.specifier;
+        if (enumSpecifier.type === "NamedDefinedEnum") {
+          // a new enum has been defined
+          const newTagSymbolEntry = {
+            type: "enum",
+            dataType: createEnumDataType(enumSpecifier.tag),
+          };
+          addTagToSymbolTable(enumSpecifier.tag, newTagSymbolEntry);
+          enumSpecifier.enumerators.forEach((enumerator) => {
+            addIdentifierToSymbolTable(enumerator.name, {
+              type: "variable",
+              dataType: createEnumDataType(enumSpecifier.tag),
+            });
+          });
+          return {
+            dataType: createEnumDataType(enumSpecifier.tag),
+            enumDeclarations: [
+              { type: "EnumDeclaration", enumerators: enumSpecifier.enumerators },
+            ],
+            tagDefinitions: [
+              { name: enumSpecifier.tag, tagSymbolEntry: newTagSymbolEntry },
+            ],
+          }; // all enums defined as having signed int type
+        } else if (enumSpecifier.type === "AnonymousEnum") {
+          return {
+            dataType: createEnumDataType(null),
+            enumDeclarations: [
+              { type: "EnumDeclaration", enumerators: enumSpecifier.enumerators },
+            ],
+          };
+        } else if (enumSpecifier.type === "NamedEnumReference") {
+          if (isTagDefined(enumSpecifier.tag)) {
+            const symbolEntry = getTagSymbolEntry(enumSpecifier.tag);
+            if (symbolEntry.type !== "enum") {
+              error(
+                `'${enumSpecifier.tag}' defined as wrong type of tag`
+              );
+            }
+            return { dataType: symbolEntry.dataType };
+          } else {
+            return { dataType: createIncompleteDataType("enum", enumSpecifier.tag) };
+          }
+        }
+      } else if (firstTypeSpecifier.type === "VoidTypeSpecifier") {
+        return { dataType: { type: "void" } };
+      } else if (firstTypeSpecifier.type === "UserNamedTypeSpecifier") {
+        if (!isIdentifierAType(firstTypeSpecifier.typeName)) {
+          error(`Type '${firstTypeSpecifier.typeName}'`);
+        }
+        return {
+          dataType: getIdentifierSymbolEntry(firstTypeSpecifier.typeName)
+            .dataType,
+        };
+      }
+    } else {
+      // only dealing with primary data types now
+      let lengthSpecifier;
+      let intSignSpecifier;
+      let primaryDataTypeSpecifier;
+      for (const specifier of typeSpecifiers) {
+        if (specifier.type === "PrimaryTypeSpecifier") {
+          if (primaryDataTypeSpecifier) {
+            // error if primary data type already given
+            error("Two or more data types in declaration specifiers");
+          }
+          primaryDataTypeSpecifier = specifier.specifier;
+        } else if (specifier.type === "PrimaryDataTypeLengthSpecifier") {
+          if (lengthSpecifier) {
+            error(
+              `Both '${lengthSpecifier}' and '${specifier.specifier}' in declaration specifiers`
+            );
+          }
+          lengthSpecifier = specifier.specifier;
+        } else if (specifier.type === "IntegerSignSpecifier") {
+          if (intSignSpecifier) {
+            error(
+              `Both '${intSignSpecifier}' and '${specifier.specifier}' in declaration specifiers`
+            );
+          }
+          intSignSpecifier = specifier.specifier;
+        }
+      }
+
+      if (!primaryDataTypeSpecifier) {
+        error("Type specifier required in declaration specifiers");
+      }
+
+      if (
+        primaryDataTypeSpecifier === "float" ||
+        primaryDataTypeSpecifier === "double"
+      ) {
+        if (intSignSpecifier) {
+          error(
+            `Both '${intSignSpecifier}' and '${primaryDataTypeSpecifier}' in declaration specifiers`
+          );
+        }
+        return { dataType: createPrimaryDataType(primaryDataTypeSpecifier) };
+      } else if (primaryDataTypeSpecifier === "char") {
+        const intSignPrefix = intSignSpecifier ? intSignSpecifier + " " : "";
+        if (lengthSpecifier) {
+          error(
+            `Both '${lengthSpecifier}' and '${primaryDataTypeSpecifier}' in declaration specifiers`
+          );
+        }
+        return { dataType: createPrimaryDataType(intSignPrefix + "char") };
+      } else if (primaryDataTypeSpecifier === "int") {
+        const intSignPrefix = intSignSpecifier ? intSignSpecifier + " " : "";
+        if (lengthSpecifier) {
+          return {
+            dataType: createPrimaryDataType(intSignPrefix + lengthSpecifier),
+          };
+        } else {
+          // just int
+          return { dataType: createPrimaryDataType(intSignPrefix + "int") };
+        }
+      }
+    }
+  }
+
+  // Unpacks a series of { declarations: Declaration, incompletePointers: PointerDataType } objects into
+  // one singular object { declarations: Declaration, incompletePointers: PointerDataType }
+  function unpackDeclarations(declarations) {
+    const unpackedResult = {
+      declarations: [],
+      incompletePointers: [],
+    };
+
+    declarations.forEach(({ declarations, incompletePointers }) => {
+      unpackedResult.declarations.push(...declarations);
+      unpackedResult.incompletePointers.push(...incompletePointers);
+    });
+    return unpackedResult;
+  }
+
+  // Similar to unpackDeclarations, with enumDeclarations and tagDefinitions also being unpacked
+  function unpackStructDeclarations(declarations) {
+    const unpackedResult = {
+      declarations: [],
+      incompletePointers: [],
+      enumDeclarations: [], // all the enum variables declarad within the struct
+      tagDefinitions: [], // all the structs/enums declared within the struct
+    };
+
+    declarations.forEach(
+      ({
+        declarations,
+        incompletePointers,
+        enumDeclarations,
+        tagDefinitions,
+      }) => {
+        unpackedResult.declarations.push(...declarations);
+        if (incompletePointers) {
+          unpackedResult.incompletePointers.push(...incompletePointers);
+        }
+        if (enumDeclarations) {
+          unpackedResult.enumDeclarations.push(...enumDeclarations);
+        }
+        if (tagDefinitions) {
+          unpackedResult.enumDeclarations.push(...tagDefinitions);
+        }
+      }
+    );
+    return unpackedResult;
+  }
+
+  /**
+   * Called after a new struct is declared.
+   * @returns { dataType: StructDataType, incompletePointers: PointerDataType[], enumDeclarations: { type: "EnumeratorDeclaration", enumerators: { name: string, value: number}[]}[], tagDefinitions }
+   * 
+   */
+  function createStructSpecifier(unpackedFieldDeclarations, tag) {
     const structDataType = {
       type: "struct",
       tag,
-      fields: []
-    }
+      fields: [],
+    };
 
     // add the declarations of each field to the struct
-    fieldDeclarations.forEach(declaration => {
-      structDataType.fields.push({ tag: declaration.name, dataType: declaration.dataType });
-    })
+    unpackedFieldDeclarations.declarations.forEach((declaration) => {
+      structDataType.fields.push({
+        tag: declaration.name,
+        dataType: declaration.dataType,
+      });
+    });
 
-    if (tag !== null) {
-      // if the tag of the struct was provided, it defines a new user defined type
-      addUserDefinedDataType(`struct ${tag}`, structDataType);
+    // resolve all incomplete pointers which can be resolved
+    const incompletePointers = [];
+    unpackedFieldDeclarations.incompletePointers.forEach((incompletePointer) => {
+      const pointeeTag = incompletePointer.pointeeType.tag;
+      const tagType = incompletePointer.pointeeType.subtype;
+      if (pointeeTag === tag) {
+        // this is a pointer that points to the struct it is within
+        if (tagType !== "struct") {
+          error(`'${pointeeTag}' declared as wrong kind of tag`);
+        }
+        delete incompletePointer.pointeeType;
+        incompletePointer.type = "struct self pointer";
+      } else {
+        if (isTagDefined(pointeeTag)) {
+          const symbolEntry = getTagSymbolEntry(pointeeTag);
+          if (symbolEntry.type !== tagType) {
+            error(`'${pointeeTag}' declared as wrong kind of tag`);
+          }
+          // incomplete pointer is now complete (pointing to complete type)
+          incompletePointer.pointeeType = symbolEntry.dataType;
+        } else {
+          // still incomplete
+          incompletePointers.push(incompletePointer.pointeeType);
+        }
+      }
+    });
+
+    // add this new struct (if named) thats been declared to the tagDefinitions & symboltable
+    const tagDefinitions = unpackedFieldDeclarations.tagDefinitions ?? [];
+    if (tag) {
+      const symbolEntry = { type: "struct", dataType: structDataType };
+      const tagDefinition = addTagToSymbolTable(tag, symbolEntry);
+      tagDefinitions.push(tagDefinition);
     }
-    return structDataType;
+
+    return {
+      dataType: structDataType,
+      incompletePointers,
+      enumDeclarations: unpackedFieldDeclarations.enumDeclarations,
+      tagDefinitions,
+    };
   }
 
-
   // Recursively traverses a tree of declarators to create a DataType object and extract the name of the symbol with this dataType,
-  // returning the object with type: { name: string, dataType: DataType }
+  // returning the object with type: { name: string, dataType: DataType, incompletePointer?: PointerDataType }
   // this function is able to evaluate declarators used in function declarations that do not have a symbol as well.
   // optionally takes a param @isFunctionParam that indicates that this declarator is used in a function parameter
-  function convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType, isFunctionParam) {
-    const result = {};
+  function convertDeclaratorIntoDataTypeAndSymbolName(
+    declarator,
+    typeSpecifierDataType,
+    isFunctionParam
+  ) {
+    const result = { functionDefinitionInfo: declarator.functionDefinitionInfo };
     let currNode = result;
     // helper function to add datatype to currNode
     function addDataType(dataTypeToAdd) {
@@ -356,7 +952,7 @@
         currNode.dataType = dataTypeToAdd;
       }
     }
-    
+
     function recursiveHelper(declarator) {
       if (declarator.type === "SymbolDeclarator") {
         // all non-abstract declarations will end with a symbol (based on parsing rules)
@@ -370,19 +966,20 @@
         // all other declarators require more traversal
         recursiveHelper(declarator.directDeclarator);
       }
-      
+
       if (declarator.type === "PointerDeclarator") {
         const pointerType = {
-          type: "pointer"
-        }
-        addDataType(pointerType)
+          type: "pointer",
+          isConst: declarator.isConst,
+        };
+        addDataType(pointerType);
         currNode = pointerType;
       } else if (declarator.type === "FunctionDeclarator") {
         const functionType = {
           type: "function",
           parameters: declarator.parameters,
-          parameterNames: declarator.parameterNames
-        }
+          parameterNames: declarator.parameterNames,
+        };
         // some error checks
         if (currNode.type === "FunctionDeclarator") {
           error("Cannot declare a function returning a function", location());
@@ -395,9 +992,9 @@
       } else if (declarator.type === "ArrayDeclarator") {
         const arrayType = {
           type: "array",
-          numElements: declarator.numElements
-        }
-        
+          numElements: declarator.numElements,
+        };
+
         if (currNode.type === "FunctionDeclarator") {
           error("Cannot declare a function returning an array", location());
         }
@@ -414,21 +1011,21 @@
     // Only pointers can point to incomplete types
     if (typeSpecifierDataType.type === "incomplete") {
       if (currNode.type !== "pointer") {
-        error(`Unknown type name '${typeSpecifierDataType.typeName}'`);
+        error(`Unknown type name '${typeSpecifierDataType.tag}'`);
       } else {
         // keep track that this pointer datatype as incomplete
-        incompletePointers.push(currNode);
+        result.incompletePointer = currNode;
       }
     }
 
     addDataType(typeSpecifierDataType);
-    
+
     if (isFunctionParam && result.dataType.type === "array") {
       // function parameters that are arrays are implictly converted into pointers to the underlying array element type
       result.dataType = {
         type: "pointer",
-        pointeeType: result.dataType.elementDataType
-      }
+        pointeeType: result.dataType.elementDataType,
+      };
     }
 
     return result;
@@ -441,122 +1038,361 @@
   function generateInitializerListFromStringLiteral(chars) {
     return {
       type: "InitializerList",
-      values: chars.map(char => ({
+      values: chars.map((char) => ({
         type: "InitializerSingle",
         value: {
           type: "IntegerConstant",
           value: BigInt(char),
-          suffix: null
+          suffix: null,
         },
-      }))
+      })),
+    };
+  }
+
+  /**
+   * Removes all the identifiers and tags(structs/enums) that were introduced to the symboltable inside parameter declarations of a function.
+   */
+  function removeFunctionParamIdentifiersAndTags(
+    tagDefinitions,
+    enumDeclarations,
+    parameterNames
+  ) {
+    // remove all struct/enum tags
+    for (const tagDefinition of tagDefinitions) {
+      removeTagSymbolEntry(tagDefinition.name);
+    }
+    // remove all enumerator identifiers defined in params
+    for (const enumDeclaration of enumDeclarations) {
+      enumDeclaration.enumerators.forEach((e) => {
+        removeIdentifierSymbolEntry(e.name);
+      });
+    }
+    // remove all parameter identifiers
+    for (const paramName of parameterNames) {
+      if (paramName !== null) {
+        removeIdentifierSymbolEntry(paramName);
+      }
     }
   }
 
+  /**
+   * Processes declarations.
+   * Returns the declarations, as well as the dataType objects that are pointers to incomplete types
+   * @returns { type: "Declaration", declarations: Declaration[], incompletePointers: PointerDataType[], tagDefinitions, identifierDefinitions}
+   * identifierDefinitions is { name: string, symbolEntry: SymbolEntry } that represents each declared identifier
+   * tagDefinitions is { name: string, symbolEntry: SymbolEntry } that represents each declared tag
+   */
+  function processDeclaration(declarationSpecifiers, declarators) {
+    const declarations = [];
+    const identifierDefinitions = [];
+    const {
+      enumDeclarations,
+      tagDefinitions,
+      hasTypeDefSpecifier,
+      incompletePointers: incompletePointersFromSpecifiers,
+    } = unpackDeclarationSpecifiers(declarationSpecifiers);
+
+    const incompletePointers = incompletePointersFromSpecifiers ?? [];
+    // add all enum fields as enum declarations to the array of all declarations
+    if (typeof enumDeclarations !== "undefined") {
+      enumDeclarations.forEach((enumDeclaration) => {
+        declarations.push(enumDeclaration);
+        // enumerator identifiers were already added to the symboltable, just track their identifier definitions
+        for (const enumerator of enumDeclaration.enumerators) {
+          identifierDefinitions.push({
+            name: enumerator.name,
+            symbolEntry: getIdentifierSymbolEntry(enumerator.name),
+          });
+        }
+      });
+    }
+
+    declarators.forEach((declarator) => {
+      const { declaration, incompletePointer } = evaluateDeclarator(
+        declarationSpecifiers,
+        declarator
+      );
+      // actually a typedef declaration
+      if (hasTypeDefSpecifier) {
+        if (declaration.initializer) {
+          error("Typedef is initialized");
+        }
+        identifierDefinitions.push(
+          addIdentifierToSymbolTable(declaration.name, {
+            type: "type",
+            dataType: declaration.dataType,
+          })
+        );
+      } else {
+        identifierDefinitions.push(
+          addIdentifierToSymbolTable(declaration.name, {
+            type: "variable",
+            dataType: declaration.dataType,
+          })
+        );
+        declarations.push(declaration);
+        // remove all tags and identifiers that were introduced in the parameters if this were a function declaration
+        if (declarator.functionDefinitionInfo) {
+          removeFunctionParamIdentifiersAndTags(
+            declarator.functionDefinitionInfo.tagDefinitions,
+            declarator.functionDefinitionInfo.enumDeclarations,
+            declarator.functionDefinitionInfo.parameterNames
+          );
+          // delete this functionDefinition field from declarator - it is not needed
+          delete declarator.functionDefinitionInfo;
+        }
+      }
+
+      if (incompletePointer) {
+        incompletePointers.push(incompletePointer);
+      }
+    });
+
+    return {
+      type: "Declaration",
+      declarations,
+      incompletePointers,
+      identifierDefinitions,
+      tagDefinitions,
+    };
+  }
+
+  // similar to processDeclarations, with added enumeratorDeclaration as a result field (no longer incorporated into declarations)
+  function processStructDeclaration(declarationSpecifiers, declarators) {
+    const declarations = [];
+    const incompletePointers = [];
+    const {
+      enumDeclarations,
+      tagDefinitions,
+      storageClass,
+      hasTypeDefSpecifier,
+    } = unpackDeclarationSpecifiers(declarationSpecifiers);
+    if (storageClass || hasTypeDefSpecifier) {
+      error("Struct field cannot have storage class specifier");
+    }
+
+    declarators.forEach((declarator) => {
+      const { declaration, incompletePointer } = evaluateDeclarator(
+        declarationSpecifiers,
+        declarator
+      );
+      declarations.push(declaration);
+      if (incompletePointer) {
+        incompletePointers.push(incompletePointer);
+      }
+    });
+
+    return { declarations, incompletePointers, enumDeclarations, tagDefinitions };
+  }
+
   // evaluates the return of init_declarator or declarator with the given array of declaration specifiers, to return a declaration
-  // TODO: edit this function when more specifiers are supported
+  // return type: { declaration: Declaration, incompletePointer?: PointerDataType }
   function evaluateDeclarator(declarationSpecifiers, declarator) {
-    const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
-    const dataTypeAndSymbolName = convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType);
-    
+    const { dataType: typeSpecifierDataType, storageClass } =
+      unpackDeclarationSpecifiers(declarationSpecifiers);
+    const { name, dataType, incompletePointer, functionDefinitionInfo } =
+      convertDeclaratorIntoDataTypeAndSymbolName(
+        declarator,
+        typeSpecifierDataType
+      );
+
     const declarationNode = {
       type: "Declaration",
-      name: dataTypeAndSymbolName.name,
-      dataType: dataTypeAndSymbolName.dataType,
-      initializer: declarator.initializer // may be undefined
+      name: name,
+      storageClass: storageClass ?? "auto", // storage class is auto by default
+      dataType: dataType,
+      initializer: declarator.initializer, // may be undefined
     };
     if (declarationNode.dataType.type === "array") {
       if (typeof declarationNode.initializer !== "undefined") {
         if (declarationNode.initializer.type !== "InitializerList") {
           if (declarationNode.initializer.value.type === "StringLiteral") {
-            declarationNode.initializer = generateInitializerListFromStringLiteral(declarationNode.initializer.value.chars)
+            declarationNode.initializer =
+              generateInitializerListFromStringLiteral(
+                declarationNode.initializer.value.chars
+              );
           } else {
             error("Invalid initializer for array", location());
           }
         }
         // Array size deduction based on initializer list size
         if (typeof declarationNode.dataType.numElements === "undefined") {
-          declarationNode.dataType.numElements = generateNode("IntegerConstant", { value: BigInt(declarationNode.initializer.values.length) });
+          declarationNode.dataType.numElements = generateNode("IntegerConstant", {
+            value: BigInt(declarationNode.initializer.values.length),
+          });
         }
       } else if (typeof declarationNode.dataType.numElements === "undefined") {
         // no intializer provided, if numElements not defined, then it is set to 1 - TODO: provide warning to user
-        declarationNode.dataType.numElements = generateNode("IntegerConstant", { value: 1n } );
+        declarationNode.dataType.numElements = generateNode("IntegerConstant", {
+          value: 1n,
+        });
       }
-    }    
+    }
 
-    return declarationNode;
+    return {
+      declaration: declarationNode,
+      incompletePointer,
+      functionDefinitionInfo,
+    };
   }
 
-  // Returns function parameter declaration as { name: string | null, dataType: DataType }
-  // @param declarator can be an abstract declarator (no symbol name).
-  function convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, declarator) {
-    const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
+  // Process function parameter.
+  // @returns { type: "ParameterDeclaration", name: string | null, dataType: DataType, enumDeclarations, tagDefinitions, incompletePointers }
+  function processParameterDeclaration(declarationSpecifiers, declarator) {
+    const {
+      dataType: typeSpecifierDataType,
+      enumDeclarations,
+      tagDefinitions,
+      incompletePointers,
+      storageClass,
+      hasTypeDefSpecifier,
+    } = unpackDeclarationSpecifiers(declarationSpecifiers);
+    if (storageClass || hasTypeDefSpecifier) {
+      error(`Cannot specify storage class for function parameter`);
+    }
     if (declarator === null) {
       // abstractDeclarator was null
-      return { dataType: typeSpecifierDataType, name: null};
+      return generateNode("ParameterDeclaration", {
+        name: null,
+        dataType: typeSpecifierDataType,
+        enumDeclarations,
+        tagDefinitions,
+        incompletePointers,
+      });
     }
-    return convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType, true);
+    const { name, dataType, incompletePointer } =
+      convertDeclaratorIntoDataTypeAndSymbolName(
+        declarator,
+        typeSpecifierDataType,
+        true
+      );
+
+    if (incompletePointer) {
+      incompletePointers.push(incompletePointer);
+    }
+
+    // add this parameter to symbol table
+    addIdentifierToSymbolTable(name, {
+      type: "variable",
+      dataType: dataType,
+    });
+
+    if (enumDeclarations) {
+      for (const enumDeclaration of enumDeclarations) {
+        // add any declared enum variables
+        enumDeclaration.enumerator.forEach((enumerator) => {
+          addIdentifierToSymbolTable(enumerator.name, {
+            type: "variable",
+            dataType: createPrimaryDataType("signed int"),
+          });
+        });
+      }
+    }
+
+    return generateNode("ParameterDeclaration", {
+      name,
+      dataType,
+      enumDeclarations,
+      tagDefinitions,
+      incompletePointers,
+    });
   }
 
   /**
    * Used to generate the DataType for type_name rule.
    * Functionally very similar to convertParameterDeclarationToDataTypeAndSymbolName.
+   * TODO:
    */
-  function generateDataTypeFromSpecifierAndAbstractDeclarators(declarationSpecifiers, declarator) {
-    const typeSpecifierDataType = getTypeSpecifierDataType(declarationSpecifiers);
+  function generateDataTypeFromSpecifierAndAbstractDeclarators(
+    declarationSpecifiers,
+    declarator
+  ) {
+    const { typeSpecifierDataType } = unpackDeclarationSpecifiers(
+      declarationSpecifiers
+    );
     if (declarator === null) {
       // abstractDeclarator was null
       return typeSpecifierDataType;
     }
-    return convertDeclaratorIntoDataTypeAndSymbolName(declarator, typeSpecifierDataType).dataType;
+    return convertDeclaratorIntoDataTypeAndSymbolName(
+      declarator,
+      typeSpecifierDataType
+    ).dataType;
   }
 
-  // splits an array of parameter declartions which are objects: { dataType: DataType, name: string | null } into 2 separate arrays by field
-  function splitParameterDataTypesAndNames(paramDataTypeAndNames) {
+  // extracts out all the datatype, names, enumDeclarations, tagDefinitions and incompletePointers from a set of parameterDeclarations
+  function unpackParameters(parameterDeclarations) {
     const dataTypes = [];
     const names = [];
-
-    paramDataTypeAndNames.forEach(paramDataTypeAndName => {
-      dataTypes.push(paramDataTypeAndName.dataType);
-      names.push(paramDataTypeAndName.name);
+    const enumDeclarations = [];
+    const tagDefinitions = [];
+    const incompletePointers = [];
+    const setOfNames = new Set();
+    parameterDeclarations.forEach((paramDeclaration) => {
+      if (setOfNames.has(paramDeclaration.name)) {
+        error(`Redefinition of parameter '${paramDeclaration.name}'`)
+      }
+      dataTypes.push(paramDeclaration.dataType);
+      names.push(paramDeclaration.name);
+      setOfNames.add(paramDeclaration.name);
+      if (paramDeclaration.enumDeclarations) {
+        enumDeclarations.push(...paramDeclaration.enumDeclarations);
+      }
+      if (paramDeclaration.tagDefinitions) {
+        tagDefinitions.push(...paramDeclaration.tagDefinitions);
+      }
+      if (paramDeclaration.incompletePointers) {
+        incompletePointers.push(...paramDeclaration.incompletePointers);
+      }
     });
 
-    return { dataTypes, names };
-  }
-
-  function generateFunctionDefinitionNode(declarationSpecifiers, declarator, body) {
-    const functionDeclaration = evaluateDeclarator(declarationSpecifiers, declarator); // evaluate the declarator section of function
-    if (functionDeclaration.dataType.type !== "function") {
-      error("Compound statement can only follow a function declarator", location()); //TODO: maybe give a bit better error message
-    }
     return {
-      type: "FunctionDefinition",
-      name: functionDeclaration.name,
-      dataType: functionDeclaration.dataType,
-      body,
-      parameterNames: functionDeclaration.dataType.parameterNames
-    }
+      names,
+      dataTypes,
+      enumDeclarations,
+      tagDefinitions,
+      incompletePointers,
+    };
   }
 
-  // Unpacks an array containing declarations which may consist of multiple declaratons and other nodes 
-  // also removes nulls from teh array
-  function unpack(blockItems) {
-    const unpackedItems = [];
-    blockItems.forEach(item => {
-      if (item === null) {
-        return;
-      } else if (Array.isArray(item)) {
-        unpackedItems.push(...item);
-      } else {
-        unpackedItems.push(item);
-      }
-    })
-    return unpackedItems;
+  function generateFunctionDefinitionNode(
+    declarationSpecifiers,
+    declarator,
+    body
+  ) {
+    const { declaration, functionDefinitionInfo } = evaluateDeclarator(
+      declarationSpecifiers,
+      declarator
+    );
+    const dataType = declaration.dataType;
+    const name = declaration.name;
+    if (!functionDefinitionInfo || dataType.type !== "function") {
+      error("Compound statement can only follow a function declarator");
+    }
+
+    const incompletePointers = body.incompletePointers;
+    delete body.incompletePointers;
+
+    // remove all tagDefinitions and identifiers declared in params from symboltable
+    removeFunctionParamIdentifiersAndTags(
+      functionDefinitionInfo.tagDefinitions,
+      functionDefinitionInfo.enumDeclarations,
+      functionDefinitionInfo.parameterNames
+    );
+
+    return generateNode("FunctionDefinition", {
+      type: "FunctionDefinition",
+      name: name,
+      dataType: dataType,
+      body,
+      parameterNames: functionDefinitionInfo.parameterNames,
+      incompletePointers
+    });
   }
 }
-
 // ======== Beginning of Grammar rules =========
 
-program = children:translation_unit  { return createRootNode(children); }
+program = translation_unit
 
 // this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
 // it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.
@@ -567,10 +1403,11 @@ _ "token separator"
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = items:(function_definition / declaration)|.., _| { return unpack(items); } //TODO: come back here for ;
+  = items:(function_definition / declaration)|.., _| { return createRootNode(items); } //TODO: come back here for ;
    
 function_definition
-	= declarationSpecifiers:declaration_specifiers _ declarator:declarator _ body:compound_statement { return generateFunctionDefinitionNode(declarationSpecifiers, declarator, body); }
+	= declarationSpecifier:declaration_specifier _ declarator:declarator _ body:compound_statement { return generateFunctionDefinitionNode([declarationSpecifier], declarator, body); } 
+  / declarationSpecifiers:declaration_specifiers _ declarator:declarator _ body:compound_statement { return generateFunctionDefinitionNode(declarationSpecifiers, declarator, body); }
 
 
 // ======= Statements ==========
@@ -582,15 +1419,14 @@ statement
   / expression_statement
   / selection_statement
 
-
 // ======== Compound Statement =========
 
 compound_statement "block"
-	= "{" _ statements:block_item_list _ "}" { return generateNode("Block", { statements }); }
-  / "{" _ "}" { return generateNode("Block", { statements: [] }); }
+	= "{" _ statements:block_item_list _ "}" { return processBlock(statements); }
+  / "{" _ "}" { return processBlock([]); }
     
 block_item_list
-  = items:block_item|1.., _| { return unpack(items); } // unpack any arrays, as declarations can declare multiple symbols in one declarations which equates to multiple declaration nodes
+  = items:block_item|1.., _|
 
 block_item
   = declaration
@@ -631,26 +1467,51 @@ selection_statement
 
 // declaration returns an array of declaration nodes
 declaration
-  = declarationSpecifiers:declaration_specifiers _ initDeclarators:init_declarator_list _ ";" { return initDeclarators.map(initDeclarator => evaluateDeclarator(declarationSpecifiers, initDeclarator) ); }
-  / declarationSpecifiers:declaration_specifiers _ ";" { return processDeclarationWithoutDeclarator(declarationSpecifiers); } // TODO: this rule supports declarations of structs and typedef where nothing is being declared, merely a type
+  = declarationSpecifier:declaration_specifier _ initDeclarators:init_declarator_list _ ";" { return processDeclaration([declarationSpecifier], initDeclarators); } // this rules must be first, as preferentially should try to match an declarator if possible (to deal with typedef ambiguity)
+  / declarationSpecifiers:declaration_specifiers _ initDeclarators:init_declarator_list _ ";" { return processDeclaration(declarationSpecifiers, initDeclarators); }
+  / declarationSpecifiers:declaration_specifiers _ ";" { return processDeclarationWithoutDeclarator(declarationSpecifiers); } // this rule supports anonymous structs and enums
 
 declaration_specifiers
   = declaration_specifier|1.., _|
 
 // TODO: add more specifiers
 declaration_specifier
-  = dataType:type_specifier { return { type: "TypeSpecifier", dataType }; }
+  = type_qualifier
+  / storage_class_specifier
+  / specifier:type_specifier { return generateNode("TypeSpecifier", { specifier } ); }
+  / typedef_specifier
 
-// type specifier should return a DataType
-type_specifier
-	=  primaryDataType:primary_type_specifier { return primaryDataType === "void" ? { type: "void" } : { type: "primary", primaryDataType }; }
-  /  struct_specifier
+type_qualifier
+  = "const" { return generateNode("TypeQualifier", { qualifier: "const"}); }
 
-primary_type_specifier
-  = float_type // check for float type first, due to "long double" needing to be checked before "long" by itself
-  / signed_integer
-  / unsigned_integer
-  / "void"
+storage_class_specifier
+  = specifier:("auto" / "static") { return generateNode("StorageClassSpecifier", { specifier }); }
+
+typedef_specifier
+  = "typedef" { return { type: "TypeDefSpecifier" }; }
+
+type_specifier 
+  = specifier:primary_data_type_specifier { return generateNode("PrimaryTypeSpecifier", { specifier }); }
+  / specifier:struct_specifier { return generateNode("StructTypeSpecifier", { specifier }); } 
+  / specifier:primary_data_type_length_specifier { return generateNode("PrimaryDataTypeLengthSpecifier", { specifier }); }
+  / specifier:integer_sign_type_specifier { return generateNode("IntegerSignSpecifier", { specifier }); }
+  / "void" { return generateNode("VoidTypeSpecifier"); }
+  / specifier:enum_specifier { return generateNode("EnumTypeSpecifier", { specifier }); }
+  / typeName:typedef_name { return generateNode("UserNamedTypeSpecifier", { typeName }); }
+
+primary_data_type_specifier
+  = "char" / "int" / "float" / "double"
+
+primary_data_type_length_specifier
+  = "long"
+  / "short"
+
+integer_sign_type_specifier
+  = "signed"
+  / "unsigned"
+
+typedef_name
+  = name:identifier &{ return isIdentifierAType(name); } { return name; }
 
 init_declarator_list 
   = init_declarator|1.., _ "," _|
@@ -665,7 +1526,10 @@ declarator
 
 // TODO: add type qualifiers to pointer
 pointer 
-  = "*"|1.., _|
+  = pointer_with_qualifier|1.., _|
+
+pointer_with_qualifier
+  = "*" qualifier:(_ @type_qualifier|1.., _|)? { return { type: "pointer", isConst: qualifier !== null}; } // since only have const as our single type qualifier this rule is fine
 
 initializer
   = list_initializer
@@ -684,8 +1548,8 @@ direct_declarator_helper // helper rule to remove left recursion in direct_decla
 
 // This rule, along with array_declarator_suffix, are helper rules to avoid left recursion, to use Peggy.js || expressions instead
 function_declarator_suffix
-  = "(" _ parameterDataTypesAndNames:parameter_list _ ")" { return { type: "FunctionDeclarator", parameters: parameterDataTypesAndNames.dataTypes, parameterNames: parameterDataTypesAndNames.names }; }
-  / "(" _ ")" { return { type: "FunctionDeclarator", parameters: [], parameterNames: [] }; } 
+  = "(" _ parameters:parameter_list _ ")" { return createFunctionDeclarator(parameters); }
+  / "(" _ ")" { return createFunctionDeclarator(); } 
 
 array_declarator_suffix
   = "[" _ numElements:(@assignment_expression _)? "]" { return { type: "ArrayDeclarator", numElements: numElements !== null ? numElements : undefined }; }
@@ -693,21 +1557,23 @@ array_declarator_suffix
 // ========= Struct related rules =========
 
 struct_specifier
-  = "struct" _ tag:(@identifier _)? "{" _ fieldDeclarations:struct_declaration_list _ "}" { return generateStructDataType(fieldDeclarations, tag); }
-  / "struct" _ tag:(@identifier _)? "{" _ "}" { return generateStructDataType([], tag); } 
-  / "struct" _ structName:identifier { return getUserDefinedDataType(`struct ${structName}`); } // this struct is defined elsewhere, just retrieve it
+  = "struct" _ tag:(@identifier _)? "{" _ fieldDeclarations:struct_declaration_list _ "}" { return generateNode(tag === null ? "AnonymousStruct" : "NamedStructDefinition", createStructSpecifier(fieldDeclarations, tag)); }
+  / "struct" _ tag:(@identifier _)? "{" _ "}" { return generateNode(tag === null ? "AnonymousStruct" : "NamedStructDefinition", createStructSpecifier([], tag)); } 
+  / "struct" _ tag:identifier { return generateNode("NamedStructReference", { tag } ); } // this struct is defined elsewhere
 
 struct_declaration_list 
-  = declarations:struct_declaration|1.., _| { return unpack(declarations); } ; // unpack declarations
+  = declarations:struct_declaration|1.., _| { return unpackStructDeclarations(declarations); } ; // unpack declarations
 
 struct_declaration 
-  = specifiers:specifier_qualifier_list _ fieldDeclarators:struct_declarator_list _ ";" { return fieldDeclarators.map(declarator => evaluateDeclarator(specifiers, declarator)); }
+  = specifier:specifier_qualifier_list_item _ declarators:struct_declarator_list _ ";" { return processStructDeclaration([specifier], declarators); }
+  / specifiers:specifier_qualifier_list _ declarators:struct_declarator_list _ ";" { return processStructDeclaration(specifiers, declarators); }
 
 specifier_qualifier_list 
   = specifier_qualifier_list_item|1.., _| // TODO: add type qualifiers in future 
 
 specifier_qualifier_list_item
-  = dataType:type_specifier { return { type: "TypeSpecifier", dataType }; }
+  = specifier:type_specifier { return { type: "TypeSpecifier", specifier }; }
+  / type_qualifier
 
 struct_declarator_list
   = struct_declarator|1.., _ "," _|
@@ -715,17 +1581,30 @@ struct_declarator_list
 struct_declarator
   = declarator 
 
+enum_specifier
+  = "enum" _ tag:identifier _ "{" _  enumerators:enumerator_list _ ("," _ )? "}" { return generateNode("NamedDefinedEnum", { tag, enumerators } ); }
+  / "enum" _ "{" _  enumerators:enumerator_list _ ("," _ )? "}" { return generateNode("AnonymousEnum", { enumerators }); }
+  / "enum" _ tag:identifier { return generateNode("NamedEnumReference", { tag }); } 
+
+enumerator_list
+  = enumerator|1.., _ "," _|
+
+enumerator 
+  = name:enumeration_constant _ "=" _ value:constant_expression { return { name, value }; }
+  / name:enumeration_constant { return { name }; }
+
 // =======================================
 
 // ============ Function parameter declarations ============
 
 parameter_list
-  = parameters:parameter_declaration|1.., _ "," _| { return splitParameterDataTypesAndNames(parameters); }
+  = parameters:parameter_declaration|1.., _ "," _| { return unpackParameters(parameters); }
 
 parameter_declaration
-  = declarationSpecifiers:declaration_specifiers _ declarator:declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, declarator); }
-  / declarationSpecifiers:declaration_specifiers _ abstractDeclarator:abstract_declarator { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, abstractDeclarator); } 
-  / declarationSpecifiers:declaration_specifiers { return convertParameterDeclarationToDataTypeAndSymbolName(declarationSpecifiers, null); }// to support function declarations without explicit function paramter names 
+  = declarationSpecifier:declaration_specifier _ declarator:declarator { return processParameterDeclaration([declarationSpecifier], declarator); }
+  / declarationSpecifiers:declaration_specifiers _ declarator:declarator { return processParameterDeclaration(declarationSpecifiers, declarator); }
+  / declarationSpecifiers:declaration_specifiers _ abstractDeclarator:abstract_declarator { return processParameterDeclaration(declarationSpecifiers, abstractDeclarator); } 
+  / declarationSpecifiers:declaration_specifiers { return processParameterDeclaration(declarationSpecifiers, null); }// to support function declarations without explicit function paramter names 
 
 // an abstract declarator is specifically for function declaration parameters that do not have names given to them
 abstract_declarator
@@ -745,6 +1624,8 @@ direct_abstract_declarator_helper
 
 
 // ========== Expressions ========
+constant_expression
+  = logical_or_expression // TODO: change to conditional expression soon
 
 expression
   = expressions:assignment_expression|2.., _ "," _| { return generateNode("CommaSeparatedExpressions", { expressions }); }
@@ -831,35 +1712,6 @@ primary_expression
 
 type_name
   = specifiers:specifier_qualifier_list declarator:(_ @abstract_declarator)? { return generateDataTypeFromSpecifierAndAbstractDeclarators(specifiers, declarator); } 
-
-
-// =========== Types ================
-
-signed_integer 
-  = ("char" / "signed char") { return "signed char"; }
-  / ("short" / "signed short") { return "signed short"; }
-  / ("int" / "signed int") { return "signed int"; } 
-  / (long_type / "signed " long_type) { return "signed long"; }
-
-unsigned_integer
-  = $"unsigned char"
-  / $"unsigned short"
-  / $"unsigned int"
-  / $"unsigned long"
-
-// long can be matched by multiple type keywords - all 8 bytes long in this compiler
-long_type
-  = "long long int"
-  / "long long" 
-  / "long int" 
-  / "long"
-
-float_type
-  = "float"
-  / ("double" / "long double") { return "double"; }
-
-
-
 
 // ======================================================
 // ================= LEXICAL GRAMMAR ====================

@@ -11,40 +11,62 @@ export type DataType =
   | ScalarDataType
   | ArrayDataType
   | StructDataType
-  | FunctionDataType;
+  | FunctionDataType
 
 export type ScalarDataType = PrimaryDataType | PointerDataType;
 
-export interface PrimaryDataType {
+export interface DataTypeBase {
+  isConst?: boolean // indicates if the given datatype has const qualifier
+}
+
+export interface PrimaryDataType extends DataTypeBase {
   type: "primary";
   primaryDataType: PrimaryCDataType;
 }
 
-export interface ArrayDataType {
+export interface ArrayDataType extends DataTypeBase {
   type: "array";
   elementDataType: DataType;
   numElements: Expression;
 }
 
-export interface PointerDataType {
+export interface PointerDataType extends DataTypeBase {
   type: "pointer";
   // type of the object being pointed to
   pointeeType: DataType | null; // when this is null it represents a void pointer
 }
 
-export interface FunctionDataType {
+export interface FunctionDataType extends DataTypeBase {
   type: "function";
   returnType: DataType | null;
   parameters: DataType[];
 }
 
-export interface StructDataType {
+export interface StructDataType extends DataTypeBase {
   type: "struct";
   tag: string | null; // tag of this struct. May be null for anonymous structs. Essential for determining struct compatibility.
   fields: StructField[];
 }
 
+/**
+ * Enum types are defined in this implementation as "signed int". 
+ * This separate dataType exists merely for data type checking on the processor.
+ */
+export interface EnumDataType extends DataTypeBase {
+  type: "enum";
+  tag: string | null;
+}
+
 interface StructField {
   tag: string;
-  dataType: DataType;
+  dataType: DataType | StructSelfPointer;
+}
+
+/**
+ * A SelfPointer refers to a pointer that is a present as a struct field that points to the struct it is within.
+ * This separation from the generic PointerDataType prevents the creation of a cyclic AST structure where the pointeeType
+ * of the PointerDataType is equal to the StructDataType which contains the pointer as one of its fields.
+ */
+interface StructSelfPointer {
+  type: "struct self pointer"
 }
