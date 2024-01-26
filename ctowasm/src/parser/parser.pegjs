@@ -1336,7 +1336,7 @@
     declarationSpecifiers,
     declarator
   ) {
-    const { typeSpecifierDataType } = unpackDeclarationSpecifiers(
+    const { dataType: typeSpecifierDataType } = unpackDeclarationSpecifiers(
       declarationSpecifiers
     );
     if (declarator === null) {
