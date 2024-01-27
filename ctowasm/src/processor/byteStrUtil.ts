@@ -13,21 +13,24 @@ import {
   IntegerDataType,
   ScalarCDataType,
 } from "~src/common/types";
-import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
 
 export function getZeroInializerByteStrForDataType(dataType: DataType) {
   let byteStr = "";
-  if (dataType.type === "primary" || dataType.type === "pointer" || dataType.type === "enum") {
+  if (
+    dataType.type === "primary" ||
+    dataType.type === "pointer" ||
+    dataType.type === "enum"
+  ) {
     const numOfBytes = getDataTypeSize(dataType);
     for (let i = 0; i < numOfBytes; ++i) {
       byteStr += "\\00";
     }
   } else if (dataType.type === "array") {
     const numElements = evaluateCompileTimeExpression(
-      dataType.numElements
+      dataType.numElements,
     ).value;
     const elementZeroStr = getZeroInializerByteStrForDataType(
-      dataType.elementDataType
+      dataType.elementDataType,
     );
     for (let i = 0; i < numElements; i++) {
       byteStr += elementZeroStr;
@@ -35,8 +38,9 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
   } else if (dataType.type === "struct") {
     dataType.fields.forEach((field) => {
       byteStr +=
-        field.dataType.type === "struct self pointer" 
-          ? getZeroInializerByteStrForDataType({ // just initialize the zero pointer like any other pointer
+        field.dataType.type === "struct self pointer"
+          ? getZeroInializerByteStrForDataType({
+              // just initialize the zero pointer like any other pointer
               type: "pointer",
               pointeeType: null,
             })
@@ -55,7 +59,7 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
  */
 export function convertConstantToByteStr(
   constant: ConstantP,
-  targetDataType: ScalarCDataType
+  targetDataType: ScalarCDataType,
 ) {
   // shouldnt be assigning ints to pointer. THis is a constraint violation TODO: consider an error here to user based on a flag set on compiler
   if (targetDataType === "pointer") {
@@ -68,12 +72,12 @@ export function convertConstantToByteStr(
       // need to truncate the value
       return convertIntegerToByteString(
         BigInt(Math.trunc(constant.value)),
-        primaryDataTypeSizes[targetDataType]
+        primaryDataTypeSizes[targetDataType],
       );
     } else {
       return convertIntegerToByteString(
         constant.value,
-        primaryDataTypeSizes[targetDataType]
+        primaryDataTypeSizes[targetDataType],
       );
     }
   } else {
@@ -82,7 +86,7 @@ export function convertConstantToByteStr(
       // Number will automatically handle converting to the next representable value TODO: check if this is next highest or lowest
       return convertFloatNumberToByteString(
         Number(constant.value),
-        targetDataType
+        targetDataType,
       );
     } else {
       // need to get a float byte string
@@ -121,7 +125,7 @@ function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
 
 function convertFloatNumberToByteString(
   floatValue: number,
-  targetDataType: FloatDataType
+  targetDataType: FloatDataType,
 ) {
   const buffer = new ArrayBuffer(primaryDataTypeSizes[targetDataType]);
   let integerValue;
@@ -141,6 +145,6 @@ function convertFloatNumberToByteString(
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    primaryDataTypeSizes[targetDataType]
+    primaryDataTypeSizes[targetDataType],
   );
 }

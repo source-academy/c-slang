@@ -17,7 +17,7 @@ export type DataType =
 export type ScalarDataType = PrimaryDataType | PointerDataType;
 
 export interface DataTypeBase {
-  isConst?: boolean // indicates if the given datatype has const qualifier
+  isConst?: boolean; // indicates if the given datatype has const qualifier
 }
 
 export interface PrimaryDataType extends DataTypeBase {
@@ -50,7 +50,7 @@ export interface StructDataType extends DataTypeBase {
 }
 
 /**
- * Enum types are defined in this implementation as "signed int". 
+ * Enum types are defined in this implementation as "signed int".
  * This separate dataType exists merely for data type checking on the processor.
  */
 export interface EnumDataType extends DataTypeBase {
@@ -69,5 +69,5 @@ interface StructField {
  * of the PointerDataType is equal to the StructDataType which contains the pointer as one of its fields.
  */
 export interface StructSelfPointer {
-  type: "struct self pointer",
+  type: "struct self pointer";
 }

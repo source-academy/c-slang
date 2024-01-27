@@ -7,7 +7,6 @@ import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processFunctionDefinition from "~src/processor/processFunctionDefinition";
 import {
-  processDataSegmentVariableDeclaration,
   processGlobalScopeDeclaration,
   unpackDataSegmentInitializerAccordingToDataType,
 } from "~src/processor/processDeclaration";
@@ -21,11 +20,11 @@ import { SymbolTable } from "~src/processor/symbolTable";
  */
 export default function process(
   ast: CAstRoot,
-  externalFunctions?: Record<string, FunctionDataType>
+  externalFunctions?: Record<string, FunctionDataType>,
 ) {
   const symbolTable = new SymbolTable();
   const processedExternalFunctions = symbolTable.setExternalFunctions(
-    externalFunctions ?? {}
+    externalFunctions ?? {},
   );
   const processedAst: CAstRootP = {
     type: "Root",
@@ -52,12 +51,12 @@ export default function process(
     // special handling for function definitions
     if (child.type === "FunctionDefinition") {
       processedAst.functions.push(
-        processFunctionDefinition(child, symbolTable)
+        processFunctionDefinition(child, symbolTable),
       );
     } else {
       processedAst.dataSegmentByteStr += processGlobalScopeDeclaration(
         child,
-        symbolTable
+        symbolTable,
       ); // add the byte str used to initalize this variable to teh data segment byte string
     }
   });
@@ -71,7 +70,7 @@ export default function process(
         declaration.dataType,
         typeof declaration.initializer === "undefined"
           ? null
-          : declaration.initializer
+          : declaration.initializer,
       ) +
       processedAst.dataSegmentByteStr.slice(offset * BYTE_STR_LENGTH);
   });

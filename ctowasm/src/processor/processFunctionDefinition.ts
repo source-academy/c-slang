@@ -37,7 +37,7 @@ export default function processFunctionDefinition(
     funcSymbolTable.addVariableEntry(
       node.parameterNames[i],
       node.dataType.parameters[i],
-      "auto" // all function parameters must have "auto" storage class
+      "auto", // all function parameters must have "auto" storage class
     );
   }
 

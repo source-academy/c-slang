@@ -160,10 +160,13 @@ export default function processBlockItem(
       }
     } else if (node.type === "CommaSeparatedExpressions") {
       const processedExpressions: StatementP[] = [];
-      node.expressions.forEach(e => {processedExpressions.push(...processBlockItem(e, symbolTable, enclosingFunc))});
+      node.expressions.forEach((e) => {
+        processedExpressions.push(
+          ...processBlockItem(e, symbolTable, enclosingFunc),
+        );
+      });
       return processedExpressions;
-    }
-    else if (
+    } else if (
       node.type === "AddressOfExpression" ||
       node.type === "BinaryExpression" ||
       node.type === "FloatConstant" ||

@@ -28,8 +28,6 @@ export function setMemory(mem: WebAssembly.Memory) {
   memory = mem;
 }
 
-
-
 export const wasmModuleImports: Record<string, ImportedFunction> = {
   // prints a signed int (4 bytes and smaller)
   print_int: {
@@ -200,7 +198,7 @@ export const wasmModuleImports: Record<string, ImportedFunction> = {
           pointeeType: {
             type: "primary",
             primaryDataType: "signed char",
-          }
+          },
         },
       ],
       returnType: null,
@@ -215,8 +213,8 @@ export const wasmModuleImports: Record<string, ImportedFunction> = {
         str += String.fromCharCode(uInt8Arr[i++]);
       }
       print(str);
-    }, 
-  }
+    },
+  },
 };
 
 // used to extract the details of imported functions in terms of C -> to be used by compiler

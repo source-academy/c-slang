@@ -541,33 +541,37 @@ const testLog = {
     string_literal: {
       title: "Test string literal",
       expectedCode: false,
-      expectedValues: ["hello world", "Hello World"]
+      expectedValues: ["hello world", "Hello World"],
     },
     comma_separated_expressions: {
       title: "Test comma separated expressions",
       expectedCode: false,
-      expectedValues: [10, 1, 7, 4]
+      expectedValues: [10, 1, 7, 4],
     },
     declarations_test: {
-      title: "Test various declarations all in one file - structs, enums, typedef",
-      expectedCode: false
+      title:
+        "Test various declarations all in one file - structs, enums, typedef",
+      expectedCode: false,
     },
     typedef_ambiguity: {
-      title: "Test that the compiler correctly deals with the C typedef ambiguity problem",
-      expectedCode: false, 
-      expectedValues: [200]
+      title:
+        "Test that the compiler correctly deals with the C typedef ambiguity problem",
+      expectedCode: false,
+      expectedValues: [200],
     },
     enums_1: {
       title: "Test enum declaration and enumerator usage",
       expectedCode: false,
-      expectedValues: [20, 200, 0, 10, 389]
+      expectedValues: [20, 200, 0, 10, 389],
     },
     static_storage_class: {
       title: "Test 'static' storage class specifier",
       expectedCode: false,
-      expectedValues: [0,1,2,3,4,5,6,7,8,9,0,0,1,2,2,4,3,6,4,8,5,10,6,12,7,14,8,16,9,18]
-    }
-
+      expectedValues: [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 1, 2, 2, 4, 3, 6, 4, 8, 5, 10, 6,
+        12, 7, 14, 8, 16, 9, 18,
+      ],
+    },
   },
 };
 

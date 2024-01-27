@@ -45,14 +45,14 @@ function isRelationalOperator(op: BinaryOperator) {
 export function checkBinaryExpressionDataTypesValidity(
   leftExprDataType: DataType,
   rightExprDataType: DataType,
-  operator: BinaryOperator
+  operator: BinaryOperator,
 ) {
   if (
     !isScalarDataType(leftExprDataType) ||
     !isScalarDataType(rightExprDataType)
   ) {
     throw new ProcessingError(
-      `'${operator}' expression cannot be performed on non-scalar type`
+      `'${operator}' expression cannot be performed on non-scalar type`,
     );
   }
 
@@ -71,7 +71,7 @@ export function checkBinaryExpressionDataTypesValidity(
     }
     if (operator !== "-" && !isRelationalOperator(operator)) {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on 2 pointer type operands'`
+        `Cannot perform '${operator}' binary operation on 2 pointer type operands'`,
       );
     }
   } else if (leftExprDataType.type === "pointer") {
@@ -80,12 +80,12 @@ export function checkBinaryExpressionDataTypesValidity(
     }
     if (operator !== "+" && operator !== "-") {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`
+        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`,
       );
     }
     if (!isIntegeralDataType(rightExprDataType)) {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-integral type`
+        `Cannot perform '${operator}' binary operation on pointer and non-integral type`,
       );
     }
   } else if (rightExprDataType.type === "pointer") {
@@ -94,12 +94,12 @@ export function checkBinaryExpressionDataTypesValidity(
     }
     if (operator !== "+" && operator !== "-") {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`
+        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`,
       );
     }
     if (!isIntegeralDataType(leftExprDataType)) {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-integral type`
+        `Cannot perform '${operator}' binary operation on pointer and non-integral type`,
       );
     }
   } else {
@@ -116,7 +116,7 @@ export function checkBinaryExpressionDataTypesValidity(
 export function determineOperandTargetDataTypeOfBinaryExpression(
   leftExprDataType: ScalarDataType,
   rightExprDataType: ScalarDataType,
-  operator: BinaryOperator
+  operator: BinaryOperator,
 ): ScalarDataType {
   // if either data type are pointers, then target data type is pointer TODO: check this
   if (leftExprDataType.type === "pointer") {
@@ -168,7 +168,7 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
 export function determineResultDataTypeOfBinaryExpression(
   leftExprDataType: ScalarDataType,
   rightExprDataType: ScalarDataType,
-  operator: BinaryOperator
+  operator: BinaryOperator,
 ): ScalarDataType {
   if (isRelationalOperator(operator)) {
     return {
@@ -179,7 +179,7 @@ export function determineResultDataTypeOfBinaryExpression(
   return determineOperandTargetDataTypeOfBinaryExpression(
     leftExprDataType,
     rightExprDataType,
-    operator
+    operator,
   );
 }
 
@@ -188,24 +188,24 @@ export function determineResultDataTypeOfBinaryExpression(
  */
 export function getArithmeticPrePostfixExpressionNodes(
   expr: PrefixExpression | PostfixExpression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): { storeNodes: MemoryStore[]; loadNode: MemoryLoad; dataType: DataType } {
   const binaryOperator = expr.operator === "++" ? "+" : "-";
 
   const processedExpr = processExpression(expr.expr, symbolTable);
   const dataType = getDataTypeOfExpression({
-    expression: processedExpr
+    expression: processedExpr,
   });
 
   // dop some checks on the operand
   // simply use the load exprs from the processed expr to create the memory store staements
   if (processedExpr.exprs[0].type !== "MemoryLoad") {
     throw new ProcessingError(
-      `lvalue required for '${expr.operator}' expression`
+      `lvalue required for '${expr.operator}' expression`,
     );
   } else if (processedExpr.exprs.length > 1) {
     throw new ProcessingError(
-      `'${expr.operator}' expression operand must be a scalar type`
+      `'${expr.operator}' expression operand must be a scalar type`,
     );
   } else if (isVoidPointer(dataType)) {
     throw new ProcessingError(`Cannot perform arithmetic on void pointer`);
@@ -213,7 +213,9 @@ export function getArithmeticPrePostfixExpressionNodes(
 
   let amountToIncrementBy;
   if (dataType.type === "pointer") {
-    amountToIncrementBy = BigInt(getDataTypeSize(dataType.pointeeType as DataType))
+    amountToIncrementBy = BigInt(
+      getDataTypeSize(dataType.pointeeType as DataType),
+    );
   } else if (dataType.type === "array") {
     // need increment the underying expression (a pointer) by size of array
     amountToIncrementBy = BigInt(getDataTypeSize(dataType));
@@ -251,7 +253,7 @@ export function getArithmeticPrePostfixExpressionNodes(
 
 export function processPrefixExpression(
   prefixExpression: PrefixExpression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): ExpressionWrapperP {
   if (
     prefixExpression.operator === "++" ||
@@ -273,7 +275,7 @@ export function processPrefixExpression(
   } else {
     const processedExpression = processExpression(
       prefixExpression.expr,
-      symbolTable
+      symbolTable,
     );
 
     // check constraints for each opeartor as per 6.5.3.3 of C standard
@@ -283,7 +285,7 @@ export function processPrefixExpression(
       !isArithmeticDataType(processedExpression.originalDataType)
     ) {
       throw new ProcessingError(
-        `Arithmetic operand required in prefix '${prefixExpression.operator}' expression`
+        `Arithmetic operand required in prefix '${prefixExpression.operator}' expression`,
       );
     } else if (
       prefixExpression.operator === "~" &&
@@ -291,14 +293,14 @@ export function processPrefixExpression(
         !isIntegerType(processedExpression.originalDataType.primaryDataType))
     ) {
       throw new ProcessingError(
-        `Integer-type operand required in prefix '${prefixExpression.operator}' expression`
+        `Integer-type operand required in prefix '${prefixExpression.operator}' expression`,
       );
     } else if (
       prefixExpression.operator === "!" &&
       !isScalarDataType(processedExpression.originalDataType)
     ) {
       throw new ProcessingError(
-        `Scalar operand required in prefix '${prefixExpression.operator}' expression`
+        `Scalar operand required in prefix '${prefixExpression.operator}' expression`,
       );
     }
 
@@ -323,7 +325,7 @@ export function processPrefixExpression(
 
 export function processPostfixExpression(
   postfixExpression: PostfixExpression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): ExpressionWrapperP {
   const { loadNode, storeNodes, dataType } =
     getArithmeticPrePostfixExpressionNodes(postfixExpression, symbolTable);

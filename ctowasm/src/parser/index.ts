@@ -28,7 +28,7 @@ const lexer = peggy.generate(lexerGrammar as string, {
   allowedStartRules: ["program"],
   cache: true,
   warning: warningCallback,
-})
+});
 
 const parser = peggy.generate(parsingGrammar as string, {
   allowedStartRules: ["program"],

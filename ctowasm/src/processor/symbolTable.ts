@@ -1,7 +1,7 @@
 import { ENUM_DATA_TYPE } from "~src/common/constants";
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
-import { Declaration, Initializer, VariableDeclaration } from "~src/parser/c-ast/declaration";
+import { VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
 import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
 
@@ -37,7 +37,7 @@ export interface VariableSymbolEntry {
 export class SymbolTable {
   parentTable: SymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
-  staticVariables: { declaration: VariableDeclaration, offset: number }[]; // keep track of all static variables that were declared
+  staticVariables: { declaration: VariableDeclaration; offset: number }[]; // keep track of all static variables that were declared
   dataSegmentOffset: { value: number }; // current offset in dataSegment. only global variables and static storage class variables increase this.
   symbols: Record<string, SymbolEntry>;
   externalFunctions: Record<string, FunctionSymbolEntry>;
@@ -80,15 +80,22 @@ export class SymbolTable {
       return this.addFunctionEntry(declaration.name, declaration.dataType);
     } else {
       if (declaration.storageClass === "static") {
-        this.staticVariables.push({ declaration, offset: this.dataSegmentOffset.value });
+        this.staticVariables.push({
+          declaration,
+          offset: this.dataSegmentOffset.value,
+        });
       }
-      return this.addVariableEntry(declaration.name, declaration.dataType, declaration.storageClass);
+      return this.addVariableEntry(
+        declaration.name,
+        declaration.dataType,
+        declaration.storageClass,
+      );
     }
   }
 
   addEnumeratorEntry(
     enumeratorName: string,
-    enumeratorValue: bigint
+    enumeratorValue: bigint,
   ): EnumeratorSymbolEntry {
     const entry: EnumeratorSymbolEntry = {
       type: "enumerator",
@@ -99,7 +106,11 @@ export class SymbolTable {
     return entry;
   }
 
-  addVariableEntry(name: string, dataType: DataType, storageClass: "auto" | "static"): VariableSymbolEntry {
+  addVariableEntry(
+    name: string,
+    dataType: DataType,
+    storageClass: "auto" | "static",
+  ): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
       // multiple declarations only allowed outside of function bodies
@@ -117,8 +128,8 @@ export class SymbolTable {
       if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
           `Conflicting types for ${name}:  redeclared as ${symbolEntry} instead of ${toJson(
-            dataType
-          )}`
+            dataType,
+          )}`,
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
@@ -140,7 +151,7 @@ export class SymbolTable {
           dataType: dataType,
           offset: this.dataSegmentOffset.value,
         };
-        this.dataSegmentOffset.value += getDataTypeSize(dataType); 
+        this.dataSegmentOffset.value += getDataTypeSize(dataType);
       } else if (storageClass === "auto") {
         // offset grows in negative direction (high to low adderss) for locals
         this.currOffset.value -= getDataTypeSize(dataType);
@@ -150,7 +161,9 @@ export class SymbolTable {
           offset: this.currOffset.value,
         };
       } else {
-        throw new ProcessingError("addVariableEntry(): Unhandled storage class")
+        throw new ProcessingError(
+          "addVariableEntry(): Unhandled storage class",
+        );
       }
     }
     this.symbols[name] = entry;
@@ -160,14 +173,14 @@ export class SymbolTable {
   addFunctionEntry(
     name: string,
     dataType: FunctionDataType,
-    isExternalFunction?: boolean
+    isExternalFunction?: boolean,
   ): FunctionSymbolEntry {
     if (!isExternalFunction && name in this.symbols) {
       // function was already declared before
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
         throw new ProcessingError(
-          `${name} redeclared as different kind of symbol: function instead of variable`
+          `${name} redeclared as different kind of symbol: function instead of variable`,
         );
       }
 
@@ -211,7 +224,7 @@ export class SymbolTable {
     if (dataType.returnType !== null) {
       if (dataType.returnType.type === "array") {
         throw new ProcessingError(
-          "Array is not a valid return type from a function"
+          "Array is not a valid return type from a function",
         );
       }
 
@@ -221,7 +234,7 @@ export class SymbolTable {
         (scalarDataType) => ({
           dataType: scalarDataType.dataType,
           offset: scalarDataType.offset - functionDetails.sizeOfReturn,
-        })
+        }),
       );
     }
 
@@ -230,7 +243,7 @@ export class SymbolTable {
       // sanity check, as parser should have converted all array params into pointers.
       if (param.type === "array") {
         throw new ProcessingError(
-          "Compiler error: The type of a function parameter should not be an array after parsing"
+          "Compiler error: The type of a function parameter should not be an array after parsing",
         );
       }
       const dataTypeSize = getDataTypeSize(param);
