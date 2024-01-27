@@ -561,6 +561,11 @@ const testLog = {
       title: "Test enum declaration and enumerator usage",
       expectedCode: false,
       expectedValues: [20, 200, 0, 10, 389]
+    },
+    static_storage_class: {
+      title: "Test 'static' storage class specifier",
+      expectedCode: false,
+      expectedValues: [0,1,2,3,4,5,6,7,8,9,0,0,1,2,2,4,3,6,4,8,5,10,6,12,7,14,8,16,9,18]
     }
 
   },

@@ -1,7 +1,7 @@
 import { ENUM_DATA_TYPE } from "~src/common/constants";
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
-import { VariableDeclaration } from "~src/parser/c-ast/declaration";
+import { Declaration, Initializer, VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
 import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
 
@@ -24,12 +24,12 @@ export interface FunctionSymbolEntry {
  */
 export interface EnumeratorSymbolEntry {
   type: "enumerator";
-  dataType: { type: "primary", primaryDataType: typeof ENUM_DATA_TYPE } // in this compiler implementation enums directly correspond to signed ints
+  dataType: { type: "primary"; primaryDataType: typeof ENUM_DATA_TYPE }; // in this compiler implementation enums directly correspond to signed ints
   value: bigint;
 }
 
 export interface VariableSymbolEntry {
-  type: "localVariable" | "globalVariable";
+  type: "localVariable" | "dataSegmentVariable";
   dataType: DataType;
   offset: number; // offset in number of bytes of this from the first byte of the first encountered symbol in the same function OR global scope
 }
@@ -37,6 +37,8 @@ export interface VariableSymbolEntry {
 export class SymbolTable {
   parentTable: SymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
+  staticVariables: { declaration: VariableDeclaration, offset: number }[]; // keep track of all static variables that were declared
+  dataSegmentOffset: { value: number }; // current offset in dataSegment. only global variables and static storage class variables increase this.
   symbols: Record<string, SymbolEntry>;
   externalFunctions: Record<string, FunctionSymbolEntry>;
 
@@ -44,6 +46,13 @@ export class SymbolTable {
     this.parentTable = parentTable ? parentTable : null;
     this.symbols = {};
     this.externalFunctions = parentTable ? parentTable.externalFunctions : {};
+    if (!parentTable) {
+      this.dataSegmentOffset = { value: 0 };
+      this.staticVariables = [];
+    } else {
+      this.dataSegmentOffset = parentTable.dataSegmentOffset;
+      this.staticVariables = parentTable.staticVariables;
+    }
     if (!parentTable || parentTable.parentTable === null) {
       // all tables take the previous tables offset except the top 2 level parenttables
       // root table (1st level) is the global scope
@@ -70,7 +79,10 @@ export class SymbolTable {
     if (declaration.dataType.type === "function") {
       return this.addFunctionEntry(declaration.name, declaration.dataType);
     } else {
-      return this.addVariableEntry(declaration.name, declaration.dataType);
+      if (declaration.storageClass === "static") {
+        this.staticVariables.push({ declaration, offset: this.dataSegmentOffset.value });
+      }
+      return this.addVariableEntry(declaration.name, declaration.dataType, declaration.storageClass);
     }
   }
 
@@ -87,7 +99,7 @@ export class SymbolTable {
     return entry;
   }
 
-  addVariableEntry(name: string, dataType: DataType): VariableSymbolEntry {
+  addVariableEntry(name: string, dataType: DataType, storageClass: "auto" | "static"): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
       // multiple declarations only allowed outside of function bodies
@@ -116,19 +128,30 @@ export class SymbolTable {
     if (this.parentTable === null) {
       // the offset grows inthe positive direction (low to high adress) for globals
       entry = {
-        type: "globalVariable",
+        type: "dataSegmentVariable",
         dataType: dataType,
-        offset: this.currOffset.value,
+        offset: this.dataSegmentOffset.value,
       };
-      this.currOffset.value += getDataTypeSize(dataType);
+      this.dataSegmentOffset.value += getDataTypeSize(dataType);
     } else {
-      // offset grows in negative direction (high to low adderss) for locals
-      this.currOffset.value -= getDataTypeSize(dataType);
-      entry = {
-        type: "localVariable",
-        dataType: dataType,
-        offset: this.currOffset.value,
-      };
+      if (storageClass === "static") {
+        entry = {
+          type: "dataSegmentVariable",
+          dataType: dataType,
+          offset: this.dataSegmentOffset.value,
+        };
+        this.dataSegmentOffset.value += getDataTypeSize(dataType); 
+      } else if (storageClass === "auto") {
+        // offset grows in negative direction (high to low adderss) for locals
+        this.currOffset.value -= getDataTypeSize(dataType);
+        entry = {
+          type: "localVariable",
+          dataType: dataType,
+          offset: this.currOffset.value,
+        };
+      } else {
+        throw new ProcessingError("addVariableEntry(): Unhandled storage class")
+      }
     }
     this.symbols[name] = entry;
     return entry;

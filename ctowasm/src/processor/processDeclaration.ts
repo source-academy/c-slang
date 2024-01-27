@@ -49,23 +49,19 @@ export function processLocalDeclaration(
   try {
     if (declaration.type === "Declaration") {
       let symbolEntry = symbolTable.addEntry(declaration);
-      if (declaration.dataType.type === "function") {
+      if (symbolEntry.type === "function" || symbolEntry.type === "dataSegmentVariable") {
+        // if the declaration was of a function or it was of a static variable then there are no statements to carry out in the function
         return [];
       }
 
-      // sanity check, symbol table entry must be localVariable
-      if (symbolEntry.type === "globalVariable") {
-        throw new ProcessingError(
-          "processLocalVariableDeclaration: symbol entry became global variable entry"
-        );
-      }
+      console.assert(symbolEntry.type === "localVariable", "processLocalDeclaration(): symbolEntry does not have type 'localVariable'");
 
       if (typeof enclosingFunc !== "undefined") {
         enclosingFunc.sizeOfLocals += getDataTypeSize(declaration.dataType);
       }
 
       symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
-
+      
       if (typeof declaration.initializer !== "undefined") {
         return unpackLocalVariableInitializerAccordingToDataType(
           symbolEntry,
@@ -116,7 +112,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
   symbolTable: SymbolTable
 ): MemoryStore[] {
   const memoryStoreStatements: MemoryStore[] = [];
-  let currOffset = variableSymbolEntry.offset; // offset to use for address in memory store statements
+    let currOffset = variableSymbolEntry.offset; // offset to use for address in memory store statements
 
   runInitializerChecks(variableSymbolEntry.dataType, initializer);
 
@@ -138,6 +134,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
       } else {
         scalarDataType = dataType.primaryDataType;
       }
+
       if (initializer.type === "InitializerSingle") {
         memoryStoreStatements.push({
           type: "MemoryStore",
@@ -436,9 +433,9 @@ export function processDataSegmentVariableDeclaration(
 /**
  * Function to recursively go through the declaration data type and the intiializer to assign appropriately
  * (and handle zeroing of memory when insufficient intializer exprs are present).
- * Returns byte string of bytes to intialize the memory in the data segment that the declared variabled occupies with.
+ * Returns byte string of bytes to intialize the memory in the data segment that the declared variabled occupies.
  */
-function unpackDataSegmentInitializerAccordingToDataType(
+export function unpackDataSegmentInitializerAccordingToDataType(
   dataType: DataType,
   initalizer: Initializer | null
 ): string {

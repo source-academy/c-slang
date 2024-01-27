@@ -6,7 +6,11 @@ import { CAstRoot } from "~src/parser/c-ast/core";
 import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processFunctionDefinition from "~src/processor/processFunctionDefinition";
-import { processDataSegmentVariableDeclaration, processGlobalScopeDeclaration } from "~src/processor/processDeclaration";
+import {
+  processDataSegmentVariableDeclaration,
+  processGlobalScopeDeclaration,
+  unpackDataSegmentInitializerAccordingToDataType,
+} from "~src/processor/processDeclaration";
 import { SymbolTable } from "~src/processor/symbolTable";
 
 /**
@@ -17,11 +21,11 @@ import { SymbolTable } from "~src/processor/symbolTable";
  */
 export default function process(
   ast: CAstRoot,
-  externalFunctions?: Record<string, FunctionDataType>,
+  externalFunctions?: Record<string, FunctionDataType>
 ) {
   const symbolTable = new SymbolTable();
   const processedExternalFunctions = symbolTable.setExternalFunctions(
-    externalFunctions ?? {},
+    externalFunctions ?? {}
   );
   const processedAst: CAstRootP = {
     type: "Root",
@@ -48,16 +52,30 @@ export default function process(
     // special handling for function definitions
     if (child.type === "FunctionDefinition") {
       processedAst.functions.push(
-        processFunctionDefinition(child, symbolTable),
+        processFunctionDefinition(child, symbolTable)
       );
     } else {
       processedAst.dataSegmentByteStr += processGlobalScopeDeclaration(
         child,
-        symbolTable,
+        symbolTable
       ); // add the byte str used to initalize this variable to teh data segment byte string
     }
   });
-  processedAst.dataSegmentSizeInBytes =
-    processedAst.dataSegmentByteStr.length / 3; // since each byte is written as "\\XX"
+  const BYTE_STR_LENGTH = 3; // each byte is represented in the byte string with 3 characters eg "\\00" for 0x00
+  // at this point the dataSegmentOffset in the symbolTable will account for static local variables as well
+  symbolTable.staticVariables.forEach(({ declaration, offset }) => {
+    // insert the static variable byte strings at correct points in byte string using the offset
+    processedAst.dataSegmentByteStr =
+      processedAst.dataSegmentByteStr.slice(0, offset * BYTE_STR_LENGTH) +
+      unpackDataSegmentInitializerAccordingToDataType(
+        declaration.dataType,
+        typeof declaration.initializer === "undefined"
+          ? null
+          : declaration.initializer
+      ) +
+      processedAst.dataSegmentByteStr.slice(offset * BYTE_STR_LENGTH);
+  });
+
+  processedAst.dataSegmentSizeInBytes = symbolTable.dataSegmentOffset.value;
   return processedAst;
 }

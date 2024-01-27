@@ -14,7 +14,7 @@ import { DataType } from "~src/parser/c-ast/dataTypes";
  * Handles the processing of assignment to a variable.
  * Shared logic between handling Assignment and AssignmentExpression nodes.
  * Returns both the arrays of instructions needed to store the assignee expression
- * and the load the assignedto value.
+ * and then load the assigned to value.
  */
 export function getAssignmentNodes(
   assignmentNode: Assignment,

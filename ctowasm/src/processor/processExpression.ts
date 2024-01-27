@@ -335,7 +335,7 @@ export default function processExpression(
           exprs: [
             {
               type:
-                symbolEntry.type === "globalVariable"
+                symbolEntry.type === "dataSegmentVariable"
                   ? "DataSegmentAddress"
                   : "LocalAddress",
               offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
@@ -354,7 +354,7 @@ export default function processExpression(
             type: "MemoryLoad",
             address: {
               type:
-                symbolEntry.type === "globalVariable"
+                symbolEntry.type === "dataSegmentVariable"
                   ? "DataSegmentAddress"
                   : "LocalAddress",
               offset: createMemoryOffsetIntegerConstant(
@@ -391,7 +391,7 @@ export default function processExpression(
           exprs: [
             {
               type:
-                symbolEntry.type === "globalVariable"
+                symbolEntry.type === "dataSegmentVariable"
                   ? "DataSegmentAddress"
                   : "LocalAddress",
               offset: createMemoryOffsetIntegerConstant(symbolEntry.offset),
