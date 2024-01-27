@@ -11,13 +11,13 @@ import {
 } from "~src/common/utils";
 import { DataType, ScalarDataType } from "~src/parser/c-ast/dataTypes";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
-import { ProcessingError, toJson } from "~src/errors";
+import { ProcessingError } from "~src/errors";
 import {
   getDataTypeSize,
   isArithmeticDataType,
   isIntegeralDataType,
+  isVoidPointer,
   isScalarDataType,
-  unpackDataType,
 } from "~src/processor/dataTypeUtil";
 import {
   PostfixExpression,
@@ -25,16 +25,8 @@ import {
 } from "~src/parser/c-ast/expression/unaryExpression";
 import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
-import {
-  Address,
-  DynamicAddress,
-  MemoryLoad,
-  MemoryStore,
-} from "~src/processor/c-ast/memory";
-import {
-  createMemoryOffsetIntegerConstant,
-  getDataTypeOfExpression,
-} from "~src/processor/util";
+import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
+import { getDataTypeOfExpression } from "~src/processor/util";
 
 function isRelationalOperator(op: BinaryOperator) {
   return (
@@ -198,146 +190,40 @@ export function getArithmeticPrePostfixExpressionNodes(
   expr: PrefixExpression | PostfixExpression,
   symbolTable: SymbolTable
 ): { storeNodes: MemoryStore[]; loadNode: MemoryLoad; dataType: DataType } {
-  const memoryStoreNodes: MemoryStore[] = [];
-  let memoryLoad: MemoryLoad;
-  let dataType: DataType;
-
   const binaryOperator = expr.operator === "++" ? "+" : "-";
 
-  if (expr.expr.type === "IdentifierExpression") {
-    const symbolEntry = symbolTable.getSymbolEntry(expr.expr.name);
+  const processedExpr = processExpression(expr.expr, symbolTable);
+  const dataType = getDataTypeOfExpression({
+    expression: processedExpr
+  });
 
-    if (
-      symbolEntry.type === "function" ||
-      (symbolEntry.dataType.type !== "pointer" &&
-        symbolEntry.dataType.type !== "primary")
-    ) {
-      throw new ProcessingError(
-        "wrong type argument in increment or decrement expression"
-      );
-    }
+  // dop some checks on the operand
+  // simply use the load exprs from the processed expr to create the memory store staements
+  if (processedExpr.exprs[0].type !== "MemoryLoad") {
+    throw new ProcessingError(
+      `lvalue required for '${expr.operator}' expression`
+    );
+  } else if (processedExpr.exprs.length > 1) {
+    throw new ProcessingError(
+      `'${expr.operator}' expression operand must be a scalar type`
+    );
+  } else if (isVoidPointer(dataType)) {
+    throw new ProcessingError(`Cannot perform arithmetic on void pointer`);
+  }
 
-    if (symbolEntry.type === "enumerator") {
-      throw new ProcessingError("lvalue required as operand");
-    }
+  let amountToIncrementBy;
+  if (dataType.type === "pointer") {
+    amountToIncrementBy = BigInt(getDataTypeSize(dataType.pointeeType as DataType))
+  } else if (dataType.type === "array") {
+    // need increment the underying expression (a pointer) by size of array
+    amountToIncrementBy = BigInt(getDataTypeSize(dataType));
+  } else {
+    amountToIncrementBy = 1n;
+  }
 
-    const unpackedDataType = unpackDataType(symbolEntry.dataType); // will only have 1 element in array since primary/pointer type
-
-    const identifierAddress: Address = {
-      type:
-        symbolEntry.type === "localVariable"
-          ? "LocalAddress"
-          : "DataSegmentAddress",
-      offset: createMemoryOffsetIntegerConstant(symbolEntry.offset), // add the offset of the original symbol
-      dataType: "pointer",
-    };
-
-    memoryLoad = {
-      type: "MemoryLoad",
-      address: identifierAddress,
-      dataType: unpackedDataType[0].dataType,
-    };
-
-    dataType = symbolEntry.dataType;
-
-    if (
-      symbolEntry.dataType.type === "pointer" &&
-      symbolEntry.dataType.pointeeType === null
-    ) {
-      throw new ProcessingError("Cannot perform arithmetic on a void pointer");
-    }
-
-    memoryStoreNodes.push({
-      type: "MemoryStore",
-      address: identifierAddress,
-      dataType: unpackedDataType[0].dataType,
-      value: {
-        type: "BinaryExpression",
-        leftExpr: memoryLoad,
-        rightExpr: {
-          type: "IntegerConstant",
-          value:
-            symbolEntry.dataType.type === "pointer"
-              ? BigInt(
-                  getDataTypeSize(symbolEntry.dataType.pointeeType as DataType)
-                )
-              : 1n,
-          dataType: "signed int", //TODO: check this type
-        },
-        dataType: unpackedDataType[0].dataType,
-        operandTargetDataType: unpackedDataType[0].dataType,
-        operator: binaryOperator,
-      },
-    });
-  } else if (expr.expr.type === "PointerDereference") {
-    // process the expression being dereferenced first
-    const derefedExpression = processExpression(expr.expr.expr, symbolTable);
-
-    const derefedExpressionDataType = getDataTypeOfExpression({
-      expression: derefedExpression,
-      convertArrayToPointer: true,
-    });
-
-    if (derefedExpressionDataType.type !== "pointer") {
-      throw new ProcessingError(`Cannot dereference non-pointer type`);
-    }
-
-    if (derefedExpressionDataType.pointeeType === null) {
-      throw new ProcessingError(`Cannot dereference void pointer`);
-    }
-
-    const address: DynamicAddress = {
-      // address being dereferenced
-      type: "DynamicAddress",
-      address: derefedExpression.exprs[0], // derefed expression should only have one primary expression
-      dataType: "pointer",
-    };
-
-    memoryLoad = {
-      type: "MemoryLoad",
-      address,
-      dataType: derefedExpression.exprs[0].dataType,
-    };
-
-    dataType = derefedExpressionDataType;
-
-    if (dataType.type === "pointer" && dataType.pointeeType === null) {
-      throw new ProcessingError("Cannot perform arithmetic on a void pointer");
-    }
-
-    memoryStoreNodes.push({
-      type: "MemoryStore",
-      address: address,
-      dataType: derefedExpression.exprs[0].dataType,
-      value: {
-        type: "BinaryExpression",
-        leftExpr: memoryLoad,
-        rightExpr: {
-          type: "IntegerConstant",
-          value:
-            dataType.type === "pointer"
-              ? BigInt(getDataTypeSize(dataType.pointeeType as DataType))
-              : 1n,
-          dataType: "signed int",
-        },
-        dataType: derefedExpression.exprs[0].dataType,
-        operandTargetDataType: derefedExpression.exprs[0].dataType,
-        operator: binaryOperator,
-      },
-    });
-  } else if (expr.expr.type === "StructMemberAccess") {
-    const processedExpr = processExpression(expr.expr, symbolTable);
-    // simply use the load exprs from the processed expr to create the memory store staements
-    if (processedExpr.exprs.length > 1) {
-      throw new ProcessingError(
-        `'${expr.operator}' expression operand must be a scalar type`
-      );
-    }
-
-    memoryLoad = processedExpr.exprs[0] as MemoryLoad;
-    dataType = processedExpr.originalDataType;
-
-    memoryStoreNodes.push({
+  const memoryLoad = processedExpr.exprs[0] as MemoryLoad;
+  const memoryStoreNodes: MemoryStore[] = [
+    {
       type: "MemoryStore",
       address: memoryLoad.address,
       value: {
@@ -345,24 +231,16 @@ export function getArithmeticPrePostfixExpressionNodes(
         leftExpr: memoryLoad,
         rightExpr: {
           type: "IntegerConstant",
-          value:
-            memoryLoad.dataType === "pointer"
-              ? BigInt(getDataTypeSize(dataType))
-              : 1n,
-          dataType: "signed int", //TODO: check this type
+          value: amountToIncrementBy,
+          dataType: "signed int",
         },
         dataType: memoryLoad.dataType,
         operandTargetDataType: memoryLoad.dataType,
         operator: binaryOperator,
       },
       dataType: memoryLoad.dataType,
-    });
-  } else {
-    console.log(toJson(expr));
-    throw new ProcessingError(
-      "lvalue required for increment or decrement expression"
-    );
-  }
+    },
+  ];
 
   return {
     loadNode: memoryLoad,
