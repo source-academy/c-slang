@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test different initializer list formats.
  */

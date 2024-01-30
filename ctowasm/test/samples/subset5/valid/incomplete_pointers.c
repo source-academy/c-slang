@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test the ability to declare pointers to incomplete types, 
  * as long as the type is subsequently defined later in the program.

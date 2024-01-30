@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Static storage class tests.
  */

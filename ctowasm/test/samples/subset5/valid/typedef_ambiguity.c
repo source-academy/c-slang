@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int x;
 typedef int y;
 y* p; // y should be correctly interpreted as type

@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test working with arrays of structs.
  * And structs with array fields.

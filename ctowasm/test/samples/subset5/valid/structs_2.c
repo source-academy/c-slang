@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Structs test 2
  * - test more complicated structs

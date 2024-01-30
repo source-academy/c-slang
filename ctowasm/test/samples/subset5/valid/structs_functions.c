@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test using structs as parameters to functions, and returning structs from functions.
  */

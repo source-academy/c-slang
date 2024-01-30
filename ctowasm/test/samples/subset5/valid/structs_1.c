@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Structs test 1
  * - test struct declarations

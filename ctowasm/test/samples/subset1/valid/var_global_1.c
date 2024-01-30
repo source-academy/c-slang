@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int x = 10;
 int y = 30;
 int main() {

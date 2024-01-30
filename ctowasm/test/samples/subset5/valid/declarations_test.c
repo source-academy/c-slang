@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 // declaration of type
 typedef int x;
 
