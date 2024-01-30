@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test that pointer arithmetic functions correctly.
  * 

@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int temp[3];
 
 int main() {

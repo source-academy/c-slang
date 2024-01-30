@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int main() {
   int i = 0;
   while (i < 10) {

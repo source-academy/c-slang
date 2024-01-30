@@ -1,6 +1,5 @@
 #include <source_stdlib>
 
-#include <source_stdlib>
 int f() {
   return 1;
 }

@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int arr[] = {1, 2, 3};
 int brr[2] = {4, 5};
 int crr[2];

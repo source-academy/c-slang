@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int main() {
   int a = 123;
   int b = 215345;

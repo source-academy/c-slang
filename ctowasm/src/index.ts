@@ -1,4 +1,4 @@
-import ModuleRepository from "~src/modules";
+import ModuleRepository, { ModuleName, ModulesGlobalConfig } from "~src/modules";
 import {
   compile as originalCompile,
   compileToWat as originalCompileToWat,
@@ -7,46 +7,42 @@ import {
   generate_processed_C_AST as original_generate_processed_C_AST,
 } from "./compiler";
 
-
-
-export async function runWasm(wasm: Uint8Array, initialMemory: number) {
-  const memory = new WebAssembly.Memory({
-    initial: initialMemory,
-  });
-  const moduleRepository = new ModuleRepository(memory);
-  // eslint-disable-next-line
-  await WebAssembly.instantiate(wasm, moduleRepository.createWasmImportsObject());
-}
-
+export const defaultModuleRepository = new ModuleRepository(); // default repository containing module information without any custom configs or wasm memory
 /**
  * Compiles with standard imported functons.
  */
 export async function compile(program: string) {
-  const { wasm } = await originalCompile(program, wasmModuleImports);
+  const { wasm } = await originalCompile(program, defaultModuleRepository);
   return wasm;
 }
 
 export function compileToWat(program: string) {
-  return originalCompileToWat(program, wasmModuleImports);
+  return originalCompileToWat(program, defaultModuleRepository);
 }
 
 export function generate_WAT_AST(program: string) {
-  return originalGenerate_WAT_AST(program, wasmModuleImports);
+  return originalGenerate_WAT_AST(program, defaultModuleRepository);
 }
 
 /**
  * Compiles the given C program, including all default imported functions.
  */
-export async function compileAndRun(program: string) {
-  const { wasm, initialMemory } = await originalCompile(
+export async function compileAndRun(program: string, modulesConfig?: ModulesGlobalConfig) {
+  const { wasm, initialMemory, importedModules } = await originalCompile(
     program,
-    wasmModuleImports,
+    defaultModuleRepository,
   );
-  await runWasm(wasm, initialMemory);
+  await runWasm(wasm, initialMemory, importedModules, modulesConfig);
 }
 
+export async function runWasm(wasm: Uint8Array, initialMemory: number, importedModules: ModuleName[], modulesConfig?: ModulesGlobalConfig) {
+  const moduleRepository = new ModuleRepository(new WebAssembly.Memory({initial: initialMemory}), modulesConfig);
+  await WebAssembly.instantiate(wasm, moduleRepository.createWasmImportsObject(importedModules));
+}
+
+
 export function generate_processed_C_AST(program: string) {
-  return original_generate_processed_C_AST(program, wasmModuleImports);
+  return original_generate_processed_C_AST(program, defaultModuleRepository);
 }
 
 export function generate_C_AST(program: string) {

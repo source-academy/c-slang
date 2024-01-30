@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test of arrays as function parameters.
  */

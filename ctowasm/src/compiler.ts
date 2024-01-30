@@ -22,16 +22,17 @@ export async function compile(
 ): Promise<CompilationResult> {
   try {
     const CAst = parse(cSourceCode);
-    const processedCAst = process(
+    const { astRootNode, includedModules} = process(
       CAst,
       moduleRepository
     );
-    const wasmModule = translate(processedCAst, moduleRepository);
+    const wasmModule = translate(astRootNode, moduleRepository);
     const initialMemory = wasmModule.memorySize; // save the initial memory in pages needed for the module
     const output = await compileWatToWasm(generateWat(wasmModule));
     return {
       wasm: output,
       initialMemory,
+      importedModules: includedModules
     };
   } catch (e) {
     if (e instanceof SourceCodeError) {
@@ -43,17 +44,15 @@ export async function compile(
 
 export function compileToWat(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ModuleFunction>
+  moduleRepository: ModuleRepository
 ) {
   try {
     const CAst = parse(cSourceCode);
-    const processedCAst = process(
+    const { astRootNode } = process(
       CAst,
-      wasmModuleImports
-        ? extractImportedFunctionCDetails(wasmModuleImports)
-        : undefined
+      moduleRepository
     );
-    const wasmModule = translate(processedCAst, wasmModuleImports);
+    const wasmModule = translate(astRootNode, moduleRepository);
     const output = generateWat(wasmModule);
     return output;
   } catch (e) {
@@ -78,17 +77,15 @@ export function generate_C_AST(cSourceCode: string) {
 
 export function generate_processed_C_AST(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ModuleFunction>
+  moduleRepository: ModuleRepository
 ) {
   try {
     const CAst = parse(cSourceCode);
-    const processedCAst = process(
+    const { astRootNode} = process(
       CAst,
-      wasmModuleImports
-        ? extractImportedFunctionCDetails(wasmModuleImports)
-        : undefined
+      moduleRepository
     );
-    return toJson(processedCAst);
+    return toJson(astRootNode);
   } catch (e) {
     if (e instanceof SourceCodeError) {
       e.generateFullErrorMessage(cSourceCode);
@@ -99,16 +96,14 @@ export function generate_processed_C_AST(
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  wasmModuleImports?: Record<string, ModuleFunction>
+  moduleRepository: ModuleRepository
 ) {
   const CAst = parse(cSourceCode);
-  const processedCAst = process(
+  const { astRootNode } = process(
     CAst,
-    wasmModuleImports
-      ? extractImportedFunctionCDetails(wasmModuleImports)
-      : undefined
+    moduleRepository
   );
   //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
-  const wasmAst = translate(processedCAst, wasmModuleImports);
+  const wasmAst = translate(astRootNode, moduleRepository);
   return toJson(wasmAst);
 }

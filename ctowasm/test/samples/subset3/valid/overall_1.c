@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * This is a simple program where the power of 2 to 10 is calculated. It tests
  * that some of the main features (for loops, select statements and comments) 

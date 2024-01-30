@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int main() {
   int x = 4;
   print_int(x);

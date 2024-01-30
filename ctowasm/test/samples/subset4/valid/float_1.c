@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 float a = -1.1;
 float b = 1.1E10;
 float c = 1e20;

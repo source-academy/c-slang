@@ -4,8 +4,7 @@
 
 import {
   compileToWat,
-  compileAndRun,
-  setPrintFunction,
+  compileAndRun
 } from "../build/index.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -26,7 +25,7 @@ const getExpectedCodeFilePath = (subset, fileName) => {
 
 export const COMPILATION_SUCCESS = "success";
 
-export async function compileAndRunFile({ subset, testType, testFileName }) {
+export async function compileAndRunFile({ subset, testType, testFileName, modulesConfig }) {
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
@@ -37,7 +36,7 @@ export async function compileAndRunFile({ subset, testType, testFileName }) {
     "utf-8",
   );
 
-  await compileAndRun(input);
+  await compileAndRun(input, modulesConfig);
 }
 
 export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
@@ -103,14 +102,17 @@ export async function testFileCompilationSuccess(subset, testFileName) {
       // Test 2: checks that the file is runnable, and outputs the correct values
       try {
         const programOutput = [];
-        // set printed values from program using to go to this array instead of console.log
-        setPrintFunction((val) => programOutput.push(val));
+        // configuration for the modules
+        const modulesConfig = {
+          printFunction: (str) => programOutput.push(str) // custom print function, add to the programOutput instead of print to console
+        }
         try {
           // if there is a expectedValues for variables in the file, check that they are equal
           await compileAndRunFile({
             subset,
             testType: "assertCorrectness",
             testFileName,
+            modulesConfig
           });
           if (
             "customTest" in testLog[`subset${subset.toString()}`][testFileName]

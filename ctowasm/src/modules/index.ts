@@ -23,8 +23,12 @@ export default class ModuleRepository {
   config: ModulesGlobalConfig;
   modules: Record<ModuleName, Module>;
 
-  constructor(memory: WebAssembly.Memory, config?: ModulesGlobalConfig) {
-    this.memory = memory;
+  constructor(memory?: WebAssembly.Memory, config?: ModulesGlobalConfig) {
+    if (memory) {
+      this.memory = memory // initially memory starts at 0
+    } else {
+      this.memory = new WebAssembly.Memory({initial: 0});
+    }
     if (config) {
       this.config = { ...defaultModulesGlobalConfig, ...config };
     } else {
@@ -39,39 +43,29 @@ export default class ModuleRepository {
     };
   }
 
+  setMemory(numberOfPages: number) {
+    this.memory = new WebAssembly.Memory({ initial: numberOfPages });
+  }
+
   /**
    * Returns the object that can be used as argument to Webassembly.instantiate.
    * @param importedModules the names of all modules that are being imported and used in a particular compiled wasm output file.
    */
-  createWasmImportsObject(importedModules?: ModuleName[]): WebAssembly.Imports {
+  createWasmImportsObject(importedModules: ModuleName[]): WebAssembly.Imports {
     const imports: WebAssembly.Imports = {
       js: { mem: this.memory },
     };
 
-    if (typeof importedModules === "undefined") {
-      // import all modules
-      Object.keys(this.modules).forEach((moduleName) => {
-        const module = this.modules[moduleName as ModuleName];
-        const moduleImports: WebAssembly.ModuleImports = {};
-        Object.keys(this.modules[moduleName as ModuleName].moduleFunctions).map(
-          (moduleFunctionName) => {
-            moduleImports[moduleFunctionName] = module.moduleFunctions[moduleFunctionName]
-              .jsFunction;
-          }
-        );
-      });
-      return imports;
-    }
-    
     importedModules.forEach((moduleName) => {
       const module = this.modules[moduleName];
-      const moduleImports: WebAssembly.ModuleImports = {};
+      const moduleImportObject: WebAssembly.ModuleImports = {};
       Object.keys(this.modules[moduleName].moduleFunctions).map(
         (moduleFunctionName) => {
-          moduleImports[moduleFunctionName] = module.moduleFunctions[moduleFunctionName]
+          moduleImportObject[moduleFunctionName] = module.moduleFunctions[moduleFunctionName]
             .jsFunction;
         }
       );
+      imports[moduleName] = moduleImportObject;
     });
 
     return imports;

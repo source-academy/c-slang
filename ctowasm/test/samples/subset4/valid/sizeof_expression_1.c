@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test sizeof(expression) functionality. The other variant of sizeof with type specifier will be done in sizeof_expression_2.c
  */

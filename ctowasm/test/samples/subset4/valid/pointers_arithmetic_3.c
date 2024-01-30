@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Pointers arithmetic 3
  * Test pointer subtraction.

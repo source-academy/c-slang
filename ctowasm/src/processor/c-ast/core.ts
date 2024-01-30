@@ -59,6 +59,7 @@ export interface ExpressionPBase extends CNodePBase {
 }
 
 export interface ExternalFunction {
+  moduleName: ModuleName; // the module this function comes from
   name: string;
   parameters: PrimaryDataTypeMemoryObjectDetails[];
   returnObjects: PrimaryDataTypeMemoryObjectDetails[] | null;
@@ -69,5 +70,5 @@ export interface CAstRootP extends CNodePBase {
   functions: FunctionDefinitionP[];
   dataSegmentByteStr: string; // the string of bytes (each byte is in the form "\\XX" where X is a digit in base-16) to initialize the data segment with, determined by processing initializers for data segment variables.
   dataSegmentSizeInBytes: number;
-  includedModules: ModuleName[] // names of all the modules being included in this C program
+  externalFunctions: ExternalFunction[]; // the unpacked primary data type function signature of functions from included modules
 }

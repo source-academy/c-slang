@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 char x = 10;
 char c = 'a';
 int main() {

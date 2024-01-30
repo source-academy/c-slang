@@ -6,13 +6,12 @@ import { ModuleFunction } from "~src/modules/types";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import translateFunction from "~src/translator/translateFunction";
 import { CAstRootP } from "~src/processor/c-ast/core";
-import processImportedFunctions from "~src/translator/processImportedFunctions";
+import processIncludedModules from "~src/translator/processImportedFunctions";
 import ModuleRepository from "~src/modules";
 
 export default function translate(
   CAstRoot: CAstRootP,
-  moduleRepository: ModuleRepository,
-  importedModules: 
+  moduleRepository: ModuleRepository
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -23,8 +22,8 @@ export default function translate(
     importedFunctions: [],
   };
 
-  const processedImportedFunctions = processImportedFunctions(
-    imports,
+  const processedImportedFunctions = processIncludedModules(
+    moduleRepository,
     CAstRoot.externalFunctions
   );
 

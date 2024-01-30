@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * A test of the adress of operator.
  */

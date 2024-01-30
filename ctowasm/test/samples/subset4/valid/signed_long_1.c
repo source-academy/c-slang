@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 long x = -2147483646;
 int main() {
   long y = 2147483648;

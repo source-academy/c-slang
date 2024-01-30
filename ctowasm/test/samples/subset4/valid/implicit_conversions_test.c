@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test implicit integer conversions, both
  * those defined in the standard, and those that are implementation defined.

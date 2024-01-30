@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test passing pointers as function parameters and returning pointers.
  */

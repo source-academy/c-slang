@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test variant of for loops with no declaration, just expressions.
  */

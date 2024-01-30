@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 int x = 0;
 
 void f(int a, int b) {

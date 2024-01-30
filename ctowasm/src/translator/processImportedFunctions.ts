@@ -14,6 +14,7 @@ import {
 } from "~src/translator/memoryUtil";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
+import ModuleRepository from "~src/modules";
 
 /**
  * Process the imported functions.
@@ -21,27 +22,21 @@ import { WASM_ADDR_SIZE } from "~src/common/constants";
  */
 
 export default function processImportedFunctions(
-  importedFunctions: Record<string, ModuleFunction>,
-  externalCFunctions: Record<string, ExternalFunction> // external functions as defined by CAstRoot
+  moduleRepository: ModuleRepository,
+  externalCFunctions: ExternalFunction[] // external functions as defined by CAstRoot
 ): {
-  functionImports: WasmImportedFunction[];
-  wrappedFunctions: WasmFunction[];
+  functionImports: WasmImportedFunction[]; // the wasm function imports
+  wrappedFunctions: WasmFunction[]; // the wrapped imported functions (what is actually called directly by user code)
 } {
   const functionImports: WasmImportedFunction[] = [];
   const wrappedFunctions: WasmFunction[] = [];
 
-  for (const functionName of Object.keys(importedFunctions)) {
-    const importedFunction = importedFunctions[functionName];
-    if (!(functionName in externalCFunctions)) {
-      throw new TranslationError(
-        `Imported WASM function ${functionName} has not external C function counterpart`
-      ); // should not happen as imports are synchronized across modules
-    }
-    const externalCFunction = externalCFunctions[functionName];
-
+  for (const externalCFunction of externalCFunctions) {
+    const importedFunction = moduleRepository.modules[externalCFunction.moduleName].moduleFunctions[externalCFunction.name];
+    console.assert(typeof importedFunction !== "undefined", "Translator: Imported function not found in module repository");
     functionImports.push({
-      name: functionName + "_imported",
-      importPath: [importedFunction.parentImportedObject, functionName],
+      name: externalCFunction.name + "_imported",
+      importPath: [importedFunction.parentImportedObject, externalCFunction.name],
       wasmParamTypes: externalCFunction.parameters.map((param) =>
         convertScalarDataTypeToWasmType(param.dataType)
       ),
@@ -57,14 +52,14 @@ export default function processImportedFunctions(
     // then store the function results from virtual stack into the real stack
     const functionWrapper: WasmFunction = {
       type: "Function",
-      name: functionName,
+      name: externalCFunction.name,
       body: [],
     };
 
     // the actual call to the imported function that the wrapper wraps
     const importedFunctionCall: WasmRegularFunctionCall = {
       type: "RegularFunctionCall",
-      name: functionName + "_imported",
+      name: externalCFunction.name + "_imported",
       args: [],
     };
 

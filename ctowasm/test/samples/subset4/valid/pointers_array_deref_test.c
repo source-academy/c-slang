@@ -1,3 +1,5 @@
+#include <source_stdlib>
+
 /**
  * Test that dereferencing a pointer to an array gives a pointer to the array element type.
  * This needed to be handled specifically in the processor, due to the fact that the value
