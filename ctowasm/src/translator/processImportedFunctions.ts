@@ -4,7 +4,7 @@ import {
   WasmRegularFunctionCall,
 } from "~src/translator/wasm-ast/functions";
 import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
-import { ImportedFunction } from "~src/wasmModuleImports";
+import { ModuleFunction } from "~src/modules/types";
 import { TranslationError } from "~src/errors";
 import { ExternalFunction } from "~src/processor/c-ast/core";
 import { unpackDataType } from "~src/processor/dataTypeUtil";
@@ -21,8 +21,8 @@ import { WASM_ADDR_SIZE } from "~src/common/constants";
  */
 
 export default function processImportedFunctions(
-  importedFunctions: Record<string, ImportedFunction>,
-  externalCFunctions: Record<string, ExternalFunction>, // external functions as defined by CAstRoot
+  importedFunctions: Record<string, ModuleFunction>,
+  externalCFunctions: Record<string, ExternalFunction> // external functions as defined by CAstRoot
 ): {
   functionImports: WasmImportedFunction[];
   wrappedFunctions: WasmFunction[];
@@ -34,7 +34,7 @@ export default function processImportedFunctions(
     const importedFunction = importedFunctions[functionName];
     if (!(functionName in externalCFunctions)) {
       throw new TranslationError(
-        `Imported WASM function ${functionName} has not external C function counterpart`,
+        `Imported WASM function ${functionName} has not external C function counterpart`
       ); // should not happen as imports are synchronized across modules
     }
     const externalCFunction = externalCFunctions[functionName];
@@ -43,11 +43,11 @@ export default function processImportedFunctions(
       name: functionName + "_imported",
       importPath: [importedFunction.parentImportedObject, functionName],
       wasmParamTypes: externalCFunction.parameters.map((param) =>
-        convertScalarDataTypeToWasmType(param.dataType),
+        convertScalarDataTypeToWasmType(param.dataType)
       ),
       returnWasmTypes: externalCFunction.returnObjects
         ? externalCFunction.returnObjects.map((retObj) =>
-            convertScalarDataTypeToWasmType(retObj.dataType),
+            convertScalarDataTypeToWasmType(retObj.dataType)
           )
         : [],
     });
@@ -79,7 +79,7 @@ export default function processImportedFunctions(
           externalCFunction.parameters[i].dataType
         ) {
           throw new TranslationError(
-            `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${externalCFunction.parameters[i].dataType}' `,
+            `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${externalCFunction.parameters[i].dataType}' `
           );
         }
         importedFunctionCall.args.push({
@@ -87,13 +87,13 @@ export default function processImportedFunctions(
           addr: getRegisterPointerArithmeticNode(
             BASE_POINTER,
             "+",
-            externalCFunction.parameters[i].offset,
+            externalCFunction.parameters[i].offset
           ),
           wasmDataType: convertScalarDataTypeToWasmType(
-            externalCFunction.parameters[i].dataType,
+            externalCFunction.parameters[i].dataType
           ),
           numOfBytes: getSizeOfScalarDataType(
-            externalCFunction.parameters[i].dataType,
+            externalCFunction.parameters[i].dataType
           ),
         });
       }
@@ -111,7 +111,7 @@ export default function processImportedFunctions(
           addr: getRegisterPointerArithmeticNode(
             "bp",
             "+",
-            WASM_ADDR_SIZE + returnObject.offset,
+            WASM_ADDR_SIZE + returnObject.offset
           ),
           wasmDataType: convertScalarDataTypeToWasmType(returnObject.dataType),
           numOfBytes: getSizeOfScalarDataType(returnObject.dataType),

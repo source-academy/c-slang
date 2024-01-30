@@ -1454,7 +1454,7 @@
 }
 // ======== Beginning of Grammar rules =========
 
-program = translation_unit
+program = includedModules:include|.., _| rootNode:translation_unit { rootNode.includedModules = includedModules; return rootNode;}
 
 // this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
 // it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.
@@ -1788,11 +1788,15 @@ extended_source_character_set
   = "@"
 
 token
-  = keyword 
+  = include
+  / keyword 
   / identifier
   / constant 
   / string_literal 
   / punctuator 
+
+include  // custom keyword for specifying modules to import
+  = "#include <" @identifier ">"
 
 keyword  // must be ordered in descending order of length, as longer keywords take precedence in matching
   = "_Static_assert"/"_Thread_local"/"_Imaginary"/"_Noreturn"/"continue"/"register"/"restrict"/"unsigned"/"volatile"/"_Alignas"/"_Alignof"/"_Complex"/"_Generic"/"default"/"typedef"/"_Atomic"/"extern"/"inline"/"double"/"return"/"signed"/"sizeof"/"static"/"struct"/"switch"/"break"/"float"/"const"/"short"/"union"/"while"/"_Bool"/"auto"/"case"/"char"/"goto"/"long"/"else"/"enum"/"void"/"for"/"int"/"if"/"do"

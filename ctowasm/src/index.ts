@@ -1,4 +1,4 @@
-import wasmModuleImports, { setMemory } from "~src/wasmModuleImports";
+import ModuleRepository from "~src/modules";
 import {
   compile as originalCompile,
   compileToWat as originalCompileToWat,
@@ -6,23 +6,16 @@ import {
   generate_WAT_AST as originalGenerate_WAT_AST,
   generate_processed_C_AST as original_generate_processed_C_AST,
 } from "./compiler";
-export { setPrintFunction } from "~src/wasmModuleImports";
+
+
 
 export async function runWasm(wasm: Uint8Array, initialMemory: number) {
   const memory = new WebAssembly.Memory({
     initial: initialMemory,
   });
+  const moduleRepository = new ModuleRepository(memory);
   // eslint-disable-next-line
-  const moduleImports: Record<string, Function> = {};
-  Object.keys(wasmModuleImports).forEach(
-    (funcName) =>
-      (moduleImports[funcName] = wasmModuleImports[funcName].jsFunction),
-  );
-  setMemory(memory);
-  await WebAssembly.instantiate(wasm, {
-    imports: moduleImports,
-    js: { mem: memory },
-  });
+  await WebAssembly.instantiate(wasm, moduleRepository.createWasmImportsObject());
 }
 
 /**

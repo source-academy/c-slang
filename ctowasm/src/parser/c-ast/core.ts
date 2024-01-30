@@ -15,6 +15,7 @@ import IterationStatement from "~src/parser/c-ast/statement/iterationStatement";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import Block from "~src/parser/c-ast/statement/compoundStatement";
 import IdentifierExpression from "~src/parser/c-ast/expression/identifierExpr";
+import { ModuleName } from "~src/modules";
 
 export interface CNodeBase {
   type: string;
@@ -27,6 +28,7 @@ export type CNode = Statement | FunctionDefinition;
 export interface CAstRoot extends CNodeBase {
   type: "Root";
   children: (Declaration | FunctionDefinition)[];
+  includedModules: ModuleName[]
 }
 
 /**

@@ -4,6 +4,7 @@ import { ProcessingError, toJson } from "~src/errors";
 import { VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
 import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
+import ModuleRepository, { ModuleName } from "~src/modules";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
@@ -63,10 +64,15 @@ export class SymbolTable {
     }
   }
 
-  setExternalFunctions(externalFunctions: Record<string, FunctionDataType>) {
+  /**
+   * Add all the functions of imoprted modules to global scope.
+   */
+  setExternalFunctions(includedModules: ModuleName[], moduleRepository: ModuleRepository) {
     this.externalFunctions = {};
-    for (const funcName of Object.keys(externalFunctions)) {
-      this.addFunctionEntry(funcName, externalFunctions[funcName], true);
+    for (const moduleName of includedModules) {
+      Object.keys(moduleRepository.modules[moduleName].moduleFunctions).forEach(funcName => {
+        this.addFunctionEntry(funcName, moduleRepository.modules[moduleName].moduleFunctions[funcName].functionType, true);
+      })
     }
     return this.externalFunctions;
   }

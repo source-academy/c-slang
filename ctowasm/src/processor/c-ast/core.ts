@@ -22,6 +22,7 @@ import { Address, MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
 import { SelectionStatementP } from "~src/processor/c-ast/statement/selectionStatement";
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
+import { ModuleName } from "~src/modules";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -68,5 +69,5 @@ export interface CAstRootP extends CNodePBase {
   functions: FunctionDefinitionP[];
   dataSegmentByteStr: string; // the string of bytes (each byte is in the form "\\XX" where X is a digit in base-16) to initialize the data segment with, determined by processing initializers for data segment variables.
   dataSegmentSizeInBytes: number;
-  externalFunctions: Record<string, ExternalFunction>;
+  includedModules: ModuleName[] // names of all the modules being included in this C program
 }
