@@ -6,6 +6,7 @@ import { FunctionDetails } from "~src/processor/c-ast/function";
 import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
 import ModuleRepository, { ModuleName } from "~src/modules";
 import { unpackDataSegmentInitializerAccordingToDataType } from "~src/processor/processDeclaration";
+import { convertIntegerToByteString } from "~src/processor/byteStrUtil";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
@@ -123,11 +124,18 @@ export class SymbolTable {
   }
 
   /**
-   * Allocate spcae for an object of the given size.
-   * Adds the initializing str 
+   * Allocate bytes on data segment
+   * Adds the initializing bytes to the dataSegmentByteStr as well. 
+   * @params the array of bytes (in demical numeric form) to put on data segment.
+   * @returns offset in data segment of the allocated object.
    */
-  addDataSegmentObject() {
-
+  addDataSegmentObject(bytes: number[]): number {
+    bytes.forEach(byte => {
+      this.dataSegmentByteStr.value += convertIntegerToByteString(BigInt(byte), 1);
+    })
+    const offset = this.dataSegmentOffset.value;
+    this.dataSegmentOffset.value += bytes.length;
+    return offset;
   }
 
   addVariableEntry(

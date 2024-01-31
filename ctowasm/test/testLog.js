@@ -539,9 +539,14 @@ const testLog = {
       expectedValues: [18, 487424, 291, 1911],
     },
     string_literal: {
-      title: "Test string literal",
+      title: "Test string literal usage as initializer",
       expectedCode: false,
       expectedValues: ["hello world", "Hello World"],
+    },
+    string_literal_expression: {
+      title: "Test string literal usage as expression",
+      expectedCode: false,
+      expectedValues: ["hello world", "bye"]
     },
     comma_separated_expressions: {
       title: "Test comma separated expressions",

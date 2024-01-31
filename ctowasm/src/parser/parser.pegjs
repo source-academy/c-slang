@@ -1017,7 +1017,7 @@
 
   /**
    * Creates intiializer list from string literal.
-   * @param chars characters in the string, already in numeric form
+   * @param chars array of characters in the string, already in numeric form
    */
   function generateInitializerListFromStringLiteral(chars) {
     return {
@@ -1443,7 +1443,7 @@
 // ======== Beginning of Grammar rules =========
 
 program = includedModules:include|1.., _| _ rootNode:translation_unit { rootNode.includedModules = includedModules; return rootNode;}
-        / rootNode:translation_unit { rootNode.includedModules = includedModules; return rootNode;}
+        / rootNode:translation_unit { rootNode.includedModules = []; return rootNode;}
 
 // this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
 // it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.

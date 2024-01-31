@@ -98,7 +98,7 @@ export function convertConstantToByteStr(
 /**
  * Converts an integer into a string of bytes with numOfBytes length.
  */
-function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
+export function convertIntegerToByteString(integer: bigint, numOfBytes: number) {
   if (integer < 0) {
     // convert to 2's complement equivalent in terms of positive number
     integer = 2n ** (BigInt(numOfBytes) * 8n) + integer;

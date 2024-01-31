@@ -384,7 +384,6 @@ export default function processExpression(
           );
         }
 
-        // TODO: need to handle struct -> .
         return {
           originalDataType: {
             type: "pointer",
@@ -701,6 +700,25 @@ export default function processExpression(
             ? scalarConditionalDataType
             : truePrimaryExpr.dataType,
         })),
+      };
+    } else if (expr.type === "StringLiteral") {
+      // allocate the string in datasegment
+      const dataSegmentOffset = symbolTable.addDataSegmentObject(expr.chars);
+      return {
+        originalDataType: {
+          type: "pointer",
+          pointeeType: {
+            type: "primary",
+            primaryDataType: "signed char",
+          },
+        },
+        exprs: [
+          {
+            type: "DataSegmentAddress",
+            offset: createMemoryOffsetIntegerConstant(dataSegmentOffset),
+            dataType: "pointer",
+          },
+        ],
       };
     } else {
       // this should not happen
