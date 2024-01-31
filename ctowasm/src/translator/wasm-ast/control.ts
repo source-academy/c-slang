@@ -3,6 +3,7 @@ import {
   WasmExpression,
   WasmStatement,
 } from "~src/translator/wasm-ast/core";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
 
 /**

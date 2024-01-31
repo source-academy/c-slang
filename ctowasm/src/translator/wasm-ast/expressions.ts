@@ -61,11 +61,13 @@ export interface WasmBooleanExpression extends WasmWrapperNode {
 }
 
 /**
- * Wasm's version of a conditional expression e.g. 1 ? 2 : 3
+ * Custom WasmConditionalExpressin (comprised of multiple basic Wasm nodes as Wasm does not have native support for such a construct)
+ * Wasm Generator will convert this into a if else block that returns the given type.
  */
-export interface WasmSelectExpression extends WasmAstNode {
-  type: "SelectExpression";
-  condition: WasmExpression;
+export interface WasmConditionalExpression extends WasmAstNode {
+  type: "ConditionalExpression";
+  condition: WasmBooleanExpression;
   trueExpression: WasmExpression;
   falseExpression: WasmExpression;
+  wasmDataType: WasmDataType;
 }

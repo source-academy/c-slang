@@ -166,6 +166,14 @@ export default function processBlockItem(
         );
       });
       return processedExpressions;
+    } else if (node.type === "ConditionalExpression") {
+      // break this conditional into a simple if else expression (expressions inside condtional may have side effects)
+      return [{
+        type: "SelectionStatement",
+        condition: processCondition(node.condition, symbolTable),
+        ifStatements: processBlockItem(node.trueExpression, symbolTable, enclosingFunc),
+        elseStatements: processBlockItem(node.falseExpression, symbolTable, enclosingFunc)
+      }]
     } else if (
       node.type === "AddressOfExpression" ||
       node.type === "BinaryExpression" ||
@@ -173,7 +181,8 @@ export default function processBlockItem(
       node.type === "IntegerConstant" ||
       node.type === "IdentifierExpression" ||
       node.type === "PointerDereference" ||
-      node.type === "SizeOfExpression"
+      node.type === "SizeOfExpression" || 
+      node.type === "StructMemberAccess"
     ) {
       // all these expression statements can be safely ignored as they have no side effects
       return [];

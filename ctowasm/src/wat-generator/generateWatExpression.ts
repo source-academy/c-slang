@@ -52,9 +52,9 @@ export default function generateWatExpression(node: WasmExpression): string {
     return `${generateStatementsList(node.statements)} ${generateWatExpression(
       node.expr,
     )}`;
-  } else if (node.type === "SelectExpression") {
-    return `(select ${generateWatExpression(node.trueExpression)} ${generateWatExpression(node.falseExpression)} ${generateWatExpression(node.condition)})`
-  }else {
+  } else if (node.type === "ConditionalExpression") {
+    return `(if (result ${node.wasmDataType}) ${generateWatExpression(node.condition)} (then ${generateWatExpression(node.trueExpression)}) (else ${generateWatExpression(node.falseExpression)}))`
+  } else {
     throw new WatGeneratorError(`Unhandled WAT AST node: ${toJson(node)}`);
   }
 }

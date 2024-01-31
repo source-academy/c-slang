@@ -8,10 +8,10 @@ import {
 } from "~src/translator/wasm-ast/control";
 import {
   WasmBinaryExpression,
+  WasmConditionalExpression,
   WasmNegateFloatExpression,
   WasmPostStatementExpression,
   WasmPreStatementExpression,
-  WasmSelectExpression,
 } from "~src/translator/wasm-ast/expressions";
 import {
   WasmFunction,
@@ -84,4 +84,5 @@ export type WasmExpression =
   | WasmGlobalGet
   | WasmPreStatementExpression
   | WasmPostStatementExpression
-  | WasmSelectExpression;
+  | WasmConditionalExpression
+  

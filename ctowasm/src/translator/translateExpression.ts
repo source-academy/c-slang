@@ -119,10 +119,11 @@ export default function translateExpression(
       };
     } else if(expr.type === "ConditionalExpression") {
       return {
-        type: "SelectExpression",
+        type: "ConditionalExpression",
         condition: createWasmBooleanExpression(expr.condition),
         trueExpression: translateExpression(expr.trueExpression, expr.dataType, enclosingLoopDetails),
         falseExpression: translateExpression(expr.falseExpression, expr.dataType, enclosingLoopDetails),
+        wasmDataType: convertScalarDataTypeToWasmType(expr.dataType)
       }
     } else {
       throw new TranslationError(`Unhandled expression: ${toJson(expr)}`);

@@ -572,6 +572,14 @@ const testLog = {
         12, 7, 14, 8, 16, 9, 18,
       ],
     },
+    conditional_expression: {
+      title: "Test conditional expressions",
+      expectedCode: false,
+      expectedValues: [
+        2, 100, 1, 2, -1 , -1
+      ]
+    }
+    
   },
 };
 
