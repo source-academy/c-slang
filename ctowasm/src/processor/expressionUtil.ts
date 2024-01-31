@@ -108,6 +108,16 @@ export function checkBinaryExpressionDataTypesValidity(
 }
 
 /**
+ * Determine the overall datatype of a ConditionalExpression (e.g. 1 ? 2 : 3).
+ * Follows same rules as binary expressions ("+" used as placeholder).
+ */
+export function determineConditionalExpressionDataType(leftExprDataType: ScalarDataType,
+  rightExprDataType: ScalarDataType) {
+    const dataType = determineResultDataTypeOfBinaryExpression(leftExprDataType, rightExprDataType, "+");
+    return dataType.type === "pointer" ? "pointer" : dataType.primaryDataType;
+}
+
+/**
  * Determines the type that operands in a binary expression should be converted to before the operation,
  * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
  * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)

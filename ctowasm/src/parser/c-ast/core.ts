@@ -16,6 +16,7 @@ import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import Block from "~src/parser/c-ast/statement/compoundStatement";
 import IdentifierExpression from "~src/parser/c-ast/expression/identifierExpr";
 import { ModuleName } from "~src/modules";
+import ConditionalExpression from "~src/parser/c-ast/expression/conditionalExpression";
 
 export interface CNodeBase {
   type: string;
@@ -49,7 +50,8 @@ export type Expression =
   | Constant
   | IdentifierExpression
   | UnaryExpression
-  | CommaSeparatedExpressions;
+  | CommaSeparatedExpressions
+  | ConditionalExpression;
 
 export interface CommaSeparatedExpressions extends CNodeBase {
   type: "CommaSeparatedExpressions";

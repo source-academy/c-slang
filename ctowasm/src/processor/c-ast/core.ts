@@ -9,6 +9,7 @@ import { ScalarCDataType } from "~src/common/types";
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import {
   BinaryExpressionP,
+  ConditionalExpressionP,
   PostStatementExpressionP,
   PreStatementExpressionP,
   UnaryExpressionP,
@@ -23,6 +24,7 @@ import { SelectionStatementP } from "~src/processor/c-ast/statement/selectionSta
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 import { ModuleName } from "~src/modules";
+import ConditionalExpression from "~src/parser/c-ast/expression/conditionalExpression";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -49,7 +51,8 @@ export type ExpressionP =
   | PostStatementExpressionP
   | UnaryExpressionP
   | Address
-  | MemoryLoad;
+  | MemoryLoad
+  | ConditionalExpressionP;
 
 /**
  * All expressions should inherit this, as all expressions should have a primary data type.

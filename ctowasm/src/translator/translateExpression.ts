@@ -22,6 +22,7 @@ import translateBinaryExpression, {
 } from "~src/translator/translateBinaryExpression";
 import translateStatement from "~src/translator/translateStatement";
 import translateUnaryExpression from "~src/translator/translateUnaryExpression";
+import { createWasmBooleanExpression } from "~src/translator/util";
 import { WasmExpression } from "~src/translator/wasm-ast/core";
 
 /**
@@ -116,6 +117,13 @@ export default function translateExpression(
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
         numOfBytes: getSizeOfScalarDataType(expr.dataType),
       };
+    } else if(expr.type === "ConditionalExpression") {
+      return {
+        type: "SelectExpression",
+        condition: createWasmBooleanExpression(expr.condition),
+        trueExpression: translateExpression(expr.trueExpression, expr.dataType, enclosingLoopDetails),
+        falseExpression: translateExpression(expr.falseExpression, expr.dataType, enclosingLoopDetails),
+      }
     } else {
       throw new TranslationError(`Unhandled expression: ${toJson(expr)}`);
     }

@@ -11,6 +11,7 @@ import {
   WasmNegateFloatExpression,
   WasmPostStatementExpression,
   WasmPreStatementExpression,
+  WasmSelectExpression,
 } from "~src/translator/wasm-ast/expressions";
 import {
   WasmFunction,
@@ -82,4 +83,5 @@ export type WasmExpression =
   | WasmLocalGet
   | WasmGlobalGet
   | WasmPreStatementExpression
-  | WasmPostStatementExpression;
+  | WasmPostStatementExpression
+  | WasmSelectExpression;

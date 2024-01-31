@@ -21,15 +21,6 @@ export interface UnaryExpressionP extends ExpressionPBase {
 }
 
 /**
- * Wrapper node that indicates that the wrapped expression is to be treated as a boolean (int that is 1 or 0)
- */
-export interface BooleanExpressionP extends ExpressionPBase {
-  type: "BooleanExpression";
-  expr: ExpressionP;
-  dataType: "signed int";
-}
-
-/**
  * Represents an expression that consists of a series of statements followed by a expression
  * Used as the result of processing assignment expressions.
  */
@@ -47,6 +38,16 @@ export interface PostStatementExpressionP extends ExpressionPBase {
   type: "PostStatementExpression";
   statements: StatementP[];
   expr: ExpressionP;
+}
+
+/**
+ * Represents a inline conditional expression e.g: 1 ? 2 : 3
+ */
+export interface ConditionalExpressionP extends ExpressionPBase {
+  type: "ConditionalExpression";
+  condition: ExpressionP;
+  trueExpression: ExpressionP; // expression to return if condition is not zero (true)
+  falseExpression: ExpressionP;
 }
 
 /**
