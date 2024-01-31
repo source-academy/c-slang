@@ -387,25 +387,23 @@ export function unpackLocalVariableInitializerAccordingToDataType(
 export function processGlobalScopeDeclaration(
   declaration: Declaration,
   symbolTable: SymbolTable,
-): string {
+) {
   if (declaration.type === "Declaration") {
-    return processDataSegmentVariableDeclaration(declaration, symbolTable);
+    processDataSegmentVariableDeclaration(declaration, symbolTable);
   } else if (declaration.type === "EnumDeclaration") {
     processEnumDeclaration(declaration, symbolTable);
-    return "";
   } else {
     console.assert(false, "Unknown declaration type");
-    return "";
   }
 }
 
 /**
- * Processes a data segment variable declaration, returns the byte string to intialize that data segment with.
+ * Processes a data segment variable declaration. 
  */
 export function processDataSegmentVariableDeclaration(
   node: VariableDeclaration,
   symbolTable: SymbolTable,
-): string {
+) {
   try {
     const symbolEntry = symbolTable.addEntry(node);
     if (node.dataType.type === "function") {
@@ -414,7 +412,6 @@ export function processDataSegmentVariableDeclaration(
           `Function ${node.name} is initialized like a variable`,
         );
       }
-      return ""; // nothing to initalize function with
     }
 
     // sanity check
@@ -423,11 +420,6 @@ export function processDataSegmentVariableDeclaration(
         "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'",
       );
     }
-
-    return unpackDataSegmentInitializerAccordingToDataType(
-      node.dataType,
-      typeof node.initializer === "undefined" ? null : node.initializer,
-    );
   } catch (e) {
     if (e instanceof ProcessingError) {
       e.addPositionInfo(node.position);

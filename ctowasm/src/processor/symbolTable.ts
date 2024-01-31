@@ -5,6 +5,7 @@ import { VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
 import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
 import ModuleRepository, { ModuleName } from "~src/modules";
+import { unpackDataSegmentInitializerAccordingToDataType } from "~src/processor/processDeclaration";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
@@ -38,22 +39,27 @@ export interface VariableSymbolEntry {
 export class SymbolTable {
   parentTable: SymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
-  staticVariables: { declaration: VariableDeclaration; offset: number }[]; // keep track of all static variables that were declared
-  dataSegmentOffset: { value: number }; // current offset in dataSegment. only global variables and static storage class variables increase this.
+  dataSegmentByteStr: { value: string }; // the string of bytes that forms the data segment
+  dataSegmentOffset: { value: number }; // the current offset at data segment (address of next allocated data segment object)
   symbols: Record<string, SymbolEntry>;
   externalFunctions: Record<string, FunctionSymbolEntry>;
 
   constructor(parentTable?: SymbolTable | null) {
-    this.parentTable = parentTable ? parentTable : null;
+    
     this.symbols = {};
-    this.externalFunctions = parentTable ? parentTable.externalFunctions : {};
-    if (!parentTable) {
-      this.dataSegmentOffset = { value: 0 };
-      this.staticVariables = [];
-    } else {
+    
+    if (parentTable) {
+      this.externalFunctions = parentTable.externalFunctions;
+      this.parentTable = parentTable;
+      this.dataSegmentByteStr = parentTable.dataSegmentByteStr;
       this.dataSegmentOffset = parentTable.dataSegmentOffset;
-      this.staticVariables = parentTable.staticVariables;
+    } else {
+      this.externalFunctions = {};
+      this.parentTable = null;
+      this.dataSegmentByteStr = { value: "" };
+      this.dataSegmentOffset = { value: 0 }
     }
+
     if (!parentTable || parentTable.parentTable === null) {
       // all tables take the previous tables offset except the top 2 level parenttables
       // root table (1st level) is the global scope
@@ -85,11 +91,15 @@ export class SymbolTable {
     if (declaration.dataType.type === "function") {
       return this.addFunctionEntry(declaration.name, declaration.dataType);
     } else {
-      if (declaration.storageClass === "static") {
-        this.staticVariables.push({
-          declaration,
-          offset: this.dataSegmentOffset.value,
-        });
+      if (this.parentTable === null || declaration.storageClass === "static") {
+        // the declaration is either a global or static
+        // allocate space for and the initializer bytes for this declared object in data segment
+        this.dataSegmentByteStr.value += unpackDataSegmentInitializerAccordingToDataType(
+          declaration.dataType,
+          typeof declaration.initializer === "undefined"
+            ? null
+            : declaration.initializer,
+        )
       }
       return this.addVariableEntry(
         declaration.name,
@@ -110,6 +120,14 @@ export class SymbolTable {
     };
     this.symbols[enumeratorName] = entry;
     return entry;
+  }
+
+  /**
+   * Allocate spcae for an object of the given size.
+   * Adds the initializing str 
+   */
+  addDataSegmentObject() {
+
   }
 
   addVariableEntry(
@@ -147,7 +165,7 @@ export class SymbolTable {
       entry = {
         type: "dataSegmentVariable",
         dataType: dataType,
-        offset: this.dataSegmentOffset.value,
+        offset: this.dataSegmentOffset.value
       };
       this.dataSegmentOffset.value += getDataTypeSize(dataType);
     } else {

@@ -61,27 +61,11 @@ export default function process(
         processFunctionDefinition(child, symbolTable),
       );
     } else {
-      processedAst.dataSegmentByteStr += processGlobalScopeDeclaration(
-        child,
-        symbolTable,
-      ); // add the byte str used to initalize this variable to teh data segment byte string
+      processGlobalScopeDeclaration(child, symbolTable)
     }
   });
-  const BYTE_STR_LENGTH = 3; // each byte is represented in the byte string with 3 characters eg "\\00" for 0x00
-  // at this point the dataSegmentOffset in the symbolTable will account for static local variables as well
-  symbolTable.staticVariables.forEach(({ declaration, offset }) => {
-    // insert the static variable byte strings at correct points in byte string using the offset
-    processedAst.dataSegmentByteStr =
-      processedAst.dataSegmentByteStr.slice(0, offset * BYTE_STR_LENGTH) +
-      unpackDataSegmentInitializerAccordingToDataType(
-        declaration.dataType,
-        typeof declaration.initializer === "undefined"
-          ? null
-          : declaration.initializer,
-      ) +
-      processedAst.dataSegmentByteStr.slice(offset * BYTE_STR_LENGTH);
-  });
 
+  processedAst.dataSegmentByteStr = symbolTable.dataSegmentByteStr.value;
   processedAst.dataSegmentSizeInBytes = symbolTable.dataSegmentOffset.value;
   return { astRootNode: processedAst, includedModules };
 }
