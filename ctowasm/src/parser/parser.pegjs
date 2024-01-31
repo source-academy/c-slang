@@ -443,39 +443,27 @@
     return currNode;
   }
 
-  /**
-   * Evaluates a string of assignment expressions from right to left.
-   * The resultant node does not consists of "BinaryExpression" nodes, as they consist of unique nodes depending on the expression (unlike regular arithmetic binary expressions).
-   * This is used for assignment and compound assignment expressions.
-   * @param firstExpr refers to the rightmost expression
-   */
-  function createAssignmentTree(firstExpr, assignmentOperations) {
-    let currNode = firstExpr;
-    for (let i = assignmentOperations.length - 1; i >= 0; --i) {
-      const operation = assignmentOperations[i];
-      // check if operator is null
-      if (operation[1].length > 1) {
-        // compound assignment
-        currNode = {
+  function createAssignmentNode(lvalue, assignedExpression, assignmentOperator) {
+    if (assignmentOperator.length > 1) {
+      // compond assignment operator
+      return {
           type: "Assignment",
-          lvalue: operation[0],
+          lvalue,
           expr: {
             type: "BinaryExpression",
-            leftExpr: operation[0],
-            rightExpr: currNode,
-            operator: operation[1][0],
+            leftExpr: lvalue,
+            rightExpr: assignedExpression,
+            operator: assignmentOperator[0], // only take the first char of assignmentOperator e.g. "+" of "+="
           },
-        };
-      } else {
-        currNode = {
-          type: "Assignment",
-          lvalue: operation[0],
-          expr: currNode,
-        };
+        }; 
+    } else {
+      return {
+        type: "Assignment",
+        lvalue,
+        expr: assignedExpression
       }
     }
-    return currNode;
-  }
+  } 
 
   /**
    * Given an array of pointers ("*"), create a tree of PointerDeclarators, ending in the directDeclarator.
@@ -1695,8 +1683,11 @@ expression
   / assignment_expression
 
 assignment_expression
-  = assignmentOperations:(@logical_or_expression _ @("+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / "&=" / "^=" / "|=" / "=") _ )+ firstExpr:conditional_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
+  = lvalue:unary_expression _ assignmentOperator:assignment_operator _ assignedExpression:assignment_expression { return createAssignmentNode(lvalue, assignedExpression, assignmentOperator); }
   / conditional_expression
+
+assignment_operator
+  = "+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / "&=" / "^=" / "|=" / "="
 
 conditional_expression
   = condition:logical_or_expression _ "?" _ trueExpression:expression _ ":" _ falseExpression:conditional_expression { return generateNode("ConditionalExpression", { condition, trueExpression, falseExpression }); }
@@ -1740,10 +1731,10 @@ add_subtract_expression
   / multiply_divide_expression
 
 multiply_divide_expression
-  = firstExpr:prefix_expression tail:(_ @("*" / "/" / "%") _ @prefix_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
-  / prefix_expression // as the last binary expression (highest precedence), this rule is needed
+  = firstExpr:unary_expression tail:(_ @("*" / "/" / "%") _ @unary_expression)+ { return createLeftToRightBinaryExpressionTree(firstExpr, tail); }
+  / unary_expression // as the last binary expression (highest precedence), this rule is needed
 
-prefix_expression 
+unary_expression 
   = operations:(@prefix_operation _)+ firstExpr:postfix_expression { return createPrefixExpressionNode(firstExpr, operations); }
   / postfix_expression
 
