@@ -1695,7 +1695,11 @@ expression
   / assignment_expression
 
 assignment_expression
-  = assignmentOperations:(@logical_or_expression _ @("+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / "&=" / "^=" / "|=" / "=") _ )+ firstExpr:logical_or_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
+  = assignmentOperations:(@logical_or_expression _ @("+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / "&=" / "^=" / "|=" / "=") _ )+ firstExpr:conditional_expression { return createAssignmentTree(firstExpr, assignmentOperations); }
+  / conditional_expression
+
+conditional_expression
+  = condition:logical_or_expression _ "?" _ trueExpression:expression _ ":" _ falseExpression:conditional_expression { return generateNode("ConditionalExpression", { condition, trueExpression, falseExpression }); }
   / logical_or_expression
 
 // binary expressions are ordered by operator precedence (top is least precedence, bottom is highest precedence)
