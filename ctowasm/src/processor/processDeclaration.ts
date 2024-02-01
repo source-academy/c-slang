@@ -398,7 +398,7 @@ export function processGlobalScopeDeclaration(
 }
 
 /**
- * Processes a data segment variable declaration. 
+ * Processes a data segment variable declaration.
  */
 export function processDataSegmentVariableDeclaration(
   node: VariableDeclaration,

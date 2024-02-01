@@ -546,7 +546,7 @@ const testLog = {
     string_literal_expression: {
       title: "Test string literal usage as expression",
       expectedCode: false,
-      expectedValues: ["hello world", "bye"]
+      expectedValues: ["hello world", "bye"],
     },
     comma_separated_expressions: {
       title: "Test comma separated expressions",
@@ -580,25 +580,18 @@ const testLog = {
     conditional_expression: {
       title: "Test conditional expressions",
       expectedCode: false,
-      expectedValues: [
-        2, 100, 1, 2, -1 , -1
-      ]
+      expectedValues: [2, 100, 1, 2, -1, -1],
     },
     switch_statements: {
       title: "Test switch statements",
       expectedCode: false,
-      expectedValues: [
-        1, 1, 1, 1, 1, 1
-      ]
+      expectedValues: [1, 1, 1, 1, 1, 1],
     },
     nested_loop_jumps: {
       title: "Test jump statements (continue/break) in nested while loops",
       expectedCode: false,
-      expectedValues: [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-      ]
-    }
-    
+      expectedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    },
   },
 };
 

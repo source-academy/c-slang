@@ -81,5 +81,7 @@ export function generateBranchTableInstruction(branchTable: WasmBranchTable) {
   for (let i = 0; i <= branchTable.maxIndex; ++i) {
     indexes += `${i} `;
   }
-  return `(br_table ${indexes}${generateWatExpression(branchTable.indexExpression)})`;
+  return `(br_table ${indexes}${generateWatExpression(
+    branchTable.indexExpression,
+  )})`;
 }

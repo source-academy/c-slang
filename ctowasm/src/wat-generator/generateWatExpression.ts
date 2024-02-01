@@ -53,7 +53,11 @@ export default function generateWatExpression(node: WasmExpression): string {
       node.expr,
     )}`;
   } else if (node.type === "ConditionalExpression") {
-    return `(if (result ${node.wasmDataType}) ${generateWatExpression(node.condition)} (then ${generateWatExpression(node.trueExpression)}) (else ${generateWatExpression(node.falseExpression)}))`
+    return `(if (result ${node.wasmDataType}) ${generateWatExpression(
+      node.condition,
+    )} (then ${generateWatExpression(
+      node.trueExpression,
+    )}) (else ${generateWatExpression(node.falseExpression)}))`;
   } else {
     throw new WatGeneratorError(`Unhandled WAT AST node: ${toJson(node)}`);
   }

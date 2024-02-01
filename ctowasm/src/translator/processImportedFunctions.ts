@@ -4,7 +4,6 @@ import {
   WasmRegularFunctionCall,
 } from "~src/translator/wasm-ast/functions";
 import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
-import { ModuleFunction } from "~src/modules/types";
 import { TranslationError } from "~src/errors";
 import { ExternalFunction } from "~src/processor/c-ast/core";
 import { unpackDataType } from "~src/processor/dataTypeUtil";
@@ -23,7 +22,7 @@ import ModuleRepository from "~src/modules";
 
 export default function processImportedFunctions(
   moduleRepository: ModuleRepository,
-  externalCFunctions: ExternalFunction[] // external functions as defined by CAstRoot
+  externalCFunctions: ExternalFunction[], // external functions as defined by CAstRoot
 ): {
   functionImports: WasmImportedFunction[]; // the wasm function imports
   wrappedFunctions: WasmFunction[]; // the wrapped imported functions (what is actually called directly by user code)
@@ -32,17 +31,26 @@ export default function processImportedFunctions(
   const wrappedFunctions: WasmFunction[] = [];
 
   for (const externalCFunction of externalCFunctions) {
-    const importedFunction = moduleRepository.modules[externalCFunction.moduleName].moduleFunctions[externalCFunction.name];
-    console.assert(typeof importedFunction !== "undefined", "Translator: Imported function not found in module repository");
+    const importedFunction =
+      moduleRepository.modules[externalCFunction.moduleName].moduleFunctions[
+        externalCFunction.name
+      ];
+    console.assert(
+      typeof importedFunction !== "undefined",
+      "Translator: Imported function not found in module repository",
+    );
     functionImports.push({
       name: externalCFunction.name + "_imported",
-      importPath: [importedFunction.parentImportedObject, externalCFunction.name],
+      importPath: [
+        importedFunction.parentImportedObject,
+        externalCFunction.name,
+      ],
       wasmParamTypes: externalCFunction.parameters.map((param) =>
-        convertScalarDataTypeToWasmType(param.dataType)
+        convertScalarDataTypeToWasmType(param.dataType),
       ),
       returnWasmTypes: externalCFunction.returnObjects
         ? externalCFunction.returnObjects.map((retObj) =>
-            convertScalarDataTypeToWasmType(retObj.dataType)
+            convertScalarDataTypeToWasmType(retObj.dataType),
           )
         : [],
     });
@@ -74,7 +82,7 @@ export default function processImportedFunctions(
           externalCFunction.parameters[i].dataType
         ) {
           throw new TranslationError(
-            `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${externalCFunction.parameters[i].dataType}' `
+            `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${externalCFunction.parameters[i].dataType}' `,
           );
         }
         importedFunctionCall.args.push({
@@ -82,13 +90,13 @@ export default function processImportedFunctions(
           addr: getRegisterPointerArithmeticNode(
             BASE_POINTER,
             "+",
-            externalCFunction.parameters[i].offset
+            externalCFunction.parameters[i].offset,
           ),
           wasmDataType: convertScalarDataTypeToWasmType(
-            externalCFunction.parameters[i].dataType
+            externalCFunction.parameters[i].dataType,
           ),
           numOfBytes: getSizeOfScalarDataType(
-            externalCFunction.parameters[i].dataType
+            externalCFunction.parameters[i].dataType,
           ),
         });
       }
@@ -106,7 +114,7 @@ export default function processImportedFunctions(
           addr: getRegisterPointerArithmeticNode(
             "bp",
             "+",
-            WASM_ADDR_SIZE + returnObject.offset
+            WASM_ADDR_SIZE + returnObject.offset,
           ),
           wasmDataType: convertScalarDataTypeToWasmType(returnObject.dataType),
           numOfBytes: getSizeOfScalarDataType(returnObject.dataType),

@@ -2,7 +2,6 @@
  * Translator module which performs translation of C AST to WAT AST.
  */
 import { setPseudoRegisters } from "~src/translator/util";
-import { ModuleFunction } from "~src/modules/types";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import translateFunction from "~src/translator/translateFunction";
 import { CAstRootP } from "~src/processor/c-ast/core";
@@ -11,7 +10,7 @@ import ModuleRepository from "~src/modules";
 
 export default function translate(
   CAstRoot: CAstRootP,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -24,7 +23,7 @@ export default function translate(
 
   const processedImportedFunctions = processIncludedModules(
     moduleRepository,
-    CAstRoot.externalFunctions
+    CAstRoot.externalFunctions,
   );
 
   wasmRoot.importedFunctions = processedImportedFunctions.functionImports;

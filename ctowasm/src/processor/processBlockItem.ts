@@ -19,12 +19,10 @@ import { BlockItem } from "~src/parser/c-ast/core";
 import {
   determineOperandTargetDataTypeOfArithmeticExpression,
   determineResultDataTypeOfArithmeticExpression,
-  determineResultDataTypeOfBinaryExpression,
   getArithmeticPrePostfixExpressionNodes,
 } from "~src/processor/expressionUtil";
 import { processLocalDeclaration } from "~src/processor/processDeclaration";
 import processExpression from "~src/processor/processExpression";
-import { DataType } from "~src/parser/c-ast/dataTypes";
 import { isIntegralDataType } from "~src/processor/dataTypeUtil";
 import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
@@ -41,7 +39,7 @@ import { PrimaryCDataType } from "~src/common/types";
 export default function processBlockItem(
   node: BlockItem,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP
+  enclosingFunc: FunctionDefinitionP,
 ): StatementP[] {
   try {
     if (node.type === "Block") {
@@ -71,15 +69,15 @@ export default function processBlockItem(
             ...processLocalDeclaration(
               declaration,
               forLoopSymbolTable,
-              enclosingFunc
-            )
+              enclosingFunc,
+            ),
           );
         }
       } else if (node.clause !== null && node.clause.type === "Expression") {
         clause = processBlockItem(
           node.clause.value,
           forLoopSymbolTable,
-          enclosingFunc
+          enclosingFunc,
         );
       } else {
         clause = [];
@@ -113,7 +111,7 @@ export default function processBlockItem(
       if (typeof enclosingFunc === "undefined") {
         throw new ProcessingError(
           "Return statement is not valid outside of a function",
-          node.position
+          node.position,
         );
       }
 
@@ -136,7 +134,7 @@ export default function processBlockItem(
           ifStatements: processBlockItem(
             node.ifStatement,
             symbolTable,
-            enclosingFunc
+            enclosingFunc,
           ),
           elseStatements: node.elseStatement
             ? processBlockItem(node.elseStatement, symbolTable, enclosingFunc)
@@ -156,7 +154,7 @@ export default function processBlockItem(
     } else if (node.type === "SwitchStatement") {
       const processedTargetExpression = processExpression(
         node.targetExpression,
-        symbolTable
+        symbolTable,
       );
       const dataTypeOfTargetExpression = getDataTypeOfExpression({
         expression: processedTargetExpression,
@@ -168,13 +166,13 @@ export default function processBlockItem(
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
         const evaluatedConstant = evaluateCompileTimeExpression(
-          switchStatementCase.conditionMatch
+          switchStatementCase.conditionMatch,
         );
         // TODO: refine error message if not compile time expression
         const processedStatements: StatementP[] = [];
         for (const statement of switchStatementCase.statements) {
           processedStatements.push(
-            ...processBlockItem(statement, symbolTable, enclosingFunc)
+            ...processBlockItem(statement, symbolTable, enclosingFunc),
           );
         }
         // the conditon of each switch case is adjusted to be a relational expression: targetExpression == case value
@@ -188,12 +186,12 @@ export default function processBlockItem(
               determineOperandTargetDataTypeOfArithmeticExpression(
                 processedTargetExpression.exprs[0].dataType as PrimaryCDataType,
                 evaluatedConstant.dataType,
-                "=="
+                "==",
               ),
             dataType: determineResultDataTypeOfArithmeticExpression(
               processedTargetExpression.exprs[0].dataType as PrimaryCDataType,
               evaluatedConstant.dataType,
-              "=="
+              "==",
             ),
           },
           statements: processedStatements,
@@ -202,7 +200,7 @@ export default function processBlockItem(
       const processedDefaultStatements: StatementP[] = [];
       for (const defaultStatement of node.defaultStatements) {
         processedDefaultStatements.push(
-          ...processBlockItem(defaultStatement, symbolTable, enclosingFunc)
+          ...processBlockItem(defaultStatement, symbolTable, enclosingFunc),
         );
       }
       return [
@@ -233,7 +231,7 @@ export default function processBlockItem(
       const processedExpressions: StatementP[] = [];
       node.expressions.forEach((e) => {
         processedExpressions.push(
-          ...processBlockItem(e, symbolTable, enclosingFunc)
+          ...processBlockItem(e, symbolTable, enclosingFunc),
         );
       });
       return processedExpressions;
@@ -246,12 +244,12 @@ export default function processBlockItem(
           ifStatements: processBlockItem(
             node.trueExpression,
             symbolTable,
-            enclosingFunc
+            enclosingFunc,
           ),
           elseStatements: processBlockItem(
             node.falseExpression,
             symbolTable,
-            enclosingFunc
+            enclosingFunc,
           ),
         },
       ];

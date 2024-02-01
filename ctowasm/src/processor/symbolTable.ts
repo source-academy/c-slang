@@ -46,9 +46,8 @@ export class SymbolTable {
   externalFunctions: Record<string, FunctionSymbolEntry>;
 
   constructor(parentTable?: SymbolTable | null) {
-    
     this.symbols = {};
-    
+
     if (parentTable) {
       this.externalFunctions = parentTable.externalFunctions;
       this.parentTable = parentTable;
@@ -58,7 +57,7 @@ export class SymbolTable {
       this.externalFunctions = {};
       this.parentTable = null;
       this.dataSegmentByteStr = { value: "" };
-      this.dataSegmentOffset = { value: 0 }
+      this.dataSegmentOffset = { value: 0 };
     }
 
     if (!parentTable || parentTable.parentTable === null) {
@@ -74,12 +73,22 @@ export class SymbolTable {
   /**
    * Add all the functions of imoprted modules to global scope.
    */
-  setExternalFunctions(includedModules: ModuleName[], moduleRepository: ModuleRepository) {
+  setExternalFunctions(
+    includedModules: ModuleName[],
+    moduleRepository: ModuleRepository,
+  ) {
     this.externalFunctions = {};
     for (const moduleName of includedModules) {
-      Object.keys(moduleRepository.modules[moduleName].moduleFunctions).forEach(funcName => {
-        this.addFunctionEntry(funcName, moduleRepository.modules[moduleName].moduleFunctions[funcName].functionType, true);
-      })
+      Object.keys(moduleRepository.modules[moduleName].moduleFunctions).forEach(
+        (funcName) => {
+          this.addFunctionEntry(
+            funcName,
+            moduleRepository.modules[moduleName].moduleFunctions[funcName]
+              .functionType,
+            true,
+          );
+        },
+      );
     }
     return this.externalFunctions;
   }
@@ -95,12 +104,13 @@ export class SymbolTable {
       if (this.parentTable === null || declaration.storageClass === "static") {
         // the declaration is either a global or static
         // allocate space for and the initializer bytes for this declared object in data segment
-        this.dataSegmentByteStr.value += unpackDataSegmentInitializerAccordingToDataType(
-          declaration.dataType,
-          typeof declaration.initializer === "undefined"
-            ? null
-            : declaration.initializer,
-        )
+        this.dataSegmentByteStr.value +=
+          unpackDataSegmentInitializerAccordingToDataType(
+            declaration.dataType,
+            typeof declaration.initializer === "undefined"
+              ? null
+              : declaration.initializer,
+          );
       }
       return this.addVariableEntry(
         declaration.name,
@@ -125,14 +135,17 @@ export class SymbolTable {
 
   /**
    * Allocate bytes on data segment
-   * Adds the initializing bytes to the dataSegmentByteStr as well. 
+   * Adds the initializing bytes to the dataSegmentByteStr as well.
    * @params the array of bytes (in demical numeric form) to put on data segment.
    * @returns offset in data segment of the allocated object.
    */
   addDataSegmentObject(bytes: number[]): number {
-    bytes.forEach(byte => {
-      this.dataSegmentByteStr.value += convertIntegerToByteString(BigInt(byte), 1);
-    })
+    bytes.forEach((byte) => {
+      this.dataSegmentByteStr.value += convertIntegerToByteString(
+        BigInt(byte),
+        1,
+      );
+    });
     const offset = this.dataSegmentOffset.value;
     this.dataSegmentOffset.value += bytes.length;
     return offset;
@@ -173,7 +186,7 @@ export class SymbolTable {
       entry = {
         type: "dataSegmentVariable",
         dataType: dataType,
-        offset: this.dataSegmentOffset.value
+        offset: this.dataSegmentOffset.value,
       };
       this.dataSegmentOffset.value += getDataTypeSize(dataType);
     } else {

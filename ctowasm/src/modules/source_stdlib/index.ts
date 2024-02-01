@@ -2,13 +2,13 @@ import { ModulesGlobalConfig } from "~src/modules";
 import { Module, ModuleFunction } from "~src/modules/types";
 import { convertFloatToCStyleString } from "~src/modules/util";
 
-// the name that this module is imported into wasm by, 
+// the name that this module is imported into wasm by,
 // as well as the include name to use in C program file.
 export const sourceStandardLibraryModuleImportName = "source_stdlib";
 
 export class SourceStandardLibraryModule extends Module {
   moduleFunctions: Record<string, ModuleFunction>;
-  
+
   constructor(memory: WebAssembly.Memory, config: ModulesGlobalConfig) {
     super(memory, config);
     this.moduleFunctions = {
@@ -131,7 +131,8 @@ export class SourceStandardLibraryModule extends Module {
           ],
           returnType: null,
         },
-        jsFunction: (float: number) => this.print(convertFloatToCStyleString(float)),
+        jsFunction: (float: number) =>
+          this.print(convertFloatToCStyleString(float)),
       },
       print_double: {
         parentImportedObject: sourceStandardLibraryModuleImportName,
@@ -145,7 +146,8 @@ export class SourceStandardLibraryModule extends Module {
           ],
           returnType: null,
         },
-        jsFunction: (float: number) => this.print(convertFloatToCStyleString(float)),
+        jsFunction: (float: number) =>
+          this.print(convertFloatToCStyleString(float)),
       },
       // for printing the value of pointers. behaves the same as print_int_unsigned
       print_address: {
@@ -197,7 +199,6 @@ export class SourceStandardLibraryModule extends Module {
           this.print(str);
         },
       },
-    }
+    };
   }
 }
-  

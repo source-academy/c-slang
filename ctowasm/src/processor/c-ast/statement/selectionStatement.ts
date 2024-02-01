@@ -9,7 +9,7 @@ export interface SelectionStatementP extends CNodePBase {
 }
 
 export interface SwitchStatementP {
-  type: "SwitchStatement",
+  type: "SwitchStatement";
   targetExpression: ExpressionP;
   cases: SwitchStatementCaseP[];
   defaultStatements: StatementP[];

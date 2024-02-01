@@ -21,13 +21,13 @@ export interface ModuleFunction {
 export abstract class Module {
   memory: WebAssembly.Memory;
   config: ModulesGlobalConfig;
-  abstract moduleFunctions: Record<string, ModuleFunction> // all the functions within this module
-  
+  abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
+
   constructor(memory: WebAssembly.Memory, config: ModulesGlobalConfig) {
     this.memory = memory;
     this.config = config;
   }
-  
+
   /**
    * Print to "stdout" by calling the printFunction defined in config.
    */

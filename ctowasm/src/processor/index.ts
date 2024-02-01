@@ -3,13 +3,9 @@
  */
 
 import { CAstRoot } from "~src/parser/c-ast/core";
-import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processFunctionDefinition from "~src/processor/processFunctionDefinition";
-import {
-  processGlobalScopeDeclaration,
-  unpackDataSegmentInitializerAccordingToDataType,
-} from "~src/processor/processDeclaration";
+import { processGlobalScopeDeclaration } from "~src/processor/processDeclaration";
 import { SymbolTable } from "~src/processor/symbolTable";
 import ModuleRepository, { ModuleName } from "~src/modules";
 
@@ -22,11 +18,12 @@ import ModuleRepository, { ModuleName } from "~src/modules";
 export default function process(
   ast: CAstRoot,
   moduleRepository: ModuleRepository,
-): { astRootNode: CAstRootP, includedModules: ModuleName[] }{
+): { astRootNode: CAstRootP; includedModules: ModuleName[] } {
   const includedModules: ModuleName[] = [];
   const symbolTable = new SymbolTable();
   const processedExternalFunctions = symbolTable.setExternalFunctions(
-    ast.includedModules, moduleRepository
+    ast.includedModules,
+    moduleRepository,
   );
   const processedAst: CAstRootP = {
     type: "Root",
@@ -39,19 +36,20 @@ export default function process(
   // save the processed details of external functions
   for (const moduleName of ast.includedModules) {
     includedModules.push(moduleName);
-    Object.keys(moduleRepository.modules[moduleName].moduleFunctions).forEach(moduleFunctionName => {
-      processedAst.externalFunctions.push({
-        moduleName,
-        name: moduleFunctionName,
-        parameters:
-          processedExternalFunctions[moduleFunctionName].processedFunctionDetails
-            .parameters,
-        returnObjects:
-          processedExternalFunctions[moduleFunctionName].processedFunctionDetails
-            .returnObjects,
-      });
-    })
-    
+    Object.keys(moduleRepository.modules[moduleName].moduleFunctions).forEach(
+      (moduleFunctionName) => {
+        processedAst.externalFunctions.push({
+          moduleName,
+          name: moduleFunctionName,
+          parameters:
+            processedExternalFunctions[moduleFunctionName]
+              .processedFunctionDetails.parameters,
+          returnObjects:
+            processedExternalFunctions[moduleFunctionName]
+              .processedFunctionDetails.returnObjects,
+        });
+      },
+    );
   }
 
   ast.children.forEach((child) => {
@@ -61,7 +59,7 @@ export default function process(
         processFunctionDefinition(child, symbolTable),
       );
     } else {
-      processGlobalScopeDeclaration(child, symbolTable)
+      processGlobalScopeDeclaration(child, symbolTable);
     }
   });
 

@@ -117,14 +117,22 @@ export default function translateExpression(
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
         numOfBytes: getSizeOfScalarDataType(expr.dataType),
       };
-    } else if(expr.type === "ConditionalExpression") {
+    } else if (expr.type === "ConditionalExpression") {
       return {
         type: "ConditionalExpression",
         condition: createWasmBooleanExpression(expr.condition),
-        trueExpression: translateExpression(expr.trueExpression, expr.dataType, enclosingLoopDetails),
-        falseExpression: translateExpression(expr.falseExpression, expr.dataType, enclosingLoopDetails),
-        wasmDataType: convertScalarDataTypeToWasmType(expr.dataType)
-      }
+        trueExpression: translateExpression(
+          expr.trueExpression,
+          expr.dataType,
+          enclosingLoopDetails,
+        ),
+        falseExpression: translateExpression(
+          expr.falseExpression,
+          expr.dataType,
+          enclosingLoopDetails,
+        ),
+        wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
+      };
     } else {
       throw new TranslationError(`Unhandled expression: ${toJson(expr)}`);
     }

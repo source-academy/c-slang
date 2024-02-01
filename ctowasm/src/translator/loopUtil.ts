@@ -9,7 +9,7 @@ export function createEnclosingLoopDetails(
   if (typeof prv !== "undefined") {
     return {
       currLoopNumber: prv.currLoopNumber + 1,
-      currBlockNumber: prv.currBlockNumber + 1
+      currBlockNumber: prv.currBlockNumber + 1,
     };
   } else {
     return {

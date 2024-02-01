@@ -25,9 +25,9 @@ export default class ModuleRepository {
 
   constructor(memory?: WebAssembly.Memory, config?: ModulesGlobalConfig) {
     if (memory) {
-      this.memory = memory // initially memory starts at 0
+      this.memory = memory; // initially memory starts at 0
     } else {
-      this.memory = new WebAssembly.Memory({initial: 0});
+      this.memory = new WebAssembly.Memory({ initial: 0 });
     }
     if (config) {
       this.config = { ...defaultModulesGlobalConfig, ...config };
@@ -38,7 +38,7 @@ export default class ModuleRepository {
     this.modules = {
       [sourceStandardLibraryModuleImportName]: new SourceStandardLibraryModule(
         this.memory,
-        this.config
+        this.config,
       ),
     };
   }
@@ -61,9 +61,9 @@ export default class ModuleRepository {
       const moduleImportObject: WebAssembly.ModuleImports = {};
       Object.keys(this.modules[moduleName].moduleFunctions).map(
         (moduleFunctionName) => {
-          moduleImportObject[moduleFunctionName] = module.moduleFunctions[moduleFunctionName]
-            .jsFunction;
-        }
+          moduleImportObject[moduleFunctionName] =
+            module.moduleFunctions[moduleFunctionName].jsFunction;
+        },
       );
       imports[moduleName] = moduleImportObject;
     });

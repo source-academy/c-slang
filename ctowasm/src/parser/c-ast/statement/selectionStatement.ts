@@ -14,11 +14,11 @@ export interface SelectionStatement extends CNodeBase {
 export interface SwitchStatement extends CNodeBase {
   type: "SwitchStatement";
   targetExpression: Expression; // the expression being used in conditions
-  cases:  SwitchStatementCase[];
+  cases: SwitchStatementCase[];
   defaultStatements: Statement[]; // statements for default case
 }
 
 interface SwitchStatementCase {
-  conditionMatch: Expression // the constant expression to match the targetExpression against
-  statements: Statement[] // the statements under this case to run
+  conditionMatch: Expression; // the constant expression to match the targetExpression against
+  statements: Statement[]; // the statements under this case to run
 }

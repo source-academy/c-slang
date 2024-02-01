@@ -16,7 +16,7 @@ import BigNumber from "bignumber.js";
  */
 export function convertFloatToCStyleString(float: number): string {
   if (float === Infinity) {
-    return "inf"
+    return "inf";
   } else if (float === -Infinity) {
     return "-inf";
   }

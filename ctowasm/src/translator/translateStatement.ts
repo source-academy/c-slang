@@ -22,7 +22,7 @@ import translateSwitchStatement from "~src/translator/translateSwitchStatement";
  */
 export default function translateStatement(
   statement: StatementP,
-  enclosingLoopDetails?: EnclosingLoopDetails // the loop labelname of the loop enclosing this statement Used to translate break statements.
+  enclosingLoopDetails?: EnclosingLoopDetails, // the loop labelname of the loop enclosing this statement Used to translate break statements.
 ): WasmStatement {
   if (statement.type === "MemoryStore") {
     return {
@@ -30,12 +30,12 @@ export default function translateStatement(
       addr: translateExpression(
         statement.address,
         statement.address.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
       value: translateExpression(
         statement.value,
         statement.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       ),
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
       numOfBytes: getSizeOfScalarDataType(statement.dataType),
@@ -47,20 +47,21 @@ export default function translateStatement(
       type: "SelectionStatement",
       condition: createWasmBooleanExpression(statement.condition),
       actions: statement.ifStatements.map((s) =>
-        translateStatement(s, enclosingLoopDetails)
+        translateStatement(s, enclosingLoopDetails),
       ),
       elseStatements: statement.elseStatements
         ? statement.elseStatements.map((s) =>
-            translateStatement(s, enclosingLoopDetails)
+            translateStatement(s, enclosingLoopDetails),
           )
         : [],
     };
   } else if (statement.type === "DoWhileLoop") {
-    const newEnclosingLoopDetails = createEnclosingLoopDetails(enclosingLoopDetails);
+    const newEnclosingLoopDetails =
+      createEnclosingLoopDetails(enclosingLoopDetails);
     const loopLabel = generateLoopLabel(newEnclosingLoopDetails);
     const blockLabel = generateBlockLabel(newEnclosingLoopDetails);
     const body: WasmStatement[] = statement.body.map((s) =>
-      translateStatement(s, newEnclosingLoopDetails)
+      translateStatement(s, newEnclosingLoopDetails),
     );
 
     body.push({
@@ -81,12 +82,13 @@ export default function translateStatement(
       ],
     };
   } else if (statement.type === "WhileLoop") {
-    const newEnclosingLoopDetails = createEnclosingLoopDetails(enclosingLoopDetails);
+    const newEnclosingLoopDetails =
+      createEnclosingLoopDetails(enclosingLoopDetails);
     const loopLabel = generateLoopLabel(newEnclosingLoopDetails);
     const blockLabel = generateBlockLabel(newEnclosingLoopDetails);
     const negatedCondition = createWasmBooleanExpression(
       statement.condition,
-      true
+      true,
     );
     const body: WasmStatement[] = [];
 
@@ -98,9 +100,7 @@ export default function translateStatement(
     });
 
     statement.body.forEach((s) =>
-      body.push(
-        translateStatement(s, newEnclosingLoopDetails)
-      )
+      body.push(translateStatement(s, newEnclosingLoopDetails)),
     );
 
     // add the branching statement at end of loop body
@@ -121,7 +121,8 @@ export default function translateStatement(
       ],
     };
   } else if (statement.type === "ForLoop") {
-    const newEnclosingLoopDetails = createEnclosingLoopDetails(enclosingLoopDetails);
+    const newEnclosingLoopDetails =
+      createEnclosingLoopDetails(enclosingLoopDetails);
     const loopLabel = generateLoopLabel(newEnclosingLoopDetails);
     const blockLabel = generateBlockLabel(newEnclosingLoopDetails);
     const negatedCondition =
@@ -140,16 +141,12 @@ export default function translateStatement(
 
     // add for loop body
     statement.body.forEach((s) =>
-      loopBody.push(
-        translateStatement(s, newEnclosingLoopDetails)
-      )
+      loopBody.push(translateStatement(s, newEnclosingLoopDetails)),
     );
 
     // add the for loop update expression
     statement.update.forEach((s) =>
-      loopBody.push(
-        translateStatement(s, newEnclosingLoopDetails)
-      )
+      loopBody.push(translateStatement(s, newEnclosingLoopDetails)),
     );
 
     // add the branching statement at end of loop body
@@ -161,9 +158,7 @@ export default function translateStatement(
     const blockBody: WasmStatement[] = [];
     // push on the clause statements
     statement.clause.forEach((s) =>
-      blockBody.push(
-        translateStatement(s, newEnclosingLoopDetails)
-      )
+      blockBody.push(translateStatement(s, newEnclosingLoopDetails)),
     );
 
     blockBody.push({
@@ -186,7 +181,7 @@ export default function translateStatement(
   } else if (statement.type === "BreakStatement") {
     if (typeof enclosingLoopDetails === "undefined") {
       throw new TranslationError(
-        "Break statement cannot be present outside a loop or switch body"
+        "Break statement cannot be present outside a loop or switch body",
       );
     }
     return {
@@ -196,7 +191,7 @@ export default function translateStatement(
   } else if (statement.type === "ContinueStatement") {
     if (typeof enclosingLoopDetails === "undefined") {
       throw new TranslationError(
-        "Continue statement cannot be present outside a loop body"
+        "Continue statement cannot be present outside a loop body",
       );
     }
     return {

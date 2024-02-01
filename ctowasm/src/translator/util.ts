@@ -157,11 +157,13 @@ export function createWasmBooleanExpression(
   };
 }
 
-
-export function createIntegerConst(value: number, wasmDataType: WasmIntType): WasmIntegerConst {
+export function createIntegerConst(
+  value: number,
+  wasmDataType: WasmIntType,
+): WasmIntegerConst {
   return {
     type: "IntegerConst",
     wasmDataType,
-    value: BigInt(value)
-  }
+    value: BigInt(value),
+  };
 }

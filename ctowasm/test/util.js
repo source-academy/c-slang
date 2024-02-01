@@ -2,10 +2,7 @@
  * Utilty to help run tests.
  */
 
-import {
-  compileToWat,
-  compileAndRun
-} from "../build/index.js";
+import { compileToWat, compileAndRun } from "../build/index.js";
 import * as fs from "fs";
 import * as path from "path";
 import testLog from "./testLog.js";
@@ -25,7 +22,12 @@ const getExpectedCodeFilePath = (subset, fileName) => {
 
 export const COMPILATION_SUCCESS = "success";
 
-export async function compileAndRunFile({ subset, testType, testFileName, modulesConfig }) {
+export async function compileAndRunFile({
+  subset,
+  testType,
+  testFileName,
+  modulesConfig,
+}) {
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
@@ -104,15 +106,15 @@ export async function testFileCompilationSuccess(subset, testFileName) {
         const programOutput = [];
         // configuration for the modules
         const modulesConfig = {
-          printFunction: (str) => programOutput.push(str) // custom print function, add to the programOutput instead of print to console
-        }
+          printFunction: (str) => programOutput.push(str), // custom print function, add to the programOutput instead of print to console
+        };
         try {
           // if there is a expectedValues for variables in the file, check that they are equal
           await compileAndRunFile({
             subset,
             testType: "assertCorrectness",
             testFileName,
-            modulesConfig
+            modulesConfig,
           });
           if (
             "customTest" in testLog[`subset${subset.toString()}`][testFileName]

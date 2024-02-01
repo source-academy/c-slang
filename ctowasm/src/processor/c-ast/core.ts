@@ -20,7 +20,10 @@ import {
 } from "~src/processor/c-ast/function";
 import { IterationStatementP } from "~src/processor/c-ast/statement/iterationStatement";
 import { Address, MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
-import { SelectionStatementP, SwitchStatementP } from "~src/processor/c-ast/statement/selectionStatement";
+import {
+  SelectionStatementP,
+  SwitchStatementP,
+} from "~src/processor/c-ast/statement/selectionStatement";
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 import { ModuleName } from "~src/modules";

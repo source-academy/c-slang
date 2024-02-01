@@ -5,7 +5,10 @@
 import UnaryExpression from "~src/parser/c-ast/expression/unaryExpression";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import JumpStatement from "./statement/jumpStatement";
-import { SelectionStatement, SwitchStatement } from "~src/parser/c-ast/statement/selectionStatement";
+import {
+  SelectionStatement,
+  SwitchStatement,
+} from "~src/parser/c-ast/statement/selectionStatement";
 import { Position } from "~src/parser/c-ast/misc";
 import { Declaration } from "./declaration";
 import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";
@@ -30,7 +33,7 @@ export type CNode = Statement | FunctionDefinition;
 export interface CAstRoot extends CNodeBase {
   type: "Root";
   children: (Declaration | FunctionDefinition)[];
-  includedModules: ModuleName[]
+  includedModules: ModuleName[];
 }
 
 /**
