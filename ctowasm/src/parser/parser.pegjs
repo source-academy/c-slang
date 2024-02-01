@@ -208,7 +208,9 @@
   function unpackScopedStatement(statement, unresolvedIncompletePointers) {
     const unpackedStatements = [];
     let incompletePointers = unresolvedIncompletePointers;
-    if (statement.type === "Declaration") {
+    if (statement === null) {
+      // ignore null statements
+    } else if (statement.type === "Declaration") {
       unpackedStatements.push(...(statement.declarations));
       // add any incompletepointers from the declaration
       incompletePointers = removeDeclarationIdentifiersAndTags(
@@ -217,10 +219,10 @@
       );
     } else if (statement.type === "Block" || statement.type === "SwitchStatement") {
       // bring up all the incomplete pointers from the nested block
-      incompletePointers.push(...statement.incompletePointers);
+      incompletePointers.push(...(statement.incompletePointers));
       delete statement.incompletePointers;
       unpackedStatements.push(statement);
-    } else if (statement !== null) {
+    } else {
       unpackedStatements.push(statement);
     }
 
@@ -1567,7 +1569,7 @@ iteration_statement
 selection_statement
   = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" _ elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
   / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return { type: "SelectionStatement", condition, ifStatement }; }
-  / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ cases:switch_statement_case|1.., _| (_ defaultStatements:switch_default_case)? _ "}"  { return createSwitchStatementNode(targetExpression, cases, defaultStatements); }
+  / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ cases:switch_statement_case|1.., _| defaultStatements:(_ @switch_default_case)? _ "}"  { return createSwitchStatementNode(targetExpression, cases, defaultStatements ?? []); }
   / "switch" _ "(" _ @expression _ ")" _ "{" _ "}" // functionally useless except for potentially side effect expression
   / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed", location()); return targetExpression; } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
 
