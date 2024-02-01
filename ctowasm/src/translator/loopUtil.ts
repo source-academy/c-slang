@@ -8,7 +8,8 @@ export function createEnclosingLoopDetails(
 ): EnclosingLoopDetails {
   if (typeof prv !== "undefined") {
     return {
-      ...prv,
+      currLoopNumber: prv.currLoopNumber + 1,
+      currBlockNumber: prv.currBlockNumber + 1
     };
   } else {
     return {

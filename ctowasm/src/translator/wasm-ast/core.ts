@@ -5,6 +5,7 @@ import {
   WasmBranchIf,
   WasmBranch,
   WasmBlock,
+  WasmBranchTable,
 } from "~src/translator/wasm-ast/control";
 import {
   WasmBinaryExpression,
@@ -62,6 +63,7 @@ export type WasmStatement =
   | WasmLoop
   | WasmBranchIf
   | WasmBranch
+  | WasmBranchTable
   | WasmBlock
   | WasmMemoryStore
   | WasmMemoryStoreFromWasmStack
@@ -84,5 +86,4 @@ export type WasmExpression =
   | WasmGlobalGet
   | WasmPreStatementExpression
   | WasmPostStatementExpression
-  | WasmConditionalExpression
-  
+  | WasmConditionalExpression;

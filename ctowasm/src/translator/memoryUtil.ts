@@ -73,8 +73,16 @@ function getReg1SetNode(value: WasmExpression): WasmStatement {
   };
 }
 
+export function getReg2SetNode(value: WasmExpression): WasmStatement {
+  return {
+    type: "GlobalSet",
+    name: REG_2,
+    value,
+  };
+}
+
 export function convertPrimaryDataObjectDetailsToWasmDataObjectDetails(
-  primaryDataObject: PrimaryDataTypeMemoryObjectDetails,
+  primaryDataObject: PrimaryDataTypeMemoryObjectDetails
 ): WasmDataObjectMemoryDetails {
   return {
     dataType: convertScalarDataTypeToWasmType(primaryDataObject.dataType),
@@ -89,7 +97,7 @@ export function convertPrimaryDataObjectDetailsToWasmDataObjectDetails(
 export function getRegisterPointerArithmeticNode(
   registerPointer: "sp" | "bp" | "hp" | "r1",
   operator: "+" | "-",
-  operand: number,
+  operand: number
 ): WasmExpression {
   return {
     type: "BinaryExpression",
@@ -109,7 +117,7 @@ export function getRegisterPointerArithmeticNode(
 
 export function getPointerIncrementNode(
   pointer: "sp" | "bp" | "hp" | "r1",
-  incVal: number,
+  incVal: number
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -120,7 +128,7 @@ export function getPointerIncrementNode(
 
 export function getPointerDecrementNode(
   pointer: "sp" | "bp" | "hp",
-  decVal: number,
+  decVal: number
 ): WasmStatement {
   return {
     type: "GlobalSet",
@@ -133,7 +141,7 @@ export function getPointerDecrementNode(
  * Returns the teardown statements for a function stack frame.
  */
 export function getFunctionCallStackFrameTeardownStatements(
-  functionDetails: FunctionDetails,
+  functionDetails: FunctionDetails
 ): WasmStatement[] {
   return [
     // bring the stack pointer back down to end of previous stack frame
@@ -162,7 +170,7 @@ export function getFunctionCallStackFrameTeardownStatements(
  * If not, attempts to expand linear memory.
  */
 export function getStackSpaceAllocationCheckStatement(
-  allocationSize: number,
+  allocationSize: number
 ): WasmStatement {
   return {
     type: "SelectionStatement",
@@ -398,7 +406,7 @@ export function getStackSpaceAllocationCheckStatement(
  */
 export function getFunctionCallStackFrameSetupStatements(
   functionDetails: FunctionDetails,
-  functionArgs: WasmExpression[], // arguments passed to this function call
+  functionArgs: WasmExpression[] // arguments passed to this function call
 ): WasmStatement[] {
   const statements: WasmStatement[] = [];
 
@@ -408,13 +416,13 @@ export function getFunctionCallStackFrameSetupStatements(
     WASM_ADDR_SIZE;
 
   statements.push(
-    getStackSpaceAllocationCheckStatement(totalStackSpaceRequired),
+    getStackSpaceAllocationCheckStatement(totalStackSpaceRequired)
   );
 
   //allocate space for Return type on stack (if have)
   if (functionDetails.sizeOfReturn > 0) {
     statements.push(
-      getPointerDecrementNode(STACK_POINTER, functionDetails.sizeOfReturn),
+      getPointerDecrementNode(STACK_POINTER, functionDetails.sizeOfReturn)
     );
   }
 
@@ -436,8 +444,8 @@ export function getFunctionCallStackFrameSetupStatements(
     statements.push(
       getPointerDecrementNode(
         STACK_POINTER,
-        getSizeOfScalarDataType(functionDetails.parameters[i].dataType),
-      ),
+        getSizeOfScalarDataType(functionDetails.parameters[i].dataType)
+      )
     );
     const param = functionDetails.parameters[i];
 
@@ -453,8 +461,8 @@ export function getFunctionCallStackFrameSetupStatements(
   // set BP to be sp + size of params
   statements.push(
     getBasePointerSetNode(
-      getRegisterPointerArithmeticNode("sp", "+", functionDetails.sizeOfParams),
-    ),
+      getRegisterPointerArithmeticNode("sp", "+", functionDetails.sizeOfParams)
+    )
   );
 
   return statements;

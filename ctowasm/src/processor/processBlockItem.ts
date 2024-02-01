@@ -16,13 +16,19 @@ import {
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentNodes } from "~src/processor/lvalueUtil";
 import { BlockItem } from "~src/parser/c-ast/core";
-import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
+import {
+  determineOperandTargetDataTypeOfArithmeticExpression,
+  determineResultDataTypeOfArithmeticExpression,
+  determineResultDataTypeOfBinaryExpression,
+  getArithmeticPrePostfixExpressionNodes,
+} from "~src/processor/expressionUtil";
 import { processLocalDeclaration } from "~src/processor/processDeclaration";
 import processExpression from "~src/processor/processExpression";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import { isIntegralDataType } from "~src/processor/dataTypeUtil";
 import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
+import { PrimaryCDataType } from "~src/common/types";
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -35,7 +41,7 @@ import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExp
 export default function processBlockItem(
   node: BlockItem,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP,
+  enclosingFunc: FunctionDefinitionP
 ): StatementP[] {
   try {
     if (node.type === "Block") {
@@ -65,15 +71,15 @@ export default function processBlockItem(
             ...processLocalDeclaration(
               declaration,
               forLoopSymbolTable,
-              enclosingFunc,
-            ),
+              enclosingFunc
+            )
           );
         }
       } else if (node.clause !== null && node.clause.type === "Expression") {
         clause = processBlockItem(
           node.clause.value,
           forLoopSymbolTable,
-          enclosingFunc,
+          enclosingFunc
         );
       } else {
         clause = [];
@@ -107,7 +113,7 @@ export default function processBlockItem(
       if (typeof enclosingFunc === "undefined") {
         throw new ProcessingError(
           "Return statement is not valid outside of a function",
-          node.position,
+          node.position
         );
       }
 
@@ -130,7 +136,7 @@ export default function processBlockItem(
           ifStatements: processBlockItem(
             node.ifStatement,
             symbolTable,
-            enclosingFunc,
+            enclosingFunc
           ),
           elseStatements: node.elseStatement
             ? processBlockItem(node.elseStatement, symbolTable, enclosingFunc)
@@ -148,31 +154,65 @@ export default function processBlockItem(
       ];
       // start of processing Expression nodes which may have side effects
     } else if (node.type === "SwitchStatement") {
-      const processedTargetExpression = processExpression(node.targetExpression, symbolTable);
-      const dataTypeOfTargetExpression = getDataTypeOfExpression({expression: processedTargetExpression, convertArrayToPointer: true});
+      const processedTargetExpression = processExpression(
+        node.targetExpression,
+        symbolTable
+      );
+      const dataTypeOfTargetExpression = getDataTypeOfExpression({
+        expression: processedTargetExpression,
+        convertArrayToPointer: true,
+      });
       if (!isIntegralDataType(dataTypeOfTargetExpression)) {
         throw new ProcessingError("Switch quantity is not an integer");
       }
-      const processedCases: SwitchStatementCaseP[] = []
+      const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
-        const evaluatedConstant = evaluateCompileTimeExpression(switchStatementCase.conditionMatch);
+        const evaluatedConstant = evaluateCompileTimeExpression(
+          switchStatementCase.conditionMatch
+        );
         // TODO: refine error message if not compile time expression
         const processedStatements: StatementP[] = [];
         for (const statement of switchStatementCase.statements) {
-          processedStatements.push(...processBlockItem(statement, symbolTable, enclosingFunc));
+          processedStatements.push(
+            ...processBlockItem(statement, symbolTable, enclosingFunc)
+          );
         }
-        processedCases.push({conditionMatch: evaluatedConstant, statements: processedStatements});
+        // the conditon of each switch case is adjusted to be a relational expression: targetExpression == case value
+        processedCases.push({
+          condition: {
+            type: "BinaryExpression",
+            leftExpr: processedTargetExpression.exprs[0],
+            rightExpr: evaluatedConstant,
+            operator: "==",
+            operandTargetDataType:
+              determineOperandTargetDataTypeOfArithmeticExpression(
+                processedTargetExpression.exprs[0].dataType as PrimaryCDataType,
+                evaluatedConstant.dataType,
+                "=="
+              ),
+            dataType: determineResultDataTypeOfArithmeticExpression(
+              processedTargetExpression.exprs[0].dataType as PrimaryCDataType,
+              evaluatedConstant.dataType,
+              "=="
+            ),
+          },
+          statements: processedStatements,
+        });
       }
       const processedDefaultStatements: StatementP[] = [];
       for (const defaultStatement of node.defaultStatements) {
-        processedDefaultStatements.push(...processBlockItem(defaultStatement, symbolTable, enclosingFunc));
+        processedDefaultStatements.push(
+          ...processBlockItem(defaultStatement, symbolTable, enclosingFunc)
+        );
       }
-      return [{
-        type: "SwitchStatement",
-        targetExpression: processedTargetExpression.exprs[0], // since processedtargetexpression has integer type, only has one primary data expression
-        cases: processedCases,
-        defaultStatements: processedDefaultStatements
-      }]
+      return [
+        {
+          type: "SwitchStatement",
+          targetExpression: processedTargetExpression.exprs[0], // since processedtargetexpression has integer type, only has one primary data expression
+          cases: processedCases,
+          defaultStatements: processedDefaultStatements,
+        },
+      ];
     } else if (node.type === "Assignment") {
       return getAssignmentNodes(node, symbolTable).memoryStoreStatements;
     } else if (node.type === "FunctionCall") {
@@ -193,18 +233,28 @@ export default function processBlockItem(
       const processedExpressions: StatementP[] = [];
       node.expressions.forEach((e) => {
         processedExpressions.push(
-          ...processBlockItem(e, symbolTable, enclosingFunc),
+          ...processBlockItem(e, symbolTable, enclosingFunc)
         );
       });
       return processedExpressions;
     } else if (node.type === "ConditionalExpression") {
       // break this conditional into a simple if else expression (expressions inside condtional may have side effects)
-      return [{
-        type: "SelectionStatement",
-        condition: processCondition(node.condition, symbolTable),
-        ifStatements: processBlockItem(node.trueExpression, symbolTable, enclosingFunc),
-        elseStatements: processBlockItem(node.falseExpression, symbolTable, enclosingFunc)
-      }]
+      return [
+        {
+          type: "SelectionStatement",
+          condition: processCondition(node.condition, symbolTable),
+          ifStatements: processBlockItem(
+            node.trueExpression,
+            symbolTable,
+            enclosingFunc
+          ),
+          elseStatements: processBlockItem(
+            node.falseExpression,
+            symbolTable,
+            enclosingFunc
+          ),
+        },
+      ];
     } else if (
       node.type === "AddressOfExpression" ||
       node.type === "BinaryExpression" ||
@@ -212,7 +262,7 @@ export default function processBlockItem(
       node.type === "IntegerConstant" ||
       node.type === "IdentifierExpression" ||
       node.type === "PointerDereference" ||
-      node.type === "SizeOfExpression" || 
+      node.type === "SizeOfExpression" ||
       node.type === "StructMemberAccess"
     ) {
       // all these expression statements can be safely ignored as they have no side effects
@@ -229,5 +279,3 @@ export default function processBlockItem(
     throw e;
   }
 }
-
-

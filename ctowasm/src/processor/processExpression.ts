@@ -11,6 +11,7 @@ import {
 import { MemoryLoad } from "~src/processor/c-ast/memory";
 import {
   checkBinaryExpressionDataTypesValidity,
+  convertDataTypeToScalarCDataType,
   determineConditionalExpressionDataType,
   determineOperandTargetDataTypeOfBinaryExpression,
   determineResultDataTypeOfBinaryExpression,
@@ -118,10 +119,12 @@ export default function processExpression(
 
       const binaryExpressionDataType =
         determineResultDataTypeOfBinaryExpression(
-          processedLeftExprDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
+          processedLeftExprDataType as ScalarDataType,
           processedRightExprDataType as ScalarDataType,
           expr.operator
         );
+
+      
 
       const operandTargetDataType =
         determineOperandTargetDataTypeOfBinaryExpression(

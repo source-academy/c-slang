@@ -6,6 +6,7 @@ import {
   generateStatementsList,
   generateArgString,
   getWasmMemoryStoreInstruction,
+  generateBranchTableInstruction,
 } from "~src/wat-generator/util";
 
 /**
@@ -67,6 +68,8 @@ export default function generateWatStatement(node: WasmStatement): string {
       node.wasmDataType,
       node.numOfBytes,
     )} ${generateWatExpression(node.addr)})`;
+  } else if (node.type === "BranchTable") {
+    return generateBranchTableInstruction(node);
   } else {
     throw new WatGeneratorError(`Unhandled statement: ${toJson(node)}`);
   }

@@ -1,4 +1,5 @@
 import { CNodePBase, ExpressionP, StatementP } from "~src/processor/c-ast/core";
+import { BinaryExpressionP } from "~src/processor/c-ast/expression/expressions";
 
 export interface SelectionStatementP extends CNodePBase {
   type: "SelectionStatement";
@@ -15,6 +16,6 @@ export interface SwitchStatementP {
 }
 
 export interface SwitchStatementCaseP {
-  conditionMatch: ExpressionP;
+  condition: BinaryExpressionP;
   statements: StatementP[];
 }

@@ -583,6 +583,20 @@ const testLog = {
       expectedValues: [
         2, 100, 1, 2, -1 , -1
       ]
+    },
+    switch_statements: {
+      title: "Test switch statements",
+      expectedCode: false,
+      expectedValues: [
+        1, 1, 1, 1, 1, 1
+      ]
+    },
+    nested_loop_jumps: {
+      title: "Test jump statements (continue/break) in nested while loops",
+      expectedCode: false,
+      expectedValues: [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+      ]
     }
     
   },

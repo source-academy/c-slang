@@ -2,7 +2,7 @@
  * Various utility functions with different uses will be defined here.
  */
 
-import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
+import { WasmDataType, WasmIntType } from "~src/translator/wasm-ast/dataTypes";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import {
   STACK_POINTER,
@@ -155,4 +155,13 @@ export function createWasmBooleanExpression(
     wasmDataType: "i32",
     isNegated,
   };
+}
+
+
+export function createIntegerConst(value: number, wasmDataType: WasmIntType): WasmIntegerConst {
+  return {
+    type: "IntegerConst",
+    wasmDataType,
+    value: BigInt(value)
+  }
 }

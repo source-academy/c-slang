@@ -2,6 +2,7 @@
  * Utility functions for WAT generation.
  */
 
+import { WasmBranchTable } from "~src/translator/wasm-ast/control";
 import { WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";
@@ -73,4 +74,12 @@ export function generateArgString(exprs: WasmExpression[]) {
  */
 export function generateStatementsList(statements: WasmStatement[]) {
   return statements.map((s) => generateWatStatement(s)).join(" ");
+}
+
+export function generateBranchTableInstruction(branchTable: WasmBranchTable) {
+  let indexes = "";
+  for (let i = 0; i <= branchTable.maxIndex; ++i) {
+    indexes += `${i} `;
+  }
+  return `(br_table ${indexes}${generateWatExpression(branchTable.indexExpression)})`;
 }

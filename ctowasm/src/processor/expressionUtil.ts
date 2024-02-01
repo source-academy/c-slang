@@ -2,7 +2,7 @@
  * Definitions of various utility functions used for processing the C AST expressions.
  */
 
-import { BinaryOperator } from "~src/common/types";
+import { BinaryOperator, PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 
 import {
   isFloatType,
@@ -108,6 +108,17 @@ export function checkBinaryExpressionDataTypesValidity(
 }
 
 /**
+ * Extracts the ScalarCDataType of a dataType.
+ * @throws ProcessingError if the argument is not actually scalar data type.
+ */
+export function convertDataTypeToScalarCDataType(dataType: DataType): ScalarCDataType {
+  if (dataType.type !== "pointer" && dataType.type !== "primary" && dataType.type !== "array") {
+    throw new ProcessingError("Non scalar data type");
+  }
+  return dataType.type === "pointer" || dataType.type === "array" ? "pointer" : dataType.primaryDataType;
+}
+
+/**
  * Determine the overall datatype of a ConditionalExpression (e.g. 1 ? 2 : 3).
  * Follows same rules as binary expressions ("+" used as placeholder).
  */
@@ -139,23 +150,39 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
     return leftExprDataType;
   } else if (rightExprDataType.type === "pointer") {
     return rightExprDataType;
-  } else if (
-    isFloatType(leftExprDataType.primaryDataType) &&
-    isFloatType(rightExprDataType.primaryDataType)
+  } else {
+    return { type: "primary", primaryDataType: determineOperandTargetDataTypeOfArithmeticExpression(leftExprDataType.primaryDataType, rightExprDataType.primaryDataType, operator)};
+  }
+}
+
+/**
+ * Returns the data type of the result of an arithmetic expression between two primary data types.
+ */
+export function determineResultDataTypeOfArithmeticExpression(leftExprDataType: PrimaryCDataType, rightExprDataType: PrimaryCDataType, operator: BinaryOperator): PrimaryCDataType {
+  if (isRelationalOperator(operator)) {
+    return "signed int";
+  }
+  return determineOperandTargetDataTypeOfArithmeticExpression(leftExprDataType, rightExprDataType, operator);
+}
+
+export function determineOperandTargetDataTypeOfArithmeticExpression(leftExprDataType: PrimaryCDataType, rightExprDataType: PrimaryCDataType, operator: BinaryOperator): PrimaryCDataType {
+  if (
+    isFloatType(leftExprDataType) &&
+    isFloatType(rightExprDataType)
   ) {
     // take more higher ranking float type
     if (
-      primaryDataTypeSizes[rightExprDataType.primaryDataType] >
-      primaryDataTypeSizes[leftExprDataType.primaryDataType]
+      primaryDataTypeSizes[rightExprDataType] >
+      primaryDataTypeSizes[leftExprDataType]
     ) {
       return leftExprDataType;
     } else {
       return rightExprDataType;
     }
-  } else if (isFloatType(leftExprDataType.primaryDataType)) {
+  } else if (isFloatType(leftExprDataType)) {
     // float types have greater precedence than any integer types
     return leftExprDataType;
-  } else if (isFloatType(rightExprDataType.primaryDataType)) {
+  } else if (isFloatType(rightExprDataType)) {
     return rightExprDataType;
   } else {
     // both types are integers
@@ -165,8 +192,8 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
     }
 
     if (
-      primaryDataTypeSizes[rightExprDataType.primaryDataType] >
-      primaryDataTypeSizes[leftExprDataType.primaryDataType]
+      primaryDataTypeSizes[rightExprDataType] >
+      primaryDataTypeSizes[leftExprDataType]
     ) {
       return rightExprDataType;
     } else {
@@ -174,6 +201,8 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
     }
   }
 }
+
+
 
 /**
  * Returns the correct varaible type for both the result of a binary expression,
@@ -189,8 +218,8 @@ export function determineResultDataTypeOfBinaryExpression(
   if (isRelationalOperator(operator)) {
     return {
       type: "primary",
-      primaryDataType: "signed int",
-    };
+      primaryDataType: "signed int"
+    }
   }
   return determineOperandTargetDataTypeOfBinaryExpression(
     leftExprDataType,
