@@ -64,8 +64,8 @@
 
   const warnings = [];
   // add a warning to warnings
-  function warn(message) {
-    warnings.push(message);
+  function warn(message, location) {
+    warnings.push({ message, location });
   }
   // this object is used to keep track of symbols, and identify whether they represent a variable/function or type (defined by struct/enum/typedef)
   // this is critical for identifying if an identifier is a typename defined by typedef or a variable -> needed for resolving "typedef ambiguity"
@@ -139,31 +139,38 @@
   }
 
   /**
+   *  Try to resolve the incomplete pointers given. Return whatever is still unresolved.
+   */
+  function resolveIncompletePointers(incompletePointers) {
+    const unresolvedIncompletePointers = [];  
+    for (const incompletePointer of incompletePointers) {
+      if (isTagDefined(incompletePointer.pointeeType.tag)) {
+        // incomplete pointee type was defined - now complete
+        incompletePointer.pointeeType = getTagSymbolEntry(
+          incompletePointer.pointeeType.tag
+        ).dataType;
+      } else {
+        // incomplete pointee type still not defined
+        unresolvedIncompletePointers.push(incompletePointer);
+      }
+    }
+    return unresolvedIncompletePointers
+  }
+
+  /**
    * Remove the identifiers and tags that a given declaration created.
    * Also resolves incomplete pointers if the declaration resolves them. (declaration defines an incomplete type that a incomplete pointer points to)
    * Returns any remainig unresolved incomplete pointers.
    */
   function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers) {
-    const unresolvedIncompletePointers = []; 
-    const incompletePointers = existingIncompletePointers ?? [];
+    let incompletePointers = existingIncompletePointers ?? [];
     if (declaration.incompletePointers) {
-      // add the incomplet pointers from the declaration itself
+      // add the incomplete pointers from the declaration itself
       incompletePointers.push(...(declaration.incompletePointers));
     }
-    if (incompletePointers) {
-      for (const incompletePointer of incompletePointers) {
-        if (isTagDefined(incompletePointer.pointeeType.tag)) {
-          // incomplete pointee type was defined - now complete
-          incompletePointer.pointeeType = getTagSymbolEntry(
-            incompletePointer.pointeeType.tag
-          ).dataType;
 
-        } else {
-          // incomplete pointee type still not defined
-          unresolvedIncompletePointers.push(incompletePointer);
-        }
-      }
-    }
+    incompletePointers = resolveIncompletePointers(incompletePointers);
+    
     // remove identifiers
     for (const identifierDefinition of declaration.identifierDefinitions) {
       removeIdentifierSymbolEntry(identifierDefinition.name);
@@ -175,30 +182,81 @@
       }
     }
 
-    return unresolvedIncompletePointers;
+    return incompletePointers;
   }
 
-  function processBlock(statements) {
+  function createBlockNode(statements) {
     // remove the declarations that were made in this block from the scope and unpack declarations
-    const unpackedStatements = [];
+    const unpackedBlockStatements = [];
     let unresolvedIncompletePointers = [];
     for (const statement of statements) {
-      if (statement.type === "Declaration") {
-        unpackedStatements.push(...(statement.declarations));
-        // add any incompletepointers from the declaration
-        unresolvedIncompletePointers = removeDeclarationIdentifiersAndTags(
-          statement,
-          unresolvedIncompletePointers
-        );
-      } else {
-        unpackedStatements.push(statement);
-      }
+      const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, unresolvedIncompletePointers);
+      unpackedBlockStatements.push(...unpackedStatements);
+      unresolvedIncompletePointers = incompletePointers;
     }
 
     return generateNode("Block", {
-      statements: unpackedStatements,
+      statements: unpackedBlockStatements,
       incompletePointers: unresolvedIncompletePointers,
     });
+  }
+
+  /**
+   * Unpacks statements in a scope (block, switch scope).
+   * Performs any removal of old 
+   */
+  function unpackScopedStatement(statement, unresolvedIncompletePointers) {
+    const unpackedStatements = [];
+    let incompletePointers = unresolvedIncompletePointers;
+    if (statement.type === "Declaration") {
+      unpackedStatements.push(...(statement.declarations));
+      // add any incompletepointers from the declaration
+      incompletePointers = removeDeclarationIdentifiersAndTags(
+        statement,
+        incompletePointers
+      );
+    } else if (statement.type === "Block" || statement.type === "SwitchStatement") {
+      // bring up all the incomplete pointers from the nested block
+      incompletePointers.push(...statement.incompletePointers);
+      delete statement.incompletePointers;
+      unpackedStatements.push(statement);
+    } else if (statement !== null) {
+      unpackedStatements.push(statement);
+    }
+
+    return { unpackedStatements, incompletePointers };
+  }
+
+  /**
+   * Performs similarly to createBlockNode - has to remove any declared symbols 
+   * as a new scope is defined in the switch statement block.
+   */
+  function createSwitchStatementNode(targetExpression, cases, defaultStatements) {
+    const switchStatementNode = generateNode("SwitchStatement", {
+      targetExpression: targetExpression,
+      cases: [],
+      defaultStatements: [],
+      incompletePointers: []
+    });
+    for (const switchCase of cases) {
+      const switchStatementCase = {
+        conditionMatch: switchCase.conditionMatch,
+        statements: []
+      }
+      for (const statement of switchCase.statements) {
+        const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, switchStatementNode.incompletePointers);
+        switchStatementCase.statements.push(...unpackedStatements);
+        switchStatementNode.incompletePointers = incompletePointers;
+      }
+      switchStatementNode.cases.push(switchStatementCase);
+    }
+    for (const statement of defaultStatements) {
+      const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, switchStatementNode.incompletePointers);
+      switchStatementNode.defaultStatements.push(...unpackedStatements);
+      switchStatementNode.incompletePointers = incompletePointers;
+    }
+
+    return switchStatementNode;
   }
 
   /**
@@ -285,10 +343,10 @@
     const identifierDefinitions = [];
     const declarations = [];
     if (storageClass) {
-      warn("Useless storage class in type defintion");
+      warn("Useless storage class in type defintion", location());
     }
     if (typeof tagDefinitions === "undefined" || tagDefinitions.length === 0) {
-      warn("Useless type name in empty declaration");
+      warn("Useless type name in empty declaration", location());
     }
 
     // add all enum variables that could have been defined in enum specifier
@@ -1473,8 +1531,8 @@ statement
 // ======== Compound Statement =========
 
 compound_statement "block"
-	= "{" _ statements:block_item_list _ "}" { return processBlock(statements); }
-  / "{" _ "}" { return processBlock([]); }
+	= "{" _ statements:block_item_list _ "}" { return createBlockNode(statements); }
+  / "{" _ "}" { return createBlockNode([]); }
     
 block_item_list
   = items:block_item|1.., _|
@@ -1496,7 +1554,6 @@ jump_statement
 expression_statement
   = @(@expression _)? ";" // the optional specifier allows us to match empty specifiers
 
-
 // ========== Iteration Statement ============
 
 iteration_statement
@@ -1505,14 +1562,22 @@ iteration_statement
   / "for" _ "(" _ clause:(@expression _)? ";" _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return generateNode("ForLoop", { clause: clause === null ? null : { type: "Expression", value: clause }, condition, update, body }); }
   / "for" _ "(" _ clause:declaration _ condition:(@expression _)? ";" _ update:(@expression _)? ")" _ body:statement { return createDeclarationForLoopNode(clause, condition, update, body);  }
 
-
 // ========== Selection Statement ===========
 
 selection_statement
   = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" _ elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
   / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return { type: "SelectionStatement", condition, ifStatement }; }
+  / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ cases:switch_statement_case|1.., _| (_ defaultStatements:switch_default_case)? _ "}"  { return createSwitchStatementNode(targetExpression, cases, defaultStatements); }
+  / "switch" _ "(" _ @expression _ ")" _ "{" _ "}" // functionally useless except for potentially side effect expression
+  / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed", location()); return targetExpression; } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
 
+switch_default_case
+  = "default" _ ":" _ @block_item_list
+  / "default" _ ":" { return []; }
 
+switch_statement_case
+  = "case" _ conditionMatch:constant_expression _ ":" _ statements:block_item_list { return { conditionMatch, statements }; }
+  / "case" _ conditionMatch:constant_expression _ ":" { return { conditionMatch, statements: [] }; }
 
 // ======== Declarations ========
 
@@ -1676,7 +1741,7 @@ direct_abstract_declarator_helper
 
 // ========== Expressions ========
 constant_expression
-  = logical_or_expression // TODO: change to conditional expression soon
+  = conditional_expression 
 
 expression
   = expressions:assignment_expression|2.., _ "," _| { return generateNode("CommaSeparatedExpressions", { expressions }); }
