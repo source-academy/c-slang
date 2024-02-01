@@ -6,3 +6,15 @@ export interface SelectionStatementP extends CNodePBase {
   ifStatements: StatementP[];
   elseStatements: StatementP[] | null;
 }
+
+export interface SwitchStatementP {
+  type: "SwitchStatement",
+  targetExpression: ExpressionP;
+  cases: SwitchStatementCaseP[];
+  defaultStatements: StatementP[];
+}
+
+export interface SwitchStatementCaseP {
+  conditionMatch: ExpressionP;
+  statements: StatementP[];
+}

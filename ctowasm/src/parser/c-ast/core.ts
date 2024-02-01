@@ -5,7 +5,7 @@
 import UnaryExpression from "~src/parser/c-ast/expression/unaryExpression";
 import { Assignment } from "~src/parser/c-ast/expression/assignment";
 import JumpStatement from "./statement/jumpStatement";
-import { SelectionStatement } from "~src/parser/c-ast/statement/selectionStatement";
+import { SelectionStatement, SwitchStatement } from "~src/parser/c-ast/statement/selectionStatement";
 import { Position } from "~src/parser/c-ast/misc";
 import { Declaration } from "./declaration";
 import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";
@@ -41,7 +41,8 @@ export type Statement =
   | Expression
   | IterationStatement
   | JumpStatement
-  | SelectionStatement;
+  | SelectionStatement
+  | SwitchStatement;
 
 export type BlockItem = Statement | Declaration;
 

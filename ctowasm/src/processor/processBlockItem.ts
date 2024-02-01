@@ -8,7 +8,7 @@ import { ProcessingError, toJson } from "~src/errors";
 
 import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
-import { processCondition } from "~src/processor/util";
+import { getDataTypeOfExpression, processCondition } from "~src/processor/util";
 import {
   convertFunctionCallToFunctionCallP,
   processFunctionReturnStatement,
@@ -18,6 +18,11 @@ import { getAssignmentNodes } from "~src/processor/lvalueUtil";
 import { BlockItem } from "~src/parser/c-ast/core";
 import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
 import { processLocalDeclaration } from "~src/processor/processDeclaration";
+import processExpression from "~src/processor/processExpression";
+import { DataType } from "~src/parser/c-ast/dataTypes";
+import { isIntegralDataType } from "~src/processor/dataTypeUtil";
+import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
+import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -142,6 +147,32 @@ export default function processBlockItem(
         },
       ];
       // start of processing Expression nodes which may have side effects
+    } else if (node.type === "SwitchStatement") {
+      const processedTargetExpression = processExpression(node.targetExpression, symbolTable);
+      const dataTypeOfTargetExpression = getDataTypeOfExpression({expression: processedTargetExpression, convertArrayToPointer: true});
+      if (!isIntegralDataType(dataTypeOfTargetExpression)) {
+        throw new ProcessingError("Switch quantity is not an integer");
+      }
+      const processedCases: SwitchStatementCaseP[] = []
+      for (const switchStatementCase of node.cases) {
+        const evaluatedConstant = evaluateCompileTimeExpression(switchStatementCase.conditionMatch);
+        // TODO: refine error message if not compile time expression
+        const processedStatements: StatementP[] = [];
+        for (const statement of switchStatementCase.statements) {
+          processedStatements.push(...processBlockItem(statement, symbolTable, enclosingFunc));
+        }
+        processedCases.push({conditionMatch: evaluatedConstant, statements: processedStatements});
+      }
+      const processedDefaultStatements: StatementP[] = [];
+      for (const defaultStatement of node.defaultStatements) {
+        processedDefaultStatements.push(...processBlockItem(defaultStatement, symbolTable, enclosingFunc));
+      }
+      return [{
+        type: "SwitchStatement",
+        targetExpression: processedTargetExpression.exprs[0], // since processedtargetexpression has integer type, only has one primary data expression
+        cases: processedCases,
+        defaultStatements: processedDefaultStatements
+      }]
     } else if (node.type === "Assignment") {
       return getAssignmentNodes(node, symbolTable).memoryStoreStatements;
     } else if (node.type === "FunctionCall") {
@@ -198,3 +229,5 @@ export default function processBlockItem(
     throw e;
   }
 }
+
+

@@ -20,11 +20,10 @@ import {
 } from "~src/processor/c-ast/function";
 import { IterationStatementP } from "~src/processor/c-ast/statement/iterationStatement";
 import { Address, MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
-import { SelectionStatementP } from "~src/processor/c-ast/statement/selectionStatement";
+import { SelectionStatementP, SwitchStatementP } from "~src/processor/c-ast/statement/selectionStatement";
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 import { ModuleName } from "~src/modules";
-import ConditionalExpression from "~src/parser/c-ast/expression/conditionalExpression";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -41,7 +40,8 @@ export type StatementP =
   | IterationStatementP
   | FunctionCallP
   | JumpStatementP
-  | MemoryStore;
+  | MemoryStore
+  | SwitchStatementP;
 
 // An expression results in the "loading" of a primary data type from memory (could be to a virtual stack as in Wasm, or register in other architectures)
 export type ExpressionP =
