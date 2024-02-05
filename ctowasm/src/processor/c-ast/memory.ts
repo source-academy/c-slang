@@ -13,7 +13,8 @@ export type Address =
   | LocalAddress
   | DataSegmentAddress
   | DynamicAddress
-  | ReturnObjectAddress;
+  | ReturnObjectAddress
+  | FunctionTableIndex;
 
 export interface AddressBase extends ExpressionPBase {
   dataType: "pointer"; // all addresses should have pointer type
@@ -35,6 +36,14 @@ export interface DataSegmentAddress extends AddressBase {
 export interface DynamicAddress extends AddressBase {
   type: "DynamicAddress";
   address: ExpressionP; // represents the exact address itself
+}
+
+/**
+ * Index of a function within the SymbolTable.functionTable - i.e. its "address"
+ */
+export interface FunctionTableIndex extends AddressBase {
+  type: "FunctionTableIndex";
+  index: IntegerConstantP; 
 }
 
 // represents the address of a primary data object that is part of a return object of a function

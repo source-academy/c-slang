@@ -9,20 +9,26 @@ import {
   FunctionCallP,
   FunctionDefinitionP,
 } from "~src/processor/c-ast/function";
-import { SymbolTable } from "~src/processor/symbolTable";
+import { FunctionSymbolEntry, SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
+import {
+  createMemoryOffsetIntegerConstant,
+  getDataTypeOfExpression,
+  extractFunctionDataTypeFromFunctionPointer,
+} from "~src/processor/util";
 import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { getSizeOfScalarDataType } from "~src/common/utils";
+import { convertFunctionDataTypeToFunctionDetails } from "~src/processor/dataTypeUtil";
+import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
-  symbolTable: SymbolTable,
+  symbolTable: SymbolTable
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
-
+  symbolTable.setFunctionIsDefinedFlag(node.name);
   if (
     node.dataType.returnType !== null &&
     node.dataType.returnType.type === "array"
@@ -37,7 +43,7 @@ export default function processFunctionDefinition(
     funcSymbolTable.addVariableEntry(
       node.parameterNames[i],
       node.dataType.parameters[i],
-      "auto", // all function parameters must have "auto" storage class
+      "auto" // all function parameters must have "auto" storage class
     );
   }
 
@@ -53,7 +59,7 @@ export default function processFunctionDefinition(
   const body = processBlockItem(
     node.body,
     funcSymbolTable,
-    functionDefinitionNode,
+    functionDefinitionNode
   );
   functionDefinitionNode.body = body; // body is a Block, an array of StatementP will be returned
   return functionDefinitionNode;
@@ -65,7 +71,7 @@ export default function processFunctionDefinition(
  */
 export function processFunctionReturnStatement(
   expr: Expression,
-  symbolTable: SymbolTable,
+  symbolTable: SymbolTable
 ): StatementP[] {
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);
@@ -112,42 +118,63 @@ export function processFunctionReturnStatement(
  */
 export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
-  symbolTable: SymbolTable,
-): FunctionCallP {
-  if (node.expr.type === "IdentifierExpression") {
-    const symbolEntry = symbolTable.getSymbolEntry(node.expr.name);
-    if (symbolEntry.type !== "function") {
-      // TODO: add function pointer check later on
-      throw new ProcessingError(
-        `Called object '${node.expr.name}' is neither a function nor function pointer`,
-      );
-    }
-    // TODO: type check params and args
-
-    // create functionDetails for this function call
-
+  symbolTable: SymbolTable
+): { functionCallP: FunctionCallP; returnType: DataType | null } {
+  // direct call of a function
+  if (
+    node.expr.type === "IdentifierExpression" &&
+    symbolTable.getSymbolEntry(node.expr.name).type === "function"
+  ) {
+    const symbolEntry = symbolTable.getSymbolEntry(
+      node.expr.name
+    ) as FunctionSymbolEntry;
     return {
+      functionCallP: {
+        type: "FunctionCall",
+        calledFunction: {
+          type: "DirectlyCalledFunction",
+          functionName: node.expr.name,
+        },
+        functionDetails: symbolEntry.functionDetails,
+        args: node.args.reduce(
+          // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
+          // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
+          (prv, expr) =>
+            prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
+          [] as ExpressionP[]
+        ),
+      },
+      returnType: symbolEntry.dataType.returnType,
+    };
+  }
+
+  // indirect call of function from an expression that is a function pointer
+  const processedCalledExpr = processExpression(node.expr, symbolTable);
+  const dataTypeOfCalledExpr = getDataTypeOfExpression({
+    expression: processedCalledExpr,
+    convertArrayToPointer: true,
+  });
+
+  const functionDataType =
+    extractFunctionDataTypeFromFunctionPointer(dataTypeOfCalledExpr);
+
+  return {
+    returnType: dataTypeOfCalledExpr,
+    functionCallP: {
       type: "FunctionCall",
       calledFunction: {
-        type: "FunctionName",
-        name: node.expr.name,
-        // save the parameters as the primary data types
-        // concatenation in reverse order per parameter to follow stack frame structure
-        functionDetails: symbolEntry.processedFunctionDetails,
+        type: "IndirectlyCalledFunction",
+        functionAddress: processedCalledExpr.exprs[0],
       },
+      functionDetails:
+          convertFunctionDataTypeToFunctionDetails(functionDataType),
       args: node.args.reduce(
         // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
         // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
         (prv, expr) =>
           prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
-        [] as ExpressionP[],
+        [] as ExpressionP[]
       ),
-    };
-  } else {
-    throw new ProcessingError(
-      `Called expression is neither a function nor function pointer`,
-      node.position,
-    );
-  }
-  //TODO: add function pointer support
+    },
+  };
 }

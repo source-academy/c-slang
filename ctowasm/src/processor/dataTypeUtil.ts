@@ -4,6 +4,7 @@
 
 import {
   DataType,
+  FunctionDataType,
   StructDataType,
   StructSelfPointer,
 } from "~src/parser/c-ast/dataTypes";
@@ -18,6 +19,7 @@ import {
   primaryDataTypeSizes,
 } from "~src/common/utils";
 import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
+import { FunctionDetails } from "~src/processor/c-ast/function";
 
 /**
  * Returns the size in bytes of a data type.
@@ -270,4 +272,51 @@ export function determineIndexAndDataTypeOfFieldInStruct(
       structDataType.tag !== null ? " " + structDataType.tag : ""
     } has no member named '${fieldTag}'`,
   );
+}
+
+export function convertFunctionDataTypeToFunctionDetails(dataType: FunctionDataType): FunctionDetails {
+  const functionDetails: FunctionDetails = {
+    sizeOfParams: 0,
+    sizeOfReturn: 0,
+    parameters: [],
+    returnObjects: null,
+  };
+
+  if (dataType.returnType !== null) {
+    if (dataType.returnType.type === "array") {
+      throw new ProcessingError(
+        "Array is not a valid return type from a function",
+      );
+    }
+
+    functionDetails.sizeOfReturn += getDataTypeSize(dataType.returnType);
+    // offset is relative to 1 byte past the last return object, thus negative (from high to low address)
+    functionDetails.returnObjects = unpackDataType(dataType.returnType).map(
+      (scalarDataType) => ({
+        dataType: scalarDataType.dataType,
+        offset: scalarDataType.offset - functionDetails.sizeOfReturn,
+      }),
+    );
+  }
+
+  let offset = 0;
+    for (const param of dataType.parameters) {
+      // sanity check, as parser should have converted all array params into pointers.
+      if (param.type === "array") {
+        throw new ProcessingError(
+          "Compiler error: The type of a function parameter should not be an array after parsing",
+        );
+      }
+      const dataTypeSize = getDataTypeSize(param);
+      offset -= dataTypeSize;
+      functionDetails.sizeOfParams += dataTypeSize;
+      const unpackedParam = unpackDataType(param).map((scalarDataType) => ({
+        dataType: scalarDataType.dataType,
+        offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
+      }));
+      // need to load unpacked param in reverse order, as in stack frame creation, the highest address subobject of an aggregate type gets loaded first as the stack frame grows from high to low address
+      functionDetails.parameters.push(...unpackedParam.reverse());
+    }
+
+  return functionDetails;
 }

@@ -2,7 +2,7 @@
  * Defines functions for evaluating C AST expression nodes and converting them to corresponding WAT AST nodes.
  */
 
-import { WASM_ADDR_SIZE } from "~src/common/constants";
+import { POINTER_TYPE, WASM_ADDR_SIZE } from "~src/common/constants";
 import { ScalarCDataType } from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import { TranslationError, toJson } from "~src/errors";
@@ -133,6 +133,8 @@ export default function translateExpression(
         ),
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
       };
+    } else if (expr.type === "FunctionTableIndex") {
+      return translateExpression(expr.index, POINTER_TYPE, enclosingLoopDetails); // translate the underlying integer constant
     } else {
       throw new TranslationError(`Unhandled expression: ${toJson(expr)}`);
     }

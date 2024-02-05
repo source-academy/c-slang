@@ -3,7 +3,10 @@ import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
 import { VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
-import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
+import {
+  convertFunctionDataTypeToFunctionDetails,
+  getDataTypeSize,
+} from "~src/processor/dataTypeUtil";
 import ModuleRepository, { ModuleName } from "~src/modules";
 import { unpackDataSegmentInitializerAccordingToDataType } from "~src/processor/processDeclaration";
 import { convertIntegerToByteString } from "~src/processor/byteStrUtil";
@@ -15,10 +18,11 @@ export type SymbolEntry =
   | FunctionSymbolEntry
   | VariableSymbolEntry
   | EnumeratorSymbolEntry;
+
 export interface FunctionSymbolEntry {
   type: "function";
   dataType: FunctionDataType;
-  processedFunctionDetails: FunctionDetails; // process and save the function details
+  functionDetails: FunctionDetails; // process and save the function details
 }
 
 /**
@@ -37,11 +41,21 @@ export interface VariableSymbolEntry {
   offset: number; // offset in number of bytes of this from the first byte of the first encountered symbol in the same function OR global scope
 }
 
+export type FunctionTable = FunctionTableEntry[]
+
+export interface FunctionTableEntry {
+  functionName: string;
+  functionDetails: FunctionDetails;
+  isDefined: boolean // whether the given function has been defined
+}
+
 export class SymbolTable {
   parentTable: SymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
   dataSegmentByteStr: { value: string }; // the string of bytes that forms the data segment
   dataSegmentOffset: { value: number }; // the current offset at data segment (address of next allocated data segment object)
+  functionTable: FunctionTableEntry[]; // list of all functions declared in the program in one table 
+  functionTableIndexes: Record<string, number>; // map function name to index in functionTable for fast lookup
   symbols: Record<string, SymbolEntry>;
   externalFunctions: Record<string, FunctionSymbolEntry>;
 
@@ -53,11 +67,15 @@ export class SymbolTable {
       this.parentTable = parentTable;
       this.dataSegmentByteStr = parentTable.dataSegmentByteStr;
       this.dataSegmentOffset = parentTable.dataSegmentOffset;
+      this.functionTable = parentTable.functionTable;
+      this.functionTableIndexes = parentTable.functionTableIndexes;
     } else {
       this.externalFunctions = {};
       this.parentTable = null;
       this.dataSegmentByteStr = { value: "" };
       this.dataSegmentOffset = { value: 0 };
+      this.functionTable = [];
+      this.functionTableIndexes = {};
     }
 
     if (!parentTable || parentTable.parentTable === null) {
@@ -75,7 +93,7 @@ export class SymbolTable {
    */
   setExternalFunctions(
     includedModules: ModuleName[],
-    moduleRepository: ModuleRepository,
+    moduleRepository: ModuleRepository
   ) {
     this.externalFunctions = {};
     for (const moduleName of includedModules) {
@@ -85,9 +103,10 @@ export class SymbolTable {
             funcName,
             moduleRepository.modules[moduleName].moduleFunctions[funcName]
               .functionType,
-            true,
+            true
           );
-        },
+          this.setFunctionIsDefinedFlag(funcName);
+        }
       );
     }
     return this.externalFunctions;
@@ -109,20 +128,20 @@ export class SymbolTable {
             declaration.dataType,
             typeof declaration.initializer === "undefined"
               ? null
-              : declaration.initializer,
+              : declaration.initializer
           );
       }
       return this.addVariableEntry(
         declaration.name,
         declaration.dataType,
-        declaration.storageClass,
+        declaration.storageClass
       );
     }
   }
 
   addEnumeratorEntry(
     enumeratorName: string,
-    enumeratorValue: bigint,
+    enumeratorValue: bigint
   ): EnumeratorSymbolEntry {
     const entry: EnumeratorSymbolEntry = {
       type: "enumerator",
@@ -143,7 +162,7 @@ export class SymbolTable {
     bytes.forEach((byte) => {
       this.dataSegmentByteStr.value += convertIntegerToByteString(
         BigInt(byte),
-        1,
+        1
       );
     });
     const offset = this.dataSegmentOffset.value;
@@ -154,7 +173,7 @@ export class SymbolTable {
   addVariableEntry(
     name: string,
     dataType: DataType,
-    storageClass: "auto" | "static",
+    storageClass: "auto" | "static"
   ): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
@@ -173,8 +192,8 @@ export class SymbolTable {
       if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
           `Conflicting types for ${name}:  redeclared as ${symbolEntry} instead of ${toJson(
-            dataType,
-          )}`,
+            dataType
+          )}`
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
@@ -207,7 +226,7 @@ export class SymbolTable {
         };
       } else {
         throw new ProcessingError(
-          "addVariableEntry(): Unhandled storage class",
+          "addVariableEntry(): Unhandled storage class"
         );
       }
     }
@@ -225,7 +244,7 @@ export class SymbolTable {
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
         throw new ProcessingError(
-          `${name} redeclared as different kind of symbol: function instead of variable`,
+          `${name} redeclared as different kind of symbol: function instead of variable`
         );
       }
 
@@ -258,54 +277,10 @@ export class SymbolTable {
       return this.symbols[name] as FunctionSymbolEntry;
     }
 
-    // Create function details
-    const functionDetails: FunctionDetails = {
-      sizeOfParams: 0,
-      sizeOfReturn: 0,
-      parameters: [],
-      returnObjects: null,
-    };
-
-    if (dataType.returnType !== null) {
-      if (dataType.returnType.type === "array") {
-        throw new ProcessingError(
-          "Array is not a valid return type from a function",
-        );
-      }
-
-      functionDetails.sizeOfReturn += getDataTypeSize(dataType.returnType);
-      // offset is relative to 1 byte past the last return object, thus negative (from high to low address)
-      functionDetails.returnObjects = unpackDataType(dataType.returnType).map(
-        (scalarDataType) => ({
-          dataType: scalarDataType.dataType,
-          offset: scalarDataType.offset - functionDetails.sizeOfReturn,
-        }),
-      );
-    }
-
-    let offset = 0;
-    for (const param of dataType.parameters) {
-      // sanity check, as parser should have converted all array params into pointers.
-      if (param.type === "array") {
-        throw new ProcessingError(
-          "Compiler error: The type of a function parameter should not be an array after parsing",
-        );
-      }
-      const dataTypeSize = getDataTypeSize(param);
-      offset -= dataTypeSize;
-      functionDetails.sizeOfParams += dataTypeSize;
-      const unpackedParam = unpackDataType(param).map((scalarDataType) => ({
-        dataType: scalarDataType.dataType,
-        offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
-      }));
-      // need to load unpacked param in reverse order, as in stack frame creation, the highest address subobject of an aggregate type gets loaded first as the stack frame grows from high to low address
-      functionDetails.parameters.push(...unpackedParam.reverse());
-    }
-
     const entry: FunctionSymbolEntry = {
       type: "function",
       dataType,
-      processedFunctionDetails: functionDetails,
+      functionDetails: convertFunctionDataTypeToFunctionDetails(dataType),
     };
 
     if (isExternalFunction) {
@@ -313,6 +288,9 @@ export class SymbolTable {
     } else {
       this.symbols[name] = entry;
     }
+
+    this.functionTable.push({functionName: name, functionDetails: entry.functionDetails, isDefined: false});
+    this.functionTableIndexes[name] = this.functionTable.length - 1;
     return entry;
   }
 
@@ -333,5 +311,19 @@ export class SymbolTable {
     }
 
     throw new ProcessingError(`Symbol '${name}' not found in symbol table`);
+  }
+
+  /**
+   * Returns the index of function with given name in the functionTable
+   */
+  getFunctionIndex(name: string) {
+    return this.functionTableIndexes[name];
+  }
+
+  /**
+   * Set the isDefined flag for the given function to true.
+   */
+  setFunctionIsDefinedFlag(functionName: string) {
+    this.functionTable[this.getFunctionIndex(functionName)].isDefined = true;
   }
 }

@@ -1,12 +1,13 @@
 /**
  * Translator module which performs translation of C AST to WAT AST.
  */
-import { setPseudoRegisters } from "~src/translator/util";
+import { createWasmFunctionTable, setPseudoRegisters } from "~src/translator/util";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import translateFunction from "~src/translator/translateFunction";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processIncludedModules from "~src/translator/processImportedFunctions";
 import ModuleRepository from "~src/modules";
+import { WasmFunctionTable } from "~src/translator/wasm-ast/functionTable";
 
 export default function translate(
   CAstRoot: CAstRootP,
@@ -19,6 +20,7 @@ export default function translate(
     functions: {},
     memorySize: 1,
     importedFunctions: [],
+    functionTable: createWasmFunctionTable(CAstRoot.functionTable)
   };
 
   const processedImportedFunctions = processIncludedModules(

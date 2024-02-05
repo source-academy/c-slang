@@ -1,6 +1,7 @@
 import { WatGeneratorError, toJson } from "~src/errors";
 import { WasmSelectionStatement } from "~src/translator/wasm-ast/control";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
+import { FUNCTION_TYPE_LABEL } from "~src/wat-generator/constants";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";
 import {
   generateStatementsList,
@@ -21,6 +22,10 @@ export default function generateWatStatement(node: WasmStatement): string {
     return `(call $${node.name} ${generateStatementsList(
       node.stackFrameSetup,
     )}) ${generateStatementsList(node.stackFrameTearDown)}`;
+  } else if (node.type === "IndirectFunctionCall") {
+    return `(call_indirect (type ${FUNCTION_TYPE_LABEL}) ${generateWatExpression(node.index)} ${generateStatementsList(
+      node.stackFrameSetup,
+    )}) ${generateStatementsList(node.stackFrameTearDown)}`
   } else if (node.type === "RegularFunctionCall") {
     return `(call $${node.name} ${generateArgString(node.args)})`;
   } else if (node.type === "SelectionStatement") {

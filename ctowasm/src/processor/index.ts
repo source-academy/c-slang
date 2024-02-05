@@ -17,13 +17,13 @@ import ModuleRepository, { ModuleName } from "~src/modules";
  */
 export default function process(
   ast: CAstRoot,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ): { astRootNode: CAstRootP; includedModules: ModuleName[] } {
   const includedModules: ModuleName[] = [];
   const symbolTable = new SymbolTable();
   const processedExternalFunctions = symbolTable.setExternalFunctions(
     ast.includedModules,
-    moduleRepository,
+    moduleRepository
   );
   const processedAst: CAstRootP = {
     type: "Root",
@@ -31,6 +31,7 @@ export default function process(
     dataSegmentByteStr: "",
     dataSegmentSizeInBytes: 0,
     externalFunctions: [],
+    functionTable: []
   };
 
   // save the processed details of external functions
@@ -42,13 +43,13 @@ export default function process(
           moduleName,
           name: moduleFunctionName,
           parameters:
-            processedExternalFunctions[moduleFunctionName]
-              .processedFunctionDetails.parameters,
+            processedExternalFunctions[moduleFunctionName].functionDetails
+              .parameters,
           returnObjects:
-            processedExternalFunctions[moduleFunctionName]
-              .processedFunctionDetails.returnObjects,
+            processedExternalFunctions[moduleFunctionName].functionDetails
+              .returnObjects,
         });
-      },
+      }
     );
   }
 
@@ -56,7 +57,7 @@ export default function process(
     // special handling for function definitions
     if (child.type === "FunctionDefinition") {
       processedAst.functions.push(
-        processFunctionDefinition(child, symbolTable),
+        processFunctionDefinition(child, symbolTable)
       );
     } else {
       processGlobalScopeDeclaration(child, symbolTable);
@@ -65,5 +66,6 @@ export default function process(
 
   processedAst.dataSegmentByteStr = symbolTable.dataSegmentByteStr.value;
   processedAst.dataSegmentSizeInBytes = symbolTable.dataSegmentOffset.value;
+  processedAst.functionTable = symbolTable.functionTable;
   return { astRootNode: processedAst, includedModules };
 }

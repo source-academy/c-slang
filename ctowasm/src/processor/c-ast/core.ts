@@ -27,6 +27,7 @@ import {
 import { JumpStatementP } from "~src/processor/c-ast/statement/jumpStatement";
 import { PrimaryDataTypeMemoryObjectDetails } from "~src/processor/dataTypeUtil";
 import { ModuleName } from "~src/modules";
+import { FunctionTable } from "~src/processor/symbolTable";
 
 export type CNodeP = FunctionDefinitionP | StatementP | ExpressionP;
 
@@ -77,4 +78,5 @@ export interface CAstRootP extends CNodePBase {
   dataSegmentByteStr: string; // the string of bytes (each byte is in the form "\\XX" where X is a digit in base-16) to initialize the data segment with, determined by processing initializers for data segment variables.
   dataSegmentSizeInBytes: number;
   externalFunctions: ExternalFunction[]; // the unpacked primary data type function signature of functions from included modules
+  functionTable: FunctionTable; // all the declared functions in the program (starting with included functions) in declaration order
 }

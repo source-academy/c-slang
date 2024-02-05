@@ -2,6 +2,7 @@
  * WAT Generator module for generating a WAT string from WAT AST.
  */
 import { WasmModule } from "~src/translator/wasm-ast/core";
+import { FUNCTION_TYPE_LABEL } from "~src/wat-generator/constants";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";
 import generateWatStatement from "~src/wat-generator/generateWatStatement";
 import { generateLine } from "~src/wat-generator/util";
@@ -59,6 +60,17 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
     baseIndentation + 1,
   );
 
+  // add the table of functions
+  watStr += generateLine(`(table ${module.functionTable.size} funcref)`, baseIndentation + 1);
+
+  // add the type of all user defined functions (to wasm the functions simply take no params, no return (memory model handles these))
+  watStr += generateLine(`(type ${FUNCTION_TYPE_LABEL} (func))`, baseIndentation + 1);
+
+  // add all functions into the table
+  for (const f of module.functionTable.elements) {
+    watStr += generateLine(`(elem (i32.const ${f.index}) $${f.functionName})`, baseIndentation + 1);
+  }
+
   // add all the function definitions
   for (const functionName of Object.keys(module.functions)) {
     const func = module.functions[functionName];
@@ -71,6 +83,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
     }
     watStr += generateLine(")", baseIndentation + 1);
   }
+
   watStr += generateLine("(start $main)", 1);
   watStr += generateLine(")", 0);
   return watStr;

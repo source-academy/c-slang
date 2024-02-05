@@ -215,7 +215,7 @@ export default function processBlockItem(
       return getAssignmentNodes(node, symbolTable).memoryStoreStatements;
     } else if (node.type === "FunctionCall") {
       // in this context, the return (if any) of the functionCall is ignored, as it is used as a statement
-      return [convertFunctionCallToFunctionCallP(node, symbolTable)];
+      return [convertFunctionCallToFunctionCallP(node, symbolTable).functionCallP];
     } else if (
       node.type === "PrefixExpression" ||
       node.type === "PostfixExpression"

@@ -23,6 +23,8 @@ import { TranslationError, toJson } from "~src/errors";
 import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
 import { ExpressionP } from "~src/processor/c-ast/core";
 import translateExpression from "~src/translator/translateExpression";
+import { FunctionTable } from "~src/processor/symbolTable";
+import { WasmFunctionTable, WasmFunctionTableEntry } from "~src/translator/wasm-ast/functionTable";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator
@@ -166,4 +168,14 @@ export function createIntegerConst(
     wasmDataType,
     value: BigInt(value),
   };
+}
+
+export function createWasmFunctionTable(functionTable: FunctionTable): WasmFunctionTable {
+  const wasmFunctionTable: WasmFunctionTable = {elements: [], size: functionTable.length};
+  functionTable.forEach((f, index) => {
+    if (f.isDefined) {
+      wasmFunctionTable.elements.push({functionName: f.functionName, index});
+    }
+  })
+  return wasmFunctionTable;
 }

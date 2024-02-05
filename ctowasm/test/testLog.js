@@ -592,6 +592,11 @@ const testLog = {
       expectedCode: false,
       expectedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     },
+    function_pointers_1: {
+      title: "Function Pointers 1: Test basic functionality - declaration, initialization and calling",
+      expectedCode: false,
+      expectedValues: [0, 0, 5, 0, 5]
+    }
   },
 };
 
