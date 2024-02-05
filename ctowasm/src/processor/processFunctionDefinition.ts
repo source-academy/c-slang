@@ -120,6 +120,7 @@ export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
   symbolTable: SymbolTable
 ): { functionCallP: FunctionCallP; returnType: DataType | null } {
+
   // direct call of a function
   if (
     node.expr.type === "IdentifierExpression" &&
@@ -159,7 +160,7 @@ export function convertFunctionCallToFunctionCallP(
     extractFunctionDataTypeFromFunctionPointer(dataTypeOfCalledExpr);
 
   return {
-    returnType: dataTypeOfCalledExpr,
+    returnType: functionDataType.returnType,
     functionCallP: {
       type: "FunctionCall",
       calledFunction: {
