@@ -6,6 +6,7 @@ import { CNodeBase } from "~src/parser/c-ast/core";
 import { PrimaryCDataType, ScalarCDataType } from "~src/common/types";
 import { MemoryVariableByteSize } from "~src/translator/wasm-ast/memory";
 import { POINTER_SIZE } from "~src/common/constants";
+import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
 
 /**
  * Definitions of the sizes in bytes of the supported C variables types.
@@ -61,4 +62,11 @@ export function isIntegerType(dataType: ScalarCDataType) {
 
 export function isConstant(node: CNodeBase) {
   return node.type === "IntegerConstant" || node.type === "FloatConstant";
+}
+
+/**
+ * Returns the total number of wasm memory pages needed to store the given number of bytes.
+ */
+export function calculateNumberOfPagesNeededForBytes(numBytes: number) {
+  return Math.floor(numBytes / WASM_PAGE_SIZE) + 1;
 }

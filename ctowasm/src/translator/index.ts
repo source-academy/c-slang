@@ -1,31 +1,35 @@
 /**
  * Translator module which performs translation of C AST to WAT AST.
  */
-import { createWasmFunctionTable, setPseudoRegisters } from "~src/translator/util";
+import {
+  createWasmFunctionTable,
+  setPseudoRegisters,
+} from "~src/translator/util";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import translateFunction from "~src/translator/translateFunction";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processIncludedModules from "~src/translator/processImportedFunctions";
 import ModuleRepository from "~src/modules";
-import { WasmFunctionTable } from "~src/translator/wasm-ast/functionTable";
+import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
 
 export default function translate(
   CAstRoot: CAstRootP,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
     dataSegmentByteStr: CAstRoot.dataSegmentByteStr, // byte str to set the data segment to
     globalWasmVariables: [], // actual wasm global variables -  used for pseudo registers
+    importedGlobalWasmVariables: [],
     functions: {},
-    memorySize: 1,
+    dataSegmentSize: CAstRoot.dataSegmentSizeInBytes,
     importedFunctions: [],
-    functionTable: createWasmFunctionTable(CAstRoot.functionTable)
+    functionTable: createWasmFunctionTable(CAstRoot.functionTable),
   };
 
   const processedImportedFunctions = processIncludedModules(
     moduleRepository,
-    CAstRoot.externalFunctions,
+    CAstRoot.externalFunctions
   );
 
   wasmRoot.importedFunctions = processedImportedFunctions.functionImports;
@@ -38,7 +42,7 @@ export default function translate(
     wasmRoot.functions[func.name] = translateFunction(func);
   });
 
-  setPseudoRegisters(wasmRoot, CAstRoot.dataSegmentSizeInBytes);
+  setPseudoRegisters(wasmRoot);
 
   return wasmRoot;
 }

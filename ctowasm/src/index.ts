@@ -9,6 +9,8 @@ import {
   generate_WAT_AST as originalGenerate_WAT_AST,
   generate_processed_C_AST as original_generate_processed_C_AST,
 } from "./compiler";
+import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
+import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
 
 export const defaultModuleRepository = new ModuleRepository(); // default repository containing module information without any custom configs or wasm memory
 /**
@@ -34,23 +36,26 @@ export async function compileAndRun(
   program: string,
   modulesConfig?: ModulesGlobalConfig,
 ) {
-  const { wasm, initialMemory, importedModules } = await originalCompile(
+  const { wasm, dataSegmentSize, importedModules } = await originalCompile(
     program,
     defaultModuleRepository,
   );
-  await runWasm(wasm, initialMemory, importedModules, modulesConfig);
+  await runWasm(wasm, dataSegmentSize, importedModules, modulesConfig);
 }
 
 export async function runWasm(
   wasm: Uint8Array,
-  initialMemory: number,
+  dataSegmentSize: number,
   importedModules: ModuleName[],
   modulesConfig?: ModulesGlobalConfig,
 ) {
+  const numberOfInitialPagesNeeded = calculateNumberOfPagesNeededForBytes(dataSegmentSize);
   const moduleRepository = new ModuleRepository(
-    new WebAssembly.Memory({ initial: initialMemory }),
+    new WebAssembly.Memory({ initial: numberOfInitialPagesNeeded }),
     modulesConfig,
   );
+  moduleRepository.setStackPointerValue(numberOfInitialPagesNeeded * WASM_PAGE_SIZE);
+  moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4) // align to 4 bytes
   await WebAssembly.instantiate(
     wasm,
     moduleRepository.createWasmImportsObject(importedModules),

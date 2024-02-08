@@ -20,6 +20,13 @@ export interface WasmGlobalVariable extends WasmVariable {
   initializerValue?: WasmConst;
 }
 
+/**
+ * A wasm global variable imported from JS runtime.
+ */
+export interface WasmImportedGlobalVariable extends WasmVariable {
+  type: "ImportedGlobalVariable";
+}
+
 export interface WasmGlobalSet extends WasmAstNode {
   type: "GlobalSet";
   name: string;

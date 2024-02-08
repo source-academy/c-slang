@@ -11,23 +11,22 @@ import ModuleRepository, { ModuleName } from "~src/modules";
 
 export interface CompilationResult {
   wasm: Uint8Array;
-  initialMemory: number; // initial memory in pages needed for this wasm module
+  dataSegmentSize: number;
   importedModules: ModuleName[]; // all the modules imported into this C program
 }
 
 export async function compile(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ): Promise<CompilationResult> {
   try {
     const CAst = parse(cSourceCode);
     const { astRootNode, includedModules } = process(CAst, moduleRepository);
     const wasmModule = translate(astRootNode, moduleRepository);
-    const initialMemory = wasmModule.memorySize; // save the initial memory in pages needed for the module
     const output = await compileWatToWasm(generateWat(wasmModule));
     return {
       wasm: output,
-      initialMemory,
+      dataSegmentSize: wasmModule.dataSegmentSize,
       importedModules: includedModules,
     };
   } catch (e) {
@@ -40,7 +39,7 @@ export async function compile(
 
 export function compileToWat(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   try {
     const CAst = parse(cSourceCode);
@@ -70,7 +69,7 @@ export function generate_C_AST(cSourceCode: string) {
 
 export function generate_processed_C_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   try {
     const CAst = parse(cSourceCode);
@@ -86,7 +85,7 @@ export function generate_processed_C_AST(
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   const CAst = parse(cSourceCode);
   const { astRootNode } = process(CAst, moduleRepository);
