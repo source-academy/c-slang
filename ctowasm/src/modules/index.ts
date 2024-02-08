@@ -53,6 +53,7 @@ export default class ModuleRepository {
       [sourceStandardLibraryModuleImportName]: new SourceStandardLibraryModule(
         this.memory,
         this.config,
+        this.sharedWasmGlobalVariables
       ),
     };
   }

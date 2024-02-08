@@ -1,4 +1,6 @@
-import { ModulesGlobalConfig } from "~src/modules";
+import { POINTER_TYPE, SIZE_T } from "~src/common/constants";
+import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
+import { MemoryBlock, freeFunction, mallocFunction } from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
 import { convertFloatToCStyleString } from "~src/modules/util";
 
@@ -8,9 +10,18 @@ export const sourceStandardLibraryModuleImportName = "source_stdlib";
 
 export class SourceStandardLibraryModule extends Module {
   moduleFunctions: Record<string, ModuleFunction>;
+  sharedWasmGlobalVariables: SharedWasmGlobalVariables;
+  // freeList used for malloc
+  freeList: MemoryBlock[] = [];
+  allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
 
-  constructor(memory: WebAssembly.Memory, config: ModulesGlobalConfig) {
+  constructor(
+    memory: WebAssembly.Memory,
+    config: ModulesGlobalConfig,
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+  ) {
     super(memory, config);
+    this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
     this.moduleFunctions = {
       print_int: {
         parentImportedObject: sourceStandardLibraryModuleImportName,
@@ -198,6 +209,49 @@ export class SourceStandardLibraryModule extends Module {
           }
           this.print(str);
         },
+      },
+      malloc: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+            {
+              type: "primary",
+              primaryDataType: SIZE_T,
+            },
+          ],
+          returnType: {
+            type: "pointer",
+            pointeeType: null,
+          },
+        },
+        jsFunction: (numBytes: number) =>
+          mallocFunction({
+            memory: this.memory,
+            memoryPointers: this.sharedWasmGlobalVariables,
+            freeList: this.freeList,
+            allocatedBlocks: this.allocatedBlocks,
+            bytesRequested: numBytes
+          }),
+      },
+      free: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+            {
+              type: "pointer",
+              pointeeType: null
+            },
+          ],
+          returnType: null,
+        },
+        jsFunction: (address: number) =>
+          freeFunction({
+            address,
+            freeList: this.freeList,
+            allocatedBlocks: this.allocatedBlocks
+          }),
       },
     };
   }
