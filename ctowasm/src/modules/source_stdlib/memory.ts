@@ -88,15 +88,40 @@ interface FreeFunctionParameters {
 export function freeFunction({
   address,
   freeList,
-  allocatedBlocks
+  allocatedBlocks,
 }: FreeFunctionParameters) {
   // shrink heap segment
   const sizeOfBlock = allocatedBlocks.get(address);
   if (typeof sizeOfBlock === "undefined") {
-    throw new Error("free(): No allocated block with given address")
+    throw new Error("free(): No allocated block with given address");
   }
-  
+
   // add the freed memory block to freeList
-  freeList.push({address: address, size: sizeOfBlock});
+  freeList.push({ address: address, size: sizeOfBlock });
   allocatedBlocks.delete(address);
+}
+
+/**
+ * Helper debug function for printing contents of the heap as an array of bytes.
+ */
+export function printHeap(
+  memory: WebAssembly.Memory,
+  heapAddress: number,
+  heapPointer: number
+) {
+  const memoryView = new Uint8Array(
+    memory.buffer,
+    heapAddress,
+    heapPointer - heapAddress
+  );
+  console.log(memoryView);
+}
+
+export function printStack(memory: WebAssembly.Memory, stackPointer: number) {
+  const memoryView = new Uint8Array(
+    memory.buffer,
+    stackPointer,
+    memory.buffer.byteLength - stackPointer
+  );
+  console.log(memoryView);
 }

@@ -54,6 +54,7 @@ export default function processImportedFunctions(
           )
         : [],
     });
+    
 
     // create the function wrapper
     // function wrapper needs to first load up function args into virtual wasm stack from the real stack in linear memory
@@ -73,13 +74,16 @@ export default function processImportedFunctions(
 
     // load up the function args
     for (const dataType of importedFunction.functionType.parameters) {
+      let externalCFunctionParamIndex = 0;
       const unpackedDataType = unpackDataType(dataType); // unpack the data type into series of primary object first
-      // start loading up the function args from back to front as the primary object function args within an aggregate object given to the wrapper will be back to front
-      for (let i = unpackedDataType.length - 1; i >= 0; --i) {
+      for (let i = 0; i < unpackedDataType.length; ++i) {
+        // the primary data type param corresponding to the param 
+        externalCFunctionParamIndex += unpackedDataType.length // the index of the next aggregate/primary param
+        const correspondingExternalFunctionParam = externalCFunction.parameters[externalCFunctionParamIndex - 1 - i];
         // sanity check, should not occur
         if (
           unpackedDataType[i].dataType !==
-          externalCFunction.parameters[i].dataType
+          correspondingExternalFunctionParam.dataType
         ) {
           throw new TranslationError(
             `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${externalCFunction.parameters[i].dataType}' `,
@@ -90,13 +94,13 @@ export default function processImportedFunctions(
           addr: getRegisterPointerArithmeticNode(
             BASE_POINTER,
             "+",
-            externalCFunction.parameters[i].offset,
+            correspondingExternalFunctionParam.offset,
           ),
           wasmDataType: convertScalarDataTypeToWasmType(
-            externalCFunction.parameters[i].dataType,
+            correspondingExternalFunctionParam.dataType,
           ),
           numOfBytes: getSizeOfScalarDataType(
-            externalCFunction.parameters[i].dataType,
+            correspondingExternalFunctionParam.dataType,
           ),
         });
       }
@@ -105,7 +109,7 @@ export default function processImportedFunctions(
     functionWrapper.body.push(importedFunctionCall);
 
     // now all the return values of the imported function call are on the virtual wasm stack - need to load them into the real stack
-    // this needs to be done back to front, as the top of stack contains the last primary data object of the return object
+    // this needs to be done back to front, as the top of virtualstack contains the last primary data object of the return object
     if (externalCFunction.returnObjects !== null) {
       for (let i = externalCFunction.returnObjects.length - 1; i >= 0; --i) {
         const returnObject = externalCFunction.returnObjects[i];

@@ -1,6 +1,12 @@
-import { POINTER_TYPE, SIZE_T } from "~src/common/constants";
+import { SIZE_T } from "~src/common/constants";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
-import { MemoryBlock, freeFunction, mallocFunction } from "~src/modules/source_stdlib/memory";
+import {
+  MemoryBlock,
+  freeFunction,
+  mallocFunction,
+  printHeap,
+  printStack,
+} from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
 import { convertFloatToCStyleString } from "~src/modules/util";
 
@@ -11,6 +17,7 @@ export const sourceStandardLibraryModuleImportName = "source_stdlib";
 export class SourceStandardLibraryModule extends Module {
   moduleFunctions: Record<string, ModuleFunction>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
+  heapAddress: number; // address of first item in heap
   // freeList used for malloc
   freeList: MemoryBlock[] = [];
   allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
@@ -22,6 +29,7 @@ export class SourceStandardLibraryModule extends Module {
   ) {
     super(memory, config);
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
+    this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
     this.moduleFunctions = {
       print_int: {
         parentImportedObject: sourceStandardLibraryModuleImportName,
@@ -231,7 +239,7 @@ export class SourceStandardLibraryModule extends Module {
             memoryPointers: this.sharedWasmGlobalVariables,
             freeList: this.freeList,
             allocatedBlocks: this.allocatedBlocks,
-            bytesRequested: numBytes
+            bytesRequested: numBytes,
           }),
       },
       free: {
@@ -241,7 +249,7 @@ export class SourceStandardLibraryModule extends Module {
           parameters: [
             {
               type: "pointer",
-              pointeeType: null
+              pointeeType: null,
             },
           ],
           returnType: null,
@@ -250,8 +258,35 @@ export class SourceStandardLibraryModule extends Module {
           freeFunction({
             address,
             freeList: this.freeList,
-            allocatedBlocks: this.allocatedBlocks
+            allocatedBlocks: this.allocatedBlocks,
           }),
+      },
+      print_heap: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [],
+          returnType: null,
+        },
+        jsFunction: () =>
+          printHeap(
+            this.memory,
+            this.heapAddress,
+            this.sharedWasmGlobalVariables.heapPointer.value
+          ),
+      },
+      print_stack: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [],
+          returnType: null,
+        },
+        jsFunction: () =>
+          printStack(
+            this.memory,
+            this.sharedWasmGlobalVariables.stackPointer.value
+          ),
       },
     };
   }

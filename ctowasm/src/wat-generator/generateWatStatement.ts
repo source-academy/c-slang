@@ -1,4 +1,5 @@
 import { WatGeneratorError, toJson } from "~src/errors";
+import { REG_2 } from "~src/translator/memoryUtil";
 import { WasmSelectionStatement } from "~src/translator/wasm-ast/control";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
 import { FUNCTION_TYPE_LABEL } from "~src/wat-generator/constants";
@@ -27,7 +28,7 @@ export default function generateWatStatement(node: WasmStatement): string {
       node.stackFrameSetup,
     )}) ${generateStatementsList(node.stackFrameTearDown)}`
   } else if (node.type === "RegularFunctionCall") {
-    return `(call $${node.name} ${generateArgString(node.args)})`;
+    return `(call $${node.name}${generateArgString(node.args)})`;
   } else if (node.type === "SelectionStatement") {
     const n = node as WasmSelectionStatement;
     return `(if ${generateWatExpression(n.condition)} (then ${n.actions
@@ -69,10 +70,13 @@ export default function generateWatStatement(node: WasmStatement): string {
       node.value,
     )})`;
   } else if (node.type === "MemoryStoreFromWasmStack") {
+    // need to use psuedoregister R2 to temporarily store value from virtual stack,
+    // then put store address on virtual stack followed by loading from psuedoregister R2.
+    // This is needed to provide the intsructions in correct order to store instruction.
     return `(${getWasmMemoryStoreInstruction(
       node.wasmDataType,
       node.numOfBytes,
-    )} ${generateWatExpression(node.addr)})`;
+    )} (global.set $${REG_2}) ${generateWatExpression(node.addr)} (global.get $${REG_2}))`;
   } else if (node.type === "BranchTable") {
     return generateBranchTableInstruction(node);
   } else {

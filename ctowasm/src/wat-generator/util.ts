@@ -62,11 +62,14 @@ export function getWasmMemoryStoreInstruction(
  * the subexpressions that form the stack values.
  */
 export function generateArgString(exprs: WasmExpression[]) {
+  if (exprs.length === 0) {
+    return "";
+  }
   let argsStr = "";
   for (const arg of exprs) {
     argsStr += generateWatExpression(arg) + " ";
   }
-  return argsStr.trim();
+  return " " + argsStr.trim();
 }
 
 /**

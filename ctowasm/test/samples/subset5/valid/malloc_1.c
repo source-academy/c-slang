@@ -1,3 +1,6 @@
+/**
+ * A simple test of malloc and free.
+ */
 #include <source_stdlib>
 
 int main() {

@@ -30,7 +30,6 @@ export default class ModuleRepository {
   modules: Record<ModuleName, Module>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
   
-
   constructor(memory?: WebAssembly.Memory, config?: ModulesGlobalConfig) {
     if (memory) {
       this.memory = memory; // initially memory starts at 0

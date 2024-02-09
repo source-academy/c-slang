@@ -290,11 +290,10 @@ export function convertFunctionDataTypeToFunctionDetails(dataType: FunctionDataT
     }
 
     functionDetails.sizeOfReturn += getDataTypeSize(dataType.returnType);
-    // offset is relative to 1 byte past the last return object, thus negative (from high to low address)
     functionDetails.returnObjects = unpackDataType(dataType.returnType).map(
       (scalarDataType) => ({
         dataType: scalarDataType.dataType,
-        offset: scalarDataType.offset - functionDetails.sizeOfReturn,
+        offset: scalarDataType.offset,
       }),
     );
   }
