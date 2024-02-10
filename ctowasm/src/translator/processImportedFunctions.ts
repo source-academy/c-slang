@@ -83,8 +83,8 @@ export default function processImportedFunctions(
     };
 
     // load up the function args
+    let externalCFunctionParamIndex = 0;
     for (const dataType of importedFunction.functionType.parameters) {
-      let externalCFunctionParamIndex = 0;
       const unpackedDataType = unpackDataType(dataType); // unpack the data type into series of primary object first
       externalCFunctionParamIndex += unpackedDataType.length // the index of the next aggregate/primary param
       for (let i = 0; i < unpackedDataType.length; ++i) {
@@ -96,7 +96,7 @@ export default function processImportedFunctions(
           correspondingExternalFunctionParam.dataType
         ) {
           throw new TranslationError(
-            `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${externalCFunction.parameters[i].dataType}' `,
+            `Load of function args in import function wrapper: Data type of args and param do not match: arg: '${unpackedDataType[i].dataType}' vs param: '${correspondingExternalFunctionParam.dataType}' `,
           );
         }
         importedFunctionCall.args.push({

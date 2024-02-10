@@ -298,6 +298,10 @@ export class SourceStandardLibraryModule extends Module {
       //     type: "function",
       //     parameters: [
       //       {
+      //         type: "primary",
+      //         primaryDataType: "signed int"
+      //       },
+      //       {
       //         type: "struct",
       //         tag: "A",
       //         fields: [
@@ -323,6 +327,10 @@ export class SourceStandardLibraryModule extends Module {
       //             },
       //           },
       //         ],
+      //       },
+      //       {
+      //         type: "primary",
+      //         primaryDataType: "signed char"
       //       },
       //     ],
       //     returnType: {
@@ -353,10 +361,10 @@ export class SourceStandardLibraryModule extends Module {
       //       ],
       //     },
       //   },
-      //   jsFunction: (i: number, c: number, l: bigint) => [
-      //     i + 10,
+      //   jsFunction: (a: number, i: number, c: number, l: bigint, z: number) => [
+      //     i + a,
       //     c + 1,
-      //     l + 100n,
+      //     l + BigInt(z),
       //   ],
       // },
     };
