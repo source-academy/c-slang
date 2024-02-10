@@ -2,6 +2,7 @@ import preprocessingGrammar from "bundle-text:./preprocessor.pegjs";
 import lexerGrammar from "bundle-text:./lexer.pegjs";
 import parsingGrammar from "bundle-text:./parser.pegjs";
 import peggy, { LocationRange, Stage } from "peggy";
+import ModuleRepository from "~src/modules";
 
 /**
  * Callback that the gnerated peggy parser uses to show warnings to user
@@ -36,6 +37,8 @@ const parser = peggy.generate(parsingGrammar as string, {
   warning: warningCallback,
 });
 
-export default function parse(sourceCode: string) {
+export default function parse(sourceCode: string, moduleRepository: ModuleRepository) {
+  // @ts-ignore
+  parser.moduleRepository = moduleRepository; // make moduleRepository available to parser object
   return parser.parse(lexer.parse(preprocessor.parse(sourceCode)));
 }

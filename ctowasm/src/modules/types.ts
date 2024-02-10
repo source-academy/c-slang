@@ -1,5 +1,5 @@
 import { ModulesGlobalConfig } from "~src/modules";
-import { FunctionDataType } from "~src/parser/c-ast/dataTypes";
+import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // Configuration parameters for WasmModuleImports object
 
@@ -21,6 +21,7 @@ export interface ModuleFunction {
 export abstract class Module {
   memory: WebAssembly.Memory;
   config: ModulesGlobalConfig;
+  abstract moduleDeclaredStructs: StructDataType[];
   abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
 
   constructor(memory: WebAssembly.Memory, config: ModulesGlobalConfig) {

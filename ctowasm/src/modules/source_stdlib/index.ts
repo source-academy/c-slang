@@ -9,12 +9,14 @@ import {
 } from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
 import { convertFloatToCStyleString } from "~src/modules/util";
+import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // the name that this module is imported into wasm by,
 // as well as the include name to use in C program file.
 export const sourceStandardLibraryModuleImportName = "source_stdlib";
 
 export class SourceStandardLibraryModule extends Module {
+  moduleDeclaredStructs: StructDataType[];
   moduleFunctions: Record<string, ModuleFunction>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
   heapAddress: number; // address of first item in heap
@@ -30,6 +32,7 @@ export class SourceStandardLibraryModule extends Module {
     super(memory, config);
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
+    this.moduleDeclaredStructs = [];
     this.moduleFunctions = {
       print_int: {
         parentImportedObject: sourceStandardLibraryModuleImportName,

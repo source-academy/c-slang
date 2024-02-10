@@ -20,7 +20,7 @@ export async function compile(
   moduleRepository: ModuleRepository
 ): Promise<CompilationResult> {
   try {
-    const CAst = parse(cSourceCode);
+    const CAst = parse(cSourceCode, moduleRepository);
     const { astRootNode, includedModules } = process(CAst, moduleRepository);
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = await compileWatToWasm(generateWat(wasmModule));
@@ -42,7 +42,7 @@ export function compileToWat(
   moduleRepository: ModuleRepository
 ) {
   try {
-    const CAst = parse(cSourceCode);
+    const CAst = parse(cSourceCode, moduleRepository);
     const { astRootNode } = process(CAst, moduleRepository);
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = generateWat(wasmModule);
@@ -55,9 +55,9 @@ export function compileToWat(
   }
 }
 
-export function generate_C_AST(cSourceCode: string) {
+export function generate_C_AST(cSourceCode: string, moduleRepository: ModuleRepository) {
   try {
-    const ast = parse(cSourceCode);
+    const ast = parse(cSourceCode, moduleRepository);
     return toJson(ast);
   } catch (e) {
     if (e instanceof SourceCodeError) {
@@ -72,7 +72,7 @@ export function generate_processed_C_AST(
   moduleRepository: ModuleRepository
 ) {
   try {
-    const CAst = parse(cSourceCode);
+    const CAst = parse(cSourceCode, moduleRepository);
     const { astRootNode } = process(CAst, moduleRepository);
     return toJson(astRootNode);
   } catch (e) {
@@ -87,7 +87,7 @@ export function generate_WAT_AST(
   cSourceCode: string,
   moduleRepository: ModuleRepository
 ) {
-  const CAst = parse(cSourceCode);
+  const CAst = parse(cSourceCode, moduleRepository);
   const { astRootNode } = process(CAst, moduleRepository);
   //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
   const wasmAst = translate(astRootNode, moduleRepository);

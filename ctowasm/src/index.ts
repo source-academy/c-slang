@@ -67,5 +67,5 @@ export function generate_processed_C_AST(program: string) {
 }
 
 export function generate_C_AST(program: string) {
-  return original_generate_C_AST(program);
+  return original_generate_C_AST(program, defaultModuleRepository);
 }

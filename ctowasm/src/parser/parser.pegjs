@@ -1,5 +1,6 @@
 {
-    /**
+  const thisParser = this; // reference to the parser object itself (to get some variables)
+  /**
    * Helper function to create and return a Node with position and type information
    */
   function generateNode(type, data) {
@@ -1499,6 +1500,18 @@
 
     return generateNode("ForLoop", { clause: { type: "Declaration", value: declarations }, condition, update, body });
   }
+
+  function addIncludedModuleStructDefinitions(includedModuleName) {
+    if (!(includedModuleName in thisParser.moduleRepository.modules)) {
+      // included module is not found
+      error(`Included module "${includedModuleName}" does not exist`);
+    }
+
+    // add all the defined structs in the module
+    thisParser.moduleRepository.modules[includedModuleName].moduleDeclaredStructs.forEach(s => {
+      addTagToSymbolTable(s.tag, {type: "struct", dataType: s});
+    })
+  }
 }
 // ======== Beginning of Grammar rules =========
 
@@ -1687,7 +1700,7 @@ struct_declaration
   / specifiers:specifier_qualifier_list _ declarators:struct_declarator_list _ ";" { return processStructDeclaration(specifiers, declarators); }
 
 specifier_qualifier_list 
-  = specifier_qualifier_list_item|1.., _| // TODO: add type qualifiers in future 
+  = specifier_qualifier_list_item|1.., _| 
 
 specifier_qualifier_list_item
   = specifier:type_specifier { return { type: "TypeSpecifier", specifier }; }
@@ -1859,7 +1872,7 @@ token
   / punctuator 
 
 include  // custom keyword for specifying modules to import
-  = "#include <" @identifier ">"
+  = "#include <" identifier:identifier ">" { addIncludedModuleStructDefinitions(identifier); return identifier; } // add all the structs declared in the module into the namespace
 
 keyword  // must be ordered in descending order of length, as longer keywords take precedence in matching
   = "_Static_assert"/"_Thread_local"/"_Imaginary"/"_Noreturn"/"continue"/"register"/"restrict"/"unsigned"/"volatile"/"_Alignas"/"_Alignof"/"_Complex"/"_Generic"/"default"/"typedef"/"_Atomic"/"extern"/"inline"/"double"/"return"/"signed"/"sizeof"/"static"/"struct"/"switch"/"break"/"float"/"const"/"short"/"union"/"while"/"_Bool"/"auto"/"case"/"char"/"goto"/"long"/"else"/"enum"/"void"/"for"/"int"/"if"/"do"
