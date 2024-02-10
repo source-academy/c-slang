@@ -49,13 +49,16 @@ export async function runWasm(
   importedModules: ModuleName[],
   modulesConfig?: ModulesGlobalConfig,
 ) {
-  const numberOfInitialPagesNeeded = calculateNumberOfPagesNeededForBytes(dataSegmentSize);
+  const numberOfInitialPagesNeeded =
+    calculateNumberOfPagesNeededForBytes(dataSegmentSize);
   const moduleRepository = new ModuleRepository(
     new WebAssembly.Memory({ initial: numberOfInitialPagesNeeded }),
     modulesConfig,
   );
-  moduleRepository.setStackPointerValue(numberOfInitialPagesNeeded * WASM_PAGE_SIZE);
-  moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4) // align to 4 bytes
+  moduleRepository.setStackPointerValue(
+    numberOfInitialPagesNeeded * WASM_PAGE_SIZE,
+  );
+  moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4); // align to 4 bytes
   await WebAssembly.instantiate(
     wasm,
     moduleRepository.createWasmImportsObject(importedModules),

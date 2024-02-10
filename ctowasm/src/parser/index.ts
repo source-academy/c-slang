@@ -37,7 +37,11 @@ const parser = peggy.generate(parsingGrammar as string, {
   warning: warningCallback,
 });
 
-export default function parse(sourceCode: string, moduleRepository: ModuleRepository) {
+export default function parse(
+  sourceCode: string,
+  moduleRepository: ModuleRepository,
+) {
+  // eslint-disable-next-line
   // @ts-ignore
   parser.moduleRepository = moduleRepository; // make moduleRepository available to parser object
   return parser.parse(lexer.parse(preprocessor.parse(sourceCode)));

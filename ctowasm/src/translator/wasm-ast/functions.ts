@@ -3,9 +3,12 @@
  */
 
 import { WasmMemoryLoad } from "~src/translator/wasm-ast/memory";
-import { WasmStatement, WasmAstNode, WasmExpression } from "~src/translator/wasm-ast/core";
+import {
+  WasmStatement,
+  WasmAstNode,
+  WasmExpression,
+} from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
-import { WasmIntegerConst } from "~src/translator/wasm-ast/consts";
 
 export type WasmFunctionBodyLine = WasmStatement;
 

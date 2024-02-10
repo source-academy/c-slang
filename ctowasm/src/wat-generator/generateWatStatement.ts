@@ -1,5 +1,4 @@
 import { WatGeneratorError, toJson } from "~src/errors";
-import { REG_2 } from "~src/translator/memoryUtil";
 import { WasmSelectionStatement } from "~src/translator/wasm-ast/control";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
 import { FUNCTION_TYPE_LABEL } from "~src/wat-generator/constants";
@@ -25,9 +24,11 @@ export default function generateWatStatement(node: WasmStatement): string {
       node.stackFrameSetup,
     )}) ${generateStatementsList(node.stackFrameTearDown)}`;
   } else if (node.type === "IndirectFunctionCall") {
-    return `(call_indirect (type ${FUNCTION_TYPE_LABEL}) ${generateWatExpression(node.index)} ${generateStatementsList(
+    return `(call_indirect (type ${FUNCTION_TYPE_LABEL}) ${generateWatExpression(
+      node.index,
+    )} ${generateStatementsList(
       node.stackFrameSetup,
-    )}) ${generateStatementsList(node.stackFrameTearDown)}`
+    )}) ${generateStatementsList(node.stackFrameTearDown)}`;
   } else if (node.type === "RegularFunctionCall") {
     return `(call $${node.name}${generateArgString(node.args)})`;
   } else if (node.type === "SelectionStatement") {
@@ -77,7 +78,11 @@ export default function generateWatStatement(node: WasmStatement): string {
     return `(${getWasmMemoryStoreInstruction(
       node.wasmDataType,
       node.numOfBytes,
-    )} (global.set $${getTempRegister(node.wasmDataType)}) ${generateWatExpression(node.addr)} (global.get $${getTempRegister(node.wasmDataType)}))`;
+    )} (global.set $${getTempRegister(
+      node.wasmDataType,
+    )}) ${generateWatExpression(node.addr)} (global.get $${getTempRegister(
+      node.wasmDataType,
+    )}))`;
   } else if (node.type === "BranchTable") {
     return generateBranchTableInstruction(node);
   } else {

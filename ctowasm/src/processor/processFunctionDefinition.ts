@@ -25,7 +25,7 @@ import { DataType } from "~src/parser/c-ast/dataTypes";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
   symbolTable.setFunctionIsDefinedFlag(node.name);
@@ -43,7 +43,7 @@ export default function processFunctionDefinition(
     funcSymbolTable.addVariableEntry(
       node.parameterNames[i],
       node.dataType.parameters[i],
-      "auto" // all function parameters must have "auto" storage class
+      "auto", // all function parameters must have "auto" storage class
     );
   }
 
@@ -59,7 +59,7 @@ export default function processFunctionDefinition(
   const body = processBlockItem(
     node.body,
     funcSymbolTable,
-    functionDefinitionNode
+    functionDefinitionNode,
   );
   functionDefinitionNode.body = body; // body is a Block, an array of StatementP will be returned
   return functionDefinitionNode;
@@ -71,7 +71,7 @@ export default function processFunctionDefinition(
  */
 export function processFunctionReturnStatement(
   expr: Expression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): StatementP[] {
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);
@@ -118,16 +118,15 @@ export function processFunctionReturnStatement(
  */
 export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): { functionCallP: FunctionCallP; returnType: DataType | null } {
-
   // direct call of a function
   if (
     node.expr.type === "IdentifierExpression" &&
     symbolTable.getSymbolEntry(node.expr.name).type === "function"
   ) {
     const symbolEntry = symbolTable.getSymbolEntry(
-      node.expr.name
+      node.expr.name,
     ) as FunctionSymbolEntry;
     return {
       functionCallP: {
@@ -142,7 +141,7 @@ export function convertFunctionCallToFunctionCallP(
           // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
           (prv, expr) =>
             prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
-          [] as ExpressionP[]
+          [] as ExpressionP[],
         ),
       },
       returnType: symbolEntry.dataType.returnType,
@@ -168,13 +167,13 @@ export function convertFunctionCallToFunctionCallP(
         functionAddress: processedCalledExpr.exprs[0],
       },
       functionDetails:
-          convertFunctionDataTypeToFunctionDetails(functionDataType),
+        convertFunctionDataTypeToFunctionDetails(functionDataType),
       args: node.args.reduce(
         // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
         // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
         (prv, expr) =>
           prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
-        [] as ExpressionP[]
+        [] as ExpressionP[],
       ),
     },
   };

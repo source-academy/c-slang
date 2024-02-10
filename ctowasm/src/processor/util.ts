@@ -8,13 +8,17 @@ import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
 import { isScalarDataType } from "~src/processor/dataTypeUtil";
-import { DataType, FunctionDataType, PointerDataType } from "~src/parser/c-ast/dataTypes";
+import {
+  DataType,
+  FunctionDataType,
+  PointerDataType,
+} from "~src/parser/c-ast/dataTypes";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { PTRDIFF_T } from "~src/common/constants";
 
 export function processCondition(
   condition: Expression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ) {
   const processedCondition = processExpression(condition, symbolTable);
   const dataTypeOfConditionExpression = getDataTypeOfExpression({
@@ -23,14 +27,14 @@ export function processCondition(
   });
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
-      `Cannot use ${dataTypeOfConditionExpression.type} where scalar is required`
+      `Cannot use ${dataTypeOfConditionExpression.type} where scalar is required`,
     );
   }
   return processedCondition.exprs[0];
 }
 
 export function createMemoryOffsetIntegerConstant(
-  offset: number
+  offset: number,
 ): IntegerConstantP {
   return {
     type: "IntegerConstant",
@@ -62,7 +66,7 @@ export function getDataTypeOfExpression({
 export function createFunctionTableIndexExpressionWrapper(
   functionName: string,
   functionDataType: FunctionDataType,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): ExpressionWrapperP {
   const indexInFunctionTable = symbolTable.getFunctionIndex(functionName);
   return {
@@ -80,22 +84,23 @@ export function createFunctionTableIndexExpressionWrapper(
   };
 }
 
-
 export function isFunctionPointer(dataType: DataType) {
-  return dataType.type === "pointer" &&
-  dataType.pointeeType !== null &&
-  dataType.pointeeType.type === "function"
+  return (
+    dataType.type === "pointer" &&
+    dataType.pointeeType !== null &&
+    dataType.pointeeType.type === "function"
+  );
 }
 
 /**
  * Extracts the FunctionDataType from a dataType which is a pointer to a f cuntion
  */
 export function extractFunctionDataTypeFromFunctionPointer(
-  dataType: DataType
+  dataType: DataType,
 ): FunctionDataType {
   if (!isFunctionPointer(dataType)) {
     throw new ProcessingError(
-      "Called object is not a function or function pointer"
+      "Called object is not a function or function pointer",
     );
   }
 

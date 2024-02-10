@@ -27,15 +27,15 @@ export interface FunctionDetails {
 export interface FunctionCallP {
   type: "FunctionCall";
   calledFunction: CalledFunction;
-  functionDetails: FunctionDetails;// details of the function being called
+  functionDetails: FunctionDetails; // details of the function being called
   args: ExpressionP[]; // the sequence of expressions which load up the function arguments
 }
 
 export type CalledFunction = IndirectlyCalledFunction | DirectlyCalledFunction;
 
 export interface IndirectlyCalledFunction {
-  type: "IndirectlyCalledFunction"
-  functionAddress: ExpressionP // expression that returns the address of function to call
+  type: "IndirectlyCalledFunction";
+  functionAddress: ExpressionP; // expression that returns the address of function to call
 }
 
 export interface DirectlyCalledFunction {

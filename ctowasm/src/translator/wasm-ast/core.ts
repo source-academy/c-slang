@@ -52,7 +52,7 @@ export interface WasmModule extends WasmAstNode {
   type: "Module";
   dataSegmentByteStr: string; // string of bytes to set the data segment with
   globalWasmVariables: WasmGlobalVariable[];
-  importedGlobalWasmVariables: WasmImportedGlobalVariable[]
+  importedGlobalWasmVariables: WasmImportedGlobalVariable[];
   functions: Record<string, WasmFunction>;
   dataSegmentSize: number; // number of bytes of data segment
   importedFunctions: WasmImportedFunction[];

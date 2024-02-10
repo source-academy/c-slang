@@ -13,7 +13,7 @@ import ModuleRepository from "~src/modules";
 
 export default function translate(
   CAstRoot: CAstRootP,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
@@ -28,7 +28,7 @@ export default function translate(
 
   const processedImportedFunctions = processIncludedModules(
     moduleRepository,
-    CAstRoot.externalFunctions
+    CAstRoot.externalFunctions,
   );
 
   wasmRoot.importedFunctions = processedImportedFunctions.functionImports;

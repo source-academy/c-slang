@@ -17,13 +17,13 @@ import ModuleRepository, { ModuleName } from "~src/modules";
  */
 export default function process(
   ast: CAstRoot,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ): { astRootNode: CAstRootP; includedModules: ModuleName[] } {
   const includedModules: ModuleName[] = [];
   const symbolTable = new SymbolTable();
   const processedExternalFunctions = symbolTable.setExternalFunctions(
     ast.includedModules,
-    moduleRepository
+    moduleRepository,
   );
   const processedAst: CAstRootP = {
     type: "Root",
@@ -31,7 +31,7 @@ export default function process(
     dataSegmentByteStr: "",
     dataSegmentSizeInBytes: 0,
     externalFunctions: [],
-    functionTable: []
+    functionTable: [],
   };
 
   // save the processed details of external functions
@@ -49,7 +49,7 @@ export default function process(
             processedExternalFunctions[moduleFunctionName].functionDetails
               .returnObjects,
         });
-      }
+      },
     );
   }
 
@@ -57,7 +57,7 @@ export default function process(
     // special handling for function definitions
     if (child.type === "FunctionDefinition") {
       processedAst.functions.push(
-        processFunctionDefinition(child, symbolTable)
+        processFunctionDefinition(child, symbolTable),
       );
     } else {
       processGlobalScopeDeclaration(child, symbolTable);

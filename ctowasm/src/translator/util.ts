@@ -27,9 +27,7 @@ import { WasmBooleanExpression } from "~src/translator/wasm-ast/expressions";
 import { ExpressionP } from "~src/processor/c-ast/core";
 import translateExpression from "~src/translator/translateExpression";
 import { FunctionTable } from "~src/processor/symbolTable";
-import {
-  WasmFunctionTable,
-} from "~src/translator/wasm-ast/functionTable";
+import { WasmFunctionTable } from "~src/translator/wasm-ast/functionTable";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 
 /**
@@ -37,7 +35,7 @@ import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
  */
 export function arithmeticUnaryOperatorToInstruction(
   op: ArithemeticUnaryOperator,
-  dataType: DataType
+  dataType: DataType,
 ) {
   if (dataType.type === "primary") {
     return `${priamryCDataTypeToWasmType[dataType.primaryDataType]}.${
@@ -49,8 +47,8 @@ export function arithmeticUnaryOperatorToInstruction(
     // arithmetic is not defined for non ints or non pointers
     throw new TranslationError(
       `arithmeticUnaryOperatorToInstruction(): Unsupported variable type: ${toJson(
-        dataType
-      )}`
+        dataType,
+      )}`,
     );
   }
 }
@@ -69,9 +67,7 @@ export const wasmTypeToSize: Record<WasmDataType, MemoryVariableByteSize> = {
  * @param stackPreallocate the amount of space in bytes to preallocate before intitial stack pointer position
  * @param dataSegmentSize the size of the data segment in memory
  */
-export function setPseudoRegisters(
-  wasmRoot: WasmModule,
-) {
+export function setPseudoRegisters(wasmRoot: WasmModule) {
   // imported from JS runtime
   wasmRoot.importedGlobalWasmVariables.push({
     type: "ImportedGlobalVariable",
@@ -86,7 +82,10 @@ export function setPseudoRegisters(
     initializerValue: {
       type: "IntegerConst",
       wasmDataType: "i32",
-      value: BigInt(calculateNumberOfPagesNeededForBytes(wasmRoot.dataSegmentSize) * WASM_PAGE_SIZE), // BP starts at the memory boundary
+      value: BigInt(
+        calculateNumberOfPagesNeededForBytes(wasmRoot.dataSegmentSize) *
+          WASM_PAGE_SIZE,
+      ), // BP starts at the memory boundary
     },
   });
 
@@ -179,7 +178,7 @@ export function getMaxIntConstant(intType: "i32" | "i64"): WasmIntegerConst {
  */
 export function createWasmBooleanExpression(
   expression: ExpressionP,
-  isNegated?: boolean
+  isNegated?: boolean,
 ): WasmBooleanExpression {
   return {
     type: "BooleanExpression",
@@ -191,7 +190,7 @@ export function createWasmBooleanExpression(
 
 export function createIntegerConst(
   value: number,
-  wasmDataType: WasmIntType
+  wasmDataType: WasmIntType,
 ): WasmIntegerConst {
   return {
     type: "IntegerConst",
@@ -201,7 +200,7 @@ export function createIntegerConst(
 }
 
 export function createWasmFunctionTable(
-  functionTable: FunctionTable
+  functionTable: FunctionTable,
 ): WasmFunctionTable {
   const wasmFunctionTable: WasmFunctionTable = {
     elements: [],

@@ -17,7 +17,7 @@ export interface CompilationResult {
 
 export async function compile(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ): Promise<CompilationResult> {
   try {
     const CAst = parse(cSourceCode, moduleRepository);
@@ -39,7 +39,7 @@ export async function compile(
 
 export function compileToWat(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   try {
     const CAst = parse(cSourceCode, moduleRepository);
@@ -55,7 +55,10 @@ export function compileToWat(
   }
 }
 
-export function generate_C_AST(cSourceCode: string, moduleRepository: ModuleRepository) {
+export function generate_C_AST(
+  cSourceCode: string,
+  moduleRepository: ModuleRepository,
+) {
   try {
     const ast = parse(cSourceCode, moduleRepository);
     return toJson(ast);
@@ -69,7 +72,7 @@ export function generate_C_AST(cSourceCode: string, moduleRepository: ModuleRepo
 
 export function generate_processed_C_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   try {
     const CAst = parse(cSourceCode, moduleRepository);
@@ -85,7 +88,7 @@ export function generate_processed_C_AST(
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   const CAst = parse(cSourceCode, moduleRepository);
   const { astRootNode } = process(CAst, moduleRepository);

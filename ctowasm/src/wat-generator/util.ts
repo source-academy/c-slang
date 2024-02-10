@@ -33,7 +33,7 @@ export function generateBlock(block: string, indentation: number) {
  */
 export function getWasmMemoryLoadInstruction(
   varType: WasmDataType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -46,7 +46,7 @@ export function getWasmMemoryLoadInstruction(
 
 export function getWasmMemoryStoreInstruction(
   varType: WasmDataType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -86,7 +86,7 @@ export function generateBranchTableInstruction(branchTable: WasmBranchTable) {
     indexes += `${i} `;
   }
   return `(br_table ${indexes}${generateWatExpression(
-    branchTable.indexExpression
+    branchTable.indexExpression,
   )})`;
 }
 

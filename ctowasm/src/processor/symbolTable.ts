@@ -41,12 +41,12 @@ export interface VariableSymbolEntry {
   offset: number; // offset in number of bytes of this from the first byte of the first encountered symbol in the same function OR global scope
 }
 
-export type FunctionTable = FunctionTableEntry[]
+export type FunctionTable = FunctionTableEntry[];
 
 export interface FunctionTableEntry {
   functionName: string;
   functionDetails: FunctionDetails;
-  isDefined: boolean // whether the given function has been defined
+  isDefined: boolean; // whether the given function has been defined
 }
 
 export class SymbolTable {
@@ -54,7 +54,7 @@ export class SymbolTable {
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
   dataSegmentByteStr: { value: string }; // the string of bytes that forms the data segment
   dataSegmentOffset: { value: number }; // the current offset at data segment (address of next allocated data segment object)
-  functionTable: FunctionTableEntry[]; // list of all functions declared in the program in one table 
+  functionTable: FunctionTableEntry[]; // list of all functions declared in the program in one table
   functionTableIndexes: Record<string, number>; // map function name to index in functionTable for fast lookup
   symbols: Record<string, SymbolEntry>;
   externalFunctions: Record<string, FunctionSymbolEntry>;
@@ -93,7 +93,7 @@ export class SymbolTable {
    */
   setExternalFunctions(
     includedModules: ModuleName[],
-    moduleRepository: ModuleRepository
+    moduleRepository: ModuleRepository,
   ) {
     this.externalFunctions = {};
     for (const moduleName of includedModules) {
@@ -103,10 +103,10 @@ export class SymbolTable {
             funcName,
             moduleRepository.modules[moduleName].moduleFunctions[funcName]
               .functionType,
-            true
+            true,
           );
           this.setFunctionIsDefinedFlag(funcName);
-        }
+        },
       );
     }
     return this.externalFunctions;
@@ -128,20 +128,20 @@ export class SymbolTable {
             declaration.dataType,
             typeof declaration.initializer === "undefined"
               ? null
-              : declaration.initializer
+              : declaration.initializer,
           );
       }
       return this.addVariableEntry(
         declaration.name,
         declaration.dataType,
-        declaration.storageClass
+        declaration.storageClass,
       );
     }
   }
 
   addEnumeratorEntry(
     enumeratorName: string,
-    enumeratorValue: bigint
+    enumeratorValue: bigint,
   ): EnumeratorSymbolEntry {
     const entry: EnumeratorSymbolEntry = {
       type: "enumerator",
@@ -162,7 +162,7 @@ export class SymbolTable {
     bytes.forEach((byte) => {
       this.dataSegmentByteStr.value += convertIntegerToByteString(
         BigInt(byte),
-        1
+        1,
       );
     });
     const offset = this.dataSegmentOffset.value;
@@ -173,7 +173,7 @@ export class SymbolTable {
   addVariableEntry(
     name: string,
     dataType: DataType,
-    storageClass: "auto" | "static"
+    storageClass: "auto" | "static",
   ): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
@@ -192,8 +192,8 @@ export class SymbolTable {
       if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
           `Conflicting types for ${name}:  redeclared as ${symbolEntry} instead of ${toJson(
-            dataType
-          )}`
+            dataType,
+          )}`,
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
@@ -226,7 +226,7 @@ export class SymbolTable {
         };
       } else {
         throw new ProcessingError(
-          "addVariableEntry(): Unhandled storage class"
+          "addVariableEntry(): Unhandled storage class",
         );
       }
     }
@@ -244,7 +244,7 @@ export class SymbolTable {
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
         throw new ProcessingError(
-          `${name} redeclared as different kind of symbol: function instead of variable`
+          `${name} redeclared as different kind of symbol: function instead of variable`,
         );
       }
 
@@ -289,7 +289,11 @@ export class SymbolTable {
       this.symbols[name] = entry;
     }
 
-    this.functionTable.push({functionName: name, functionDetails: entry.functionDetails, isDefined: false});
+    this.functionTable.push({
+      functionName: name,
+      functionDetails: entry.functionDetails,
+      isDefined: false,
+    });
     this.functionTableIndexes[name] = this.functionTable.length - 1;
     return entry;
   }

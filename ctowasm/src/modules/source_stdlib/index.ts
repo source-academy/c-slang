@@ -9,7 +9,7 @@ import {
 } from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
 import { convertFloatToCStyleString } from "~src/modules/util";
-import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
+import { StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // the name that this module is imported into wasm by,
 // as well as the include name to use in C program file.
@@ -27,7 +27,7 @@ export class SourceStandardLibraryModule extends Module {
   constructor(
     memory: WebAssembly.Memory,
     config: ModulesGlobalConfig,
-    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
     super(memory, config);
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
@@ -275,7 +275,7 @@ export class SourceStandardLibraryModule extends Module {
           printHeap(
             this.memory,
             this.heapAddress,
-            this.sharedWasmGlobalVariables.heapPointer.value
+            this.sharedWasmGlobalVariables.heapPointer.value,
           ),
       },
       print_stack: {
@@ -288,7 +288,7 @@ export class SourceStandardLibraryModule extends Module {
         jsFunction: () =>
           printStack(
             this.memory,
-            this.sharedWasmGlobalVariables.stackPointer.value
+            this.sharedWasmGlobalVariables.stackPointer.value,
           ),
       },
       // EXAMPLE of how to have a function taking aggregate type and returning aggreate type - TESTED AND WORKING

@@ -134,7 +134,11 @@ export default function translateExpression(
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
       };
     } else if (expr.type === "FunctionTableIndex") {
-      return translateExpression(expr.index, POINTER_TYPE, enclosingLoopDetails); // translate the underlying integer constant
+      return translateExpression(
+        expr.index,
+        POINTER_TYPE,
+        enclosingLoopDetails,
+      ); // translate the underlying integer constant
     } else {
       throw new TranslationError(`Unhandled expression: ${toJson(expr)}`);
     }

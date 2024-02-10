@@ -59,7 +59,7 @@ export function mallocFunction({
   if (freeSpace < bytesRequested) {
     // need to grow memory
     const additionalPagesNeeded = calculateNumberOfPagesNeededForBytes(
-      bytesRequested - freeSpace
+      bytesRequested - freeSpace,
     );
     const stackSegmentSize = memory.buffer.byteLength - stackPointer.value;
     const oldMemorySize = memory.buffer.byteLength;
@@ -107,12 +107,12 @@ export function freeFunction({
 export function printHeap(
   memory: WebAssembly.Memory,
   heapAddress: number,
-  heapPointer: number
+  heapPointer: number,
 ) {
   const memoryView = new Uint8Array(
     memory.buffer,
     heapAddress,
-    heapPointer - heapAddress
+    heapPointer - heapAddress,
   );
   console.log(memoryView);
 }
@@ -121,7 +121,7 @@ export function printStack(memory: WebAssembly.Memory, stackPointer: number) {
   const memoryView = new Uint8Array(
     memory.buffer,
     stackPointer,
-    memory.buffer.byteLength - stackPointer
+    memory.buffer.byteLength - stackPointer,
   );
   console.log(memoryView);
 }

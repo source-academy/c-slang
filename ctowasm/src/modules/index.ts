@@ -29,7 +29,7 @@ export default class ModuleRepository {
   config: ModulesGlobalConfig;
   modules: Record<ModuleName, Module>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
-  
+
   constructor(memory?: WebAssembly.Memory, config?: ModulesGlobalConfig) {
     if (memory) {
       this.memory = memory; // initially memory starts at 0
@@ -44,15 +44,21 @@ export default class ModuleRepository {
     }
 
     this.sharedWasmGlobalVariables = {
-      stackPointer: new WebAssembly.Global({value: WASM_ADDR_TYPE, mutable: true}, 0),
-      heapPointer:new WebAssembly.Global({value: WASM_ADDR_TYPE, mutable: true}, 0) 
+      stackPointer: new WebAssembly.Global(
+        { value: WASM_ADDR_TYPE, mutable: true },
+        0,
+      ),
+      heapPointer: new WebAssembly.Global(
+        { value: WASM_ADDR_TYPE, mutable: true },
+        0,
+      ),
     };
 
     this.modules = {
       [sourceStandardLibraryModuleImportName]: new SourceStandardLibraryModule(
         this.memory,
         this.config,
-        this.sharedWasmGlobalVariables
+        this.sharedWasmGlobalVariables,
       ),
     };
   }
@@ -75,7 +81,11 @@ export default class ModuleRepository {
    */
   createWasmImportsObject(importedModules: ModuleName[]): WebAssembly.Imports {
     const imports: WebAssembly.Imports = {
-      js: { mem: this.memory, sp: this.sharedWasmGlobalVariables.stackPointer, hp: this.sharedWasmGlobalVariables.heapPointer },
+      js: {
+        mem: this.memory,
+        sp: this.sharedWasmGlobalVariables.stackPointer,
+        hp: this.sharedWasmGlobalVariables.heapPointer,
+      },
     };
 
     importedModules.forEach((moduleName) => {

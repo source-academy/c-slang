@@ -46,7 +46,7 @@ export default function processImportedFunctions(
         wasmParams.push(convertScalarDataTypeToWasmType(scalarType.dataType));
       }
     }
-    
+
     console.assert(
       typeof importedFunction !== "undefined",
       "Translator: Imported function not found in module repository",
@@ -64,7 +64,6 @@ export default function processImportedFunctions(
           )
         : [],
     });
-    
 
     // create the function wrapper
     // function wrapper needs to first load up function args into virtual wasm stack from the real stack in linear memory
@@ -86,10 +85,11 @@ export default function processImportedFunctions(
     let externalCFunctionParamIndex = 0;
     for (const dataType of importedFunction.functionType.parameters) {
       const unpackedDataType = unpackDataType(dataType); // unpack the data type into series of primary object first
-      externalCFunctionParamIndex += unpackedDataType.length // the index of the next aggregate/primary param
+      externalCFunctionParamIndex += unpackedDataType.length; // the index of the next aggregate/primary param
       for (let i = 0; i < unpackedDataType.length; ++i) {
-        // the primary data type param corresponding to the param 
-        const correspondingExternalFunctionParam = externalCFunction.parameters[externalCFunctionParamIndex - 1 - i];
+        // the primary data type param corresponding to the param
+        const correspondingExternalFunctionParam =
+          externalCFunction.parameters[externalCFunctionParamIndex - 1 - i];
         // sanity check, should not occur
         if (
           unpackedDataType[i].dataType !==

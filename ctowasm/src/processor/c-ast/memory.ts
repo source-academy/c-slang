@@ -43,7 +43,7 @@ export interface DynamicAddress extends AddressBase {
  */
 export interface FunctionTableIndex extends AddressBase {
   type: "FunctionTableIndex";
-  index: IntegerConstantP; 
+  index: IntegerConstantP;
 }
 
 // represents the address of a primary data object that is part of a return object of a function
