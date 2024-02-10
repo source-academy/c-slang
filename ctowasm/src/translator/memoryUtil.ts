@@ -25,6 +25,9 @@ export const BASE_POINTER = "bp";
 export const HEAP_POINTER = "hp"; // points to the address of first byte after heap
 export const REG_1 = "r1"; // general purpose register
 export const REG_2 = "r2";
+export const REG_I64 = "ri64" // gpr for i64 type
+export const REG_F32 = "rf32" // gpr for f32 type
+export const REG_F64 = "rf64" // gpr for f64 type
 
 // Wasm AST node for getting the value of base pointer at run time
 export const basePointerGetNode: WasmGlobalGet = {

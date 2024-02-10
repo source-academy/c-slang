@@ -12,6 +12,9 @@ import {
   REG_1,
   REG_2,
   WASM_ADDR_TYPE,
+  REG_I64,
+  REG_F32,
+  REG_F64,
 } from "~src/translator/memoryUtil";
 
 import { MemoryVariableByteSize } from "~src/translator/wasm-ast/memory";
@@ -114,6 +117,39 @@ export function setPseudoRegisters(
       type: "IntegerConst",
       wasmDataType: "i32",
       value: 0n,
+    },
+  });
+
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: REG_I64,
+    wasmDataType: "i64",
+    initializerValue: {
+      type: "IntegerConst",
+      wasmDataType: "i64",
+      value: 0n,
+    },
+  });
+
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: REG_F32,
+    wasmDataType: "f32",
+    initializerValue: {
+      type: "FloatConst",
+      wasmDataType: "f32",
+      value: 0,
+    },
+  });
+
+  wasmRoot.globalWasmVariables.push({
+    type: "GlobalVariable",
+    name: REG_F64,
+    wasmDataType: "f64",
+    initializerValue: {
+      type: "FloatConst",
+      wasmDataType: "f64",
+      value: 0,
     },
   });
 }

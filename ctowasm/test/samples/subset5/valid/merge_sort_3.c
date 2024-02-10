@@ -1,12 +1,12 @@
 #include <source_stdlib>
 
 /**
- * Mergesort program 2. Upgraded from 1 by incoporating pointer functionality intrcduced in subset 4
- * to allow for sorting local arrays (by passing pointers to array to functions).
+ * Mergesort program 3. Similar to mergesort program 2, just that now it uses malloc to dynamically allocate
+ * temp arrays.
  */
 
 void merge(long arr[], int start_a, int mid, int end_b) {
-  long temp[5];
+  long *temp = malloc((end_b - start_a) * sizeof(long));
   int curr_a = start_a;
   int curr_b = mid;
   int curr_temp = 0;
@@ -29,6 +29,8 @@ void merge(long arr[], int start_a, int mid, int end_b) {
   for (int i = start_a; i < end_b; ++i) {
     arr[i] = temp[i - start_a];
   }
+
+  free(temp);
 }
 
 void mergesort_recursive_helper(long arr[], int start, int end) {
@@ -46,9 +48,9 @@ void mergesort(long arr[], int length) {
 }
 
 int main() {
-  long arr[5] = {4294967296 ,-12, 123, 12, 32};
-  mergesort(arr, 5);
-  for (int i = 0; i < 5; ++i) {
+  long arr[10] = {4294967296 ,-12, 123, 12, 32, 2312, -23123, 34342, 56745, 1231};
+  mergesort(arr, 10);
+  for (int i = 0; i < 10; ++i) {
     print_long(arr[i]);
   }
 }

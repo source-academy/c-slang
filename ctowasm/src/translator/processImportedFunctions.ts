@@ -14,6 +14,7 @@ import {
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import ModuleRepository from "~src/modules";
+import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 
 /**
  * Process the imported functions.
@@ -35,6 +36,17 @@ export default function processImportedFunctions(
       moduleRepository.modules[externalCFunction.moduleName].moduleFunctions[
         externalCFunction.name
       ];
+
+    // need to unpack the datatype of each parameter of this external function into primary data types -> wasm types, in param order
+    // for aggregate parameters, their parameters should also remain in the same order as they were in the aggregate
+    const wasmParams: WasmDataType[] = [];
+    for (const param of importedFunction.functionType.parameters) {
+      const unpackedDataType = unpackDataType(param);
+      for (const scalarType of unpackedDataType) {
+        wasmParams.push(convertScalarDataTypeToWasmType(scalarType.dataType));
+      }
+    }
+    
     console.assert(
       typeof importedFunction !== "undefined",
       "Translator: Imported function not found in module repository",
@@ -45,9 +57,7 @@ export default function processImportedFunctions(
         importedFunction.parentImportedObject,
         externalCFunction.name,
       ],
-      wasmParamTypes: externalCFunction.parameters.map((param) =>
-        convertScalarDataTypeToWasmType(param.dataType),
-      ),
+      wasmParamTypes: wasmParams,
       returnWasmTypes: externalCFunction.returnObjects
         ? externalCFunction.returnObjects.map((retObj) =>
             convertScalarDataTypeToWasmType(retObj.dataType),
@@ -76,9 +86,9 @@ export default function processImportedFunctions(
     for (const dataType of importedFunction.functionType.parameters) {
       let externalCFunctionParamIndex = 0;
       const unpackedDataType = unpackDataType(dataType); // unpack the data type into series of primary object first
+      externalCFunctionParamIndex += unpackedDataType.length // the index of the next aggregate/primary param
       for (let i = 0; i < unpackedDataType.length; ++i) {
         // the primary data type param corresponding to the param 
-        externalCFunctionParamIndex += unpackedDataType.length // the index of the next aggregate/primary param
         const correspondingExternalFunctionParam = externalCFunction.parameters[externalCFunctionParamIndex - 1 - i];
         // sanity check, should not occur
         if (

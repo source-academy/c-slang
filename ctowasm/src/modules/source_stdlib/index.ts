@@ -288,6 +288,74 @@ export class SourceStandardLibraryModule extends Module {
             this.sharedWasmGlobalVariables.stackPointer.value
           ),
       },
+      // EXAMPLE of how to have a function taking aggregate type and returning aggreate type - TESTED AND WORKING
+      // adjust_a: {
+      //   parentImportedObject: sourceStandardLibraryModuleImportName,
+      //   functionType: {
+      //     type: "function",
+      //     parameters: [
+      //       {
+      //         type: "struct",
+      //         tag: "A",
+      //         fields: [
+      //           {
+      //             tag: "i",
+      //             dataType: {
+      //               type: "primary",
+      //               primaryDataType: "signed int",
+      //             },
+      //           },
+      //           {
+      //             tag: "c",
+      //             dataType: {
+      //               type: "primary",
+      //               primaryDataType: "signed char",
+      //             },
+      //           },
+      //           {
+      //             tag: "l",
+      //             dataType: {
+      //               type: "primary",
+      //               primaryDataType: "signed long",
+      //             },
+      //           },
+      //         ],
+      //       },
+      //     ],
+      //     returnType: {
+      //       type: "struct",
+      //       tag: "A",
+      //       fields: [
+      //         {
+      //           tag: "i",
+      //           dataType: {
+      //             type: "primary",
+      //             primaryDataType: "signed int",
+      //           },
+      //         },
+      //         {
+      //           tag: "c",
+      //           dataType: {
+      //             type: "primary",
+      //             primaryDataType: "signed char",
+      //           },
+      //         },
+      //         {
+      //           tag: "l",
+      //           dataType: {
+      //             type: "primary",
+      //             primaryDataType: "signed long",
+      //           },
+      //         },
+      //       ],
+      //     },
+      //   },
+      //   jsFunction: (i: number, c: number, l: bigint) => [
+      //     i + 10,
+      //     c + 1,
+      //     l + 100n,
+      //   ],
+      // },
     };
   }
 }

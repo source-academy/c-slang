@@ -9,6 +9,7 @@ import {
   generateArgString,
   getWasmMemoryStoreInstruction,
   generateBranchTableInstruction,
+  getTempRegister,
 } from "~src/wat-generator/util";
 
 /**
@@ -76,7 +77,7 @@ export default function generateWatStatement(node: WasmStatement): string {
     return `(${getWasmMemoryStoreInstruction(
       node.wasmDataType,
       node.numOfBytes,
-    )} (global.set $${REG_2}) ${generateWatExpression(node.addr)} (global.get $${REG_2}))`;
+    )} (global.set $${getTempRegister(node.wasmDataType)}) ${generateWatExpression(node.addr)} (global.get $${getTempRegister(node.wasmDataType)}))`;
   } else if (node.type === "BranchTable") {
     return generateBranchTableInstruction(node);
   } else {

@@ -593,10 +593,53 @@ const testLog = {
       expectedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     },
     function_pointers_1: {
-      title: "Function Pointers 1: Test basic functionality - declaration, initialization and calling",
+      title:
+        "Function Pointers 1: Test basic functionality - declaration, initialization and calling",
       expectedCode: false,
-      expectedValues: [0, 0, 5, 0, 5]
-    }
+      expectedValues: [0, 0, 5, 0, 5],
+    },
+    malloc_1: {
+      title: "Malloc 1 - Simple test of malloc and free functions",
+      expectedCode: false,
+      expectedValues: [10],
+    },
+    malloc_2: {
+      title: "Malloc 2 - Test malloc and free of aggregate types",
+      expectedCode: false,
+      expectedValues: [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        "a",
+        3147483622,
+        "Hello World!",
+      ],
+    },
+    merge_sort_3: {
+      title:
+        "Mergesort 3 - Incoporating malloc to dynamically allocate temporary arrays",
+      expectedCode: false,
+      expectedValues: [
+        -23123,
+        -12,
+        12,
+        32,
+        123,
+        1231,
+        2312,
+        34342,
+        56745,
+        "4294967296",
+      ],
+    },
   },
 };
 

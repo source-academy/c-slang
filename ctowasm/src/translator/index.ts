@@ -10,7 +10,6 @@ import translateFunction from "~src/translator/translateFunction";
 import { CAstRootP } from "~src/processor/c-ast/core";
 import processIncludedModules from "~src/translator/processImportedFunctions";
 import ModuleRepository from "~src/modules";
-import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
 
 export default function translate(
   CAstRoot: CAstRootP,
