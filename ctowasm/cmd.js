@@ -8,7 +8,7 @@ import {
   generate_C_AST,
   generate_WAT_AST,
   generate_processed_C_AST,
-} from "./build/index.js";
+} from "./dist/index.js";
 import yargs from "yargs";
 import * as fs from "fs";
 import * as path from "node:path";

@@ -2,7 +2,7 @@
  * Utilty to help run tests.
  */
 
-import { compileToWat, compileAndRun } from "../build/index.js";
+import { compileToWat, compileAndRun } from "../dist/index.js";
 import * as fs from "fs";
 import * as path from "path";
 import testLog from "./testLog.js";

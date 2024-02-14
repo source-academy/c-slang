@@ -4,5 +4,6 @@ test
 output
 input
 build
+dist
 .parcel-cache
 cmd.js
