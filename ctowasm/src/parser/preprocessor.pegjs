@@ -24,7 +24,7 @@ multi_line_comment
   = "/*" (!"*/" .)* "*/"
 
 double_quoted_string
-	= '"' .* '"' { return '"' + chars.join("") + '"'; }
+	= '"' (!'"' ('\\"' / .))* '"'
 
 backslash_newline 
   = "\\\n" { return ""; }
