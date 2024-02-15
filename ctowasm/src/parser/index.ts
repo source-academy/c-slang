@@ -44,5 +44,7 @@ export default function parse(
   // eslint-disable-next-line
   // @ts-ignore
   parser.moduleRepository = moduleRepository; // make moduleRepository available to parser object
-  return parser.parse(lexer.parse(preprocessor.parse(sourceCode)));
+  const preprocessedOutput = preprocessor.parse(sourceCode);
+  const lexedOutput = lexer.parse(preprocessedOutput);
+  return parser.parse(lexedOutput);
 }

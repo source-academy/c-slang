@@ -9,7 +9,7 @@ preprocess_match
   = comment { return " " }
   / $double_quoted_string
   / "\\\n" { return "" }
-  / $(!"//" !"/*" !"\\\n" .)+
+  / $(!"//" !"/*" !"\\\n" !'"' .)+
 
 comment
   = single_line_comment
