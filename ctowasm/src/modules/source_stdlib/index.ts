@@ -18,19 +18,15 @@ export const sourceStandardLibraryModuleImportName = "source_stdlib";
 export class SourceStandardLibraryModule extends Module {
   moduleDeclaredStructs: StructDataType[];
   moduleFunctions: Record<string, ModuleFunction>;
-  sharedWasmGlobalVariables: SharedWasmGlobalVariables;
   heapAddress: number; // address of first item in heap
-  // freeList used for malloc
-  freeList: MemoryBlock[] = [];
-  allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
 
   constructor(
     memory: WebAssembly.Memory,
+    functionTable: WebAssembly.Table,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, config);
-    this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
+    super(memory, functionTable, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
     this.moduleDeclaredStructs = [];
     this.moduleFunctions = {

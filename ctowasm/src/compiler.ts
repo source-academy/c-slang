@@ -12,6 +12,7 @@ import ModuleRepository, { ModuleName } from "~src/modules";
 export interface CompilationResult {
   wasm: Uint8Array;
   dataSegmentSize: number;
+  functionTableSize: number; // size of function table = to number of defined functions in program
   importedModules: ModuleName[]; // all the modules imported into this C program
 }
 
@@ -27,6 +28,7 @@ export async function compile(
     return {
       wasm: output,
       dataSegmentSize: wasmModule.dataSegmentSize,
+      functionTableSize: wasmModule.functionTable.size,
       importedModules: includedModules,
     };
   } catch (e) {

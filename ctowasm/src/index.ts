@@ -36,16 +36,17 @@ export async function compileAndRun(
   program: string,
   modulesConfig?: ModulesGlobalConfig,
 ) {
-  const { wasm, dataSegmentSize, importedModules } = await originalCompile(
+  const { wasm, dataSegmentSize, functionTableSize, importedModules } = await originalCompile(
     program,
     defaultModuleRepository,
   );
-  await runWasm(wasm, dataSegmentSize, importedModules, modulesConfig);
+  await runWasm(wasm, dataSegmentSize, functionTableSize, importedModules, modulesConfig);
 }
 
 export async function runWasm(
   wasm: Uint8Array,
   dataSegmentSize: number,
+  functionTableSize: number,
   importedModules: ModuleName[],
   modulesConfig?: ModulesGlobalConfig,
 ) {
@@ -53,6 +54,7 @@ export async function runWasm(
     calculateNumberOfPagesNeededForBytes(dataSegmentSize);
   const moduleRepository = new ModuleRepository(
     new WebAssembly.Memory({ initial: numberOfInitialPagesNeeded }),
+    new WebAssembly.Table({ element: "anyfunc", initial: functionTableSize }),
     modulesConfig,
   );
   moduleRepository.setStackPointerValue(

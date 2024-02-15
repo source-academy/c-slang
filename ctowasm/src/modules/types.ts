@@ -1,5 +1,6 @@
-import { ModulesGlobalConfig } from "~src/modules";
+import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
+import { MemoryBlock } from "~src/modules/source_stdlib/memory";
 import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // Configuration parameters for WasmModuleImports object
@@ -22,13 +23,19 @@ export interface ModuleFunction {
  */
 export abstract class Module {
   memory: WebAssembly.Memory;
+  functionTable: WebAssembly.Table;
   config: ModulesGlobalConfig;
+  freeList: MemoryBlock[] = [];
+  allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
+  sharedWasmGlobalVariables: SharedWasmGlobalVariables;
   abstract moduleDeclaredStructs: StructDataType[];
   abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
 
-  constructor(memory: WebAssembly.Memory, config: ModulesGlobalConfig) {
+  constructor(memory: WebAssembly.Memory, functionTable: WebAssembly.Table, config: ModulesGlobalConfig, sharedWasmGlobalVariables: SharedWasmGlobalVariables) {
     this.memory = memory;
+    this.functionTable = functionTable;
     this.config = config;
+    this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
   }
 
   /**

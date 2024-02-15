@@ -1,4 +1,7 @@
-import { PixAndFlixLibrary, pixAndFlixLibraryModuleImportName } from "~src/modules/pix_and_flix";
+import {
+  PixAndFlixLibrary,
+  pixAndFlixLibraryModuleImportName,
+} from "~src/modules/pix_and_flix";
 import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
 import {
   SourceStandardLibraryModule,
@@ -9,7 +12,7 @@ import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 
 export interface ModulesGlobalConfig {
   printFunction: (str: string) => void; // the print function to use for printing to "stdout"
-  externalFunctions?: {[functionName: string]: Function}
+  externalFunctions?: { [functionName: string]: Function };
 }
 
 const defaultModulesGlobalConfig: ModulesGlobalConfig = {
@@ -22,48 +25,57 @@ export interface SharedWasmGlobalVariables {
 }
 
 // all the names of the modules
-export type ModuleName = typeof sourceStandardLibraryModuleImportName | typeof pixAndFlixLibraryModuleImportName;
+export type ModuleName =
+  | typeof sourceStandardLibraryModuleImportName
+  | typeof pixAndFlixLibraryModuleImportName;
 
 /**
  * Holds all the modules that define functions that can be imported and used in C source program.
  */
 export default class ModuleRepository {
   memory: WebAssembly.Memory;
+  functionTable: WebAssembly.Table; // table of functions of webassembly module
   config: ModulesGlobalConfig;
   modules: Record<ModuleName, Module>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
 
-  constructor(memory?: WebAssembly.Memory, config?: ModulesGlobalConfig) {
-    if (memory) {
-      this.memory = memory; // initially memory starts at 0
-    } else {
-      this.memory = new WebAssembly.Memory({ initial: 0 });
-    }
-
-    if (config) {
-      this.config = { ...defaultModulesGlobalConfig, ...config };
-    } else {
-      this.config = defaultModulesGlobalConfig;
-    }
+  constructor(
+    memory?: WebAssembly.Memory,
+    functionTable?: WebAssembly.Table,
+    config?: ModulesGlobalConfig
+  ) {
+    this.memory = memory ?? new WebAssembly.Memory({ initial: 0 });
+    this.functionTable =
+      functionTable ??
+      new WebAssembly.Table({ element: "anyfunc", initial: 0 });
+    this.config = config
+      ? { ...defaultModulesGlobalConfig, ...config }
+      : defaultModulesGlobalConfig;
 
     this.sharedWasmGlobalVariables = {
       stackPointer: new WebAssembly.Global(
         { value: WASM_ADDR_TYPE, mutable: true },
-        0,
+        0
       ),
       heapPointer: new WebAssembly.Global(
         { value: WASM_ADDR_TYPE, mutable: true },
-        0,
+        0
       ),
     };
 
     this.modules = {
       [sourceStandardLibraryModuleImportName]: new SourceStandardLibraryModule(
         this.memory,
+        this.functionTable,
         this.config,
-        this.sharedWasmGlobalVariables,
+        this.sharedWasmGlobalVariables
       ),
-      [pixAndFlixLibraryModuleImportName]: new PixAndFlixLibrary(this.memory, this.config, this.sharedWasmGlobalVariables)
+      [pixAndFlixLibraryModuleImportName]: new PixAndFlixLibrary(
+        this.memory,
+        this.functionTable,
+        this.config,
+        this.sharedWasmGlobalVariables
+      ),
     };
   }
 
@@ -87,6 +99,7 @@ export default class ModuleRepository {
     const imports: WebAssembly.Imports = {
       js: {
         mem: this.memory,
+        function_table: this.functionTable,
         sp: this.sharedWasmGlobalVariables.stackPointer,
         hp: this.sharedWasmGlobalVariables.heapPointer,
       },
@@ -99,11 +112,10 @@ export default class ModuleRepository {
         (moduleFunctionName) => {
           moduleImportObject[moduleFunctionName] =
             module.moduleFunctions[moduleFunctionName].jsFunction;
-        },
+        }
       );
       imports[moduleName] = moduleImportObject;
     });
-
     return imports;
   }
 }
