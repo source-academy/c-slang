@@ -9,9 +9,7 @@ import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 
 export interface ModulesGlobalConfig {
   printFunction: (str: string) => void; // the print function to use for printing to "stdout"
-  externalLibraries?: {
-    pixAndFlix?: PixAndFlixExternalLibrayFunctions
-  }
+  externalFunctions?: {[functionName: string]: Function}
 }
 
 const defaultModulesGlobalConfig: ModulesGlobalConfig = {

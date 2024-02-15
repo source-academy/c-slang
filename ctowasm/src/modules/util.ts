@@ -1,4 +1,5 @@
 import BigNumber from "bignumber.js";
+import { ModulesGlobalConfig } from "~src/modules";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -43,4 +44,11 @@ export function extractCStyleStringFromMemory(buffer: ArrayBuffer, strAddress: n
     str += String.fromCharCode(uInt8Arr[i++]);
   }
   return str;
+}
+
+export function getExternalFunction(funcName: string, config: ModulesGlobalConfig): Function {
+  if (!config.externalFunctions || !(funcName in config.externalFunctions)) {
+    throw Error(`External function ${funcName} not provided in compiler configs`);
+  }
+  return config.externalFunctions[funcName];
 }

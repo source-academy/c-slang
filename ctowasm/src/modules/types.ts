@@ -6,9 +6,7 @@ import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 export interface ImportedModulesGlobalConfig {
   printFunction?: (str: string) => void; // the print function to use for printing to "stdout"
-  externalLibraries?: {
-    pixAndFlix?: PixAndFlixExternalLibrayFunctions
-  }
+  externalFunctions?: {[functionName: string]: Function}
 }
 // Defines the signature of a wasm imported function
 

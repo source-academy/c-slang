@@ -1,6 +1,6 @@
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { Module, ModuleFunction } from "~src/modules/types";
-import { extractCStyleStringFromMemory } from "~src/modules/util";
+import { extractCStyleStringFromMemory, getExternalFunction } from "~src/modules/util";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // the name that this module is imported into wasm by,
@@ -37,14 +37,8 @@ export class PixAndFlixLibrary extends Module {
           returnType: null,
         },
         jsFunction: (strAddress: number) => {
-          if (
-            !config.externalLibraries ||
-            !config.externalLibraries.pixAndFlix
-          ) {
-            throw new Error("Pix and flix functions not provided to compiler");
-          }
           const url = extractCStyleStringFromMemory(memory.buffer, strAddress);
-          config.externalLibraries.pixAndFlix.use_image_url(url);
+          getExternalFunction("use_image_url", config)(url);
         },
       },
       // prints an unsigned int (4 bytes and smaller)
@@ -56,13 +50,7 @@ export class PixAndFlixLibrary extends Module {
           returnType: null,
         },
         jsFunction: () => {
-          if (
-            !config.externalLibraries ||
-            !config.externalLibraries.pixAndFlix
-          ) {
-            throw new Error("Pix and flix functions not provided to compiler");
-          }
-          config.externalLibraries.pixAndFlix.start();
+          getExternalFunction("start", config)();
         },
       },
     };
