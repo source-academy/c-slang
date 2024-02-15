@@ -1,6 +1,6 @@
 {
   "name": "ctowasm",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Browser-based Typescript compiler from C to Webassembly",
   "repository": "git@github.com:source-academy/c-slang.git",
   "author": "benmurphyy <47269122+benmurphyy@users.noreply.github.com>",
