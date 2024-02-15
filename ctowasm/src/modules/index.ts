@@ -1,3 +1,5 @@
+import { PixAndFlixLibrary, pixAndFlixLibraryModuleImportName } from "~src/modules/pix_and_flix";
+import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
 import {
   SourceStandardLibraryModule,
   sourceStandardLibraryModuleImportName,
@@ -7,6 +9,9 @@ import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 
 export interface ModulesGlobalConfig {
   printFunction: (str: string) => void; // the print function to use for printing to "stdout"
+  externalLibraries?: {
+    pixAndFlix?: PixAndFlixExternalLibrayFunctions
+  }
 }
 
 const defaultModulesGlobalConfig: ModulesGlobalConfig = {
@@ -19,7 +24,7 @@ export interface SharedWasmGlobalVariables {
 }
 
 // all the names of the modules
-export type ModuleName = typeof sourceStandardLibraryModuleImportName;
+export type ModuleName = typeof sourceStandardLibraryModuleImportName | typeof pixAndFlixLibraryModuleImportName;
 
 /**
  * Holds all the modules that define functions that can be imported and used in C source program.
@@ -60,6 +65,7 @@ export default class ModuleRepository {
         this.config,
         this.sharedWasmGlobalVariables,
       ),
+      [pixAndFlixLibraryModuleImportName]: new PixAndFlixLibrary(this.memory, this.config, this.sharedWasmGlobalVariables)
     };
   }
 

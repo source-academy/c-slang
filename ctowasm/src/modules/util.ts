@@ -30,3 +30,17 @@ export function convertFloatToCStyleString(float: number): string {
   const bigNumber = new BigNumber(floatStr);
   return bigNumber.toFixed(6);
 }
+
+/**
+ * Extracts a C-style string from memory buffer, starting at given address.
+ */
+export function extractCStyleStringFromMemory(buffer: ArrayBuffer, strAddress: number) {
+  const uInt8Arr = new Uint8Array(buffer);
+  let str = "";
+  let i = strAddress;
+  while (uInt8Arr[i] !== 0) {
+    // keep recording chars until null terminator
+    str += String.fromCharCode(uInt8Arr[i++]);
+  }
+  return str;
+}

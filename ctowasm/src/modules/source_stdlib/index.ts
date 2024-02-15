@@ -8,7 +8,7 @@ import {
   printStack,
 } from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
-import { convertFloatToCStyleString } from "~src/modules/util";
+import { convertFloatToCStyleString, extractCStyleStringFromMemory } from "~src/modules/util";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // the name that this module is imported into wasm by,
@@ -211,13 +211,7 @@ export class SourceStandardLibraryModule extends Module {
         },
         jsFunction: (strAddress: number) => {
           // need to intepret val as unsigned 4 byte int
-          const uInt8Arr = new Uint8Array(memory.buffer);
-          let str = "";
-          let i = strAddress;
-          while (uInt8Arr[i] !== 0) {
-            // keep recording chars until null terminator
-            str += String.fromCharCode(uInt8Arr[i++]);
-          }
+          const str = extractCStyleStringFromMemory(memory.buffer, strAddress);
           this.print(str);
         },
       },

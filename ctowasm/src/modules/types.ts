@@ -1,10 +1,14 @@
 import { ModulesGlobalConfig } from "~src/modules";
+import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
 import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // Configuration parameters for WasmModuleImports object
 
 export interface ImportedModulesGlobalConfig {
   printFunction?: (str: string) => void; // the print function to use for printing to "stdout"
+  externalLibraries?: {
+    pixAndFlix?: PixAndFlixExternalLibrayFunctions
+  }
 }
 // Defines the signature of a wasm imported function
 
