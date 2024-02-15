@@ -1,6 +1,6 @@
 {
   "name": "ctowasm",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Browser-based Typescript compiler from C to Webassembly",
   "repository": "git@github.com:source-academy/c-slang.git",
   "author": "benmurphyy <47269122+benmurphyy@users.noreply.github.com>",
@@ -9,7 +9,9 @@
   "source": "src/index.ts",
   "main": "dist/index.js",
   "types": "dist/types.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@babel/core": "^7.23.2",
     "@babel/plugin-transform-modules-commonjs": "^7.22.15",
