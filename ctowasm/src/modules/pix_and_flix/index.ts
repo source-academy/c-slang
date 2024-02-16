@@ -50,6 +50,26 @@ export class PixAndFlixLibrary extends Module {
           getExternalFunction("use_image_url", config)(url);
         },
       },
+      use_video_url: {
+        parentImportedObject: pixAndFlixLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+            {
+              type: "pointer",
+              pointeeType: {
+                type: "primary",
+                primaryDataType: "signed char",
+              },
+            },
+          ],
+          returnType: null,
+        },
+        jsFunction: (strAddress: number) => {
+          const url = extractCStyleStringFromMemory(memory.buffer, strAddress);
+          getExternalFunction("use_video_url", config)(url);
+        },
+      },
       // prints an unsigned int (4 bytes and smaller)
       start: {
         parentImportedObject: pixAndFlixLibraryModuleImportName,
@@ -258,6 +278,31 @@ export class PixAndFlixLibrary extends Module {
           getExternalFunction("install_filter", config)(filter);
         },
       },
+      reset_filter: {
+        parentImportedObject: pixAndFlixLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [],
+          returnType: null,
+        },
+        jsFunction: () => {
+          getExternalFunction("reset_filter", config)();
+        }, 
+      },
+      set_fps: {
+        parentImportedObject: pixAndFlixLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [{
+            type: "primary",
+            primaryDataType: "signed int"
+          }],
+          returnType: null,
+        },
+        jsFunction: () => {
+          getExternalFunction("set_fps", config)();
+        }, 
+      }
     };
   }
 }
