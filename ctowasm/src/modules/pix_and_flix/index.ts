@@ -3,13 +3,11 @@ import {
   freeFunction,
   mallocFunction,
 } from "~src/modules/source_stdlib/memory";
-import { Module, ModuleFunction } from "~src/modules/types";
+import wrapFunctionPtrCall from "~src/modules/stackFrameUtils";
+import { Module, ModuleFunction, StackFrameArg } from "~src/modules/types";
 import {
-  StackFrameArg,
   extractCStyleStringFromMemory,
   getExternalFunction,
-  loadStackFrame,
-  tearDownStackFrame,
 } from "~src/modules/util";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
 
@@ -184,6 +182,7 @@ export class PixAndFlixLibrary extends Module {
         jsFunction: (funcPtr: number) => {
           const filter = (src: number[][][], dest: number[][][]) => {
             const memSize = src.length * src[0].length * src[0][0].length;
+
             // allocate buffers on the heap
             const srcAddress = mallocFunction({
               memory,
@@ -213,42 +212,26 @@ export class PixAndFlixLibrary extends Module {
 
             const stackFrameArgs: StackFrameArg[] = [
               {
-                value: srcAddress,
-                size: 4,
-                isSigned: false,
+                value: BigInt(srcAddress),
+                type: "unsigned int"
               },
               {
-                value: destAddress,
-                size: 4,
-                isSigned: false,
+                value: BigInt(destAddress),
+                type: "unsigned int"
               },
               {
-                value: src.length,
-                size: 4,
-                isSigned: false,
+                value: BigInt(src.length),
+                type: "unsigned int"
               },
               {
-                value: src[0].length,
-                size: 4,
-                isSigned: false,
+                value: BigInt(src[0].length),
+                type: "unsigned int"
               },
             ];
 
-            // load arguments for the funcPtr into memory at places they should be
-            const stackFrameSize = loadStackFrame(
-              memory,
-              sharedWasmGlobalVariables,
-              stackFrameArgs,
-              0
-            );
-            this.functionTable.get(funcPtr)();
-            tearDownStackFrame(
-              memory,
-              stackFrameSize,
-              sharedWasmGlobalVariables.stackPointer,
-              sharedWasmGlobalVariables.basePointer
-            );
-
+            // call the function pointer
+            wrapFunctionPtrCall(memory, functionTable, funcPtr, sharedWasmGlobalVariables, stackFrameArgs, []);
+            
             // copy the values out
             const destArr = new Uint8Array(memory.buffer, destAddress, memSize);
             currAddress = 0;

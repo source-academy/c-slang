@@ -1,7 +1,11 @@
 import BigNumber from "bignumber.js";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
-import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
+import {
+  calculateNumberOfPagesNeededForBytes,
+  getSizeOfScalarDataType,
+} from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
+import { StackFrameArg } from "~src/modules/types";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -61,105 +65,6 @@ export function getExternalFunction(
     );
   }
   return config.externalFunctions[funcName];
-}
-
-export interface StackFrameArg {
-  value: number;
-  size: 1 | 2 | 4 | 8;
-  isSigned: boolean;
-}
-
-export function loadStackFrame(
-  memory: WebAssembly.Memory,
-  sharedWasmGlobalVariables: SharedWasmGlobalVariables,
-  stackFrameArgs: StackFrameArg[],
-  sizeOfReturn: number
-): number {
-  const totalArgsSize = stackFrameArgs.reduce(
-    (prv, curr) => prv + curr.size,
-    0
-  );
-  const bytesNeeded = totalArgsSize + sizeOfReturn + WASM_ADDR_SIZE; // need to add base pointer
-  checkAndExpandMemoryIfNeeded(memory, bytesNeeded, sharedWasmGlobalVariables);
-
-  const stackFrameDataView = new DataView(
-    memory.buffer,
-    sharedWasmGlobalVariables.stackPointer.value - bytesNeeded,
-    bytesNeeded
-  );
-
-  // fill in old bp
-  stackFrameDataView.setUint32(
-    totalArgsSize,
-    sharedWasmGlobalVariables.basePointer.value,
-    true //little endian
-  );
-
-  // fill in params
-  let currOffset = bytesNeeded - sizeOfReturn - WASM_ADDR_SIZE;
-  for (const arg of stackFrameArgs) {
-    switch (arg.size) {
-      case 1:
-        currOffset -= 1;
-        if (arg.isSigned) {
-          stackFrameDataView.setInt8(currOffset, arg.value);
-        } else {
-          stackFrameDataView.setUint8(currOffset, arg.value);
-        }
-        break;
-      case 2:
-        currOffset -= 2;
-        if (arg.isSigned) {
-          stackFrameDataView.setInt16(currOffset, arg.value, true);
-        } else {
-          stackFrameDataView.setUint16(currOffset, arg.value, true);
-        }
-        break;
-      case 4:
-        currOffset -= 4;
-        if (arg.isSigned) {
-          stackFrameDataView.setInt32(currOffset, arg.value, true);
-        } else {
-          stackFrameDataView.setUint32(currOffset, arg.value, true);
-        }
-        break;
-      case 8:
-        currOffset -= 8;
-        if (arg.isSigned) {
-          //TODO: handle big int properly
-          stackFrameDataView.setBigInt64(currOffset, BigInt(arg.value), true);
-        } else {
-          stackFrameDataView.setBigUint64(currOffset, BigInt(arg.value), true);
-        }
-        break;
-    }
-  }
-
-  // set the value of bp
-  sharedWasmGlobalVariables.basePointer.value =
-    sharedWasmGlobalVariables.stackPointer.value -
-    sizeOfReturn -
-    WASM_ADDR_SIZE;
-  // set the value of sp
-  sharedWasmGlobalVariables.stackPointer.value =
-    sharedWasmGlobalVariables.stackPointer.value - bytesNeeded;
-
-  return bytesNeeded;
-}
-
-export function tearDownStackFrame(
-  memory: WebAssembly.Memory,
-  stackFrameSize: number,
-  stackPointer: WebAssembly.Global,
-  basePointer: WebAssembly.Global
-) {
-  stackPointer.value += stackFrameSize;
-  const dataView = new DataView(
-    memory.buffer,
-    basePointer.value,
-    WASM_ADDR_SIZE
-  );
-  basePointer.value = dataView.getUint32(0, true);
 }
 
 export function checkAndExpandMemoryIfNeeded(

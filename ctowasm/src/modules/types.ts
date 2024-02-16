@@ -1,3 +1,5 @@
+import { FloatDataType, PrimaryCDataType } from "~dist/types";
+import { IntegerDataType, PointerCDataType } from "~src/common/types";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
 import { MemoryBlock } from "~src/modules/source_stdlib/memory";
@@ -45,3 +47,22 @@ export abstract class Module {
     this.config.printFunction(str);
   }
 }
+
+export type StackFrameArg = IntegerStackFrameArg | FloatStackFrameArg
+
+/**
+ * Represents a stack frame argument to be placed on a stack frame.
+ */
+interface IntegerStackFrameArg {
+  value: bigint;
+  type: IntegerDataType | PointerCDataType;
+}
+
+/**
+ * Represents a stack frame argument to be placed on a stack frame.
+ */
+interface FloatStackFrameArg {
+  value: number;
+  type: FloatDataType;
+}
+
