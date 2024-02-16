@@ -75,18 +75,10 @@ export function setPseudoRegisters(wasmRoot: WasmModule) {
     wasmDataType: "i32",
   });
 
-  wasmRoot.globalWasmVariables.push({
-    type: "GlobalVariable",
+  wasmRoot.importedGlobalWasmVariables.push({
+    type: "ImportedGlobalVariable",
     name: BASE_POINTER,
     wasmDataType: "i32",
-    initializerValue: {
-      type: "IntegerConst",
-      wasmDataType: "i32",
-      value: BigInt(
-        calculateNumberOfPagesNeededForBytes(wasmRoot.dataSegmentSize) *
-          WASM_PAGE_SIZE,
-      ), // BP starts at the memory boundary
-    },
   });
 
   // heap segment follows immediately after data segment

@@ -60,6 +60,7 @@ export async function runWasm(
   moduleRepository.setStackPointerValue(
     numberOfInitialPagesNeeded * WASM_PAGE_SIZE,
   );
+  moduleRepository.setBasePointerValue(numberOfInitialPagesNeeded * WASM_PAGE_SIZE);
   moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4); // align to 4 bytes
   await WebAssembly.instantiate(
     wasm,

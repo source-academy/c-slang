@@ -229,7 +229,7 @@ export class SourceStandardLibraryModule extends Module {
         jsFunction: (numBytes: number) =>
           mallocFunction({
             memory: this.memory,
-            memoryPointers: this.sharedWasmGlobalVariables,
+            sharedWasmGlobalVariables: this.sharedWasmGlobalVariables,
             freeList: this.freeList,
             allocatedBlocks: this.allocatedBlocks,
             bytesRequested: numBytes,

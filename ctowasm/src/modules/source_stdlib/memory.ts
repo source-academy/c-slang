@@ -4,6 +4,7 @@
 
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { SharedWasmGlobalVariables } from "~src/modules";
+import { checkAndExpandMemoryIfNeeded } from "~src/modules/util";
 
 // represents a memory block that is allocated/deallocated
 export interface MemoryBlock {
@@ -13,7 +14,7 @@ export interface MemoryBlock {
 
 interface MallocFunctionParams {
   memory: WebAssembly.Memory;
-  memoryPointers: SharedWasmGlobalVariables;
+  sharedWasmGlobalVariables: SharedWasmGlobalVariables;
   freeList: MemoryBlock[];
   allocatedBlocks: Map<number, number>; // map of address of allocated memory block to size
   bytesRequested: number;
@@ -21,7 +22,7 @@ interface MallocFunctionParams {
 
 export function mallocFunction({
   memory,
-  memoryPointers: { stackPointer, heapPointer },
+  sharedWasmGlobalVariables,
   bytesRequested,
   allocatedBlocks,
   freeList,
@@ -54,26 +55,11 @@ export function mallocFunction({
   }
 
   // no suitable block on the free list, need to expand heap
-
-  const freeSpace = stackPointer.value - heapPointer.value;
-  if (freeSpace < bytesRequested) {
-    // need to grow memory
-    const additionalPagesNeeded = calculateNumberOfPagesNeededForBytes(
-      bytesRequested - freeSpace,
-    );
-    const stackSegmentSize = memory.buffer.byteLength - stackPointer.value;
-    const oldMemorySize = memory.buffer.byteLength;
-    memory.grow(additionalPagesNeeded);
-    // need to copy stack segment starting from the end of the new memory buffer
-    const memoryView = new Uint8Array(memory.buffer);
-    for (let i = 0; i < stackSegmentSize; i++) {
-      memoryView[memoryView.length - i - 1] = memoryView[oldMemorySize - i - 1];
-    }
-  }
+  checkAndExpandMemoryIfNeeded(memory, bytesRequested, sharedWasmGlobalVariables); 
 
   // enlarge heap segment
-  const address = heapPointer.value;
-  heapPointer.value += bytesRequested;
+  const address = sharedWasmGlobalVariables.heapPointer.value;
+  sharedWasmGlobalVariables.heapPointer.value += bytesRequested;
 
   allocatedBlocks.set(address, bytesRequested);
   return address;

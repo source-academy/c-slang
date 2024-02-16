@@ -22,6 +22,7 @@ const defaultModulesGlobalConfig: ModulesGlobalConfig = {
 export interface SharedWasmGlobalVariables {
   stackPointer: WebAssembly.Global;
   heapPointer: WebAssembly.Global;
+  basePointer: WebAssembly.Global;
 }
 
 // all the names of the modules
@@ -57,6 +58,10 @@ export default class ModuleRepository {
         { value: WASM_ADDR_TYPE, mutable: true },
         0
       ),
+      basePointer: new WebAssembly.Global(
+        { value: WASM_ADDR_TYPE, mutable: true },
+        0
+      ),
       heapPointer: new WebAssembly.Global(
         { value: WASM_ADDR_TYPE, mutable: true },
         0
@@ -83,6 +88,10 @@ export default class ModuleRepository {
     this.sharedWasmGlobalVariables.stackPointer.value = value;
   }
 
+  setBasePointerValue(value: number) {
+    this.sharedWasmGlobalVariables.basePointer.value = value;
+  }
+
   setHeapPointerValue(value: number) {
     this.sharedWasmGlobalVariables.heapPointer.value = value;
   }
@@ -102,6 +111,7 @@ export default class ModuleRepository {
         function_table: this.functionTable,
         sp: this.sharedWasmGlobalVariables.stackPointer,
         hp: this.sharedWasmGlobalVariables.heapPointer,
+        bp: this.sharedWasmGlobalVariables.basePointer
       },
     };
 

@@ -1,9 +1,15 @@
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
-import { mallocFunction } from "~src/modules/source_stdlib/memory";
+import {
+  freeFunction,
+  mallocFunction,
+} from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
 import {
+  StackFrameArg,
   extractCStyleStringFromMemory,
   getExternalFunction,
+  loadStackFrame,
+  tearDownStackFrame,
 } from "~src/modules/util";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
 
@@ -92,11 +98,11 @@ export class PixAndFlixLibrary extends Module {
           type: "function",
           parameters: [
             {
-              type: "primary",
+              type: "primary", // height of image
               primaryDataType: "signed int",
             },
             {
-              type: "primary",
+              type: "primary", // width of image
               primaryDataType: "signed int",
             },
           ],
@@ -114,45 +120,62 @@ export class PixAndFlixLibrary extends Module {
             {
               type: "pointer",
               pointeeType: {
-                type: "pointer",
-                pointeeType: {
-                  type: "array",
-                  elementDataType: {
-                    type: "primary",
-                    primaryDataType: "signed char",
-                  },
-                  numElements: {
-                    type: "IntegerConstant",
-                    value: 3n,
-                    suffix: null,
-                    position: {
-                      start: { line: 0, offset: 0, column: 0 },
-                      end: { line: 0, offset: 0, column: 0 },
+                type: "function",
+                parameters: [
+                  {
+                    type: "pointer",
+                    pointeeType: {
+                      type: "pointer",
+                      pointeeType: {
+                        type: "array",
+                        elementDataType: {
+                          type: "primary",
+                          primaryDataType: "signed char",
+                        },
+                        numElements: {
+                          type: "IntegerConstant",
+                          value: 3n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                        },
+                      },
                     },
                   },
-                },
-              },
-            },
-            {
-              type: "pointer",
-              pointeeType: {
-                type: "pointer",
-                pointeeType: {
-                  type: "array",
-                  elementDataType: {
-                    type: "primary",
-                    primaryDataType: "signed char",
-                  },
-                  numElements: {
-                    type: "IntegerConstant",
-                    value: 3n,
-                    suffix: null,
-                    position: {
-                      start: { line: 0, offset: 0, column: 0 },
-                      end: { line: 0, offset: 0, column: 0 },
+                  {
+                    type: "pointer",
+                    pointeeType: {
+                      type: "pointer",
+                      pointeeType: {
+                        type: "array",
+                        elementDataType: {
+                          type: "primary",
+                          primaryDataType: "signed char",
+                        },
+                        numElements: {
+                          type: "IntegerConstant",
+                          value: 3n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                        },
+                      },
                     },
                   },
-                },
+                  {
+                    type: "primary", // height of image
+                    primaryDataType: "signed int",
+                  },
+                  {
+                    type: "primary", // width of image
+                    primaryDataType: "signed int",
+                  },
+                ],
+                returnType: null,
               },
             },
           ],
@@ -160,17 +183,96 @@ export class PixAndFlixLibrary extends Module {
         },
         jsFunction: (funcPtr: number) => {
           const filter = (src: number[][][], dest: number[][][]) => {
-            const memNeeded = src.length * src[0].length * src[0][0].length;
-            const address = mallocFunction({
+            const memSize = src.length * src[0].length * src[0][0].length;
+            // allocate buffers on the heap
+            const srcAddress = mallocFunction({
               memory,
-              memoryPointers: sharedWasmGlobalVariables,
+              sharedWasmGlobalVariables,
               freeList: this.freeList,
               allocatedBlocks: this.allocatedBlocks,
-              bytesRequested: memNeeded
-            })
-            
-          }
-          getExternalFunction("install_filter", config)();
+              bytesRequested: memSize,
+            });
+            const destAddress = mallocFunction({
+              memory,
+              sharedWasmGlobalVariables,
+              freeList: this.freeList,
+              allocatedBlocks: this.allocatedBlocks,
+              bytesRequested: memSize,
+            });
+
+            // copy the values in
+            let currAddress = srcAddress;
+            const srcArr = new Uint8Array(memory.buffer, srcAddress, memSize);
+            for (let i = 0; i < src.length; ++i) {
+              for (let j = 0; j < src[0].length; ++j) {
+                for (let k = 0; k < src[0][0].length; ++k) {
+                  srcArr[currAddress++] = src[i][j][k];
+                }
+              }
+            }
+
+            const stackFrameArgs: StackFrameArg[] = [
+              {
+                value: srcAddress,
+                size: 4,
+                isSigned: false,
+              },
+              {
+                value: destAddress,
+                size: 4,
+                isSigned: false,
+              },
+              {
+                value: src.length,
+                size: 4,
+                isSigned: false,
+              },
+              {
+                value: src[0].length,
+                size: 4,
+                isSigned: false,
+              },
+            ];
+
+            // load arguments for the funcPtr into memory at places they should be
+            const stackFrameSize = loadStackFrame(
+              memory,
+              sharedWasmGlobalVariables,
+              stackFrameArgs,
+              0
+            );
+            this.functionTable.get(funcPtr)();
+            tearDownStackFrame(
+              memory,
+              stackFrameSize,
+              sharedWasmGlobalVariables.stackPointer,
+              sharedWasmGlobalVariables.basePointer
+            );
+
+            // copy the values out
+            const destArr = new Uint8Array(memory.buffer, destAddress, memSize);
+            currAddress = 0;
+            for (let i = 0; i < dest.length; ++i) {
+              for (let j = 0; j < dest[0].length; ++j) {
+                for (let k = 0; k < dest[0][0].length; ++k) {
+                  dest[i][j][k] = destArr[currAddress++];
+                }
+              }
+            }
+
+            // free both buffers
+            freeFunction({
+              address: srcAddress,
+              freeList: this.freeList,
+              allocatedBlocks: this.allocatedBlocks,
+            });
+            freeFunction({
+              address: destAddress,
+              freeList: this.freeList,
+              allocatedBlocks: this.allocatedBlocks,
+            });
+          };
+          getExternalFunction("install_filter", config)(filter);
         },
       },
     };
