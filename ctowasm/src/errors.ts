@@ -4,6 +4,24 @@
 
 import { Position } from "~src/parser/c-ast/misc";
 
+function generateCompilationMessage(
+  message: string,
+  sourceCode: string,
+  position: Position
+) {
+  let errorMessage = `${message}\n${position.start.line} | `;
+  let currLine = position.start.line;
+  for (let i = position.start.offset; i < position.end.offset; ++i) {
+    if (sourceCode[i] === "\n") {
+      errorMessage += `\n${++currLine} | `;
+    } else {
+      errorMessage += sourceCode[i];
+    }
+  }
+  errorMessage += "\n";
+  return errorMessage;
+}
+
 /**
  * Generates a compilation error message with positional information.
  * @param message
@@ -16,17 +34,26 @@ function generateCompilationErrorMessage(
   sourceCode: string,
   position: Position
 ): string {
-  let errorMessage = `Error: ${message}\n${position.start.line} | `;
-  let currLine = position.start.line;
-  for (let i = position.start.offset; i < position.end.offset; ++i) {
-    if (sourceCode[i] === "\n") {
-      errorMessage += `\n${++currLine} | `;
-    } else {
-      errorMessage += sourceCode[i];
-    }
-  }
-  errorMessage += "\n";
-  return errorMessage;
+  return `Error: ${generateCompilationMessage(message, sourceCode, position)}`;
+}
+
+/**
+ * Generates a compilation warning message with positional information.
+ * @param message
+ * @param sourceCode
+ * @param position
+ * @returns
+ */
+export function generateCompilationWarningMessage(
+  message: string,
+  sourceCode: string,
+  position: Position
+): string {
+  return `Warning: ${generateCompilationMessage(
+    message,
+    sourceCode,
+    position
+  )}`;
 }
 
 /**

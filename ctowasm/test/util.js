@@ -37,9 +37,8 @@ export async function compileAndRunFile({
     ),
     "utf-8",
   );
-
+  
   await compileAndRun(input, modulesConfig);
-
 }
 
 export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
@@ -57,13 +56,15 @@ export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
     "utf-8",
   );
 
-  const output = compileToWat(input);
-  if (output.status === "failure") {
+  const { watOutput, status, warnings } = compileToWat(input);
+  if (status === "failure") {
     throw new CompilationFailure(`Compilation failed due to following errors:\n${output.errorMessage}`);
   }
-
+  if (warnings.length > 0) {
+    console.log(`Compilation succeeded with warnings: ${warnings.join("\n")}`)
+  }
   fs.mkdirSync(path.dirname(watFilePath), { recursive: true });
-  fs.writeFileSync(watFilePath, output.watOutput);
+  fs.writeFileSync(watFilePath, watOutput);
   return output;
 }
 

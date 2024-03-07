@@ -71,6 +71,13 @@ switch (argv._[0]) {
       console.log(result.errorMessage);
       break;
     }
+    if (result.warnings.length > 0) {
+      console.log(
+        `Compilation succeeded with the following warnings: ${result.warnings.join(
+          "\n"
+        )}`
+      );
+    }
     output = result.watOutput;
     break;
   case "compile-run":
@@ -81,6 +88,13 @@ switch (argv._[0]) {
       isSuccess = false;
       console.log(result.errorMessage);
       break;
+    }
+    if (result.warnings.length > 0) {
+      console.log(
+        `Compilation succeeded with the following warnings:\n${result.warnings.join(
+          "\n"
+        )}`
+      );
     }
     output = result.watOutput;
     await compileAndRun(input);
