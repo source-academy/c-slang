@@ -1,16 +1,21 @@
 {
   const thisParser = this; // reference to the parser object itself (to get some variables)
+
+  function getCurrPosition() {
+    const loc = range();
+    return {
+      start: thisParser.tokenPositions.get(loc.start).start,
+      end: thisParser.tokenPositions.get(loc.end - 1).end
+    }
+  }
+
   /**
    * Helper function to create and return a Node with position and type information
    */
   function generateNode(type, data) {
-    const loc = location();
     return {
       type: type,
-      position: {
-        start: thisParser.tokenPositions.get(loc.start.offset).start,
-        end: thisParser.tokenPositions.get(loc.end.offset - 1).end
-      },
+      position: getCurrPosition(),
       ...data,
     };
   }
@@ -64,9 +69,16 @@
 
   const warnings = [];
   // add a warning to warnings
-  function warn(message, location) {
-    warnings.push({ message, location });
+  function warn(message) {
+    warnings.push({ message, position: getCurrPosition() });
   }
+
+  // any non-syntax related compilation errors detected during parsing
+  const compilationErrors = [];
+  function error(message) {
+    compilationErrors.push({ message, position: getCurrPosition() });
+  }
+
   // this object is used to keep track of symbols, and identify whether they represent a variable/function or type (defined by struct/enum/typedef)
   // this is critical for identifying if an identifier is a typename defined by typedef or a variable -> needed for resolving "typedef ambiguity"
 
@@ -105,7 +117,7 @@
 
   function getIdentifierSymbolEntry(name) {
     if (!(name in symbolTable.identifiers)) {
-      error(`Symbol '${name}' not declared`);
+      throw new Error(`Symbol '${name}' not declared`);
     }
     const entries = symbolTable.identifiers[name];
     return entries[entries.length - 1];
@@ -117,7 +129,7 @@
 
   function getTagSymbolEntry(name) {
     if (!(name in symbolTable.tags)) {
-      error(`Symbol '${name}' not declared`);
+      throw new Error(`Symbol '${name}' not declared`);
     }
     const entries = symbolTable.tags[name];
     return entries[entries.length - 1];
@@ -126,14 +138,14 @@
   // pop off the latest symbol entry for a symbol (to be done at end of scopes)
   function removeIdentifierSymbolEntry(name) {
     if (!(name in symbolTable.identifiers)) {
-      error(`Symbol '${name}' not declared`);
+      throw new Error(`Symbol '${name}' not declared`);
     }
     symbolTable.identifiers[name].pop();
   }
 
   function removeTagSymbolEntry(name) {
     if (!(name in symbolTable.tags)) {
-      error(`Symbol '${name}' not declared`);
+      throw new Error(`Symbol '${name}' not declared`);
     }
     symbolTable.tags[name].pop();
   }
@@ -304,7 +316,7 @@
         error("Unknown child in root node");
       }
     }
-    return generateNode("Root", { children: unpackedChildren, warnings });
+    return generateNode("Root", { children: unpackedChildren, warnings, compilationErrors });
   }
 
   function generateIntegerConstant(value, suffix) {
@@ -345,10 +357,10 @@
     const identifierDefinitions = [];
     const declarations = [];
     if (storageClass) {
-      warn("Useless storage class in type defintion", location());
+      warn("Useless storage class in type defintion");
     }
     if (typeof tagDefinitions === "undefined" || tagDefinitions.length === 0) {
-      warn("Useless type name in empty declaration", location());
+      warn("Useless type name in empty declaration");
     }
 
     // add all enum variables that could have been defined in enum specifier
@@ -571,17 +583,17 @@
       if (suffix.type === "FunctionDeclarator") {
         // you can only have string of consecutive array declarators
         if (currNode.type === "FunctionDeclarator") {
-          error("Cannot have a function returning a function", location());
+          error("Cannot have a function returning a function");
         }
         // you cannot have an array of functions
         if (currNode.type === "ArrayDeclarator") {
-          error("Cannot have an array of functions", location());
+          error("Cannot have an array of functions");
         }
       } else {
         // suffix is "ArrayDeclarator"
         if (currNode.type === "FunctionDeclarator") {
           // cannot have a function returning array
-          error("Cannot have a function returning an array", location());
+          error("Cannot have a function returning an array");
         }
       }
 
@@ -972,9 +984,9 @@
       // only pointers and functions can have null type specifier - void type
       if (dataTypeToAdd.type === "void") {
         if (typeof currNode.type === "undefined" || currNode.type === "primary") {
-          error(`Variable or field declared as void`, location());
+          error(`Variable or field declared as void`);
         } else if (currNode.type === "array") {
-          error(`Declaration of array of voids`, location());
+          error(`Declaration of array of voids`);
         } else if (currNode.type === "function") {
           currNode.returnType = null;
           return;
@@ -1020,9 +1032,9 @@
         };
         // some error checks
         if (currNode.type === "FunctionDeclarator") {
-          error("Cannot declare a function returning a function", location());
+          error("Cannot declare a function returning a function");
         } else if (currNode.type === "ArrayDeclarator") {
-          error("Cannot declare an array of functions", location());
+          error("Cannot declare an array of functions");
         }
 
         addDataType(functionType);
@@ -1034,13 +1046,13 @@
         };
 
         if (currNode.type === "FunctionDeclarator") {
-          error("Cannot declare a function returning an array", location());
+          error("Cannot declare a function returning an array");
         }
 
         addDataType(arrayType);
         currNode = arrayType;
       } else {
-        error("Unknown declarator type", location());
+        error("Unknown declarator type");
       }
     }
 
@@ -1259,7 +1271,7 @@
                 declarationNode.initializer.value.chars
               );
           } else {
-            error("Invalid initializer for array", location());
+            error("Invalid initializer for array");
           }
         }
         // Array size deduction based on initializer list size
@@ -1574,7 +1586,7 @@ selection_statement
   / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return generateNode( "SelectionStatement", { condition, ifStatement }); }
   / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ cases:switch_statement_case|1.., _| defaultStatements:(_ @switch_default_case)? _ "}"  { return createSwitchStatementNode(targetExpression, cases, defaultStatements ?? []); }
   / "switch" _ "(" _ @expression _ ")" _ "{" _ "}" // functionally useless except for potentially side effect expression
-  / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed", location()); return targetExpression; } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
+  / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed"); return targetExpression; } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
 
 switch_default_case
   = "default" _ ":" _ @block_item_list
