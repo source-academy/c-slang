@@ -25,6 +25,12 @@ export function generate_WAT_AST(program: string) {
 
 export { compile } ;
 
+export class CompilationFailure extends Error {
+  constructor(message: string) {
+    super(`Compilation failed with the following errors:\n${message}`);
+  }
+}
+
 /**
  * Compiles the given C program, including all default imported functions.
  */
@@ -39,7 +45,7 @@ export async function compileAndRun(
   );
 
   if (compilationResult.status === "failure") {
-    return await Promise.reject(compilationResult.errorMessage);
+    throw new CompilationFailure(compilationResult.errorMessage);
   }
 
   const { wasm, dataSegmentSize, functionTableSize, importedModules } = compilationResult;

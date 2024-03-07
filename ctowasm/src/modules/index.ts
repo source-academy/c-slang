@@ -2,7 +2,6 @@ import {
   PixAndFlixLibrary,
   pixAndFlixLibraryModuleImportName,
 } from "~src/modules/pix_and_flix";
-import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
 import {
   SourceStandardLibraryModule,
   sourceStandardLibraryModuleImportName,

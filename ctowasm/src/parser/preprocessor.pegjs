@@ -3,12 +3,18 @@
  * - Reduces comments to single whitespaces (leaves strings untouched)
  * - Removes backslash-newlines (replaces them with nothing)
  */
+{
+  const thisParser = this;
+  // positions of "\\\n" in the program
+  thisParser.falseNewlinePositions = []
+}
+
 program = matches:preprocess_match* { return matches.join("").trim(); }
 
 preprocess_match
-  = comment { return " " }
+  = comment:$comment { return " ".repeat(comment.length); } // fill in comment areas with whitespaces
   / $double_quoted_string
-  / "\\\n" { return "" }
+  / "\\\n" { thisParser.falseNewlinePositions.push(location().start.offset); return ""; }
   / $(!"//" !"/*" !"\\\n" !'"' .)+
 
 comment

@@ -273,7 +273,7 @@ export default function processBlockItem(
       throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);
     }
   } catch (e) {
-    if (e instanceof ProcessingError) {
+    if (e instanceof ProcessingError && e.position === null) {
       e.addPositionInfo(node.position);
     }
     throw e;

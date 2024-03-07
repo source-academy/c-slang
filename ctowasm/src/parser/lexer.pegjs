@@ -1,12 +1,49 @@
 /*
- * Performs lexing functionality, producing a string of tokens separated by a single whitespace, to ease parsing.
+ * Performs lexing functionality, producing a string of tokens separated by a single whitespace, to simplify parsing.
  */
+{
+  const thisParser = this; 
+  thisParser.tokenPositions = new Map();
+  // length of the output string of the lexer
+  let outputLength = 0;
 
+  /**
+   * Returns the location of the token, adjusted for "\\\n" that were removed by the preprocessor.
+   */
+  function getAdjustedTokenLocation() {
+    const FALSE_NEWLINE_CHAR_LENGTH = 2;
+    const adjustedLocation = location();
+    let numOfFalseNewlinesBefStart = 0;
+    let numOfFalseNewlinesBefEnd = 0;
+    for (const falseNewlinePosition of thisParser.falseNewlinePositions) {
+      if (falseNewlinePosition > adjustedLocation.end.offset) {
+        break;
+      }
+      numOfFalseNewlinesBefEnd++;
+      if (falseNewlinePosition < adjustedLocation.start.offset) {
+        numOfFalseNewlinesBefStart++;
+      }
+    }
+    adjustedLocation.start.offset += FALSE_NEWLINE_CHAR_LENGTH * numOfFalseNewlinesBefStart;
+    adjustedLocation.start.line += numOfFalseNewlinesBefStart;
+    adjustedLocation.end.offset += FALSE_NEWLINE_CHAR_LENGTH * numOfFalseNewlinesBefEnd;
+    adjustedLocation.end.line += numOfFalseNewlinesBefEnd;
+    return adjustedLocation;
+  }
+
+  function addTokenPosition(token) {
+    const tokenPosition = getAdjustedTokenLocation();
+    for (let i = 0; i < token.length; ++i) {
+      thisParser.tokenPositions.set(outputLength + i, tokenPosition);
+    }
+    outputLength += token.length + 1;
+  }
+}
 
 program = matches:preprocess_match* { return matches.join("").trim(); }
 
 preprocess_match
-  = token:$token { return token + " "; }
+  = token:$token { addTokenPosition(token); return token + " "; }
   / _+ { return ""; } // remove excess whitespaces
 
 _ "separator" // whitespace characters that separate tokens

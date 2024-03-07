@@ -9,11 +9,11 @@ import { Position } from "~src/parser/c-ast/misc";
  * Contains positional information for debugging purposes.
  */
 export class SourceCodeError extends Error {
-  position: Position | undefined;
+  position: Position | null;
   constructor(message: string, position?: Position) {
     super();
     this.message = message;
-    this.position = position;
+    this.position = position ?? null;
   }
 
   addPositionInfo(position: Position) {
@@ -26,7 +26,7 @@ export class SourceCodeError extends Error {
    * @param position
    */
   generateCompilationErrorMessage(sourceCode: string) : string {
-    if (typeof this.position !== "undefined") {
+    if (this.position !== null) {
       this.message = `\n${this.message}\n${this.position.start.line} | `;
       let currLine = this.position.start.line;
       for (

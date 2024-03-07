@@ -722,7 +722,7 @@ export default function processExpression(
       throw new ProcessingError(`Unhandled Expression: ${toJson(expr)}`);
     }
   } catch (e) {
-    if (e instanceof ProcessingError) {
+    if (e instanceof ProcessingError && e.position === null) {
       e.addPositionInfo(expr.position);
     }
     throw e;

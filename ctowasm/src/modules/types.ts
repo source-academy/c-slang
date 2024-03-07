@@ -1,7 +1,6 @@
-import { FloatDataType, PrimaryCDataType } from "~dist/types";
+import { FloatDataType } from "~dist/types";
 import { IntegerDataType, PointerCDataType } from "~src/common/types";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
-import { PixAndFlixExternalLibrayFunctions } from "~src/modules/pix_and_flix/types";
 import { MemoryBlock } from "~src/modules/source_stdlib/memory";
 import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
@@ -9,7 +8,7 @@ import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 
 export interface ImportedModulesGlobalConfig {
   printFunction?: (str: string) => void; // the print function to use for printing to "stdout"
-  externalFunctions?: {[functionName: string]: Function}
+  externalFunctions?: { [functionName: string]: Function };
 }
 // Defines the signature of a wasm imported function
 
@@ -33,7 +32,12 @@ export abstract class Module {
   abstract moduleDeclaredStructs: StructDataType[];
   abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
 
-  constructor(memory: WebAssembly.Memory, functionTable: WebAssembly.Table, config: ModulesGlobalConfig, sharedWasmGlobalVariables: SharedWasmGlobalVariables) {
+  constructor(
+    memory: WebAssembly.Memory,
+    functionTable: WebAssembly.Table,
+    config: ModulesGlobalConfig,
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+  ) {
     this.memory = memory;
     this.functionTable = functionTable;
     this.config = config;
@@ -48,7 +52,7 @@ export abstract class Module {
   }
 }
 
-export type StackFrameArg = IntegerStackFrameArg | FloatStackFrameArg
+export type StackFrameArg = IntegerStackFrameArg | FloatStackFrameArg;
 
 /**
  * Represents a stack frame argument to be placed on a stack frame.
@@ -65,4 +69,3 @@ interface FloatStackFrameArg {
   value: number;
   type: FloatDataType;
 }
-

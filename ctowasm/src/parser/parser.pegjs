@@ -8,9 +8,8 @@
     return {
       type: type,
       position: {
-        start: loc.start,
-        end: loc.end,
-        offset: loc.offset,
+        start: thisParser.tokenPositions.get(loc.start.offset).start,
+        end: thisParser.tokenPositions.get(loc.end.offset - 1).end
       },
       ...data,
     };
@@ -368,13 +367,12 @@
       });
     }
 
-    return {
-      type: "Declaration",
+    return generateNode("Declaration", {
       declarations,
       tagDefinitions,
       identifierDefinitions,
       incompletePointers,
-    };
+    });
   }
 
   /**
@@ -454,31 +452,28 @@
 
   // Evaluates the string of postfix expressions to generate a complete tree of unary expression nodes
   // Follows left to right associativity.
-  // TODO: add struct & pointer operation handling
   function createPostfixExpressionNode(firstExpr, operations) {
     let currNode = firstExpr;
     for (const operation of operations) {
       if (operation.type === "ArrayElementExpr") {
         // array element expr are equivalent to pointer dereference expression A[B] => *(A + B)
-        currNode = {
-          type: "PointerDereference",
+        currNode = generateNode("PointerDereference", {
           expr: {
             type: "BinaryExpression",
             leftExpr: currNode,
             rightExpr: operation.index,
             operator: "+",
           },
-        };
+        });
       } else if (operation.type === "StructPointerMemberAccess") {
         // similar to array element expr, a->x is equivalent to *a.x
-        currNode = {
-          type: "StructMemberAccess",
+        currNode = generateNode("StructMemberAccess", {
           expr: {
             type: "PointerDereference",
             expr: currNode,
           },
           fieldTag: operation.fieldTag,
-        };
+        });
       } else {
         currNode = {
           ...operation,
@@ -491,7 +486,6 @@
 
   // Evaluates the string of prefix expressions to generate a complete tree of unary expression nodes
   // Follows right to left associativity
-  // TODO: add struct & pointer operation handling
   // @param firstExpr refers to the rightmost expression
   function createPrefixExpressionNode(firstExpr, operations) {
     let currNode = firstExpr;
@@ -507,8 +501,7 @@
   function createAssignmentNode(lvalue, assignedExpression, assignmentOperator) {
     if (assignmentOperator.length > 1) {
       // compond assignment operator
-      return {
-          type: "Assignment",
+      return generateNode("Assignment", {
           lvalue,
           expr: {
             type: "BinaryExpression",
@@ -516,7 +509,7 @@
             rightExpr: assignedExpression,
             operator: assignmentOperator[0], // only take the first char of assignmentOperator e.g. "+" of "+="
           },
-        }; 
+        }); 
     } else {
       return {
         type: "Assignment",
@@ -1081,8 +1074,7 @@
    * @param chars array of characters in the string, already in numeric form
    */
   function generateInitializerListFromStringLiteral(chars) {
-    return {
-      type: "InitializerList",
+    return generateNode("InitializerList", {
       values: chars.map((char) => ({
         type: "InitializerSingle",
         value: {
@@ -1091,7 +1083,7 @@
           suffix: null,
         },
       })),
-    };
+    });
   }
 
   /**
@@ -1205,13 +1197,12 @@
       }
     });
 
-    return {
-      type: "Declaration",
+    return generateNode("Declaration", {
       declarations,
       incompletePointers,
       identifierDefinitions,
       tagDefinitions,
-    };
+    });
   }
 
   // similar to processDeclarations, with added enumeratorDeclaration as a result field (no longer incorporated into declarations)
@@ -1253,13 +1244,12 @@
         typeSpecifierDataType
       );
 
-    const declarationNode = {
-      type: "Declaration",
+    const declarationNode = generateNode("Declaration", {
       name: name,
       storageClass: storageClass ?? "auto", // storage class is auto by default
       dataType: dataType,
       initializer: declarator.initializer, // may be undefined
-    };
+    });
     if (declarationNode.dataType.type === "array") {
       if (typeof declarationNode.initializer !== "undefined") {
         if (declarationNode.initializer.type !== "InitializerList") {
@@ -1580,8 +1570,8 @@ iteration_statement
 // ========== Selection Statement ===========
 
 selection_statement
-  = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" _ elseStatement:statement { return { type: "SelectionStatement", condition, ifStatement, elseStatement }; } 
-  / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return { type: "SelectionStatement", condition, ifStatement }; }
+  = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" _ elseStatement:statement { return generateNode("SelectionStatement", { condition, ifStatement, elseStatement }); } 
+  / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return generateNode( "SelectionStatement", { condition, ifStatement }); }
   / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ cases:switch_statement_case|1.., _| defaultStatements:(_ @switch_default_case)? _ "}"  { return createSwitchStatementNode(targetExpression, cases, defaultStatements ?? []); }
   / "switch" _ "(" _ @expression _ ")" _ "{" _ "}" // functionally useless except for potentially side effect expression
   / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed", location()); return targetExpression; } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
@@ -1819,11 +1809,11 @@ unary_expression
   / postfix_expression
 
 prefix_operation
-  = operator:("++" / "--") { return { type: "PrefixExpression", operator }; }
-  / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator }; }
-  / operator:("*") { return { type: "PointerDereference" }; }
-  / "&" { return { type: "AddressOfExpression" }; }
-  / "sizeof" { return { type: "SizeOfExpression", subtype: "expression" }; }
+  = operator:("++" / "--") { return generateNode("PrefixExpression", { operator }); }
+  / operator:("+" / "-" / "!" / "~") { return generateNode("PrefixExpression", { operator }); }
+  / operator:("*") { return generateNode("PointerDereference"); }
+  / "&" { return generateNode("AddressOfExpression"); }
+  / "sizeof" { return generateNode("SizeOfExpression", { subtype: "expression" }); }
 
 postfix_expression
   = firstExpr:primary_expression operations:(_ @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }
