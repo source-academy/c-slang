@@ -9,16 +9,26 @@ import translate from "~src/translator";
 import { SourceCodeError, toJson } from "~src/errors";
 import ModuleRepository, { ModuleName } from "~src/modules";
 
-export interface CompilationResult {
+interface SuccessfulCompilationResult {
+  status: "success";
   wasm: Uint8Array;
   dataSegmentSize: number;
   functionTableSize: number; // size of function table = to number of defined functions in program
   importedModules: ModuleName[]; // all the modules imported into this C program
 }
 
+interface FailedCompilationResult {
+  status: "failure";
+  errorMessage: string;
+}
+
+export type CompilationResult =
+  | SuccessfulCompilationResult
+  | FailedCompilationResult;
+
 export async function compile(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ): Promise<CompilationResult> {
   try {
     const CAst = parse(cSourceCode, moduleRepository);
@@ -26,6 +36,7 @@ export async function compile(
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = await compileWatToWasm(generateWat(wasmModule));
     return {
+      status: "success",
       wasm: output,
       dataSegmentSize: wasmModule.dataSegmentSize,
       functionTableSize: wasmModule.functionTable.size,
@@ -33,25 +44,48 @@ export async function compile(
     };
   } catch (e) {
     if (e instanceof SourceCodeError) {
-      e.generateFullErrorMessage(cSourceCode);
+      return {
+        status: "failure",
+        errorMessage: e.generateCompilationErrorMessage(cSourceCode),
+      };
     }
     throw e;
   }
 }
 
+interface SuccessfulWatCompilationResult {
+  status: "success";
+  watOutput: string;
+}
+
+interface FailedWatCompilationResult {
+  status: "failure";
+  errorMessage: string;
+}
+
+export type WatCompilationResult =
+  | SuccessfulWatCompilationResult
+  | FailedWatCompilationResult;
+
 export function compileToWat(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
-) {
+  moduleRepository: ModuleRepository
+): WatCompilationResult {
   try {
     const CAst = parse(cSourceCode, moduleRepository);
     const { astRootNode } = process(CAst, moduleRepository);
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = generateWat(wasmModule);
-    return output;
+    return {
+      status: "success",
+      watOutput: output,
+    };
   } catch (e) {
     if (e instanceof SourceCodeError) {
-      e.generateFullErrorMessage(cSourceCode);
+      return {
+        status: "failure",
+        errorMessage: e.generateCompilationErrorMessage(cSourceCode),
+      };
     }
     throw e;
   }
@@ -59,14 +93,14 @@ export function compileToWat(
 
 export function generate_C_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   try {
     const ast = parse(cSourceCode, moduleRepository);
     return toJson(ast);
   } catch (e) {
     if (e instanceof SourceCodeError) {
-      e.generateFullErrorMessage(cSourceCode);
+      e.generateCompilationErrorMessage(cSourceCode);
     }
     throw e;
   }
@@ -74,7 +108,7 @@ export function generate_C_AST(
 
 export function generate_processed_C_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   try {
     const CAst = parse(cSourceCode, moduleRepository);
@@ -82,7 +116,7 @@ export function generate_processed_C_AST(
     return toJson(astRootNode);
   } catch (e) {
     if (e instanceof SourceCodeError) {
-      e.generateFullErrorMessage(cSourceCode);
+      e.generateCompilationErrorMessage(cSourceCode);
     }
     throw e;
   }
@@ -90,7 +124,7 @@ export function generate_processed_C_AST(
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository,
+  moduleRepository: ModuleRepository
 ) {
   const CAst = parse(cSourceCode, moduleRepository);
   const { astRootNode } = process(CAst, moduleRepository);

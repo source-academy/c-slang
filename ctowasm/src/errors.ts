@@ -22,10 +22,10 @@ export class SourceCodeError extends Error {
 
   /**
    * Add sourcecode and generate full error message with position info if available.
-   * @param sourceCode
+   * @param sourceCode preprocessed C program where comments are removed
    * @param position
    */
-  generateFullErrorMessage(sourceCode: string) {
+  generateCompilationErrorMessage(sourceCode: string) : string {
     if (typeof this.position !== "undefined") {
       this.message = `\n${this.message}\n${this.position.start.line} | `;
       let currLine = this.position.start.line;
@@ -42,18 +42,19 @@ export class SourceCodeError extends Error {
       }
       this.message += "\n";
     }
+    return this.message;
   }
 }
 
 export class ProcessingError extends SourceCodeError {
   constructor(message: string, position?: Position) {
-    super(`Processing Error: ${message}`, position);
+    super(message, position);
   }
 }
 
 export class SemanticAnalysisError extends SourceCodeError {
   constructor(message: string, position?: Position) {
-    super(`Semantic Analysis Error: ${message}`, position);
+    super(message, position);
   }
 }
 

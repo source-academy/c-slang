@@ -29,15 +29,15 @@ const argv = yargs(hideBin(process.argv))
   .command("compile-to-wat", "Compile the given file to WAT")
   .command(
     "generate-c-ast",
-    "Generate the initial C AST from parsing as a JSON file for visualisation",
+    "Generate the initial C AST from parsing as a JSON file for visualisation"
   )
   .command(
     "generate-processed-c-ast",
-    "Generate the processed C AST as a JSON file for visualisation",
+    "Generate the processed C AST as a JSON file for visualisation"
   )
   .command(
     "generate-wat-ast",
-    "Generate the WAT AST as a JSON file for visualisation",
+    "Generate the WAT AST as a JSON file for visualisation"
   )
   .demandCommand(2).argv;
 
@@ -54,6 +54,9 @@ const input = fs.readFileSync(argv._[1], "utf-8");
 
 let outputFile;
 let output;
+let result;
+
+let isSuccess = true;
 
 switch (argv._[0]) {
   case "compile":
@@ -62,12 +65,24 @@ switch (argv._[0]) {
     break;
   case "compile-to-wat":
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
-    output = compileToWat(input);
+    result = compileToWat(input);
+    if (result.status === "failure") {
+      isSuccess = false;
+      console.log(result.errorMessage);
+      break;
+    }
+    output = result.watOutput;
     break;
   case "compile-run":
     // save WAT before running
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
-    output = compileToWat(input);
+    result = compileToWat(input);
+    if (result.status === "failure") {
+      isSuccess = false;
+      console.log(result.errorMessage);
+      break;
+    }
+    output = result.watOutput;
     await compileAndRun(input);
     break;
   case "generate-c-ast":
@@ -89,9 +104,12 @@ switch (argv._[0]) {
     output = generate_WAT_AST(input);
     break;
 }
-// create the output directory if output file path provided
-fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
-fs.writeFileSync(outputFile, output);
+if (isSuccess) {
+  // create the output directory if output file path provided
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
-console.log(`Output saved to ${outputFile}`);
+  fs.writeFileSync(outputFile, output);
+
+  console.log(`Output saved to ${outputFile}`);
+}
