@@ -4,6 +4,8 @@ import parsingGrammar from "bundle-text:./parser.pegjs";
 import peggy, { LocationRange, Stage } from "peggy";
 import ModuleRepository from "~src/modules";
 import { CAstRoot } from "~src/parser/c-ast/core";
+import { ParserCompilationErrors } from "~src/errors";
+import { Position } from "~src/parser/c-ast/misc";
 
 /**
  * Callback that the gnerated peggy parser uses to show warnings to user
@@ -58,5 +60,9 @@ export default function parse(
   // eslint-disable-next-line
   // @ts-ignore
   parser.tokenPositions = lexer.tokenPositions;
-  return parser.parse(lexedOutput);
+  const { rootNode, compilationErrors, warnings } = parser.parse(lexedOutput);
+  if (compilationErrors.length > 0) {
+    throw new ParserCompilationErrors(sourceCode, compilationErrors as {message: string, position: Position}[]);
+  }
+  return rootNode;
 }

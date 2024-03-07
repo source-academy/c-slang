@@ -5,6 +5,31 @@
 import { Position } from "~src/parser/c-ast/misc";
 
 /**
+ * Generates a compilation error message with positional information.
+ * @param message
+ * @param sourceCode
+ * @param position
+ * @returns
+ */
+function generateCompilationErrorMessage(
+  message: string,
+  sourceCode: string,
+  position: Position
+): string {
+  let errorMessage = `\n${message}\n${position.start.line} | `;
+  let currLine = position.start.line;
+  for (let i = position.start.offset; i < position.end.offset; ++i) {
+    if (sourceCode[i] === "\n") {
+      errorMessage += `\n${++currLine} | `;
+    } else {
+      errorMessage += sourceCode[i];
+    }
+  }
+  errorMessage += "\n";
+  return errorMessage;
+}
+
+/**
  * An error that occured in relation to the C source code during compilation.
  * Contains positional information for debugging purposes.
  */
@@ -25,24 +50,33 @@ export class SourceCodeError extends Error {
    * @param sourceCode preprocessed C program where comments are removed
    * @param position
    */
-  generateCompilationErrorMessage(sourceCode: string) : string {
+  generateCompilationErrorMessage(sourceCode: string): string {
     if (this.position !== null) {
-      this.message = `\n${this.message}\n${this.position.start.line} | `;
-      let currLine = this.position.start.line;
-      for (
-        let i = this.position.start.offset;
-        i < this.position.end.offset;
-        ++i
-      ) {
-        if (sourceCode[i] === "\n") {
-          this.message += `\n${++currLine} | `;
-        } else {
-          this.message += sourceCode[i];
-        }
-      }
-      this.message += "\n";
+      this.message = generateCompilationErrorMessage(
+        this.message,
+        sourceCode,
+        this.position
+      );
     }
     return this.message;
+  }
+}
+
+/**
+ * Represents an error thrown by
+ */
+export class ParserCompilationErrors extends SourceCodeError {
+  constructor(
+    sourceCode: string,
+    errors: { message: string; position: Position }[]
+  ) {
+    super(
+      errors
+        .map((e) =>
+          generateCompilationErrorMessage(e.message, sourceCode, e.position)
+        )
+        .join("\n")
+    );
   }
 }
 
