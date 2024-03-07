@@ -16,7 +16,7 @@ function generateCompilationErrorMessage(
   sourceCode: string,
   position: Position
 ): string {
-  let errorMessage = `\n${message}\n${position.start.line} | `;
+  let errorMessage = `Error: ${message}\n${position.start.line} | `;
   let currLine = position.start.line;
   for (let i = position.start.offset; i < position.end.offset; ++i) {
     if (sourceCode[i] === "\n") {

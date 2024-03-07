@@ -12,6 +12,7 @@ import {
 } from "./compiler";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
+import { SuccessfulCompilationResult } from "~dist/types";
 
 export const defaultModuleRepository = new ModuleRepository(); // default repository containing module information without any custom configs or wasm memory
 
@@ -37,8 +38,7 @@ export class CompilationFailure extends Error {
 export async function compileAndRun(
   program: string,
   modulesConfig?: ModulesGlobalConfig,
-) {
-
+): Promise<SuccessfulCompilationResult> {
   const compilationResult = await compile(
     program,
     defaultModuleRepository,
@@ -49,7 +49,10 @@ export async function compileAndRun(
   }
 
   const { wasm, dataSegmentSize, functionTableSize, importedModules } = compilationResult;
+
   await runWasm(wasm, dataSegmentSize, functionTableSize, importedModules, modulesConfig);
+
+  return compilationResult;
 }
 
 export async function runWasm(
@@ -71,6 +74,7 @@ export async function runWasm(
   );
   moduleRepository.setBasePointerValue(numberOfInitialPagesNeeded * WASM_PAGE_SIZE);
   moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4); // align to 4 bytes
+
   await WebAssembly.instantiate(
     wasm,
     moduleRepository.createWasmImportsObject(importedModules),

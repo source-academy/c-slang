@@ -41,8 +41,8 @@ const parser = peggy.generate(parsingGrammar as string, {
 });
 
 export interface ParserOutput {
-  ast: CAstRoot;
-  preprocessedSourceCode: string; // preprocessed source code of the program
+  cAstRoot: CAstRoot;
+  warnings: string[];
 }
 
 export default function parse(
@@ -64,5 +64,5 @@ export default function parse(
   if (compilationErrors.length > 0) {
     throw new ParserCompilationErrors(sourceCode, compilationErrors as {message: string, position: Position}[]);
   }
-  return rootNode;
+  return { cAstRoot: rootNode, warnings: warnings };
 }
