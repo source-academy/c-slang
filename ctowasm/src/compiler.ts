@@ -88,7 +88,7 @@ export function compileToWat(
     if (e instanceof SourceCodeError) {
       return {
         status: "failure",
-        errorMessage: `Compilation failed with the following errors:\n${e.generateCompilationErrorMessage(cSourceCode)}`,
+        errorMessage: `${e.generateCompilationErrorMessage(cSourceCode)}`,
       };
     }
     throw e;

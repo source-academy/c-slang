@@ -9,6 +9,7 @@ import {
   generate_WAT_AST as originalGenerate_WAT_AST,
   generate_processed_C_AST as original_generate_processed_C_AST,
   WatCompilationResult,
+  CompilationResult,
 } from "./compiler";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
@@ -26,30 +27,24 @@ export function generate_WAT_AST(program: string) {
 
 export { compile } ;
 
-export class CompilationFailure extends Error {
-  constructor(message: string) {
-    super(`Compilation failed with the following errors:\n${message}`);
-  }
-}
-
 /**
  * Compiles the given C program, including all default imported functions.
  */
 export async function compileAndRun(
   program: string,
   modulesConfig?: ModulesGlobalConfig,
-): Promise<SuccessfulCompilationResult> {
+): Promise<CompilationResult> {
   const compilationResult = await compile(
     program,
     defaultModuleRepository,
   );
 
+  // check if compilation failed
   if (compilationResult.status === "failure") {
-    throw new CompilationFailure(compilationResult.errorMessage);
+    return compilationResult; 
   }
 
   const { wasm, dataSegmentSize, functionTableSize, importedModules } = compilationResult;
-
   await runWasm(wasm, dataSegmentSize, functionTableSize, importedModules, modulesConfig);
 
   return compilationResult;

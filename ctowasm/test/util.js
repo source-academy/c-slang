@@ -2,7 +2,7 @@
  * Utilty to help run tests.
  */
 
-import { compileToWat, compileAndRun, CompilationFailure } from "../dist/index.js";
+import { compileToWat, compileAndRun } from "../dist/index.js";
 import * as fs from "fs";
 import * as path from "path";
 import testLog from "./testLog.js";
@@ -39,6 +39,12 @@ export async function compileAndRunFile({
   );
   
   await compileAndRun(input, modulesConfig);
+}
+
+class CompilationFailure extends Error {
+  constructor(message) {
+    super(message);
+  }
 }
 
 export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
