@@ -73,7 +73,7 @@ switch (argv._[0]) {
     }
     if (result.warnings.length > 0) {
       console.log(
-        `Compilation finished with the following warnings: ${result.warnings.join(
+        `Compilation finished with the following warnings:\n${result.warnings.join(
           "\n"
         )}`
       );

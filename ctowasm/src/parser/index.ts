@@ -6,6 +6,7 @@ import ModuleRepository from "~src/modules";
 import { CAstRoot } from "~src/parser/c-ast/core";
 import {
   ParserCompilationErrors,
+  SourceCodeError,
   generateCompilationWarningMessage,
 } from "~src/errors";
 import { Position } from "~src/parser/c-ast/misc";
@@ -34,7 +35,8 @@ export default function parse(
   sourceCode: string,
   moduleRepository: ModuleRepository
 ) {
-  // eslint-disable-next-line
+  try {
+// eslint-disable-next-line
   // @ts-ignore
   parser.moduleRepository = moduleRepository; // make moduleRepository available to parser object
   const preprocessedOutput = preprocessor.parse(sourceCode);
@@ -58,4 +60,12 @@ export default function parse(
       generateCompilationWarningMessage(w.message, sourceCode, w.position)
     ),
   };
+  } catch (e) {
+    // catch syntax errors detected by peggy js
+    if ("location" in (e as object)) {
+      throw new ParserCompilationErrors(sourceCode, [{message: (e as any).message, position: (e as any).location}]);
+    }
+    throw e;
+  }
+  
 }

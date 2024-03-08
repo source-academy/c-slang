@@ -71,7 +71,7 @@ export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
   }
   fs.mkdirSync(path.dirname(watFilePath), { recursive: true });
   fs.writeFileSync(watFilePath, watOutput);
-  return output;
+  return watOutput;
 }
 
 /**

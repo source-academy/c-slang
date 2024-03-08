@@ -13,7 +13,6 @@ import {
 } from "./compiler";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { WASM_PAGE_SIZE } from "~src/translator/memoryUtil";
-import { SuccessfulCompilationResult } from "~dist/types";
 
 export const defaultModuleRepository = new ModuleRepository(); // default repository containing module information without any custom configs or wasm memory
 

@@ -5,7 +5,7 @@
     const loc = range();
     return {
       start: thisParser.tokenPositions.get(loc.start).start,
-      end: thisParser.tokenPositions.get(loc.end - 1).end
+      end: thisParser.tokenPositions.get(Math.max(loc.start, loc.end - 1)).end
     }
   }
 
@@ -1517,8 +1517,8 @@
 }
 // ======== Beginning of Grammar rules =========
 
-program = includedModules:include|1.., _| _ rootNode:translation_unit { rootNode.includedModules = includedModules; return { compilationErrors, warnings, rootNode };}
-        / rootNode:translation_unit { rootNode.includedModules = []; return { compilationErrors, warnings, rootNode };}
+program = includedModules:include|1.., _| _ rootNode:translation_unit _? { rootNode.includedModules = includedModules; return { compilationErrors, warnings, rootNode };}
+        / rootNode:translation_unit _? { rootNode.includedModules = []; return { compilationErrors, warnings, rootNode };}
 
 // this is the token separator. It is to be placed between every token of the ruleset as per the generated whitespace delimited tokens of the preprocesser. 
 // it is optional, as certain rulesets containing optional lists like |.., ","| may not be present, so the separator needs to be optional to not fail parsing rules containing these empty lists.

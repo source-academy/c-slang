@@ -40,7 +40,7 @@
   }
 }
 
-program = matches:preprocess_match* { return matches.join("").trim(); }
+program = matches:preprocess_match* { return matches.join(""); }
 
 preprocess_match
   = token:$token { addTokenPosition(token); return token + " "; }
@@ -65,7 +65,7 @@ token
   = include
   / keyword 
   / identifier
-  / constant 
+  / (@constant ![a-z_]i) // make sure constant is not followed immediately by a indentifier character
   / string_literal 
   / punctuator 
 
