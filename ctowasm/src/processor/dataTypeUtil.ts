@@ -129,10 +129,59 @@ export function isVoidPointer(dataType: DataType) {
 
 /**
  * Utlity function to generate data type string.
- * TODO: change the json generation to a proper string
  */
+// export function stringifyDataType(dataType: DataType) {
+//   let str = "";
+//   function helperFunction(dataType: DataType) {
+//     if (dataType.type === "primary") {
+//       str = `${dataType.primaryDataType} ${str}`;
+//     } else if (dataType.type === "array") {
+//       helperFunction(dataType.elementDataType);
+//       str += " []";
+//     } else if (dataType.type === "pointer") {
+//       if (dataType.pointeeType === null) {
+//         str = "void *";
+//       } else if (dataType.pointeeType.type === "function" || dataType.pointeeType.type === "array") {
+//         str = `(*${str})`;
+//       } else {
+//         str = `*${str}`;
+//       }
+//     } else if (dataType.type === "function") {
+//       if (dataType.returnType === null) {
+//         str = `void ${str}`;
+//       } else {helperFunction(dataType.returnType)}
+//       str += "(";
+//       for (let i = 0; i < dataType.parameters.length - 1; ++i) {
+//         str += stringifyDataType(dataType.parameters[i]);
+//         str += ", ";
+//       }
+//       str += ")";
+//     }
+//   }
+//   helperFunction(dataType);
+//   return str;
+// }
+
 export function stringifyDataType(dataType: DataType) {
-  return toJson(dataType);
+  function helperFunction(dataType: DataType): string {
+    if (dataType.type === "primary") {
+      return `${dataType.isConst ? "const " : ""}${dataType.primaryDataType}`;
+    } else if (dataType.type === "array") {
+      return `${dataType.isConst ? "const " : ""}array with size ${dataType.numElements} of ${stringifyDataType(dataType.elementDataType)}`;
+    } else if (dataType.type === "pointer") {
+      return `${dataType.isConst ? "const " : ""}pointer to ${dataType.pointeeType === null ? "void" : stringifyDataType(dataType.pointeeType)}`
+    } else if (dataType.type === "function") {
+      return `function (${dataType.parameters.map(stringifyDataType).join(", ")}) returning ${dataType.returnType === null ? "void" : stringifyDataType(dataType.returnType)}`;
+    } else if (dataType.type === "struct") {
+      return `struct ${dataType.tag}`;
+    } else if (dataType.type === "enum") {
+      return `enum ${dataType.tag}`;
+    } else {
+      console.assert(false, "stringifyDataType() unreachable else");
+      return "";
+    }
+  }
+  return helperFunction(dataType);
 }
 
 /**
