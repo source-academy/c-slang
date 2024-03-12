@@ -1,16 +1,20 @@
-/**
- * For a detailed explanation regarding each configuration property, visit:
- * https://jestjs.io/docs/configuration
- */
-
-import type { Config } from "jest";
-
-const config: Config = {
-  transform: {},
-  clearMocks: true,
-  coverageProvider: "v8",
-  moduleDirectories: ["node_modules", "build"],
-  testTimeout: 500,
+/** @type {import('ts-jest').JestConfigWithTsJest} */
+const { pathsToModuleNameMapper } = require('ts-jest');
+const { compilerOptions } = require('./tsconfig');
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  transform: {
+    // '^.+\\.[tj]sx?$' to process js/ts with `ts-jest`
+    // '^.+\\.m?[tj]sx?$' to process js/ts/mjs/mts with `ts-jest`
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.json',
+        useEsm: true
+      },
+    ],
+  },
+  modulePaths: ['<rootDir>'],
+  moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: `<rootDir>${compilerOptions.baseUrl}`}),
 };
-
-export default config;
