@@ -194,7 +194,6 @@
       //   }
       //   removedIdentifiersInScope.add(identifierDefinition.name)
       // }
-      // identifiers do not have to be checked for redeclaration.. this is left for the processor
       
       removeIdentifierSymbolEntry(identifierDefinition.name);
     }

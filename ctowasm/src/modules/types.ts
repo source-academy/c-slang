@@ -1,5 +1,4 @@
-import { FloatDataType } from "~dist/types";
-import { IntegerDataType, PointerCDataType } from "~src/common/types";
+import { FloatDataType, IntegerDataType, PointerCDataType } from "~src/common/types";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { MemoryBlock } from "~src/modules/source_stdlib/memory";
 import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";

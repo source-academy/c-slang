@@ -2,10 +2,10 @@
  * Contains utility function related to setting up a stack frame to wrap wasm function calls made from the JS runtime.
  */
 
-import { SharedWasmGlobalVariables } from "~dist/types";
 import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { ScalarCDataType } from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
+import { SharedWasmGlobalVariables } from "~src/modules";
 import { StackFrameArg } from "~src/modules/types";
 import { checkAndExpandMemoryIfNeeded } from "~src/modules/util";
 
@@ -141,10 +141,10 @@ function loadStackFrame(
     currOffset -= getSizeOfScalarDataType(arg.type);
     switch (arg.type) {
       case "double":
-        stackFrameDataView.setFloat64(currOffset, arg.value, true);
+        stackFrameDataView.setFloat64(currOffset, Number(arg.value), true);
         break;
       case "float":
-        stackFrameDataView.setFloat32(currOffset, arg.value, true);
+        stackFrameDataView.setFloat32(currOffset, Number(arg.value), true);
         break;
       case "signed char":
         stackFrameDataView.setInt8(currOffset, Number(arg.value));
@@ -166,10 +166,10 @@ function loadStackFrame(
         stackFrameDataView.setUint32(currOffset, Number(arg.value), true);
         break;
       case "signed long":
-        stackFrameDataView.setBigInt64(currOffset, arg.value, true);
+        stackFrameDataView.setBigInt64(currOffset, BigInt(arg.value), true);
         break;
       case "unsigned long":
-        stackFrameDataView.setBigUint64(currOffset, arg.value, true);
+        stackFrameDataView.setBigUint64(currOffset, BigInt(arg.value), true);
         break;
     }
   }

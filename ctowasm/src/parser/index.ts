@@ -6,7 +6,6 @@ import ModuleRepository from "~src/modules";
 import { CAstRoot } from "~src/parser/c-ast/core";
 import {
   ParserCompilationErrors,
-  SourceCodeError,
   generateCompilationWarningMessage,
 } from "~src/errors";
 import { Position } from "~src/parser/c-ast/misc";

@@ -53,7 +53,8 @@
     "gen-p-c-ast": "yarn build && node cmd.js generate-processed-c-ast",
     "gen-wat-ast": "yarn build && node cmd.js generate-wat-ast",
     "test": "yarn build && NODE_OPTIONS=--experimental-vm-modules jest",
-    "unit-test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=unit_tests"
+    "unit-test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=unit_tests",
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "bignumber.js": "^9.1.2",
