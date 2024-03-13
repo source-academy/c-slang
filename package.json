@@ -1,5 +1,5 @@
 {
-  "name": "@benmurphyy/c-slang",
+  "name": "c-slang",
   "version": "1.0.9",
   "description": "C compiler that generates WebAssembly code, written in TypeScript, intended for teaching C programming in a browser-only environment.",
   "main": "index.js",
