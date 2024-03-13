@@ -1,6 +1,6 @@
 {
   "name": "@benmurphyy/c-slang",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "C compiler that generates WebAssembly code, written in TypeScript, intended for teaching C programming in a browser-only environment.",
   "main": "index.js",
   "repository": "git@github.com:source-academy/c-slang.git",
@@ -10,7 +10,6 @@
     "subpackage": "^1.1.0"
   },
   "scripts": {
-    "install": "subpkg install",
     "build": "subpkg run build"
   },
   "subPackages": [
