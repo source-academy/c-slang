@@ -652,7 +652,7 @@ const testLog = {
     },
     redefined_tags: {
       title: "Redefinition of tags",
-      expectedErrorMessages: ["Error: 'X' defined as wrong type of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
+      expectedErrorMessages: ["Error: Redefinition of 'X' as wrong kind of tag", "Error: Redefinition of 'A' as wrong kind of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
     }
   },
 };

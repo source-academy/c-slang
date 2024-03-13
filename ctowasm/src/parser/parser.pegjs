@@ -725,14 +725,9 @@
             incompletePointers: structSpecifier.incompletePointers,
           };
         } else if (structSpecifier.type === "NamedStructReference") {
-          // retrieve type from symbol table if it exists
-          if (isTagDefined(structSpecifier.tag)) {
+          // retrieve type from symbol table if it exists and was also a struct
+          if (isTagDefined(structSpecifier.tag) && getTagSymbolEntry(structSpecifier.tag).type === "struct") {
             const symbolEntry = getTagSymbolEntry(structSpecifier.tag);
-            if (symbolEntry.type !== "struct") {
-              error(
-                `'${structSpecifier.tag}' defined as wrong type of tag`
-              );
-            }
             return { dataType: symbolEntry.dataType };
           } else {
             const incompleteType = createIncompleteDataType(
@@ -781,13 +776,8 @@
             ],
           };
         } else if (enumSpecifier.type === "NamedEnumReference") {
-          if (isTagDefined(enumSpecifier.tag)) {
+          if (isTagDefined(enumSpecifier.tag) && getTagSymbolEntry(enumSpecifier.tag).type === "enum") {
             const symbolEntry = getTagSymbolEntry(enumSpecifier.tag);
-            if (symbolEntry.type !== "enum") {
-              error(
-                `'${enumSpecifier.tag}' defined as wrong type of tag`
-              );
-            }
             return { dataType: symbolEntry.dataType };
           } else {
             const incompleteType = createIncompleteDataType(
@@ -796,7 +786,7 @@
               );
             const symbolEntry = { type: "enum", dataType: incompleteType }
             const tagDefinition = addTagToSymbolTable(enumSpecifier.tag, symbolEntry)
-            return { dataType: incompleteType };
+            return { dataType: incompleteType, tagDefinitions: [ tagDefinition ] };
           }
         }
       } else if (firstTypeSpecifier.type === "VoidTypeSpecifier") {

@@ -7,4 +7,7 @@ enum Y { x };
 int main() {
   enum X;
   struct X;
+
+  enum A;
+  struct A { int x; };
 }
