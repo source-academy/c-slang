@@ -51,7 +51,6 @@ export interface StructDataType extends DataTypeBase {
 
 /**
  * Enum types are defined in this implementation as "signed int".
- * This separate dataType exists merely for data type checking on the processor.
  */
 export interface EnumDataType extends DataTypeBase {
   type: "enum";

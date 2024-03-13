@@ -266,6 +266,9 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType): boolean {
       return false;
     }
     return checkDataTypeCompatibility(a.pointeeType, b.pointeeType);
+  } else if (a.type === "enum" && b.type === "enum") {
+    // all enums in this implementation are equivalent to "signed int" and thus are compatibile with one another
+    return true;
   } else {
     console.assert("checkDataTypeCompatibility(): Unhandled case")
     return false;
