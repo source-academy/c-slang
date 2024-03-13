@@ -86,7 +86,7 @@ switch (argv._[0]) {
     result = compileToWat(input);
     if (result.status === "failure") {
       isSuccess = false;
-      console.log(result.errorMessage);
+      console.log(`Compilation failed with the following errors:\n${result.errorMessage}`);
       break;
     }
     if (result.warnings.length > 0) {

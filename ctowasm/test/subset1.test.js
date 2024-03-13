@@ -21,10 +21,21 @@ function generateSuccessTests(subset) {
   });
 }
 
+describe("Compilation Error Tests", () => {
+  for (const [testFile, testDetails] of Object.entries(
+    testLog["error"],
+  )) {
+    test(testDetails.title, async () => {
+      const result = testFileCompilationError(testFile);
+      expect(result).toContain(testDetails.expectedErrorMessage);
+    });
+  }
+});
+
 /**
  * Test all valid code for each subset.
  */
-Object.keys(testLog).forEach((subset) => {
+Object.keys(testLog).filter(s => s.includes("subset")).forEach((subset) => {
   const subsetNumber = subset.match(/\d+/)[0];
   describe(`Subset ${subsetNumber}`, () => {
     generateSuccessTests(parseInt(subsetNumber));

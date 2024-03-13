@@ -81,8 +81,7 @@
 
   // this object is used to keep track of symbols, and identify whether they represent a variable/function or type (defined by struct/enum/typedef)
   // this is critical for identifying if an identifier is a typename defined by typedef or a variable -> needed for resolving "typedef ambiguity"
-
-  // it is also used for resolving pointes to incomplete types (pointing to structs that are not yet defined)
+  // it is also used for resolving pointers to incomplete types (pointing to structs that are not yet defined)
   let symbolTable = {
     // 2 separate namespaces as per 6.2.3 of C17 standard
     identifiers: {}, // namespace for identifiers (regular variables/functions and types) // a symbol entry is defined as such: { type: "type" | "variable", dataType: DataType }
@@ -173,8 +172,12 @@
    * Remove the identifiers and tags that a given declaration created.
    * Also resolves incomplete pointers if the declaration resolves them. (declaration defines an incomplete type that a incomplete pointer points to)
    * Returns any remainig unresolved incomplete pointers.
+   * 
+   * Also checks for any redeclaration by checking if a given identifier/tag is removed more than once in the scope containing this declaration
+   * @param removedIdentifiersInScope set containing the identifiers that were removed in the scope containing this declaration.
+   * @param removedTagsInScope set containing the tags that were removed in the scope containg this declaration
    */
-  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers) {
+  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers, removedTagsInScope, removedIdentifiersInScope) {
     let incompletePointers = existingIncompletePointers ?? [];
     if (declaration.incompletePointers) {
       // add the incomplete pointers from the declaration itself
@@ -182,14 +185,26 @@
     }
 
     incompletePointers = resolveIncompletePointers(incompletePointers);
-    
+
     // remove identifiers
     for (const identifierDefinition of declaration.identifierDefinitions) {
+      // if (removedIdentifiersInScope) {
+      //   if (removedIdentifiersInScope.has(identifierDefinition.name)) {
+      //     error(`Redeclaration of ${identifierDefinition.name}`)
+      //   }
+      //   removedIdentifiersInScope.add(identifierDefinition.name)
+      // }
+      // identifiers do not have to be checked for redeclaration.. this is left for the processor
+      
       removeIdentifierSymbolEntry(identifierDefinition.name);
     }
     // remove tags
     if (declaration.tagDefinitions) {
       for (const tagDefinition of declaration.tagDefinitions) {
+        if (removedTagsInScope.has(tagDefinition.name)) {
+          error(`Redeclaration of ${tagDefinition.name}`);
+        }
+        removedTagsInScope.add(tagDefinition.name);
         removeTagSymbolEntry(tagDefinition.name);
       }
     }
@@ -201,8 +216,10 @@
     // remove the declarations that were made in this block from the scope and unpack declarations
     const unpackedBlockStatements = [];
     let unresolvedIncompletePointers = [];
+    const removedIdentifiers = new Set();
+    const removedTags = new Set();
     for (const statement of statements) {
-      const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, unresolvedIncompletePointers);
+      const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags, removedIdentifiers);
       unpackedBlockStatements.push(...unpackedStatements);
       unresolvedIncompletePointers = incompletePointers;
     }
@@ -215,9 +232,8 @@
 
   /**
    * Unpacks statements in a scope (block, switch scope).
-   * Performs any removal of old 
    */
-  function unpackScopedStatement(statement, unresolvedIncompletePointers) {
+  function unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags, removedIdentifiers) {
     const unpackedStatements = [];
     let incompletePointers = unresolvedIncompletePointers;
     if (statement === null) {
@@ -227,7 +243,9 @@
       // add any incompletepointers from the declaration
       incompletePointers = removeDeclarationIdentifiersAndTags(
         statement,
-        incompletePointers
+        incompletePointers,
+        removedTags,
+        removedIdentifiers
       );
     } else if (statement.type === "Block" || statement.type === "SwitchStatement") {
       // bring up all the incomplete pointers from the nested block
@@ -298,12 +316,14 @@
   function createRootNode(children) {
     const unpackedChildren = [];
     let unresolvedIncompletePointers = [];
+    let removedTags = new Set();
     for (const child of children) {
       if (child.type === "Declaration") {
         unpackedChildren.push(...child.declarations);
         unresolvedIncompletePointers = removeDeclarationIdentifiersAndTags(
           child,
-          unresolvedIncompletePointers
+          unresolvedIncompletePointers,
+          removedTags
         );
       } else if (child.type === "FunctionDefinition") {
         if (child.incompletePointers) {
@@ -1493,7 +1513,7 @@
     for (const identifierDefinition of identifierDefinitions) {
       if (identifierDefinition.name !== null) {
         if (removedIdentifiers.has(identifierDefinition.name)) {
-          error(`Redefinition of variable ${identifierDefinition.name}`)
+          error(`Redeclaration of variable ${identifierDefinition.name}`)
         }
         removedIdentifiers.add(identifierDefinition.name);
         removeIdentifierSymbolEntry(identifierDefinition.name);

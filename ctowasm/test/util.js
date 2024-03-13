@@ -77,8 +77,19 @@ export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
 /**
  * Helper function to run a test defined by the given information.
  */
-export async function testFileCompilationError(subset, testFileName) {
-  await compileAndRunFile({ subset, testType: "assertError", testFileName });
+export function testFileCompilationError(testFileName) {
+  const input = fs.readFileSync(
+    path.resolve(
+      __dirname,
+      `samples/error/${testFileName}.c`,
+    ),
+    "utf-8",
+  );
+  const { status, errorMessage } = compileToWat(input);
+  if (status !== "failure") {
+    throw new Error("Test compilation error failed: No compilation error occured.")
+  }
+  return errorMessage;
 }
 
 export async function testFileCompilationSuccess(subset, testFileName) {

@@ -641,6 +641,16 @@ const testLog = {
       ],
     },
   },
+  error: {
+    enum_redeclaration: {
+      title: "Redeclaration of enum type",
+      expectedErrorMessage: "Error: Redeclaration of x",
+    },
+    variable_redeclaration: {
+      title: "Redeclaration of identifier",
+      expectedErrorMessage: "Error: Redeclaration of x",
+    },
+  },
 };
 
 export default testLog;
