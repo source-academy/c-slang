@@ -9,7 +9,7 @@
   thisParser.falseNewlinePositions = []
 }
 
-program = matches:preprocess_match* { return matches.join("").trim(); }
+program = matches:preprocess_match* { return matches.join("") }
 
 preprocess_match
   = comment:$comment { return " ".repeat(comment.length); } // fill in comment areas with whitespaces
