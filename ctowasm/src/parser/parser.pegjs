@@ -146,7 +146,7 @@
     if (!(name in symbolTable.tags)) {
       throw new Error(`Symbol '${name}' not declared`);
     }
-    symbolTable.tags[name].pop();
+    return symbolTable.tags[name].pop();
   }
 
   /**
@@ -174,10 +174,9 @@
    * Returns any remainig unresolved incomplete pointers.
    * 
    * Also checks for any redeclaration by checking if a given identifier/tag is removed more than once in the scope containing this declaration
-   * @param removedIdentifiersInScope set containing the identifiers that were removed in the scope containing this declaration.
-   * @param removedTagsInScope set containing the tags that were removed in the scope containg this declaration
+   * @param removedTagsInScope object containing the tags that were removed in the scope containg this declaration mapped to the type of tag (struct or enum)
    */
-  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers, removedTagsInScope, removedIdentifiersInScope) {
+  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers, removedTagsInScope) {
     let incompletePointers = existingIncompletePointers ?? [];
     if (declaration.incompletePointers) {
       // add the incomplete pointers from the declaration itself
@@ -188,23 +187,26 @@
 
     // remove identifiers
     for (const identifierDefinition of declaration.identifierDefinitions) {
-      // if (removedIdentifiersInScope) {
-      //   if (removedIdentifiersInScope.has(identifierDefinition.name)) {
-      //     error(`Redeclaration of ${identifierDefinition.name}`)
-      //   }
-      //   removedIdentifiersInScope.add(identifierDefinition.name)
-      // }
-      
       removeIdentifierSymbolEntry(identifierDefinition.name);
     }
     // remove tags
     if (declaration.tagDefinitions) {
       for (const tagDefinition of declaration.tagDefinitions) {
-        if (removedTagsInScope.has(tagDefinition.name)) {
-          error(`Redeclaration of ${tagDefinition.name}`);
+        if (tagDefinition.name in removedTagsInScope) {
+          if (removedTagsInScope[tagDefinition.name].type === tagDefinition.symbolEntry.type) {
+            // redefinition of enum / struct
+            error(`Redefinition of '${removedTagsInScope[tagDefinition.name].type} ${tagDefinition.name}'`);
+          } else {
+            if (removedTagsInScope[tagDefinition.name].type === "incomplete" && removedTagsInScope[tagDefinition.name].subtype === tagDefinition.symbolEntry.type) {
+              // if the previous tag was incompletely defined and is the same type as the new tag, then there is no error.
+              continue;
+            }
+            // redefintion of tag itself. e.g. redeclare a type 'Y' from enum to be struct
+            error(`Redefinition of '${tagDefinition.name}' as wrong kind of tag`)
+          }
         }
-        removedTagsInScope.add(tagDefinition.name);
         removeTagSymbolEntry(tagDefinition.name);
+        removedTagsInScope[tagDefinition.name] = tagDefinition.symbolEntry.dataType;
       }
     }
 
@@ -232,7 +234,7 @@
   /**
    * Unpacks statements in a scope (block, switch scope).
    */
-  function unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags, removedIdentifiers) {
+  function unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags) {
     const unpackedStatements = [];
     let incompletePointers = unresolvedIncompletePointers;
     if (statement === null) {
@@ -244,7 +246,6 @@
         statement,
         incompletePointers,
         removedTags,
-        removedIdentifiers
       );
     } else if (statement.type === "Block" || statement.type === "SwitchStatement") {
       // bring up all the incomplete pointers from the nested block
@@ -315,7 +316,7 @@
   function createRootNode(children) {
     const unpackedChildren = [];
     let unresolvedIncompletePointers = [];
-    let removedTags = new Set();
+    const removedTags = {};
     for (const child of children) {
       if (child.type === "Declaration") {
         unpackedChildren.push(...child.declarations);
@@ -734,11 +735,17 @@
             }
             return { dataType: symbolEntry.dataType };
           } else {
-            return {
-              dataType: createIncompleteDataType(
+            const incompleteType = createIncompleteDataType(
                 "struct",
                 structSpecifier.tag
-              ),
+              );
+            const symbolEntry = { type: "struct", dataType: incompleteType }
+            const tagDefinition = addTagToSymbolTable(structSpecifier.tag, symbolEntry)
+            return {
+              dataType: incompleteType,
+              tagDefinitions: [
+                tagDefinition
+              ],
             }; // incomplete type for now, to be resolved later when struct is defined
           }
         }
@@ -763,7 +770,7 @@
               { type: "EnumDeclaration", enumerators: enumSpecifier.enumerators },
             ],
             tagDefinitions: [
-              { name: enumSpecifier.tag, tagSymbolEntry: newTagSymbolEntry },
+              { name: enumSpecifier.tag, symbolEntry: newTagSymbolEntry },
             ],
           }; // all enums defined as having signed int type
         } else if (enumSpecifier.type === "AnonymousEnum") {
@@ -783,7 +790,13 @@
             }
             return { dataType: symbolEntry.dataType };
           } else {
-            return { dataType: createIncompleteDataType("enum", enumSpecifier.tag) };
+            const incompleteType = createIncompleteDataType(
+                "enum",
+                enumSpecifier.tag
+              );
+            const symbolEntry = { type: "enum", dataType: incompleteType }
+            const tagDefinition = addTagToSymbolTable(enumSpecifier.tag, symbolEntry)
+            return { dataType: incompleteType };
           }
         }
       } else if (firstTypeSpecifier.type === "VoidTypeSpecifier") {
@@ -1080,7 +1093,7 @@
     // Only pointers can point to incomplete types
     if (typeSpecifierDataType.type === "incomplete") {
       if (currNode.type !== "pointer") {
-        error(`Unknown type name '${typeSpecifierDataType.tag}'`);
+        error(`'${typeSpecifierDataType.tag}' is an incomplete type`);
       } else {
         // keep track that this pointer datatype as incomplete
         result.incompletePointer = currNode;
@@ -1159,7 +1172,7 @@
   /**
    * Processes declarations.
    * Returns the declarations, as well as the dataType objects that are pointers to incomplete types
-   * @returns { type: "Declaration", declarations: Declaration[], incompletePointers: PointerDataType[], tagDefinitions: { name: string, tagSymbolEntry: { type: "struct" | "enum", dataType: DataType } }[], identifierDefinitions: { name: string, symbolEntry: { type: "type" | "variable", dataType: DataType } }[] }
+   * @returns { type: "Declaration", declarations: Declaration[], incompletePointers: PointerDataType[], tagDefinitions: { name: string, symbolEntry: { type: "struct" | "enum", dataType: DataType } }[], identifierDefinitions: { name: string, symbolEntry: { type: "type" | "variable", dataType: DataType } }[] }
    * identifierDefinitions is { name: string, symbolEntry: SymbolEntry } that represents each declared identifier
    * tagDefinitions is { name: string, symbolEntry: SymbolEntry } that represents each declared tag
    */
@@ -1379,7 +1392,6 @@
   /**
    * Used to generate the DataType for type_name rule.
    * Functionally very similar to convertParameterDeclarationToDataTypeAndSymbolName.
-   * TODO:
    */
   function generateDataTypeFromSpecifierAndAbstractDeclarators(
     declarationSpecifiers,

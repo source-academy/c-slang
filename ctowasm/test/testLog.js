@@ -644,12 +644,16 @@ const testLog = {
   error: {
     enum_redeclaration: {
       title: "Redeclaration of enum type",
-      expectedErrorMessage: "Error: Redeclaration of x",
+      expectedErrorMessages: ["Error: Redefinition of 'enum x'"],
     },
     variable_redeclaration: {
       title: "Redeclaration of identifier",
-      expectedErrorMessage: "Error: Redeclaration of x",
+      expectedErrorMessages: ["Error: Redeclaration of x"],
     },
+    redefined_tags: {
+      title: "Redefinition of tags",
+      expectedErrorMessages: ["Error: 'X' defined as wrong type of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
+    }
   },
 };
 

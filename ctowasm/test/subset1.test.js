@@ -5,6 +5,15 @@ import {
 } from "./util";
 import testLog from "./testLog";
 
+function checkSubstrsPresent(errorMessage, substrings) {
+  for (const str of substrings) {
+    if (!errorMessage.includes(str)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Generates the test cases to test successful compilation using subset thats being tested and the testLog object.
  */
@@ -27,7 +36,7 @@ describe("Compilation Error Tests", () => {
   )) {
     test(testDetails.title, async () => {
       const result = testFileCompilationError(testFile);
-      expect(result).toContain(testDetails.expectedErrorMessage);
+      expect(checkSubstrsPresent(result, testDetails.expectedErrorMessages)).toBe(true);
     });
   }
 });
