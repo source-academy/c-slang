@@ -1,4 +1,5 @@
 import {
+  COMPILATION_FAILURE_TEST_SUCCESS,
   COMPILATION_SUCCESS,
   testFileCompilationError,
   testFileCompilationSuccess,
@@ -35,8 +36,7 @@ describe("Compilation Error Tests", () => {
     testLog["error"],
   )) {
     test(testDetails.title, async () => {
-      const result = testFileCompilationError(testFile);
-      expect(checkSubstrsPresent(result, testDetails.expectedErrorMessages)).toBe(true);
+      expect(testFileCompilationError(testFile, testDetails.expectedErrorMessages)).toBe(COMPILATION_FAILURE_TEST_SUCCESS);
     });
   }
 });

@@ -74,10 +74,12 @@ export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
   return watOutput;
 }
 
+export const COMPILATION_FAILURE_TEST_SUCCESS = true;
+
 /**
  * Helper function to run a test defined by the given information.
  */
-export function testFileCompilationError(testFileName) {
+export function testFileCompilationError(testFileName, expectedMessages) {
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
@@ -89,7 +91,41 @@ export function testFileCompilationError(testFileName) {
   if (status !== "failure") {
     throw new Error("Test compilation error failed: No compilation error occured.")
   }
-  return errorMessage;
+  return checkErrorMessages(errorMessage, expectedMessages);
+}
+
+/**
+ * Checks that the actual error message given by compilation error contain only the expected messages given.
+ * Each expected error message is assumed to be unique.
+ */
+export function checkErrorMessages(actual, expectedMsgs) {
+  const errorMsgRegex = /Error:.*\n/g;
+  const actualErrors = [...actual.match(errorMsgRegex)].map(s => s.trim());
+  const extraErrors = [];
+  const missingErrors = [];
+
+  const actualErrorSet = new Set(actualErrors);
+  for (const expectedMsg of expectedMsgs) {
+    if (!actualErrorSet.has(expectedMsg)) {
+      missingErrors.push(expectedMsg);
+    }
+  }
+
+  const expectedErrorSet = new Set(expectedMsgs);
+  for (const actualMsg of actualErrors) {
+    if (!expectedErrorSet.has(actualMsg)) {
+      extraErrors.push(actualMsg);
+    }
+  }
+  
+  if (extraErrors.length > 0 || missingErrors.length > 0) {
+    return {
+      extraErrors: extraErrors,
+      missingErrors: missingErrors
+    }
+  }
+  
+  return COMPILATION_FAILURE_TEST_SUCCESS;
 }
 
 export async function testFileCompilationSuccess(subset, testFileName) {
