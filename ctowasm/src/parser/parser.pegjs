@@ -175,8 +175,9 @@
    * 
    * Also checks for any redeclaration by checking if a given identifier/tag is removed more than once in the scope containing this declaration
    * @param removedTagsInScope object containing the tags that were removed in the scope containg this declaration mapped to the type of tag (struct or enum)
+   * @param removedIdentifiersInScope
    */
-  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers, removedTagsInScope) {
+  function removeDeclarationIdentifiersAndTags(declaration, existingIncompletePointers, removedTagsInScope, removedIdentifiersInScope, isRootScope) {
     let incompletePointers = existingIncompletePointers ?? [];
     if (declaration.incompletePointers) {
       // add the incomplete pointers from the declaration itself
@@ -187,8 +188,24 @@
 
     // remove identifiers
     for (const identifierDefinition of declaration.identifierDefinitions) {
+      // check if identifiers were declared before
+      if (identifierDefinition.name in removedIdentifiersInScope) {
+        if (!(identifierDefinition.symbolEntry.type === "type" && removedIdentifiersInScope[identifierDefinition.name].type === "type") || JSON.stringify(identifierDefinition.symbolEntry.dataType) !== JSON.stringify(removedIdentifiersInScope[identifierDefinition.name].dataType)) {  
+          // in all causes, unless the previous declaration was a typedef that declared as the same type, then there is a redeclaration error.
+          if (isRootScope) {
+            if (identifierDefinition.symbolEntry.type !== "variable" || removedIdentifiersInScope[identifierDefinition.name].type !== "variable" || JSON.stringify(identifierDefinition.symbolEntry.dataType) !== JSON.stringify(removedIdentifiersInScope[identifierDefinition.name].dataType)) {
+              // in root scope it is allowed to have the 2 declarations with linkage (object/function) as long as they declare the same type
+              error(`Redeclaration of symbol '${identifierDefinition.name}' with conflicting type`); 
+            }
+          } else {
+            error(`Redeclaration of symbol '${identifierDefinition.name}'`);
+          }  
+        }
+      }
+      removedIdentifiersInScope[identifierDefinition.name] = identifierDefinition.symbolEntry;
       removeIdentifierSymbolEntry(identifierDefinition.name);
     }
+
     // remove tags
     if (declaration.tagDefinitions) {
       for (const tagDefinition of declaration.tagDefinitions) {
@@ -197,12 +214,10 @@
             // redefinition of enum / struct
             error(`Redefinition of '${removedTagsInScope[tagDefinition.name].type} ${tagDefinition.name}'`);
           } else {
-            if (removedTagsInScope[tagDefinition.name].type === "incomplete" && removedTagsInScope[tagDefinition.name].subtype === tagDefinition.symbolEntry.type) {
-              // if the previous tag was incompletely defined and is the same type as the new tag, then there is no error.
-              continue;
+            if (removedTagsInScope[tagDefinition.name].type !== "incomplete" || removedTagsInScope[tagDefinition.name].subtype !== tagDefinition.symbolEntry.type) {
+              // there is only an error is the previous tag was not incomplete or it was incomplete and its declaerd a different type of tag
+              error(`Redefinition of '${tagDefinition.name}' as wrong kind of tag`)
             }
-            // redefintion of tag itself. e.g. redeclare a type 'Y' from enum to be struct
-            error(`Redefinition of '${tagDefinition.name}' as wrong kind of tag`)
           }
         }
         removeTagSymbolEntry(tagDefinition.name);
@@ -234,7 +249,7 @@
   /**
    * Unpacks statements in a scope (block, switch scope).
    */
-  function unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags) {
+  function unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags, removedIdentifiers) {
     const unpackedStatements = [];
     let incompletePointers = unresolvedIncompletePointers;
     if (statement === null) {
@@ -246,6 +261,7 @@
         statement,
         incompletePointers,
         removedTags,
+        removedIdentifiers
       );
     } else if (statement.type === "Block" || statement.type === "SwitchStatement") {
       // bring up all the incomplete pointers from the nested block
@@ -317,13 +333,16 @@
     const unpackedChildren = [];
     let unresolvedIncompletePointers = [];
     const removedTags = {};
+    const removedIdentifiers = {};
     for (const child of children) {
       if (child.type === "Declaration") {
         unpackedChildren.push(...child.declarations);
         unresolvedIncompletePointers = removeDeclarationIdentifiersAndTags(
           child,
           unresolvedIncompletePointers,
-          removedTags
+          removedTags,
+          removedIdentifiers,
+          true
         );
       } else if (child.type === "FunctionDefinition") {
         if (child.incompletePointers) {
@@ -372,14 +391,14 @@
    * Process declarations that do not have a declarator - i.e they should be declaring a struct/enum type.
    */
   function processDeclarationWithoutDeclarator(declarationSpecifiers) {
-    const { enumDeclarations, tagDefinitions, storageClass, incompletePointers } =
+    const { enumDeclarations, tagDefinitions, storageClass, incompletePointers, hasTypeDefSpecifier } =
       unpackDeclarationSpecifiers(declarationSpecifiers);
     const identifierDefinitions = [];
     const declarations = [];
     if (storageClass) {
       warn("Useless storage class in type defintion");
     }
-    if (typeof tagDefinitions === "undefined" || tagDefinitions.length === 0) {
+    if (!hasTypeDefSpecifier && (typeof tagDefinitions === "undefined" || tagDefinitions.length === 0)) {
       warn("Useless type name in empty declaration");
     }
 
@@ -704,7 +723,6 @@
         // cannot have any more specifiers
         error("Two or more data types in declaration specifiers");
       }
-
       if (firstTypeSpecifier.type === "StructTypeSpecifier") {
         const structSpecifier = firstTypeSpecifier.specifier;
         if (structSpecifier.type === "AnonymousStruct") {
@@ -1621,14 +1639,14 @@ switch_statement_case
 
 // declaration returns an array of declaration nodes
 declaration
-  = declarationSpecifier:declaration_specifier _ initDeclarators:init_declarator_list _ ";" { return processDeclaration([declarationSpecifier], initDeclarators); } // this rules must be first, as preferentially should try to match an declarator if possible (to deal with typedef ambiguity)
+  = declarationSpecifier:declaration_specifier _ initDeclarators:init_declarator_list _ ";" { return processDeclaration([declarationSpecifier], initDeclarators); }
+  / declarationSpecifiers:declaration_specifier|2, _| _ initDeclarators:init_declarator_list _ ";" { return processDeclaration(declarationSpecifiers, initDeclarators); } // this rules must be first, as preferentially should try to match an declarator if possible (to deal with typedef ambiguity)
   / declarationSpecifiers:declaration_specifiers _ initDeclarators:init_declarator_list _ ";" { return processDeclaration(declarationSpecifiers, initDeclarators); }
   / declarationSpecifiers:declaration_specifiers _ ";" { return processDeclarationWithoutDeclarator(declarationSpecifiers); } // this rule supports anonymous structs and enums
 
 declaration_specifiers
   = declaration_specifier|1.., _|
 
-// TODO: add more specifiers
 declaration_specifier
   = type_qualifier
   / storage_class_specifier

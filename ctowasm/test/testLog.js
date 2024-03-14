@@ -648,11 +648,15 @@ const testLog = {
     },
     variable_redeclaration: {
       title: "Redeclaration of identifier",
-      expectedErrorMessages: ["Error: Redeclaration of x"],
+      expectedErrorMessages: ["Error: Redeclaration of symbol 'x'"],
     },
     redefined_tags: {
       title: "Redefinition of tags",
       expectedErrorMessages: ["Error: Redefinition of 'X' as wrong kind of tag", "Error: Redefinition of 'A' as wrong kind of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
+    },
+    typedef_diff_types: {
+      title: "Redefintion of typedefs",
+      expectedErrorMessages: ["Error: Redeclaration of symbol 't'", "Error: Redeclaration of symbol 'b' with conflicting type"]
     }
   },
 };
