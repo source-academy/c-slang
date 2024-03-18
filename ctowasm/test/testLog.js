@@ -676,7 +676,7 @@ const testLog = {
     },
     fn_call_with_wrong_args_3: {
       title: "Function call with wrong argument type",
-      expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
+      expectedErrorMessages: ["Error: Cannot assign function call argument to parameter"]
     },  
     absent_main: {
       title: "Undefined main function",

@@ -84,15 +84,17 @@ export class SourceCodeError extends Error {
         sourceCode,
         this.position
       );
+    } else {
+      this.message = `Error: ${this.message}`;
     }
-    return "Error: " + this.message;
+    return this.message;
   }
 }
 
 /**
  * Represents an error thrown by
  */
-export class ParserCompilationErrors extends SourceCodeError {
+export class ParserCompilationErrors extends Error {
   constructor(
     sourceCode: string,
     errors: { message: string; position: Position }[]

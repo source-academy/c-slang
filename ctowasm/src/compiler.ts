@@ -6,7 +6,7 @@ import process from "./processor";
 import { generateWat } from "./wat-generator";
 import { compileWatToWasm } from "./wat-to-wasm";
 import translate from "~src/translator";
-import { SourceCodeError, toJson } from "~src/errors";
+import { ParserCompilationErrors, SourceCodeError, toJson } from "~src/errors";
 import ModuleRepository, { ModuleName } from "~src/modules";
 
 export interface SuccessfulCompilationResult {
@@ -51,6 +51,12 @@ export async function compile(
         errorMessage: e.generateCompilationErrorMessage(cSourceCode),
       };
     }
+    if (e instanceof ParserCompilationErrors) {
+      return {
+        status: "failure",
+        errorMessage: e.message
+      }
+    }
     throw e;
   }
 }
@@ -88,8 +94,14 @@ export function compileToWat(
     if (e instanceof SourceCodeError) {
       return {
         status: "failure",
-        errorMessage: `${e.generateCompilationErrorMessage(cSourceCode)}`,
+        errorMessage: e.generateCompilationErrorMessage(cSourceCode),
       };
+    }
+    if (e instanceof ParserCompilationErrors) {
+      return {
+        status: "failure",
+        errorMessage: e.message
+      }
     }
     throw e;
   }
@@ -106,6 +118,12 @@ export function generate_C_AST(
     if (e instanceof SourceCodeError) {
       e.generateCompilationErrorMessage(cSourceCode);
     }
+    if (e instanceof ParserCompilationErrors) {
+      return {
+        status: "failure",
+        errorMessage: e.message
+      }
+    }
     throw e;
   }
 }
@@ -121,6 +139,12 @@ export function generate_processed_C_AST(
   } catch (e) {
     if (e instanceof SourceCodeError) {
       e.generateCompilationErrorMessage(cSourceCode);
+    }
+    if (e instanceof ParserCompilationErrors) {
+      return {
+        status: "failure",
+        errorMessage: e.message
+      }
     }
     throw e;
   }
