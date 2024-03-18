@@ -85,7 +85,7 @@ export class SourceCodeError extends Error {
         this.position
       );
     }
-    return this.message;
+    return "Error: " + this.message;
   }
 }
 

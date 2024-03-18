@@ -678,6 +678,10 @@ const testLog = {
       title: "Function call with wrong argument type",
       expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
     },  
+    absent_main: {
+      title: "Undefined main function",
+      expectedErrorMessages: ["Error: main function not defined"] 
+    }
   },
 };
 
