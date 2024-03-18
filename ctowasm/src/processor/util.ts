@@ -7,7 +7,7 @@ import { ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { isScalarDataType } from "~src/processor/dataTypeUtil";
+import { getDecayedArrayPointerType, isScalarDataType } from "~src/processor/dataTypeUtil";
 import {
   DataType,
   FunctionDataType,
@@ -55,10 +55,7 @@ export function getDataTypeOfExpression({
   convertArrayToPointer?: boolean;
 }): DataType {
   if (convertArrayToPointer && expression.originalDataType.type === "array") {
-    return {
-      type: "pointer",
-      pointeeType: expression.originalDataType.elementDataType,
-    };
+    getDecayedArrayPointerType(expression.originalDataType);
   }
   return expression.originalDataType;
 }

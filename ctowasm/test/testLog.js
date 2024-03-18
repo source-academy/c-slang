@@ -665,7 +665,19 @@ const testLog = {
     undeclared_fn: {
       title: "Call of undeclared function",
       expectedErrorMessages: ["Error: 'f' undeclared"]
-    }
+    },
+    fn_call_with_wrong_args_1: {
+      title: "Function call with too many args",
+      expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
+    },
+    fn_call_with_wrong_args_2: {
+      title: "Function call with too few args",
+      expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
+    },
+    fn_call_with_wrong_args_3: {
+      title: "Function call with wrong argument type",
+      expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
+    },  
   },
 };
 

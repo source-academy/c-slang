@@ -21,10 +21,13 @@ import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import {
+  checkAssignability,
   checkDataTypeCompatibility,
   convertFunctionDataTypeToFunctionDetails,
+  stringifyDataType,
 } from "~src/processor/dataTypeUtil";
 import { DataType, FunctionDataType } from "~src/parser/c-ast/dataTypes";
+import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
@@ -123,14 +126,15 @@ export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
   symbolTable: SymbolTable
 ): { functionCallP: FunctionCallP; returnType: DataType | null } {
-  
   // direct call of a function
-  if (node.expr.type === "IdentifierExpression" && symbolTable.getSymbolEntry(
-    node.expr.name
-  ).type === "function") {
-    const symbolEntry = symbolTable.getSymbolEntry
-    (node.expr.name) as FunctionSymbolEntry;
-    
+  if (
+    node.expr.type === "IdentifierExpression" &&
+    symbolTable.getSymbolEntry(node.expr.name).type === "function"
+  ) {
+    const symbolEntry = symbolTable.getSymbolEntry(
+      node.expr.name
+    ) as FunctionSymbolEntry;
+
     return {
       functionCallP: {
         type: "FunctionCall",
@@ -182,14 +186,16 @@ function processFunctionCallArgs(
   const argExpressions = [];
   const argDataTypes = [];
   for (const arg of args) {
-    const { originalDataType, exprs } = processExpression(arg, symbolTable);
-    argDataTypes.push(originalDataType);
+    const expr = processExpression(arg, symbolTable);
+    argDataTypes.push(
+      getDataTypeOfExpression({ expression: expr, convertArrayToPointer: true })
+    );
     // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
     // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
-    argExpressions.push(...exprs.reverse());
+    argExpressions.push(...expr.exprs.reverse());
   }
 
-  checkFunctionCallArgsAreCompatible(fnDataType, argDataTypes);
+  checkFunctionCallArgsAreCompatible(fnDataType, args, argDataTypes);
   return argExpressions;
 }
 
@@ -201,22 +207,28 @@ function processFunctionCallArgs(
  */
 function checkFunctionCallArgsAreCompatible(
   fnDataType: FunctionDataType,
-  argDataTypes: DataType[]
+  args: Expression[],
+  argsDataTypes: DataType[]
 ) {
-  if (argDataTypes.length != fnDataType.parameters.length) {
-    return false;
+  if (args.length != fnDataType.parameters.length) {
+    throw new ProcessingError(
+      "Number of arguments provided to function call does not match number of parameters specfied in prototype"
+    );
   }
-
-  for (let i = 0; i < argDataTypes.length; ++i) {
+  for (let i = 0; i < args.length; ++i) {
     if (
-      !checkDataTypeCompatibility(
+      !checkAssignability(
         fnDataType.parameters[i],
-        argDataTypes[i],
+        args[i],
+        argsDataTypes[i],
         true
       )
     ) {
-      return false;
+      throw new ProcessingError(
+        `Cannot assign function call argument to parameter\nFunction parameter type: "${stringifyDataType(
+          fnDataType.parameters[i]
+        )}"\nFunction argument type: "${stringifyDataType(argsDataTypes[i])}"`
+      );
     }
   }
-  return true;
 }

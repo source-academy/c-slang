@@ -115,6 +115,16 @@ export function isVoidPointer(dataType: DataType) {
   return dataType.type === "pointer" && dataType.pointeeType === null;
 }
 
+export function getDecayedArrayPointerType(
+  dataType: ArrayDataType
+): PointerDataType {
+  return {
+    type: "pointer",
+    pointeeType: dataType.elementDataType,
+    isConst: dataType.isConst,
+  };
+}
+
 // export function checkPrimaryDataTypeCompatibility(dataTypeA: PrimaryCDataType, dataTypeB: PrimaryCDataType) {
 //   return
 // }
@@ -506,15 +516,29 @@ export function checkAssignability(
   ignoreConst = false
 ) {
   console.assert(
-    lvalue.type !== "array" && exprDataType.type !== "array",
-    "checkAssignability called on array types"
-  );
-  console.assert(
     lvalue.type !== "function" && exprDataType.type !== "function",
     "checkAssignability called on function types"
   );
+
+  // implicit array decay
+  if (lvalue.type === "array") {
+    lvalue = getDecayedArrayPointerType(lvalue);
+  }
+  if (exprDataType.type === "array") {
+    exprDataType = getDecayedArrayPointerType(exprDataType);
+  }
+
   if (!ignoreConst && lvalue.isConst) {
     return false;
+  }
+
+  // assigning null pointer constant
+  if (
+    lvalue.type === "pointer" &&
+    isCompileTimeExpression(expr) &&
+    Number(evaluateCompileTimeExpression(expr).value) === 0
+  ) {
+    return true;
   }
 
   return (
@@ -523,13 +547,12 @@ export function checkAssignability(
       checkDataTypeCompatibility(lvalue, exprDataType)) ||
     (lvalue.type === "pointer" &&
       exprDataType.type === "pointer" &&
-      checkAssignabilityOfPointers(lvalue, expr, exprDataType))
+      checkAssignabilityOfPointers(lvalue, exprDataType, ignoreConst))
   );
 }
 
 export function checkAssignabilityOfPointers(
   left: PointerDataType,
-  rightExpr: Expression,
   right: PointerDataType,
   ignoreConst = false
 ) {
@@ -537,14 +560,6 @@ export function checkAssignabilityOfPointers(
     return false;
   }
   if (isVoidPointer(left) || isVoidPointer(right)) {
-    return true;
-  }
-
-  // assigning null pointer constant
-  if (
-    isCompileTimeExpression(rightExpr) &&
-    evaluateCompileTimeExpression(rightExpr).value === 0
-  ) {
     return true;
   }
 
