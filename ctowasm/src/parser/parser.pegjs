@@ -107,7 +107,7 @@
   }
 
   function isIdentifierAType(name) {
-    if (!(name in symbolTable.identifiers)) {
+    if (!(name in symbolTable.identifiers) || symbolTable.identifiers[name].length <= 0) {
       return false;
     }
     const entries = symbolTable.identifiers[name];
@@ -115,20 +115,20 @@
   }
 
   function getIdentifierSymbolEntry(name) {
-    if (!(name in symbolTable.identifiers)) {
-      throw new Error(`Symbol '${name}' not declared`);
+    if (!(name in symbolTable.identifiers) || symbolTable.identifiers[name].length <= 0) {
+      throw new Error(`'${name}' not declared`);
     }
     const entries = symbolTable.identifiers[name];
     return entries[entries.length - 1];
   }
 
   function isTagDefined(name) {
-    return name in symbolTable.tags;
+    return name in symbolTable.tags && symbolTable.tags.length > 0;
   }
 
   function getTagSymbolEntry(name) {
-    if (!(name in symbolTable.tags)) {
-      throw new Error(`Symbol '${name}' not declared`);
+    if (!(name in symbolTable.tags) || symbolTable.tags[name].length <= 0) {
+      throw new Error(`'${name}' not declared`);
     }
     const entries = symbolTable.tags[name];
     return entries[entries.length - 1];
@@ -136,15 +136,15 @@
 
   // pop off the latest symbol entry for a symbol (to be done at end of scopes)
   function removeIdentifierSymbolEntry(name) {
-    if (!(name in symbolTable.identifiers)) {
-      throw new Error(`Symbol '${name}' not declared`);
+    if (!(name in symbolTable.identifiers) || symbolTable.identifiers[name].length <= 0) {
+      throw new Error(`'${name}' not declared`);
     }
     symbolTable.identifiers[name].pop();
   }
 
   function removeTagSymbolEntry(name) {
-    if (!(name in symbolTable.tags)) {
-      throw new Error(`Symbol '${name}' not declared`);
+    if (!(name in symbolTable.tags) || symbolTable.tags[name].length <= 0) {
+      throw new Error(`'${name}' undeclared`);
     }
     return symbolTable.tags[name].pop();
   }
@@ -563,11 +563,11 @@
           },
         }); 
     } else {
-      return {
-        type: "Assignment",
+      return generateNode("Assignment", {
         lvalue,
         expr: assignedExpression
-      }
+        }
+      )
     }
   } 
 

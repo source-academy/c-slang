@@ -9,7 +9,6 @@ function generateCompilationMessage(
   sourceCode: string,
   position: Position
 ) {
-  console.log(message);
   let errorMessage = `${message}\n${position.start.line} | `;
   let currLine = position.start.line;
   for (let i = position.start.offset; i < position.end.offset; ++i) {

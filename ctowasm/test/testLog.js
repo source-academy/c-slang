@@ -685,6 +685,14 @@ const testLog = {
     variable_redeclaration: {
       title: "Redeclared variable with no linkage",
       expectedErrorMessages: ["Error: Redeclaration of symbol 'x'"]
+    },
+    undeclared_var_assignment_1: {
+      title: "Assignment to undeclared variable 1",
+      expectedErrorMessages: ["Error: 'x' undeclared"]
+    },
+    undeclared_var_assignment_2: {
+      title: "Assignment to undeclared variable 2",
+      expectedErrorMessages: ["Error: 'y' undeclared"]
     }
   },
 };
