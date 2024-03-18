@@ -20,7 +20,7 @@ import {
 } from "~src/common/utils";
 import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
 import { FunctionDetails } from "~src/processor/c-ast/function";
-import { StructField } from "~dist";
+import { PointerDataType, StructField } from "~dist";
 
 /**
  * Returns the size in bytes of a data type.
@@ -181,7 +181,11 @@ export function stringifyDataType(dataType: DataType): string {
 /**
  * Returns true if 2 struct fields are compatible (equivalent).
  */
-function checkStructFieldCompatibility(a: StructField, b: StructField, ignoreQualifiers = false) {
+function checkStructFieldCompatibility(
+  a: StructField,
+  b: StructField,
+  ignoreQualifiers = false
+) {
   if (a.tag !== b.tag) {
     return false;
   }
@@ -202,14 +206,29 @@ function checkStructFieldCompatibility(a: StructField, b: StructField, ignoreQua
  * Checks the compatibility of two data types. Returns true if two data types are compatible as per the C17 standard.
  * @param ignoreQualifiers to check if the unqualified data types of a and b are compatible.
  */
-export function checkDataTypeCompatibility(a: DataType, b: DataType, ignoreQualifiers = false): boolean {
-  if (a.type !== b.type || (!ignoreQualifiers && (a.isConst && !b.isConst) || (b.isConst && !a.isConst))) {
+export function checkDataTypeCompatibility(
+  a: DataType,
+  b: DataType,
+  ignoreQualifiers = false
+): boolean {
+  if (
+    a.type !== b.type ||
+    (!ignoreQualifiers && a.isConst && !b.isConst) ||
+    (b.isConst && !a.isConst)
+  ) {
     return false;
   }
   if (a.type === "primary" && b.type === "primary") {
     return a.primaryDataType === b.primaryDataType;
   } else if (a.type === "array" && b.type === "array") {
-    return a.numElements === b.numElements && checkDataTypeCompatibility(a.elementDataType, b.elementDataType, ignoreQualifiers);
+    return (
+      a.numElements === b.numElements &&
+      checkDataTypeCompatibility(
+        a.elementDataType,
+        b.elementDataType,
+        ignoreQualifiers
+      )
+    );
   } else if (a.type === "function" && b.type === "function") {
     // check return type compatibility
     if (a.returnType === null) {
@@ -217,7 +236,14 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType, ignoreQuali
         return false;
       }
     } else {
-      if (b.returnType === null || !checkDataTypeCompatibility(a.returnType, b.returnType, ignoreQualifiers)) {
+      if (
+        b.returnType === null ||
+        !checkDataTypeCompatibility(
+          a.returnType,
+          b.returnType,
+          ignoreQualifiers
+        )
+      ) {
         return false;
       }
     }
@@ -225,7 +251,13 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType, ignoreQuali
       return false;
     }
     for (let i = 0; i < a.parameters.length; ++i) {
-      if (!checkDataTypeCompatibility(a.parameters[i], b.parameters[i], ignoreQualifiers)) {
+      if (
+        !checkDataTypeCompatibility(
+          a.parameters[i],
+          b.parameters[i],
+          ignoreQualifiers
+        )
+      ) {
         return false;
       }
     }
@@ -233,12 +265,18 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType, ignoreQuali
   } else if (a.type === "struct" && b.type === "struct") {
     if (a.tag !== b.tag) {
       return false;
-    } 
+    }
     if (a.fields.length !== b.fields.length) {
       return false;
     }
     for (let i = 0; i < a.fields.length; ++i) {
-      if (!checkStructFieldCompatibility(a.fields[i], b.fields[i], ignoreQualifiers)) {
+      if (
+        !checkStructFieldCompatibility(
+          a.fields[i],
+          b.fields[i],
+          ignoreQualifiers
+        )
+      ) {
         return false;
       }
     }
@@ -250,12 +288,16 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType, ignoreQuali
     if (a.pointeeType === null || b.pointeeType === null) {
       return false;
     }
-    return checkDataTypeCompatibility(a.pointeeType, b.pointeeType, ignoreQualifiers);
+    return checkDataTypeCompatibility(
+      a.pointeeType,
+      b.pointeeType,
+      ignoreQualifiers
+    );
   } else if (a.type === "enum" && b.type === "enum") {
     // all enums in this implementation are equivalent to "signed int" and thus are compatibile with one another
     return true;
   } else {
-    console.assert(false, "checkDataTypeCompatibility(): Unhandled case")
+    console.assert(false, "checkDataTypeCompatibility(): Unhandled case");
     return false;
   }
 }
@@ -429,7 +471,10 @@ export function convertFunctionDataTypeToFunctionDetails(
   for (const param of dataType.parameters) {
     // sanity check, as parser should have converted all array params into pointers.
     if (param.type === "array") {
-      console.assert(param.type !== "array", "Compiler error: The type of a function parameter should not be an array after parsing")
+      console.assert(
+        param.type !== "array",
+        "Compiler error: The type of a function parameter should not be an array after parsing"
+      );
     }
     const dataTypeSize = getDataTypeSize(param);
     offset -= dataTypeSize;
@@ -443,4 +488,44 @@ export function convertFunctionDataTypeToFunctionDetails(
   }
 
   return functionDetails;
+}
+
+/**
+ * Checks if expr with a given datatype can be assigned to lvalue of another datatype.
+ * Follows constraints on simple assignment as listed in 6.5.16.1 of C17 standard.
+ */
+export function checkAssignability(
+  lvalue: DataType,
+  expr: DataType,
+  ignoreConst = false
+) {
+  console.assert(lvalue.type !== "array" && expr.type !== "array", "checkAssignability called on array types");
+  console.assert(lvalue.type !== "function" && expr.type !== "function", "checkAssignability called on function types");
+
+  if (!ignoreConst && lvalue.isConst) {
+    return false;
+  }
+
+  return (
+    (isArithmeticDataType(lvalue) && isArithmeticDataType(expr)) ||
+    (lvalue.type === "struct" && checkDataTypeCompatibility(lvalue, expr)) ||
+    lvalue.type === "pointer" && expr.type === "pointer" && checkAssignabilityOfPointers(lvalue, expr)
+  );
+}
+
+export function checkAssignabilityOfPointers(
+  left: PointerDataType,
+  right: PointerDataType,
+  ignoreConst = false
+) {
+  if (!ignoreConst && left.isConst) {
+    return false;
+  }
+  if (isVoidPointer(left) || isVoidPointer(right)) {
+    return true;
+  }
+  return checkDataTypeCompatibility(
+    left.pointeeType as DataType,
+    right.pointeeType as DataType
+  );
 }
