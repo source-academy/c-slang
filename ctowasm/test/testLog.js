@@ -693,6 +693,14 @@ const testLog = {
     undeclared_var_assignment_2: {
       title: "Assignment to undeclared variable 2",
       expectedErrorMessages: ["Error: 'y' undeclared"]
+    },
+    undeclared_var_return: {
+      title: "Attempt return of undeclared variable",
+      expectedErrorMessages: ["Error: 'x' undeclared"]
+    },
+    typedef_variable_dec_conflict: {
+      title: "Redeclaring symbol as typedef and vice versa",
+      expectedErrorMessages: ["Error: Redeclaration of'x'", "Error: Redeclaration of'y'"]
     }
   },
 };

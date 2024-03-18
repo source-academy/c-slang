@@ -2,4 +2,7 @@
 int main() {
   int x;
   typedef int x;
+
+  typedef char y;
+  long y;
 }
