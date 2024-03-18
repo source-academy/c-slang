@@ -1,7 +1,6 @@
 import { SIZE_T } from "~src/common/constants";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import {
-  MemoryBlock,
   freeFunction,
   mallocFunction,
   printHeap,
@@ -174,8 +173,8 @@ export class SourceStandardLibraryModule extends Module {
           type: "function",
           parameters: [
             {
-              type: "primary",
-              primaryDataType: "unsigned int",
+              type: "pointer",
+              pointeeType: null
             },
           ],
           returnType: null,

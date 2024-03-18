@@ -62,9 +62,9 @@ export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
     "utf-8",
   );
 
-  const { watOutput, status, warnings } = compileToWat(input);
+  const { watOutput, status, warnings, errorMessage } = compileToWat(input);
   if (status === "failure") {
-    throw new CompilationFailure(`Compilation failed due to following errors:\n${output.errorMessage}`);
+    throw new CompilationFailure(`Compilation failed due to following errors:\n${errorMessage}`);
   }
   if (warnings.length > 0) {
     console.log(`Compilation succeeded with warnings: ${warnings.join("\n")}`)

@@ -86,7 +86,7 @@ export class SourceCodeError extends Error {
         this.position
       );
     } else {
-      this.message = `Error: ${this.message}`;
+      this.message = `Error: ${this.message}\n`;
     }
     return this.message;
   }
