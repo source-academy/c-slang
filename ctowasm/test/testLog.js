@@ -661,6 +661,10 @@ const testLog = {
     fn_param_redefinition: {
       title: "Redefintion of function parameter",
       expectedErrorMessages: ["Error: Redefinition of parameter 'x'"]
+    },
+    undeclared_fn: {
+      title: "Call of undeclared function",
+      expectedErrorMessages: ["Error: 'f' undeclared"]
     }
   },
 };

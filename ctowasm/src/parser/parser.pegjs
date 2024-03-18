@@ -532,6 +532,7 @@
         };
       }
     }
+    currNode.position = getCurrPosition();
     return currNode;
   }
 
@@ -1872,12 +1873,12 @@ postfix_expression
 
 // all the postfix operations
 postfix_operation
-  = operator:("++" / "--") { return { type: "PostfixExpression", operator }; }
-  / "(" _ args:function_argument_list _ ")" { return { type: "FunctionCall", args }; }
-  / "(" _ ")" { return { type: "FunctionCall", args: [] }; }
-  / "[" _ index:expression _ "]" { return { type: "ArrayElementExpr", index }; }
-  / "." _ fieldTag:identifier { return { type: "StructMemberAccess", fieldTag }; }
-  / "->" _ fieldTag:identifier { return { type: "StructPointerMemberAccess", fieldTag }; }
+  = operator:("++" / "--") { return generateNode("PostfixExpression", { operator }); }
+  / "(" _ args:function_argument_list _ ")" { return generateNode("FunctionCall", { args }); }
+  / "(" _ ")" { return generateNode("FunctionCall", { args: [] } ); }
+  / "[" _ index:expression _ "]" { return generateNode("ArrayElementExpr", { index }); }
+  / "." _ fieldTag:identifier { return generateNode("StructMemberAccess", { fieldTag }); }
+  / "->" _ fieldTag:identifier { return generateNode("StructPointerMemberAccess", { fieldTag }); }
 
 function_argument_list
   = assignment_expression|1.., _ "," _|
