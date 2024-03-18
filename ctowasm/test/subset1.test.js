@@ -21,7 +21,7 @@ function checkSubstrsPresent(errorMessage, substrings) {
 function generateSuccessTests(subset) {
   describe("Compilation Success Tests", () => {
     for (const [testFile, testDetails] of Object.entries(
-      testLog[`subset${subset}`],
+      testLog[`subset${subset}`]
     )) {
       test(testDetails.title, async () => {
         const result = await testFileCompilationSuccess(subset, testFile);
@@ -32,11 +32,11 @@ function generateSuccessTests(subset) {
 }
 
 describe("Compilation Error Tests", () => {
-  for (const [testFile, testDetails] of Object.entries(
-    testLog["error"],
-  )) {
+  for (const [testFile, testDetails] of Object.entries(testLog["error"])) {
     test(testDetails.title, async () => {
-      expect(testFileCompilationError(testFile, testDetails.expectedErrorMessages)).toBe(COMPILATION_FAILURE_TEST_SUCCESS);
+      expect(
+        testFileCompilationError(testFile, testDetails.expectedErrorMessages)
+      ).toBe(COMPILATION_FAILURE_TEST_SUCCESS);
     });
   }
 });
@@ -44,12 +44,14 @@ describe("Compilation Error Tests", () => {
 /**
  * Test all valid code for each subset.
  */
-Object.keys(testLog).filter(s => s.includes("subset")).forEach((subset) => {
-  const subsetNumber = subset.match(/\d+/)[0];
-  describe(`Subset ${subsetNumber}`, () => {
-    generateSuccessTests(parseInt(subsetNumber));
+Object.keys(testLog)
+  .filter((s) => s.includes("subset"))
+  .forEach((subset) => {
+    const subsetNumber = subset.match(/\d+/)[0];
+    describe(`Subset ${subsetNumber}`, () => {
+      generateSuccessTests(parseInt(subsetNumber));
+    });
   });
-});
 
 // describe("Processor Semantic Error Tests", () => {
 //   test("Function redeclaration throws error", async () => {

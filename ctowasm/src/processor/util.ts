@@ -55,7 +55,7 @@ export function getDataTypeOfExpression({
   convertArrayToPointer?: boolean;
 }): DataType {
   if (convertArrayToPointer && expression.originalDataType.type === "array") {
-    getDecayedArrayPointerType(expression.originalDataType);
+    return getDecayedArrayPointerType(expression.originalDataType);
   }
   return expression.originalDataType;
 }
