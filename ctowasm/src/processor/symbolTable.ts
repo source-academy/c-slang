@@ -299,6 +299,21 @@ export class SymbolTable {
     return entry;
   }
 
+  hasSymbol(name: string): boolean {
+    let curr: SymbolTable | null = this;
+    while (curr !== null) {
+      if (name in curr.symbols) {
+        return true
+      }
+      curr = curr.parentTable;
+    }
+
+    if (name in this.externalFunctions) {
+      return true
+    }
+    return false;
+  }
+
   /**
    * Look up the symbol starting from the lowest symbol table (most recent).
    */
