@@ -681,6 +681,10 @@ const testLog = {
     absent_main: {
       title: "Undefined main function",
       expectedErrorMessages: ["Error: main function not defined"] 
+    },
+    variable_redeclaration: {
+      title: "Redeclared variable with no linkage",
+      expectedErrorMessages: ["Error: Redeclaration of symbol 'x'"]
     }
   },
 };

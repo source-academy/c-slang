@@ -195,10 +195,10 @@
           if (isRootScope) {
             if (identifierDefinition.symbolEntry.type !== "variable" || removedIdentifiersInScope[identifierDefinition.name].type !== "variable" || JSON.stringify(identifierDefinition.symbolEntry.dataType) !== JSON.stringify(removedIdentifiersInScope[identifierDefinition.name].dataType)) {
               // in root scope it is allowed to have the 2 declarations with linkage (object/function) as long as they declare the same type
-              error(`Redeclaration of symbol '${identifierDefinition.name}' with conflicting type`); 
+              error(`Redeclaration of '${identifierDefinition.name}' with conflicting type`); 
             }
           } else {
-            error(`Redeclaration of symbol '${identifierDefinition.name}'`);
+            error(`Redeclaration of'${identifierDefinition.name}'`);
           }  
         }
       }
