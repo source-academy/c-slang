@@ -10,7 +10,9 @@ import {
 } from "~src/parser/c-ast/dataTypes";
 
 import { ProcessingError, toJson } from "~src/errors";
-import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
+import evaluateCompileTimeExpression, {
+  isCompileTimeExpression,
+} from "~src/processor/evaluateCompileTimeExpression";
 import { ScalarCDataType } from "~src/common/types";
 import {
   getSizeOfScalarDataType,
@@ -20,7 +22,28 @@ import {
 } from "~src/common/utils";
 import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
 import { FunctionDetails } from "~src/processor/c-ast/function";
-import { PointerDataType, StructField } from "~dist";
+import { ArrayDataType, PointerDataType, StructField } from "~dist";
+import { Expression } from "~src/parser/c-ast/core";
+
+function getNumberOfElementsInArray(dataType: ArrayDataType): number {
+  try {
+    const numElementsConstant = evaluateCompileTimeExpression(
+      dataType.numElements
+    );
+    if (numElementsConstant.type === "FloatConstant") {
+      throw new ProcessingError("Array size must be an integer-type");
+    }
+    return Number(numElementsConstant.value);
+  } catch (e) {
+    if (e instanceof ProcessingError) {
+      throw new ProcessingError(
+        "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
+      );
+    } else {
+      throw e;
+    }
+  }
+}
 
 /**
  * Returns the size in bytes of a data type.
@@ -39,26 +62,10 @@ export function getDataTypeSize(
         : dataType.primaryDataType
     );
   } else if (dataType.type === "array") {
-    try {
-      const numElementsConstant = evaluateCompileTimeExpression(
-        dataType.numElements
-      );
-      if (numElementsConstant.type === "FloatConstant") {
-        throw new ProcessingError("Array size must be an integer-type");
-      }
-      return (
-        getDataTypeSize(dataType.elementDataType) *
-        Number(numElementsConstant.value)
-      );
-    } catch (e) {
-      if (e instanceof ProcessingError) {
-        throw new ProcessingError(
-          "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
-        );
-      } else {
-        throw e;
-      }
-    }
+    return (
+      getNumberOfElementsInArray(dataType) *
+      getDataTypeSize(dataType.elementDataType)
+    );
   } else if (dataType.type === "struct") {
     return dataType.fields.reduce(
       (sum, field) =>
@@ -331,9 +338,7 @@ export function unpackDataType(
       });
       currOffset += getDataTypeSize(dataType);
     } else if (dataType.type === "array") {
-      const numElements = evaluateCompileTimeExpression(
-        dataType.numElements
-      ).value;
+      const numElements = getNumberOfElementsInArray(dataType);
       for (let i = 0; i < numElements; ++i) {
         recursiveHelper(dataType.elementDataType);
       }
@@ -496,25 +501,35 @@ export function convertFunctionDataTypeToFunctionDetails(
  */
 export function checkAssignability(
   lvalue: DataType,
-  expr: DataType,
+  expr: Expression, // the expression being assigned
+  exprDataType: DataType,
   ignoreConst = false
 ) {
-  console.assert(lvalue.type !== "array" && expr.type !== "array", "checkAssignability called on array types");
-  console.assert(lvalue.type !== "function" && expr.type !== "function", "checkAssignability called on function types");
-
+  console.assert(
+    lvalue.type !== "array" && exprDataType.type !== "array",
+    "checkAssignability called on array types"
+  );
+  console.assert(
+    lvalue.type !== "function" && exprDataType.type !== "function",
+    "checkAssignability called on function types"
+  );
   if (!ignoreConst && lvalue.isConst) {
     return false;
   }
 
   return (
-    (isArithmeticDataType(lvalue) && isArithmeticDataType(expr)) ||
-    (lvalue.type === "struct" && checkDataTypeCompatibility(lvalue, expr)) ||
-    lvalue.type === "pointer" && expr.type === "pointer" && checkAssignabilityOfPointers(lvalue, expr)
+    (isArithmeticDataType(lvalue) && isArithmeticDataType(exprDataType)) ||
+    (lvalue.type === "struct" &&
+      checkDataTypeCompatibility(lvalue, exprDataType)) ||
+    (lvalue.type === "pointer" &&
+      exprDataType.type === "pointer" &&
+      checkAssignabilityOfPointers(lvalue, expr, exprDataType))
   );
 }
 
 export function checkAssignabilityOfPointers(
   left: PointerDataType,
+  rightExpr: Expression,
   right: PointerDataType,
   ignoreConst = false
 ) {
@@ -524,6 +539,15 @@ export function checkAssignabilityOfPointers(
   if (isVoidPointer(left) || isVoidPointer(right)) {
     return true;
   }
+
+  // assigning null pointer constant
+  if (
+    isCompileTimeExpression(rightExpr) &&
+    evaluateCompileTimeExpression(rightExpr).value === 0
+  ) {
+    return true;
+  }
+
   return checkDataTypeCompatibility(
     left.pointeeType as DataType,
     right.pointeeType as DataType
