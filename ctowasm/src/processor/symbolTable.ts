@@ -314,8 +314,7 @@ export class SymbolTable {
     if (name in this.externalFunctions) {
       return this.externalFunctions[name];
     }
-
-    throw new ProcessingError(`Symbol '${name}' not found in symbol table`);
+    throw new ProcessingError(`'${name}' undeclared`);
   }
 
   /**

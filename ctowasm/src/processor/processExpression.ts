@@ -256,7 +256,7 @@ export default function processExpression(
 
       if (funcReturnType === null) {
         // trying to use a function call as an expression in context that expects a return object
-        throw new ProcessingError("void value not ignored as it should");
+        throw new ProcessingError("void value not ignored as it should be");
       }
 
       // start curr offset at negative of the size of the return obj

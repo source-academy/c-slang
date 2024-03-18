@@ -20,12 +20,15 @@ import FunctionDefinition from "~src/parser/c-ast/functionDefinition";
 import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { getSizeOfScalarDataType } from "~src/common/utils";
-import { convertFunctionDataTypeToFunctionDetails } from "~src/processor/dataTypeUtil";
-import { DataType } from "~src/parser/c-ast/dataTypes";
+import {
+  checkDataTypeCompatibility,
+  convertFunctionDataTypeToFunctionDetails,
+} from "~src/processor/dataTypeUtil";
+import { DataType, FunctionDataType } from "~src/parser/c-ast/dataTypes";
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
-  symbolTable: SymbolTable,
+  symbolTable: SymbolTable
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
   symbolTable.setFunctionIsDefinedFlag(node.name);
@@ -43,7 +46,7 @@ export default function processFunctionDefinition(
     funcSymbolTable.addVariableEntry(
       node.parameterNames[i],
       node.dataType.parameters[i],
-      "auto", // all function parameters must have "auto" storage class
+      "auto" // all function parameters must have "auto" storage class
     );
   }
 
@@ -59,7 +62,7 @@ export default function processFunctionDefinition(
   const body = processBlockItem(
     node.body,
     funcSymbolTable,
-    functionDefinitionNode,
+    functionDefinitionNode
   );
   functionDefinitionNode.body = body; // body is a Block, an array of StatementP will be returned
   return functionDefinitionNode;
@@ -71,7 +74,7 @@ export default function processFunctionDefinition(
  */
 export function processFunctionReturnStatement(
   expr: Expression,
-  symbolTable: SymbolTable,
+  symbolTable: SymbolTable
 ): StatementP[] {
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);
@@ -118,16 +121,16 @@ export function processFunctionReturnStatement(
  */
 export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
-  symbolTable: SymbolTable,
+  symbolTable: SymbolTable
 ): { functionCallP: FunctionCallP; returnType: DataType | null } {
+  
   // direct call of a function
-  if (
-    node.expr.type === "IdentifierExpression" &&
-    symbolTable.getSymbolEntry(node.expr.name).type === "function"
-  ) {
-    const symbolEntry = symbolTable.getSymbolEntry(
-      node.expr.name,
-    ) as FunctionSymbolEntry;
+  if (node.expr.type === "IdentifierExpression" && symbolTable.getSymbolEntry(
+    node.expr.name
+  ).type === "function") {
+    const symbolEntry = symbolTable.getSymbolEntry
+    (node.expr.name) as FunctionSymbolEntry;
+    
     return {
       functionCallP: {
         type: "FunctionCall",
@@ -136,12 +139,10 @@ export function convertFunctionCallToFunctionCallP(
           functionName: node.expr.name,
         },
         functionDetails: symbolEntry.functionDetails,
-        args: node.args.reduce(
-          // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
-          // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
-          (prv, expr) =>
-            prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
-          [] as ExpressionP[],
+        args: processFunctionCallArgs(
+          node.args,
+          symbolEntry.dataType,
+          symbolTable
         ),
       },
       returnType: symbolEntry.dataType.returnType,
@@ -168,13 +169,54 @@ export function convertFunctionCallToFunctionCallP(
       },
       functionDetails:
         convertFunctionDataTypeToFunctionDetails(functionDataType),
-      args: node.args.reduce(
-        // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
-        // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
-        (prv, expr) =>
-          prv.concat(processExpression(expr, symbolTable).exprs.reverse()),
-        [] as ExpressionP[],
-      ),
+      args: processFunctionCallArgs(node.args, functionDataType, symbolTable),
     },
   };
+}
+
+function processFunctionCallArgs(
+  args: Expression[],
+  fnDataType: FunctionDataType,
+  symbolTable: SymbolTable
+): ExpressionP[] {
+  const argExpressions = [];
+  const argDataTypes = [];
+  for (const arg of args) {
+    const { originalDataType, exprs } = processExpression(arg, symbolTable);
+    argDataTypes.push(originalDataType);
+    // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
+    // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
+    argExpressions.push(...exprs.reverse());
+  }
+
+  checkFunctionCallArgsAreCompatible(fnDataType, argDataTypes);
+  return argExpressions;
+}
+
+/**
+ * For a function call with given args,
+ * Checks that for adherence to  Constraint 2 in 6.5.2.2 of C17 standard.
+ * 1. the number of arguments shall agree with the number of parameters
+ * 2. Each argument shall have a type such that its value may be assigned to an object with the unqualified version of the type of its corresponding parameter.
+ */
+function checkFunctionCallArgsAreCompatible(
+  fnDataType: FunctionDataType,
+  argDataTypes: DataType[]
+) {
+  if (argDataTypes.length != fnDataType.parameters.length) {
+    return false;
+  }
+
+  for (let i = 0; i < argDataTypes.length; ++i) {
+    if (
+      !checkDataTypeCompatibility(
+        fnDataType.parameters[i],
+        argDataTypes[i],
+        true
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
 }

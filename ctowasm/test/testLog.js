@@ -657,6 +657,10 @@ const testLog = {
     typedef_diff_types: {
       title: "Redefintion of typedefs",
       expectedErrorMessages: ["Error: Redeclaration of symbol 't'", "Error: Redeclaration of symbol 'b' with conflicting type"]
+    },
+    fn_param_redefinition: {
+      title: "Redefintion of function parameter",
+      expectedErrorMessages: ["Error: Redefinition of parameter 'x'"]
     }
   },
 };

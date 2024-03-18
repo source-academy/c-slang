@@ -108,22 +108,6 @@ export function isVoidPointer(dataType: DataType) {
   return dataType.type === "pointer" && dataType.pointeeType === null;
 }
 
-// /**
-//  * Checks two data types to determine if they are compatible (meaning one can be assigned to another).
-//  * TODO: add proper data type compatibility checks
-//  */
-// export function checkDataTypeCompatibility(
-//   dataTypeA: DataType,
-//   dataTypeB: DataType
-// ): boolean {
-//   if (dataTypeA.type !== dataTypeB.type) {
-//     return false
-//   };
-//   if (dataTypeA.type === "primary") {
-
-//   }
-// }
-
 // export function checkPrimaryDataTypeCompatibility(dataTypeA: PrimaryCDataType, dataTypeB: PrimaryCDataType) {
 //   return
 // }
@@ -197,7 +181,7 @@ export function stringifyDataType(dataType: DataType): string {
 /**
  * Returns true if 2 struct fields are compatible (equivalent).
  */
-function checkStructFieldCompatibility(a: StructField, b: StructField) {
+function checkStructFieldCompatibility(a: StructField, b: StructField, ignoreQualifiers = false) {
   if (a.tag !== b.tag) {
     return false;
   }
@@ -210,21 +194,22 @@ function checkStructFieldCompatibility(a: StructField, b: StructField) {
     if (b.dataType.type === "struct self pointer") {
       return false;
     }
-    return checkDataTypeCompatibility(a.dataType, b.dataType);
+    return checkDataTypeCompatibility(a.dataType, b.dataType, ignoreQualifiers);
   }
 }
 
 /**
  * Checks the compatibility of two data types. Returns true if two data types are compatible as per the C17 standard.
+ * @param ignoreQualifiers to check if the unqualified data types of a and b are compatible.
  */
-export function checkDataTypeCompatibility(a: DataType, b: DataType): boolean {
-  if (a.type !== b.type || (a.isConst && !b.isConst) || (b.isConst && !a.isConst)) {
+export function checkDataTypeCompatibility(a: DataType, b: DataType, ignoreQualifiers = false): boolean {
+  if (a.type !== b.type || (!ignoreQualifiers && (a.isConst && !b.isConst) || (b.isConst && !a.isConst))) {
     return false;
   }
   if (a.type === "primary" && b.type === "primary") {
     return a.primaryDataType === b.primaryDataType;
   } else if (a.type === "array" && b.type === "array") {
-    return a.numElements === b.numElements && checkDataTypeCompatibility(a.elementDataType, b.elementDataType);
+    return a.numElements === b.numElements && checkDataTypeCompatibility(a.elementDataType, b.elementDataType, ignoreQualifiers);
   } else if (a.type === "function" && b.type === "function") {
     // check return type compatibility
     if (a.returnType === null) {
@@ -232,7 +217,7 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType): boolean {
         return false;
       }
     } else {
-      if (b.returnType === null || !checkDataTypeCompatibility(a.returnType, b.returnType)) {
+      if (b.returnType === null || !checkDataTypeCompatibility(a.returnType, b.returnType, ignoreQualifiers)) {
         return false;
       }
     }
@@ -240,7 +225,7 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType): boolean {
       return false;
     }
     for (let i = 0; i < a.parameters.length; ++i) {
-      if (!checkDataTypeCompatibility(a.parameters[i], b.parameters[i])) {
+      if (!checkDataTypeCompatibility(a.parameters[i], b.parameters[i], ignoreQualifiers)) {
         return false;
       }
     }
@@ -253,7 +238,7 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType): boolean {
       return false;
     }
     for (let i = 0; i < a.fields.length; ++i) {
-      if (!checkStructFieldCompatibility(a.fields[i], b.fields[i])) {
+      if (!checkStructFieldCompatibility(a.fields[i], b.fields[i], ignoreQualifiers)) {
         return false;
       }
     }
@@ -265,7 +250,7 @@ export function checkDataTypeCompatibility(a: DataType, b: DataType): boolean {
     if (a.pointeeType === null || b.pointeeType === null) {
       return false;
     }
-    return checkDataTypeCompatibility(a.pointeeType, b.pointeeType);
+    return checkDataTypeCompatibility(a.pointeeType, b.pointeeType, ignoreQualifiers);
   } else if (a.type === "enum" && b.type === "enum") {
     // all enums in this implementation are equivalent to "signed int" and thus are compatibile with one another
     return true;
@@ -444,9 +429,7 @@ export function convertFunctionDataTypeToFunctionDetails(
   for (const param of dataType.parameters) {
     // sanity check, as parser should have converted all array params into pointers.
     if (param.type === "array") {
-      throw new ProcessingError(
-        "Compiler error: The type of a function parameter should not be an array after parsing"
-      );
+      console.assert(param.type !== "array", "Compiler error: The type of a function parameter should not be an array after parsing")
     }
     const dataTypeSize = getDataTypeSize(param);
     offset -= dataTypeSize;

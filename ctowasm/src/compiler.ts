@@ -85,6 +85,7 @@ export function compileToWat(
       warnings
     };
   } catch (e) {
+    console.log(e);
     if (e instanceof SourceCodeError) {
       return {
         status: "failure",

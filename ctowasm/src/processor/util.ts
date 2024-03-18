@@ -93,7 +93,7 @@ export function isFunctionPointer(dataType: DataType) {
 }
 
 /**
- * Extracts the FunctionDataType from a dataType which is a pointer to a f cuntion
+ * Extracts the FunctionDataType from a dataType which is a pointer to a function
  */
 export function extractFunctionDataTypeFromFunctionPointer(
   dataType: DataType,
