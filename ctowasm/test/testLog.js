@@ -718,38 +718,58 @@ const testLog = {
       title: "Member access in non struct type",
       expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
     },
-    "non_struct_pointer_member_access": {
+    non_struct_pointer_member_access: {
       title: "Member access in non struct pointer",
       expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
     },
-    "struct_ptr_member_access_nonexistent_field": {
+    struct_ptr_member_access_nonexistent_field: {
       title: "Access nonexistent member in struct pointer",
       expectedErrorMessages: ["Error: struct X has no member named 'y'"]
     },
-    "increment_non_real_var": {
+    increment_non_real_var: {
       title: "Increment non-real and non-pointer type",
       expectedErrorMessages: ["Error: wrong type argument to increment"]
     },
-    "increment_non_modifiable_lvalue": {
+    increment_non_modifiable_lvalue: {
       title: "Increment non-modifiable lvalue",
       expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
     },
-    "decrement_non_modifiable_lvalue": {
+    decrement_non_modifiable_lvalue: {
       title: "Decrement non-modifiable lvalue",
       expectedErrorMessages: ["Error: argument to decrement is not a modifiable lvalue"]
     },
-    "decrement_non_real_var": {
+    decrement_non_real_var: {
       title: "Decrement non-real and non-pointer type",
       expectedErrorMessages: ["Error: wrong type argument to decrement"]
     },
-    "enumerator_not_lvalue": {
+    enumerator_not_lvalue: {
       title: "Using an enumerator where lvalue is expected",
       expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
     },
-    "addressof_non_lvalue": {
+    addressof_non_lvalue: {
       title: "Addressof of non-lvalue",
       expectedErrorMessages: ["Error: lvalue required for unary '&' operand"]
-    }
+    },
+    deref_non_pointer: {
+      title: "Dereferencing an expression that is not a pointer",
+      expectedErrorMessages: ["Error: cannot dereference non-pointer type"]
+    },
+    "prefix_+_non_arithmetic": {
+      title: "Prefix '+' on non-arithmetic type",
+      expectedErrorMessages: ["Error: wrong type argument to unary '+' expression; arithmetic type required"]
+    },
+    "prefix_-_non_arithmetic": {
+      title: "Prefix '-' on non-arithmetic type",
+      expectedErrorMessages: ["Error: wrong type argument to unary '-' expression; arithmetic type required"]
+    },
+    "prefix_~_non_integer": {
+      title: "Prefix '~' on non integer type",
+      expectedErrorMessages: ["Error: wrong type argument in unary '~' expression; integer type required"]
+    },
+    "prefix_!_non_integer": {
+      title: "Prefix '!' on non scalar type",
+      expectedErrorMessages: ["Error: wrong type argument in unary '!' expression; scalar type required"]
+    },
   },
 };
 

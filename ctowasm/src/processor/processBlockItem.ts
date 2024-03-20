@@ -227,6 +227,7 @@ export default function processBlockItem(
         return getArithmeticPrePostfixExpressionNodes(node, symbolTable)
           .storeNodes;
       } else {
+        processExpression(node, symbolTable, enclosingFunc);
         return [];
       }
     } else if (node.type === "CommaSeparatedExpressions") {
