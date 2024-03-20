@@ -265,6 +265,7 @@ export default function processBlockItem(
       node.type === "SizeOfExpression" ||
       node.type === "StructMemberAccess"
     ) {
+      processExpression(node, symbolTable, enclosingFunc);
       // all these expression statements can be safely ignored as they have no side effects
       return [];
     } else if (node.type === "Declaration" || node.type === "EnumDeclaration") {

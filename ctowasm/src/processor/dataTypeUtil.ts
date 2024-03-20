@@ -115,6 +115,7 @@ export function isVoidPointer(dataType: DataType) {
   return dataType.type === "pointer" && dataType.pointeeType === null;
 }
 
+
 export function getDecayedArrayPointerType(
   dataType: ArrayDataType
 ): PointerDataType {

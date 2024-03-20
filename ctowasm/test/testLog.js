@@ -701,7 +701,16 @@ const testLog = {
     typedef_variable_dec_conflict: {
       title: "Redeclaring symbol as typedef and vice versa",
       expectedErrorMessages: ["Error: Redeclaration of'x'", "Error: Redeclaration of'y'"]
+    },
+    array_subscript_non_pointer_type: {
+      title: "Array subscript expression on non pointer type",
+      expectedErrorMessages: ["Error: Cannot dereference non-pointer type"]
+    },
+    incomplete_type: {
+      title: "Declaring variable with incomplete type",
+      expectedErrorMessage: ["Error: 'X' is an incomplete type"]
     }
+    
   },
 };
 

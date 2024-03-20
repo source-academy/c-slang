@@ -33,7 +33,10 @@ export async function compile(
 ): Promise<CompilationResult> {
   try {
     const { cAstRoot, warnings } = parse(cSourceCode, moduleRepository);
-    const { astRootNode, includedModules } = process(cAstRoot, moduleRepository);
+    const { astRootNode, includedModules } = process(
+      cAstRoot,
+      moduleRepository
+    );
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = await compileWatToWasm(generateWat(wasmModule));
     return {
@@ -42,7 +45,7 @@ export async function compile(
       dataSegmentSize: wasmModule.dataSegmentSize,
       functionTableSize: wasmModule.functionTable.size,
       importedModules: includedModules,
-      warnings
+      warnings,
     };
   } catch (e) {
     if (e instanceof SourceCodeError) {
@@ -54,8 +57,8 @@ export async function compile(
     if (e instanceof ParserCompilationErrors) {
       return {
         status: "failure",
-        errorMessage: e.message
-      }
+        errorMessage: e.message,
+      };
     }
     throw e;
   }
@@ -88,7 +91,7 @@ export function compileToWat(
     return {
       status: "success",
       watOutput: output,
-      warnings
+      warnings,
     };
   } catch (e) {
     if (e instanceof SourceCodeError) {
@@ -100,8 +103,8 @@ export function compileToWat(
     if (e instanceof ParserCompilationErrors) {
       return {
         status: "failure",
-        errorMessage: e.message
-      }
+        errorMessage: e.message,
+      };
     }
     throw e;
   }
@@ -112,17 +115,11 @@ export function generate_C_AST(
   moduleRepository: ModuleRepository
 ) {
   try {
-    const ast = parse(cSourceCode, moduleRepository);
-    return toJson(ast);
+    const parsedResult = parse(cSourceCode, moduleRepository);
+    return toJson(parsedResult);
   } catch (e) {
     if (e instanceof SourceCodeError) {
       e.generateCompilationErrorMessage(cSourceCode);
-    }
-    if (e instanceof ParserCompilationErrors) {
-      return {
-        status: "failure",
-        errorMessage: e.message
-      }
     }
     throw e;
   }
@@ -140,12 +137,6 @@ export function generate_processed_C_AST(
     if (e instanceof SourceCodeError) {
       e.generateCompilationErrorMessage(cSourceCode);
     }
-    if (e instanceof ParserCompilationErrors) {
-      return {
-        status: "failure",
-        errorMessage: e.message
-      }
-    }
     throw e;
   }
 }
@@ -155,7 +146,7 @@ export function generate_WAT_AST(
   moduleRepository: ModuleRepository
 ) {
   const { cAstRoot } = parse(cSourceCode, moduleRepository);
-    const { astRootNode } = process(cAstRoot, moduleRepository);
+  const { astRootNode } = process(cAstRoot, moduleRepository);
   //checkForErrors(cSourceCode, CAst, Object.keys(wasmModuleImports)); // use semantic analyzer to check for semantic errors
   const wasmAst = translate(astRootNode, moduleRepository);
   return toJson(wasmAst);

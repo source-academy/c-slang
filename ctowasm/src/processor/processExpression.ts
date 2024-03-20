@@ -409,7 +409,6 @@ export default function processExpression(
         expression: derefedExpression,
         convertArrayToPointer: true,
       });
-
       if (derefedExpressionDataType.type !== "pointer") {
         throw new ProcessingError(`Cannot dereference non-pointer type`);
       }

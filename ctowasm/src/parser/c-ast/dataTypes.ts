@@ -60,6 +60,7 @@ export interface EnumDataType extends DataTypeBase {
 interface StructField {
   tag: string;
   dataType: DataType | StructSelfPointer;
+  isConst?: boolean;
 }
 
 /**

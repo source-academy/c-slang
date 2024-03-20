@@ -255,6 +255,16 @@ export function determineResultDataTypeOfBinaryExpression(
 }
 
 /**
+ * Checks if the given dataType fulfills pre or postfix type constraint.
+ * Constraint 6.5.2.4/1 of C17 standard.
+ * dataType must be modificable lvalue
+ * 
+ */
+function checkPrePostfixTypeConstraint(dataType: DataType) {
+  return !dataType.isConst;
+}
+
+/**
  * Get the MemoryStore and MemoryLoad nodes needed for a increment/decrement of an lvalue of appropriate type.
  */
 export function getArithmeticPrePostfixExpressionNodes(
@@ -265,8 +275,10 @@ export function getArithmeticPrePostfixExpressionNodes(
 
   const processedExpr = processExpression(expr.expr, symbolTable);
   const dataType = getDataTypeOfExpression({
-    expression: processedExpr,
+    expression: processedExpr
   });
+
+  
 
   // dop some checks on the operand
   // simply use the load exprs from the processed expr to create the memory store staements
