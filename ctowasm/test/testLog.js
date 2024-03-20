@@ -656,7 +656,7 @@ const testLog = {
     },
     typedef_diff_types: {
       title: "Redefintion of typedefs",
-      expectedErrorMessages: ["Error: Redeclaration of 't'", "Error: Redeclaration of symbol 'b' with conflicting type"]
+      expectedErrorMessages: ["Error: Redeclaration of 't'", "Error: Redeclaration of 'b' with conflicting type"]
     },
     fn_param_redefinition: {
       title: "Redefintion of function parameter",
@@ -684,7 +684,7 @@ const testLog = {
     },
     variable_redeclaration: {
       title: "Redeclared variable with no linkage",
-      expectedErrorMessages: ["Error: Redeclaration of symbol 'x'"]
+      expectedErrorMessages: ["Error: Redeclaration of 'x'"]
     },
     undeclared_var_assignment_1: {
       title: "Assignment to undeclared variable 1",
@@ -700,7 +700,7 @@ const testLog = {
     },
     typedef_variable_dec_conflict: {
       title: "Redeclaring symbol as typedef and vice versa",
-      expectedErrorMessages: ["Error: Redeclaration of'x'", "Error: Redeclaration of'y'"]
+      expectedErrorMessages: ["Error: Redeclaration of 'x'", "Error: Redeclaration of 'y'"]
     },
     array_subscript_non_pointer_type: {
       title: "Array subscript expression on non pointer type",
