@@ -198,7 +198,7 @@
               error(`Redeclaration of '${identifierDefinition.name}' with conflicting type`); 
             }
           } else {
-            error(`Redeclaration of'${identifierDefinition.name}'`);
+            error(`Redeclaration of '${identifierDefinition.name}'`);
           }  
         }
       }
@@ -1569,7 +1569,7 @@ _ "token separator"
 // a translation unit represents a complete c program
 // should return an array of Statements or Functions
 translation_unit 
-  = items:(function_definition / declaration)|.., _| { return createRootNode(items); } //TODO: come back here for ;
+  = items:(function_definition / declaration)|.., _| { return createRootNode(items); }
    
 function_definition
 	= declarationSpecifier:declaration_specifier _ declarator:declarator _ body:compound_statement { return generateFunctionDefinitionNode([declarationSpecifier], declarator, body); } 

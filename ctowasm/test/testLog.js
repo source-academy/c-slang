@@ -648,7 +648,7 @@ const testLog = {
     },
     variable_redeclaration: {
       title: "Redeclaration of identifier",
-      expectedErrorMessages: ["Error: Redeclaration of symbol 'x'"],
+      expectedErrorMessages: ["Error: Redeclaration of 'x'"],
     },
     redefined_tags: {
       title: "Redefinition of tags",
@@ -656,7 +656,7 @@ const testLog = {
     },
     typedef_diff_types: {
       title: "Redefintion of typedefs",
-      expectedErrorMessages: ["Error: Redeclaration of symbol 't'", "Error: Redeclaration of symbol 'b' with conflicting type"]
+      expectedErrorMessages: ["Error: Redeclaration of 't'", "Error: Redeclaration of symbol 'b' with conflicting type"]
     },
     fn_param_redefinition: {
       title: "Redefintion of function parameter",
@@ -708,15 +708,15 @@ const testLog = {
     },
     declare_var_incomplete_type: {
       title: "Declaring variable with incomplete type",
-      expectedErrorMessage: ["Error: 'X' is an incomplete type"]
+      expectedErrorMessages: ["Error: 'X' is an incomplete type"]
     },
     struct_member_access_nonexistent_field: {
       title: "Access nonexistent member in struct",
-      expectedErrorMessage: ["Error: struct X has no member named 'y'"]
+      expectedErrorMessages: ["Error: struct X has no member named 'y'"]
     },
     non_struct_member_access: {
       title: "Member access in non struct type",
-      expectedErrorMessage: ["Error: request for member 'field' in something that is not a structure"]
+      expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
     }
   },
 };
