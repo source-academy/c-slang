@@ -376,7 +376,8 @@ export function unpackDataType(
       });
       currOffset += getDataTypeSize(dataType);
     } else {
-      throw new ProcessingError(
+      // should not happen
+      throw new Error(
         `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`
       );
     }
