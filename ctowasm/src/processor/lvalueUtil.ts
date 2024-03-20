@@ -11,7 +11,6 @@ import processExpression from "~src/processor/processExpression";
 import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 import { Expression } from "~src/parser/c-ast/core";
 import {
-  isArithmeticDataType,
   isScalarDataType,
 } from "~src/processor/dataTypeUtil";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";

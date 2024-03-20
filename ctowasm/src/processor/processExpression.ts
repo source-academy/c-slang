@@ -514,7 +514,7 @@ export default function processExpression(
       });
       if (dataTypeOfExpr.type !== "struct") {
         throw new ProcessingError(
-          `request for member '${expr.fieldTag}' in something that is not a structure or union`,
+          `request for member '${expr.fieldTag}' in something that is not a structure`,
         );
       }
       const { fieldIndex, fieldDataType } =

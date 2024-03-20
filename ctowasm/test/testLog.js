@@ -709,8 +709,15 @@ const testLog = {
     declare_var_incomplete_type: {
       title: "Declaring variable with incomplete type",
       expectedErrorMessage: ["Error: 'X' is an incomplete type"]
+    },
+    struct_member_access_nonexistent_field: {
+      title: "Access nonexistent member in struct",
+      expectedErrorMessage: ["Error: struct X has no member named 'y'"]
+    },
+    non_struct_member_access: {
+      title: "Member access in non struct type",
+      expectedErrorMessage: ["Error: request for member 'field' in something that is not a structure"]
     }
-    
   },
 };
 

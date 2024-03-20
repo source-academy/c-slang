@@ -451,7 +451,7 @@ export function determineIndexAndDataTypeOfFieldInStruct(
         : getDataTypeNumberOfPrimaryObjects(field.dataType);
   }
   throw new ProcessingError(
-    `Struct${
+    `struct${
       structDataType.tag !== null ? " " + structDataType.tag : ""
     } has no member named '${fieldTag}'`
   );
@@ -568,4 +568,13 @@ export function checkAssignabilityOfPointers(
     left.pointeeType as DataType,
     right.pointeeType as DataType
   );
+}
+
+export function isFieldInStruct(dataType: StructDataType, fieldTag: string) {
+  for (const field of dataType.fields) {
+    if (field.tag === fieldTag) {
+      return true;
+    }
+  }
+  return false;
 }
