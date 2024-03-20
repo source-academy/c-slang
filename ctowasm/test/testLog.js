@@ -717,6 +717,14 @@ const testLog = {
     non_struct_member_access: {
       title: "Member access in non struct type",
       expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
+    },
+    "non_struct_pointer_member_access": {
+      title: "Member access in non struct pointer",
+      expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
+    },
+    "struct_ptr_member_access_nonexistent_field": {
+      title: "Access nonexistent member in struct pointer",
+      expectedErrorMessages: ["Error: struct X has no member named 'y'"]
     }
   },
 };
