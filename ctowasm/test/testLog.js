@@ -706,7 +706,7 @@ const testLog = {
       title: "Array subscript expression on non pointer type",
       expectedErrorMessages: ["Error: Cannot dereference non-pointer type"]
     },
-    incomplete_type: {
+    declare_var_incomplete_type: {
       title: "Declaring variable with incomplete type",
       expectedErrorMessage: ["Error: 'X' is an incomplete type"]
     }
