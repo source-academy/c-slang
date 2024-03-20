@@ -69,8 +69,8 @@ export function checkBinaryExpressionDataTypesValidity(
     rightExprDataType.type === "pointer"
   ) {
     if (
-      leftExprDataType.pointeeType === null ||
-      rightExprDataType.pointeeType === null
+      isVoidPointer(leftExprDataType) ||
+      isVoidPointer(rightExprDataType)
     ) {
       throw new ProcessingError("cannot perform arithmetic on void pointer");
     }
@@ -80,7 +80,7 @@ export function checkBinaryExpressionDataTypesValidity(
       );
     }
   } else if (leftExprDataType.type === "pointer") {
-    if (leftExprDataType.pointeeType === null) {
+    if (isVoidPointer(leftExprDataType)) {
       throw new ProcessingError("cannot perform arithmetic on void pointer");
     }
     if (operator !== "+" && operator !== "-") {
@@ -94,7 +94,7 @@ export function checkBinaryExpressionDataTypesValidity(
       );
     }
   } else if (rightExprDataType.type === "pointer") {
-    if (rightExprDataType.pointeeType === null) {
+    if (isVoidPointer(rightExprDataType)) {
       throw new ProcessingError("cannot perform arithmetic on void pointer");
     }
     if (operator !== "+" && operator !== "-") {

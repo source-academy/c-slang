@@ -1,4 +1,3 @@
 int main() {
-  enum { a };
-  int x = a;
+  void * x; 
 }

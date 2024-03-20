@@ -39,7 +39,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "signed int",
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (int: number) => {
           // to print the correct int (4 bytes), need to handle signage
@@ -62,7 +62,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "unsigned int",
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (val: number) => {
           // need to intepret val as unsigned 4 byte int
@@ -84,7 +84,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "signed char",
             },
           ],
-          returnType: null,
+          returnType: { type: "void"},
         },
         jsFunction: (char: number) => {
           // signed int overflow is undefined, no need to worry about handling that
@@ -102,7 +102,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "signed long",
             },
           ],
-          returnType: null,
+          returnType: { type: "void"},
         },
         jsFunction: (long: bigint) => {
           // to prlong the correct long (4 bytes), need to handle signage
@@ -125,7 +125,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "unsigned long",
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (val: bigint) => {
           // need to intepret val as unsigned 8 byte unsigned int
@@ -146,7 +146,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "float",
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (float: number) =>
           this.print(convertFloatToCStyleString(float)),
@@ -161,7 +161,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "double",
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (float: number) =>
           this.print(convertFloatToCStyleString(float)),
@@ -174,10 +174,10 @@ export class SourceStandardLibraryModule extends Module {
           parameters: [
             {
               type: "pointer",
-              pointeeType: null
+              pointeeType: {type: "void"}
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (val: number) => {
           // need to intepret val as unsigned 4 byte int
@@ -202,7 +202,7 @@ export class SourceStandardLibraryModule extends Module {
               },
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (strAddress: number) => {
           // need to intepret val as unsigned 4 byte int
@@ -222,7 +222,7 @@ export class SourceStandardLibraryModule extends Module {
           ],
           returnType: {
             type: "pointer",
-            pointeeType: null,
+            pointeeType: {type: "void"},
           },
         },
         jsFunction: (numBytes: number) =>
@@ -241,10 +241,10 @@ export class SourceStandardLibraryModule extends Module {
           parameters: [
             {
               type: "pointer",
-              pointeeType: null,
+              pointeeType: {type: "void"},
             },
           ],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: (address: number) =>
           freeFunction({
@@ -258,7 +258,7 @@ export class SourceStandardLibraryModule extends Module {
         functionType: {
           type: "function",
           parameters: [],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: () =>
           printHeap(
@@ -272,7 +272,7 @@ export class SourceStandardLibraryModule extends Module {
         functionType: {
           type: "function",
           parameters: [],
-          returnType: null,
+          returnType: {type: "void"},
         },
         jsFunction: () =>
           printStack(

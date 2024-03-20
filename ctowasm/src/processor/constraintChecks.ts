@@ -2,9 +2,8 @@
  * This file contains various utility functions to help in checking the fulfillment of constraints of different language features.
  */
 
-import { PostfixExpression } from "~dist";
 import { ProcessingError } from "~src/errors";
-import { PrefixExpression } from "~src/parser/c-ast/expression/unaryExpression";
+import { PostfixExpression, PrefixExpression } from "~src/parser/c-ast/expression/unaryExpression";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { isScalarDataType } from "~src/processor/dataTypeUtil";
 import { isModifiableLValue } from "~src/processor/lvalueUtil";

@@ -3,9 +3,12 @@
  */
 
 import {
+  ArrayDataType,
   DataType,
   FunctionDataType,
+  PointerDataType,
   StructDataType,
+  StructField,
   StructSelfPointer,
 } from "~src/parser/c-ast/dataTypes";
 
@@ -22,7 +25,6 @@ import {
 } from "~src/common/utils";
 import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
 import { FunctionDetails } from "~src/processor/c-ast/function";
-import { ArrayDataType, PointerDataType, StructField } from "~dist";
 import { Expression } from "~src/parser/c-ast/core";
 
 function getNumberOfElementsInArray(dataType: ArrayDataType): number {
@@ -77,7 +79,10 @@ export function getDataTypeSize(
     );
   } else if (dataType.type === "enum") {
     return primaryDataTypeSizes[ENUM_DATA_TYPE];
-  } else {
+  } else if (dataType.type === "void") {
+    throw new ProcessingError(`void value not ignored as it should be`);
+  } 
+  else {
     throw new Error(
       `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`
     );
@@ -112,7 +117,7 @@ export function isArithmeticDataType(dataType: DataType) {
 }
 
 export function isVoidPointer(dataType: DataType) {
-  return dataType.type === "pointer" && dataType.pointeeType === null;
+  return dataType.type === "pointer" && dataType.pointeeType.type === "void";
 }
 
 
@@ -174,22 +179,20 @@ export function stringifyDataType(dataType: DataType): string {
     } of ${stringifyDataType(dataType.elementDataType)}`;
   } else if (dataType.type === "pointer") {
     return `${dataType.isConst ? "const " : ""}pointer to ${
-      dataType.pointeeType === null
-        ? "void"
-        : stringifyDataType(dataType.pointeeType)
+      stringifyDataType(dataType.pointeeType)
     }`;
   } else if (dataType.type === "function") {
     return `function (${dataType.parameters
       .map(stringifyDataType)
       .join(", ")}) returning ${
-      dataType.returnType === null
-        ? "void"
-        : stringifyDataType(dataType.returnType)
+     stringifyDataType(dataType.returnType)
     }`;
   } else if (dataType.type === "struct") {
     return `struct ${dataType.tag}`;
   } else if (dataType.type === "enum") {
     return `enum ${dataType.tag}`;
+  } else if (dataType.type === "void") {
+    return `void`;
   } else {
     console.assert(false, "stringifyDataType() unreachable else");
     return "";
@@ -249,13 +252,13 @@ export function checkDataTypeCompatibility(
     );
   } else if (a.type === "function" && b.type === "function") {
     // check return type compatibility
-    if (a.returnType === null) {
-      if (b.returnType !== null) {
+    if (a.returnType.type === "void") {
+      if (b.returnType.type !== "void") {
         return false;
       }
     } else {
       if (
-        b.returnType === null ||
+        b.returnType.type === "void" ||
         !checkDataTypeCompatibility(
           a.returnType,
           b.returnType,
@@ -300,10 +303,10 @@ export function checkDataTypeCompatibility(
     }
     return true;
   } else if (a.type === "pointer" && b.type === "pointer") {
-    if (a.pointeeType === null && a.pointeeType === null) {
+    if (isVoidPointer(a) && isVoidPointer(b)) {
       return true;
     }
-    if (a.pointeeType === null || b.pointeeType === null) {
+    if (isVoidPointer(a) || isVoidPointer(b)) {
       return false;
     }
     return checkDataTypeCompatibility(
@@ -467,7 +470,7 @@ export function convertFunctionDataTypeToFunctionDetails(
     returnObjects: null,
   };
 
-  if (dataType.returnType !== null) {
+  if (dataType.returnType.type !== "void") {
     if (dataType.returnType.type === "array") {
       throw new ProcessingError(
         "array is not a valid return type from a function"

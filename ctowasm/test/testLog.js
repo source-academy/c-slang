@@ -747,7 +747,7 @@ const testLog = {
       expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
     },
     "addressof_non_lvalue": {
-      title: "Addressof on non-lvalue",
+      title: "Addressof of non-lvalue",
       expectedErrorMessages: ["Error: lvalue required for unary '&' operand"]
     }
   },

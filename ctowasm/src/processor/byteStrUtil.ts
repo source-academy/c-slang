@@ -42,7 +42,7 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
           ? getZeroInializerByteStrForDataType({
               // just initialize the zero pointer like any other pointer
               type: "pointer",
-              pointeeType: null,
+              pointeeType: {type: "void"},
             })
           : getZeroInializerByteStrForDataType(field.dataType);
     });

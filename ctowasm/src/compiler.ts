@@ -85,7 +85,11 @@ export function compileToWat(
 ): WatCompilationResult {
   try {
     const { cAstRoot, warnings } = parse(cSourceCode, moduleRepository);
-    const { astRootNode } = process(cAstRoot, moduleRepository);
+    const { astRootNode, warnings: processorWarnings } = process(
+      cAstRoot,
+      moduleRepository
+    );
+    warnings.push(...processorWarnings);
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = generateWat(wasmModule);
     return {

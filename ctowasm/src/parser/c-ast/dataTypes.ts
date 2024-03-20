@@ -12,7 +12,8 @@ export type DataType =
   | ArrayDataType
   | StructDataType
   | FunctionDataType
-  | EnumDataType;
+  | EnumDataType
+  | VoidDataType;
 
 export type ScalarDataType = PrimaryDataType | PointerDataType;
 
@@ -34,12 +35,12 @@ export interface ArrayDataType extends DataTypeBase {
 export interface PointerDataType extends DataTypeBase {
   type: "pointer";
   // type of the object being pointed to
-  pointeeType: DataType | null; // when this is null it represents a void pointer
+  pointeeType: DataType; // when this is null it represents a void pointer
 }
 
 export interface FunctionDataType extends DataTypeBase {
   type: "function";
-  returnType: DataType | null;
+  returnType: DataType;
   parameters: DataType[];
 }
 
@@ -47,6 +48,10 @@ export interface StructDataType extends DataTypeBase {
   type: "struct";
   tag: string | null; // tag of this struct. May be null for anonymous structs. Essential for determining struct compatibility.
   fields: StructField[];
+}
+
+export interface VoidDataType extends DataTypeBase {
+  type: "void";
 }
 
 /**
@@ -57,7 +62,7 @@ export interface EnumDataType extends DataTypeBase {
   tag: string | null;
 }
 
-interface StructField {
+export interface StructField {
   tag: string;
   dataType: DataType | StructSelfPointer;
   isConst?: boolean;

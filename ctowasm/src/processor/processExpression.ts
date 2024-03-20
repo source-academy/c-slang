@@ -31,6 +31,7 @@ import {
   determineIndexAndDataTypeOfFieldInStruct,
   getDataTypeSize,
   isScalarDataType,
+  isVoidPointer,
   unpackDataType,
 } from "~src/processor/dataTypeUtil";
 import { IntegerDataType, ScalarCDataType } from "~src/common/types";
@@ -45,6 +46,7 @@ import { getSizeOfScalarDataType } from "~src/common/utils";
 import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { StatementP } from "~src/processor/c-ast/core";
+import { addWarning } from "~src/processor/warningUtil";
 
 /**
  * Processes an Expression node in the context where value(s) are expected to be loaded from memory for use in a statement (action).
@@ -254,7 +256,7 @@ export default function processExpression(
         returnType: funcReturnType,
       } = convertFunctionCallToFunctionCallP(expr, symbolTable);
 
-      if (funcReturnType === null) {
+      if (funcReturnType.type === "void") {
         // trying to use a function call as an expression in context that expects a return object
         throw new ProcessingError("void value not ignored as it should be");
       }
@@ -413,8 +415,8 @@ export default function processExpression(
         throw new ProcessingError(`cannot dereference non-pointer type`);
       }
 
-      if (derefedExpressionDataType.pointeeType === null) {
-        throw new ProcessingError(`cannot dereference void pointer`);
+      if (isVoidPointer(derefedExpressionDataType)) {
+        addWarning("cannot dereference void pointer", expr.position);
       }
 
       // if the derefed expression a function pointer, it remains one

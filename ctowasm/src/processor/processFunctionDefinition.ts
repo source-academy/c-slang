@@ -36,7 +36,6 @@ export default function processFunctionDefinition(
   symbolTable.addFunctionEntry(node.name, node.dataType);
   symbolTable.setFunctionIsDefinedFlag(node.name);
   if (
-    node.dataType.returnType !== null &&
     node.dataType.returnType.type === "array"
   ) {
     throw new ProcessingError("arrays cannot be returned from a function");
@@ -125,7 +124,7 @@ export function processFunctionReturnStatement(
 export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
   symbolTable: SymbolTable
-): { functionCallP: FunctionCallP; returnType: DataType | null } {
+): { functionCallP: FunctionCallP; returnType: DataType } {
   // direct call of a function
   if (
     node.expr.type === "IdentifierExpression" &&

@@ -1027,11 +1027,8 @@
         if (typeof currNode.type === "undefined" || currNode.type === "primary") {
           error(`Variable or field declared as void`);
         } else if (currNode.type === "array") {
-          error(`Declaration of array of voids`);
-        } else if (currNode.type === "function") {
-          currNode.returnType = null;
-          return;
-        }
+          error(`Declaration of array of void type`);
+        } 
       }
       if (currNode.type === "array") {
         currNode.elementDataType = dataTypeToAdd;

@@ -84,7 +84,6 @@ export function createFunctionTableIndexExpressionWrapper(
 export function isFunctionPointer(dataType: DataType) {
   return (
     dataType.type === "pointer" &&
-    dataType.pointeeType !== null &&
     dataType.pointeeType.type === "function"
   );
 }
