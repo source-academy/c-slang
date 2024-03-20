@@ -652,11 +652,11 @@ const testLog = {
     },
     redefined_tags: {
       title: "Redefinition of tags",
-      expectedErrorMessages: ["Error: redefinition of 'X' as wrong kind of tag", "Error: Redefinition of 'A' as wrong kind of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
+      expectedErrorMessages: ["Error: redefinition of 'X' as wrong kind of tag", "Error: redefinition of 'A' as wrong kind of tag", "Error: redefinition of 'struct X'", "Error: redefinition of 'Y' as wrong kind of tag"]
     },
     typedef_diff_types: {
       title: "Redefintion of typedefs",
-      expectedErrorMessages: ["Error: redeclaration of 't'", "Error: Redeclaration of 'b' with conflicting type"]
+      expectedErrorMessages: ["Error: redeclaration of 't'", "Error: redeclaration of 'b' with conflicting type"]
     },
     fn_param_redefinition: {
       title: "Redefintion of function parameter",
@@ -676,7 +676,7 @@ const testLog = {
     },
     fn_call_with_wrong_args_3: {
       title: "Function call with wrong argument type",
-      expectedErrorMessages: ["Error: Cannot assign function call argument to parameter"]
+      expectedErrorMessages: ["Error: cannot assign function call argument to parameter"]
     },  
     absent_main: {
       title: "Undefined main function",
@@ -700,7 +700,7 @@ const testLog = {
     },
     typedef_variable_dec_conflict: {
       title: "Redeclaring symbol as typedef and vice versa",
-      expectedErrorMessages: ["Error: redeclaration of 'x'", "Error: Redeclaration of 'y'"]
+      expectedErrorMessages: ["Error: redeclaration of 'x'", "Error: redeclaration of 'y'"]
     },
     array_subscript_non_pointer_type: {
       title: "Array subscript expression on non pointer type",
@@ -736,11 +736,11 @@ const testLog = {
     },
     "decrement_non_modifiable_lvalue": {
       title: "Decrement non-modifiable lvalue",
-      expectedErrorMessages: ["Error: Wrong type argument to decrement"]
+      expectedErrorMessages: ["Error: argument to decrement is not a modifiable lvalue"]
     },
     "decrement_non_real_var": {
-      title: "Decrement non-modifiable lvalue",
-      expectedErrorMessages: ["Error: argument to decrement is not a modifiable lvalue"]
+      title: "Decrement non-real and non-pointer type",
+      expectedErrorMessages: ["Error: wrong type argument to decrement"]
     }
   },
 };
