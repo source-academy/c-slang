@@ -745,6 +745,10 @@ const testLog = {
     "enumerator_not_lvalue": {
       title: "Using an enumerator where lvalue is expected",
       expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
+    },
+    "addressof_non_lvalue": {
+      title: "Addressof on non-lvalue",
+      expectedErrorMessages: ["Error: lvalue required for unary '&' operand"]
     }
   },
 };
