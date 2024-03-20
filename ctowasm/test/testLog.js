@@ -741,6 +741,10 @@ const testLog = {
     "decrement_non_real_var": {
       title: "Decrement non-real and non-pointer type",
       expectedErrorMessages: ["Error: wrong type argument to decrement"]
+    },
+    "enumerator_not_lvalue": {
+      title: "Using an enumerator where lvalue is expected",
+      expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
     }
   },
 };

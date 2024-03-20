@@ -10,9 +10,7 @@ import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 import { Expression } from "~src/parser/c-ast/core";
-import {
-  isScalarDataType,
-} from "~src/processor/dataTypeUtil";
+import { isScalarDataType } from "~src/processor/dataTypeUtil";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { getDataTypeOfExpression } from "~src/processor/util";
 
@@ -27,8 +25,20 @@ function isAllowableLValueType(dataType: DataType) {
  */
 export function isLValue(
   expression: Expression,
-  processedExpressionWrapper: ExpressionWrapperP
+  processedExpressionWrapper: ExpressionWrapperP,
+  symbolTable: SymbolTable
 ) {
+  if (expression.type === "IdentifierExpression") {
+    const symbolEntry = symbolTable.getSymbolEntry(expression.name);
+    if (
+      symbolEntry.type !== "dataSegmentVariable" &&
+      symbolEntry.type !== "localVariable"
+    ) {
+      // enumerator / function symbol entries cannot be lvalue
+      return false;
+    }
+  }
+
   return (
     (expression.type === "IdentifierExpression" ||
       expression.type === "PointerDereference" ||
@@ -41,14 +51,15 @@ export function isLValue(
 
 export function isModifiableLValue(
   expression: Expression,
-  processedExpressionWrapper: ExpressionWrapperP
+  processedExpressionWrapper: ExpressionWrapperP,
+  symbolTable: SymbolTable
 ) {
   const dataType = getDataTypeOfExpression({
     expression: processedExpressionWrapper,
   });
   return (
     !dataType.isConst &&
-    isLValue(expression, processedExpressionWrapper) &&
+    isLValue(expression, processedExpressionWrapper, symbolTable) &&
     (dataType.type !== "struct" || isStructModifiableDataType(dataType))
   );
 }

@@ -8,6 +8,7 @@ import { PrefixExpression } from "~src/parser/c-ast/expression/unaryExpression";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { isScalarDataType } from "~src/processor/dataTypeUtil";
 import { isModifiableLValue } from "~src/processor/lvalueUtil";
+import { SymbolTable } from "~src/processor/symbolTable";
 import { getDataTypeOfExpression } from "~src/processor/util";
 
 /**
@@ -17,6 +18,7 @@ import { getDataTypeOfExpression } from "~src/processor/util";
 export function checkPrePostfixTypeConstraint(
   expression: PrefixExpression | PostfixExpression,
   processedUnderlyingExpr: ExpressionWrapperP,
+  symbolTable: SymbolTable
 ) {
   const dataType = getDataTypeOfExpression({
     expression: processedUnderlyingExpr,
@@ -28,7 +30,7 @@ export function checkPrePostfixTypeConstraint(
     );
   }
 
-  if (!isModifiableLValue(expression.expr, processedUnderlyingExpr)) {
+  if (!isModifiableLValue(expression.expr, processedUnderlyingExpr, symbolTable)) {
     throw new ProcessingError(`argument to ${expression.operator === "++" ? "increment" : "decrement"} is not a modifiable lvalue`);
   }
 }

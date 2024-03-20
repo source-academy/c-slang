@@ -264,7 +264,7 @@ export function getArithmeticPrePostfixExpressionNodes(
 ): { storeNodes: MemoryStore[]; loadNode: MemoryLoad; dataType: DataType } {
   const binaryOperator = expr.operator === "++" ? "+" : "-";
   const processedExpr = processExpression(expr.expr, symbolTable);
-  checkPrePostfixTypeConstraint(expr, processedExpr);
+  checkPrePostfixTypeConstraint(expr, processedExpr, symbolTable);
   const dataType = getDataTypeOfExpression({
     expression: processedExpr
   });
