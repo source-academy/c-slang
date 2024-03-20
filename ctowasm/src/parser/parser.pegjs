@@ -123,7 +123,7 @@
   }
 
   function isTagDefined(name) {
-    return name in symbolTable.tags && symbolTable.tags.length > 0;
+    return name in symbolTable.tags && symbolTable.tags[name].length > 0;
   }
 
   function getTagSymbolEntry(name) {
