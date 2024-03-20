@@ -26,7 +26,7 @@ import {
   isFunctionPointer,
 } from "~src/processor/util";
 import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
-import { getAssignmentNodes } from "~src/processor/lvalueUtil";
+import { getAssignmentNodes, isLValue } from "~src/processor/lvalueUtil";
 import {
   determineIndexAndDataTypeOfFieldInStruct,
   getDataTypeSize,
@@ -364,16 +364,16 @@ export default function processExpression(
         // taking the address of a symbol - could be a variable or function
         const identifier = expr.expr.name;
         const symbolEntry = symbolTable.getSymbolEntry(identifier);
-        if (symbolEntry.type === "enumerator") {
-          throw new ProcessingError("lvalue required as unary '&' operand");
-        }
-
         if (symbolEntry.type === "function") {
           return createFunctionTableIndexExpressionWrapper(
             expr.expr.name,
             symbolEntry.dataType,
             symbolTable,
           );
+        }
+
+        if (symbolEntry.type === "enumerator" || !isLValue(expr.expr, symbolEntry.dataType, symbolTable, true)) {
+          throw new ProcessingError("lvalue required as unary '&' operand");
         }
 
         // If function pointer, dont increase the pointer nesting, just return processed identifier expression

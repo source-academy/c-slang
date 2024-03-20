@@ -30,7 +30,7 @@ export function checkPrePostfixTypeConstraint(
     );
   }
 
-  if (!isModifiableLValue(expression.expr, processedUnderlyingExpr, symbolTable)) {
+  if (!isModifiableLValue(expression.expr, dataType, symbolTable)) {
     throw new ProcessingError(`argument to ${expression.operator === "++" ? "increment" : "decrement"} is not a modifiable lvalue`);
   }
 }

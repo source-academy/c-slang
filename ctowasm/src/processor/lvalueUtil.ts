@@ -11,22 +11,25 @@ import processExpression from "~src/processor/processExpression";
 import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 import { Expression } from "~src/parser/c-ast/core";
 import { isScalarDataType } from "~src/processor/dataTypeUtil";
-import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
-import { getDataTypeOfExpression } from "~src/processor/util";
 
-function isAllowableLValueType(dataType: DataType) {
-  return isScalarDataType(dataType) || dataType.type === "struct";
+function isAllowableLValueType(dataType: DataType, specialCase = false) {
+  return (
+    isScalarDataType(dataType) ||
+    dataType.type === "struct" ||
+    (specialCase && (dataType.type === "array" || dataType.type === "function"))
+  );
 }
 
 /**
  * Determines if a given expression is an lvalue.
  * @param expression the original expression
- * @param processedExpressionWrapper the wrapped processed expression
+ * @param dataType datatype of the expression
  */
 export function isLValue(
   expression: Expression,
-  processedExpressionWrapper: ExpressionWrapperP,
-  symbolTable: SymbolTable
+  dataType: DataType,
+  symbolTable: SymbolTable,
+  specialCase = false // specialCase refers to certain expressions where types that normally are not lvalues (array/function) are treated as lvalue (sizeof, &)
 ) {
   if (expression.type === "IdentifierExpression") {
     const symbolEntry = symbolTable.getSymbolEntry(expression.name);
@@ -43,23 +46,19 @@ export function isLValue(
     (expression.type === "IdentifierExpression" ||
       expression.type === "PointerDereference" ||
       expression.type === "StructMemberAccess") &&
-    isAllowableLValueType(
-      getDataTypeOfExpression({ expression: processedExpressionWrapper })
-    )
+    isAllowableLValueType(dataType, specialCase)
   );
 }
 
 export function isModifiableLValue(
   expression: Expression,
-  processedExpressionWrapper: ExpressionWrapperP,
-  symbolTable: SymbolTable
+  dataType: DataType,
+  symbolTable: SymbolTable,
+  specialCase =  false
 ) {
-  const dataType = getDataTypeOfExpression({
-    expression: processedExpressionWrapper,
-  });
   return (
     !dataType.isConst &&
-    isLValue(expression, processedExpressionWrapper, symbolTable) &&
+    isLValue(expression, dataType, symbolTable, specialCase) &&
     (dataType.type !== "struct" || isStructModifiableDataType(dataType))
   );
 }
