@@ -6,7 +6,7 @@ import process from "./processor";
 import { generateWat } from "./wat-generator";
 import { compileWatToWasm } from "./wat-to-wasm";
 import translate from "~src/translator";
-import { ParserCompilationErrors, SourceCodeError, toJson } from "~src/errors";
+import { ParserCompilationErrors, SourceCodeError, generateCompilationWarningMessage, toJson } from "~src/errors";
 import ModuleRepository, { ModuleName } from "~src/modules";
 
 export interface SuccessfulCompilationResult {
@@ -33,10 +33,11 @@ export async function compile(
 ): Promise<CompilationResult> {
   try {
     const { cAstRoot, warnings } = parse(cSourceCode, moduleRepository);
-    const { astRootNode, includedModules } = process(
+    const { astRootNode, includedModules, warnings: processorWarnings } = process(
       cAstRoot,
       moduleRepository
     );
+    warnings.push(...(processorWarnings.map(w => generateCompilationWarningMessage(w.message, cSourceCode, w.position))));
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = await compileWatToWasm(generateWat(wasmModule));
     return {
@@ -89,7 +90,7 @@ export function compileToWat(
       cAstRoot,
       moduleRepository
     );
-    warnings.push(...processorWarnings);
+    warnings.push(...(processorWarnings.map(w => generateCompilationWarningMessage(w.message, cSourceCode, w.position))));
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = generateWat(wasmModule);
     return {

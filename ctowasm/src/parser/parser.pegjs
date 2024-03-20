@@ -542,10 +542,11 @@
   function createPrefixExpressionNode(firstExpr, operations) {
     let currNode = firstExpr;
     for (let i = operations.length - 1; i >= 0; --i) {
-      currNode = {
-        ...operations[i],
+      const { type, ...rest } = operations[i];
+      currNode = generateNode(type, {
+        ...rest,
         expr: currNode,
-      };
+      });
     }
     return currNode;
   }
@@ -1858,11 +1859,11 @@ unary_expression
   / postfix_expression
 
 prefix_operation
-  = operator:("++" / "--") { return generateNode("PrefixExpression", { operator }); }
-  / operator:("+" / "-" / "!" / "~") { return generateNode("PrefixExpression", { operator }); }
-  / operator:("*") { return generateNode("PointerDereference"); }
-  / "&" { return generateNode("AddressOfExpression"); }
-  / "sizeof" { return generateNode("SizeOfExpression", { subtype: "expression" }); }
+  = operator:("++" / "--") { return { type: "PrefixExpression", operator }; }
+  / operator:("+" / "-" / "!" / "~") { return { type: "PrefixExpression", operator }; }
+  / operator:("*") { return { type: "PointerDereference" }; }
+  / "&" { return { type: "AddressOfExpression" }; }
+  / "sizeof" { return { type: "SizeOfExpression", subtype: "expression" }; }
 
 postfix_expression
   = firstExpr:primary_expression operations:(_ @postfix_operation)+ { return createPostfixExpressionNode(firstExpr, operations); }

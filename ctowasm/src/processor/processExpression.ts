@@ -416,7 +416,11 @@ export default function processExpression(
       }
 
       if (isVoidPointer(derefedExpressionDataType)) {
-        addWarning("cannot dereference void pointer", expr.position);
+        addWarning("dereferencing void pointer", expr.position);
+        return {
+          originalDataType: derefedExpressionDataType.pointeeType,
+          exprs: []
+        }
       }
 
       // if the derefed expression a function pointer, it remains one

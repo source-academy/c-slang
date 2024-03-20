@@ -8,7 +8,7 @@ import processFunctionDefinition from "~src/processor/processFunctionDefinition"
 import { processGlobalScopeDeclaration } from "~src/processor/processDeclaration";
 import { SymbolTable } from "~src/processor/symbolTable";
 import ModuleRepository, { ModuleName } from "~src/modules";
-import { ProcessingError } from "~src/errors";
+import { ProcessingError, generateCompilationWarningMessage } from "~src/errors";
 import { Position } from "~src/parser/c-ast/misc";
 import { Warning, warnings } from "~src/processor/warningUtil";
 
