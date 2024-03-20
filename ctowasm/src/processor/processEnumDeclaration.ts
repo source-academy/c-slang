@@ -13,7 +13,7 @@ export default function processEnumDeclaration(
       const value = evaluateCompileTimeExpression(enumerator.value).value;
       if (typeof value !== "bigint") {
         throw new ProcessingError(
-          `Enumerator value for '${enumerator.name}' is not an integer constant`,
+          `enumerator value for '${enumerator.name}' is not an integer constant`,
         );
       }
       currValue = value;

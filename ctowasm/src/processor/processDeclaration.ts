@@ -97,17 +97,17 @@ export function processLocalDeclaration(
 function runInitializerChecks(dataType: DataType, initalizer: Initializer) {
   if (isScalarDataType(dataType)) {
     if (initalizer.type === "InitializerList" && initalizer.values.length > 1) {
-      throw new ProcessingError("Excess elements in scalar intializer"); // undefined behaviour, for not throw TODO: perhaps toggle based on flag
+      throw new ProcessingError("excess elements in scalar intializer"); // undefined behaviour, for not throw TODO: perhaps toggle based on flag
     }
   } else if (dataType.type === "function") {
     throw new ProcessingError(
-      `A function cannot be initialized like a variable`,
+      `a function cannot be initialized like a variable`,
     );
   } else if (
     dataType.type === "array" &&
     initalizer.type === "InitializerSingle"
   ) {
-    throw new ProcessingError("Invalid intializer for aggregate type");
+    throw new ProcessingError("invalid intializer for aggregate type");
   }
 }
 
@@ -244,7 +244,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
     } else if (dataType.type === "array") {
       if (initializer.type === "InitializerSingle") {
         // TODO: check if this is correct
-        throw new ProcessingError("Invalid initializer for aggregate type");
+        throw new ProcessingError("invalid initializer for aggregate type");
       }
       const numElements = evaluateCompileTimeExpression(
         dataType.numElements,
@@ -314,7 +314,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           }
         } else if (dataType.elementDataType.type === "function") {
           // should not be possible
-          throw new ProcessingError("Cannot have array of functions");
+          throw new ProcessingError("cannot have array of functions");
         }
       }
     } else if (dataType.type === "struct") {
@@ -345,7 +345,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           return offset;
         } else {
           throw new ProcessingError(
-            "Cannot assign scalar expression to aggregate type",
+            "cannot assign scalar expression to aggregate type",
           );
         }
       }
@@ -371,11 +371,11 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             helper(field.dataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
           }
         } else if (field.dataType.type === "function") {
-          throw new ProcessingError("Function is not valid field of struct");
+          throw new ProcessingError("function is not valid field of struct");
         }
       }
     } else if (dataType.type === "function") {
-      throw new ProcessingError("Cannot initialize function type");
+      throw new ProcessingError("cannot initialize function type");
     }
     return offset;
   }
@@ -409,7 +409,7 @@ export function processDataSegmentVariableDeclaration(
     if (node.dataType.type === "function") {
       if (typeof node.initializer !== "undefined") {
         throw new ProcessingError(
-          `Function ${node.name} is initialized like a variable`,
+          `function ${node.name} is initialized like a variable`,
         );
       }
     }
@@ -468,7 +468,7 @@ export function unpackDataSegmentInitializerAccordingToDataType(
         } catch (e) {
           if (e instanceof ProcessingError) {
             throw new ProcessingError(
-              "Initializer element is not compile-time constant",
+              "initializer element is not compile-time constant",
             );
           }
           throw e;
@@ -500,7 +500,7 @@ export function unpackDataSegmentInitializerAccordingToDataType(
     } else if (dataType.type === "array") {
       if (initializer.type === "InitializerSingle") {
         // TODO: check if this is correct
-        throw new ProcessingError("Invalid initializer for aggregate type");
+        throw new ProcessingError("invalid initializer for aggregate type");
       }
       const numElements = evaluateCompileTimeExpression(
         dataType.numElements,
@@ -527,13 +527,13 @@ export function unpackDataSegmentInitializerAccordingToDataType(
           }
         } else if (dataType.elementDataType.type === "function") {
           // should not be possible
-          throw new ProcessingError("Cannot have array of functions");
+          throw new ProcessingError("cannot have array of functions");
         }
       }
     } else if (dataType.type === "struct") {
       if (initializer.type === "InitializerSingle") {
         // TODO: check if this is correct
-        throw new ProcessingError("Invalid initializer for aggregate type");
+        throw new ProcessingError("invalid initializer for aggregate type");
       }
       for (const field of dataType.fields) {
         if (
@@ -556,11 +556,11 @@ export function unpackDataSegmentInitializerAccordingToDataType(
             helper(field.dataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
           }
         } else if (field.dataType.type === "function") {
-          throw new ProcessingError("Function is not valid field of struct");
+          throw new ProcessingError("function is not valid field of struct");
         }
       }
     } else if (dataType.type === "function") {
-      throw new ProcessingError("Cannot initialize function type");
+      throw new ProcessingError("cannot initialize function type");
     }
     return offset;
   }

@@ -195,10 +195,10 @@
           if (isRootScope) {
             if (identifierDefinition.symbolEntry.type !== "variable" || removedIdentifiersInScope[identifierDefinition.name].type !== "variable" || JSON.stringify(identifierDefinition.symbolEntry.dataType) !== JSON.stringify(removedIdentifiersInScope[identifierDefinition.name].dataType)) {
               // in root scope it is allowed to have the 2 declarations with linkage (object/function) as long as they declare the same type
-              error(`Redeclaration of '${identifierDefinition.name}' with conflicting type`); 
+              error(`redeclaration of '${identifierDefinition.name}' with conflicting type`); 
             }
           } else {
-            error(`Redeclaration of '${identifierDefinition.name}'`);
+            error(`redeclaration of '${identifierDefinition.name}'`);
           }  
         }
       }
@@ -212,11 +212,11 @@
         if (tagDefinition.name in removedTagsInScope) {
           if (removedTagsInScope[tagDefinition.name].type === tagDefinition.symbolEntry.type) {
             // redefinition of enum / struct
-            error(`Redefinition of '${removedTagsInScope[tagDefinition.name].type} ${tagDefinition.name}'`);
+            error(`redefinition of '${removedTagsInScope[tagDefinition.name].type} ${tagDefinition.name}'`);
           } else {
             if (removedTagsInScope[tagDefinition.name].type !== "incomplete" || removedTagsInScope[tagDefinition.name].subtype !== tagDefinition.symbolEntry.type) {
               // there is only an error is the previous tag was not incomplete or it was incomplete and its declaerd a different type of tag
-              error(`Redefinition of '${tagDefinition.name}' as wrong kind of tag`)
+              error(`redefinition of '${tagDefinition.name}' as wrong kind of tag`)
             }
           }
         }
@@ -1151,7 +1151,7 @@
     const removedTags = new Set();
     for (const tagDefinition of tagDefinitions) {
       if (removedTags.has(tagDefinition.name)) {
-        error(`Redefinition of '${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}'`);
+        error(`redefinition of '${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}'`);
       }
       removedTags.add(tagDefinition.name);
       removeTagSymbolEntry(tagDefinition.name);
@@ -1430,7 +1430,7 @@
     const setOfTags = new Set(); 
     parameterDeclarations.forEach((paramDeclaration) => {
       if (paramDeclaration.name !== null && setOfIdentifiers.has(paramDeclaration.name)) {
-        error(`Redefinition of parameter '${paramDeclaration.name}'`)
+        error(`redefinition of parameter '${paramDeclaration.name}'`)
       }
       dataTypes.push(paramDeclaration.dataType);
       names.push(paramDeclaration.name);
@@ -1449,7 +1449,7 @@
       if (paramDeclaration.tagDefinitions) {
         tagDefinitions.forEach(tagDefinition => {
           if (setOfTags.has(tagDefinition.name)) {
-            error(`Redefinition of '${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}'`);
+            error(`redefinition of '${tagDefinition.tagSymbolEntry.type} ${tagDefinition.name}'`);
           } 
         });
         tagDefinitions.push(...paramDeclaration.tagDefinitions);
@@ -1533,7 +1533,7 @@
     for (const identifierDefinition of identifierDefinitions) {
       if (identifierDefinition.name !== null) {
         if (removedIdentifiers.has(identifierDefinition.name)) {
-          error(`Redeclaration of variable ${identifierDefinition.name}`)
+          error(`redeclaration of variable ${identifierDefinition.name}`)
         }
         removedIdentifiers.add(identifierDefinition.name);
         removeIdentifierSymbolEntry(identifierDefinition.name);

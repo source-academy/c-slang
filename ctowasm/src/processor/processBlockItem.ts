@@ -110,7 +110,7 @@ export default function processBlockItem(
       // there must be an enclosing func
       if (typeof enclosingFunc === "undefined") {
         throw new ProcessingError(
-          "Return statement is not valid outside of a function",
+          "return statement is not valid outside of a function",
           node.position,
         );
       }
@@ -161,7 +161,7 @@ export default function processBlockItem(
         convertArrayToPointer: true,
       });
       if (!isIntegralDataType(dataTypeOfTargetExpression)) {
-        throw new ProcessingError("Switch quantity is not an integer");
+        throw new ProcessingError("switch quantity is not an integer");
       }
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
@@ -271,7 +271,7 @@ export default function processBlockItem(
     } else if (node.type === "Declaration" || node.type === "EnumDeclaration") {
       return processLocalDeclaration(node, symbolTable, enclosingFunc);
     } else {
-      throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);
+      throw new ProcessingError(`unhandled C AST node: ${toJson(node)}`);
     }
   } catch (e) {
     if (e instanceof ProcessingError && e.position === null) {

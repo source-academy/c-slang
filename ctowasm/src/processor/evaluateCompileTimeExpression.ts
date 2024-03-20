@@ -139,7 +139,7 @@ export default function evaluateCompileTimeExpression(
 
     if (dataType.type !== "primary") {
       throw new ProcessingError(
-        "Invalid compile-time expression",
+        "invalid compile-time expression",
       );
     }
 
@@ -190,7 +190,7 @@ export default function evaluateCompileTimeExpression(
     }
   } else {
     throw new ProcessingError(
-      "Cannot evaluate non compile-time constant type at compile-time",
+      "cannot evaluate non compile-time constant type at compile-time",
     );
   }
 }

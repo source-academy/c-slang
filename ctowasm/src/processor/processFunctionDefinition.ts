@@ -39,7 +39,7 @@ export default function processFunctionDefinition(
     node.dataType.returnType !== null &&
     node.dataType.returnType.type === "array"
   ) {
-    throw new ProcessingError("Arrays cannot be returned from a function");
+    throw new ProcessingError("arrays cannot be returned from a function");
   }
 
   const funcSymbolTable = new SymbolTable(symbolTable);
@@ -212,7 +212,7 @@ function checkFunctionCallArgsAreCompatible(
 ) {
   if (args.length != fnDataType.parameters.length) {
     throw new ProcessingError(
-      "Number of arguments provided to function call does not match number of parameters specfied in prototype"
+      "number of arguments provided to function call does not match number of parameters specfied in prototype"
     );
   }
   for (let i = 0; i < args.length; ++i) {
@@ -225,7 +225,7 @@ function checkFunctionCallArgsAreCompatible(
       )
     ) {
       throw new ProcessingError(
-        `Cannot assign function call argument to parameter\nFunction parameter type: "${stringifyDataType(
+        `cannot assign function call argument to parameter\nFunction parameter type: "${stringifyDataType(
           fnDataType.parameters[i]
         )}"\nFunction argument type: "${stringifyDataType(argsDataTypes[i])}"`
       );

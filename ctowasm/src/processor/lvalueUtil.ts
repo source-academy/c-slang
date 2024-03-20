@@ -25,7 +25,7 @@ function isAllowableLValueType(dataType: DataType) {
  * @param expression the original expression
  * @param processedExpressionWrapper the wrapped processed expression
  */
-function isLValue(
+export function isLValue(
   expression: Expression,
   processedExpressionWrapper: ExpressionWrapperP
 ) {
@@ -39,7 +39,7 @@ function isLValue(
   );
 }
 
-function isModifiableLValue(
+export function isModifiableLValue(
   expression: Expression,
   processedExpressionWrapper: ExpressionWrapperP
 ) {
@@ -53,7 +53,7 @@ function isModifiableLValue(
   );
 }
 
-function isStructModifiableDataType(dataType: StructDataType) {
+export function isStructModifiableDataType(dataType: StructDataType) {
   if (dataType.isConst) {
     return false;
   }

@@ -31,7 +31,7 @@ function getNumberOfElementsInArray(dataType: ArrayDataType): number {
       dataType.numElements
     );
     if (numElementsConstant.type === "FloatConstant") {
-      throw new ProcessingError("Array size must be an integer-type");
+      throw new ProcessingError("array size must be an integer-type");
     }
     return Number(numElementsConstant.value);
   } catch (e) {
@@ -398,7 +398,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
         dataType.numElements
       );
       if (numElementsConstant.type === "FloatConstant") {
-        throw new ProcessingError("Array size must be an integer-type");
+        throw new ProcessingError("array size must be an integer-type");
       }
       return (
         getDataTypeNumberOfPrimaryObjects(dataType.elementDataType) *
@@ -407,7 +407,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
     } catch (e) {
       if (e instanceof ProcessingError) {
         throw new ProcessingError(
-          "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
+          "array size must be compile-time constant expression (Variable Length Arrays not supported)"
         );
       } else {
         throw e;
@@ -470,7 +470,7 @@ export function convertFunctionDataTypeToFunctionDetails(
   if (dataType.returnType !== null) {
     if (dataType.returnType.type === "array") {
       throw new ProcessingError(
-        "Array is not a valid return type from a function"
+        "array is not a valid return type from a function"
       );
     }
 

@@ -180,19 +180,19 @@ export class SymbolTable {
       // given variable already exists in given scope
       // multiple declarations only allowed outside of function bodies
       if (this.parentTable !== null) {
-        throw new ProcessingError(`Redeclaration of ${name}`);
+        throw new ProcessingError(`redeclaration of ${name}`);
       }
       const symbolEntry = this.symbols[name];
       if (
         symbolEntry.type === "function" ||
         symbolEntry.type === "enumerator"
       ) {
-        throw new ProcessingError(`Redeclaration of ${name}`);
+        throw new ProcessingError(`redeclaration of ${name}`);
       }
 
       if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
-          `Conflicting types for ${name}:  redeclared as "${stringifyDataType(dataType)}" instead of ${stringifyDataType(
+          `conflicting types for ${name}:  redeclared as "${stringifyDataType(dataType)}" instead of ${stringifyDataType(
             symbolEntry.dataType,
           )}`,
         ); //TODO: stringify there datatype in english instead of just printing json
@@ -245,7 +245,7 @@ export class SymbolTable {
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
         throw new ProcessingError(
-          `Redeclaration of ${name} as different kind of symbol: function instead of variable`,
+          `redeclaration of ${name} as different kind of symbol: function instead of variable`,
         );
       }
 

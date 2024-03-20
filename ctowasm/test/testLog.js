@@ -644,23 +644,23 @@ const testLog = {
   error: {
     enum_redeclaration: {
       title: "Redeclaration of enum type",
-      expectedErrorMessages: ["Error: Redefinition of 'enum x'"],
+      expectedErrorMessages: ["Error: redefinition of 'enum x'"],
     },
     variable_redeclaration: {
       title: "Redeclaration of identifier",
-      expectedErrorMessages: ["Error: Redeclaration of 'x'"],
+      expectedErrorMessages: ["Error: redeclaration of 'x'"],
     },
     redefined_tags: {
       title: "Redefinition of tags",
-      expectedErrorMessages: ["Error: Redefinition of 'X' as wrong kind of tag", "Error: Redefinition of 'A' as wrong kind of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
+      expectedErrorMessages: ["Error: redefinition of 'X' as wrong kind of tag", "Error: Redefinition of 'A' as wrong kind of tag", "Error: Redefinition of 'struct X'", "Error: Redefinition of 'Y' as wrong kind of tag"]
     },
     typedef_diff_types: {
       title: "Redefintion of typedefs",
-      expectedErrorMessages: ["Error: Redeclaration of 't'", "Error: Redeclaration of 'b' with conflicting type"]
+      expectedErrorMessages: ["Error: redeclaration of 't'", "Error: Redeclaration of 'b' with conflicting type"]
     },
     fn_param_redefinition: {
       title: "Redefintion of function parameter",
-      expectedErrorMessages: ["Error: Redefinition of parameter 'x'"]
+      expectedErrorMessages: ["Error: redefinition of parameter 'x'"]
     },
     undeclared_fn: {
       title: "Call of undeclared function",
@@ -668,11 +668,11 @@ const testLog = {
     },
     fn_call_with_wrong_args_1: {
       title: "Function call with too many args",
-      expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
+      expectedErrorMessages: ["Error: number of arguments provided to function call does not match number of parameters specfied in prototype"]
     },
     fn_call_with_wrong_args_2: {
       title: "Function call with too few args",
-      expectedErrorMessages: ["Error: Number of arguments provided to function call does not match number of parameters specfied in prototype"]
+      expectedErrorMessages: ["Error: number of arguments provided to function call does not match number of parameters specfied in prototype"]
     },
     fn_call_with_wrong_args_3: {
       title: "Function call with wrong argument type",
@@ -684,7 +684,7 @@ const testLog = {
     },
     variable_redeclaration: {
       title: "Redeclared variable with no linkage",
-      expectedErrorMessages: ["Error: Redeclaration of 'x'"]
+      expectedErrorMessages: ["Error: redeclaration of 'x'"]
     },
     undeclared_var_assignment_1: {
       title: "Assignment to undeclared variable 1",
@@ -700,11 +700,11 @@ const testLog = {
     },
     typedef_variable_dec_conflict: {
       title: "Redeclaring symbol as typedef and vice versa",
-      expectedErrorMessages: ["Error: Redeclaration of 'x'", "Error: Redeclaration of 'y'"]
+      expectedErrorMessages: ["Error: redeclaration of 'x'", "Error: Redeclaration of 'y'"]
     },
     array_subscript_non_pointer_type: {
       title: "Array subscript expression on non pointer type",
-      expectedErrorMessages: ["Error: Cannot dereference non-pointer type"]
+      expectedErrorMessages: ["Error: cannot dereference non-pointer type"]
     },
     declare_var_incomplete_type: {
       title: "Declaring variable with incomplete type",
@@ -725,6 +725,22 @@ const testLog = {
     "struct_ptr_member_access_nonexistent_field": {
       title: "Access nonexistent member in struct pointer",
       expectedErrorMessages: ["Error: struct X has no member named 'y'"]
+    },
+    "increment_non_real_var": {
+      title: "Increment non-real and non-pointer type",
+      expectedErrorMessages: ["Error: wrong type argument to increment"]
+    },
+    "increment_non_modifiable_lvalue": {
+      title: "Increment non-modifiable lvalue",
+      expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
+    },
+    "decrement_non_modifiable_lvalue": {
+      title: "Decrement non-modifiable lvalue",
+      expectedErrorMessages: ["Error: Wrong type argument to decrement"]
+    },
+    "decrement_non_real_var": {
+      title: "Decrement non-modifiable lvalue",
+      expectedErrorMessages: ["Error: argument to decrement is not a modifiable lvalue"]
     }
   },
 };

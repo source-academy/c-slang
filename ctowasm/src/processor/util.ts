@@ -27,7 +27,7 @@ export function processCondition(
   });
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
-      `Cannot use ${dataTypeOfConditionExpression.type} where scalar is required`,
+      `cannot use ${dataTypeOfConditionExpression.type} where scalar is required`,
     );
   }
   return processedCondition.exprs[0];
@@ -97,7 +97,7 @@ export function extractFunctionDataTypeFromFunctionPointer(
 ): FunctionDataType {
   if (!isFunctionPointer(dataType)) {
     throw new ProcessingError(
-      "Called object is not a function or function pointer",
+      "called object is not a function or function pointer",
     );
   }
 

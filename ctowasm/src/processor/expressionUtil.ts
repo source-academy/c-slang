@@ -31,6 +31,7 @@ import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
 import { getDataTypeOfExpression } from "~src/processor/util";
+import { checkPrePostfixTypeConstraint } from "~src/processor/constraintChecks";
 
 function isRelationalOperator(op: BinaryOperator) {
   return (
@@ -71,39 +72,39 @@ export function checkBinaryExpressionDataTypesValidity(
       leftExprDataType.pointeeType === null ||
       rightExprDataType.pointeeType === null
     ) {
-      throw new ProcessingError("Cannot perform arithmetic on void pointer");
+      throw new ProcessingError("cannot perform arithmetic on void pointer");
     }
     if (operator !== "-" && !isRelationalOperator(operator)) {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on 2 pointer type operands'`,
+        `cannot perform '${operator}' binary operation on 2 pointer type operands'`,
       );
     }
   } else if (leftExprDataType.type === "pointer") {
     if (leftExprDataType.pointeeType === null) {
-      throw new ProcessingError("Cannot perform arithmetic on void pointer");
+      throw new ProcessingError("cannot perform arithmetic on void pointer");
     }
     if (operator !== "+" && operator !== "-") {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`,
+        `cannot perform '${operator}' binary operation on pointer and non-pointer type`,
       );
     }
     if (!isIntegralDataType(rightExprDataType)) {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-integral type`,
+        `cannot perform '${operator}' binary operation on pointer and non-integral type`,
       );
     }
   } else if (rightExprDataType.type === "pointer") {
     if (rightExprDataType.pointeeType === null) {
-      throw new ProcessingError("Cannot perform arithmetic on void pointer");
+      throw new ProcessingError("cannot perform arithmetic on void pointer");
     }
     if (operator !== "+" && operator !== "-") {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-pointer type`,
+        `cannot perform '${operator}' binary operation on pointer and non-pointer type`,
       );
     }
     if (!isIntegralDataType(leftExprDataType)) {
       throw new ProcessingError(
-        `Cannot perform '${operator}' binary operation on pointer and non-integral type`,
+        `cannot perform '${operator}' binary operation on pointer and non-integral type`,
       );
     }
   } else {
@@ -123,7 +124,7 @@ export function convertDataTypeToScalarCDataType(
     dataType.type !== "primary" &&
     dataType.type !== "array"
   ) {
-    throw new ProcessingError("Non scalar data type");
+    throw new ProcessingError("non scalar data type");
   }
   return dataType.type === "pointer" || dataType.type === "array"
     ? "pointer"
@@ -255,16 +256,6 @@ export function determineResultDataTypeOfBinaryExpression(
 }
 
 /**
- * Checks if the given dataType fulfills pre or postfix type constraint.
- * Constraint 6.5.2.4/1 of C17 standard.
- * dataType must be modificable lvalue
- * 
- */
-function checkPrePostfixTypeConstraint(dataType: DataType) {
-  return !dataType.isConst;
-}
-
-/**
  * Get the MemoryStore and MemoryLoad nodes needed for a increment/decrement of an lvalue of appropriate type.
  */
 export function getArithmeticPrePostfixExpressionNodes(
@@ -272,15 +263,13 @@ export function getArithmeticPrePostfixExpressionNodes(
   symbolTable: SymbolTable,
 ): { storeNodes: MemoryStore[]; loadNode: MemoryLoad; dataType: DataType } {
   const binaryOperator = expr.operator === "++" ? "+" : "-";
-
   const processedExpr = processExpression(expr.expr, symbolTable);
+  checkPrePostfixTypeConstraint(expr, processedExpr);
   const dataType = getDataTypeOfExpression({
     expression: processedExpr
   });
 
-  
-
-  // dop some checks on the operand
+  // do some checks on the operand
   // simply use the load exprs from the processed expr to create the memory store staements
   if (processedExpr.exprs[0].type !== "MemoryLoad") {
     throw new ProcessingError(
@@ -291,7 +280,7 @@ export function getArithmeticPrePostfixExpressionNodes(
       `'${expr.operator}' expression operand must be a scalar type`,
     );
   } else if (isVoidPointer(dataType)) {
-    throw new ProcessingError(`Cannot perform arithmetic on void pointer`);
+    throw new ProcessingError(`cannot perform arithmetic on void pointer`);
   }
 
   let amountToIncrementBy;
@@ -368,7 +357,7 @@ export function processPrefixExpression(
       !isArithmeticDataType(processedExpression.originalDataType)
     ) {
       throw new ProcessingError(
-        `Arithmetic operand required in prefix '${prefixExpression.operator}' expression`,
+        `arithmetic operand required in prefix '${prefixExpression.operator}' expression`,
       );
     } else if (
       prefixExpression.operator === "~" &&
@@ -376,14 +365,14 @@ export function processPrefixExpression(
         !isIntegerType(processedExpression.originalDataType.primaryDataType))
     ) {
       throw new ProcessingError(
-        `Integer-type operand required in prefix '${prefixExpression.operator}' expression`,
+        `integer-type operand required in prefix '${prefixExpression.operator}' expression`,
       );
     } else if (
       prefixExpression.operator === "!" &&
       !isScalarDataType(processedExpression.originalDataType)
     ) {
       throw new ProcessingError(
-        `Scalar operand required in prefix '${prefixExpression.operator}' expression`,
+        `scalar operand required in prefix '${prefixExpression.operator}' expression`,
       );
     }
 

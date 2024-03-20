@@ -47,7 +47,7 @@ export function getZeroInializerByteStrForDataType(dataType: DataType) {
           : getZeroInializerByteStrForDataType(field.dataType);
     });
   } else if (dataType.type === "function") {
-    throw new ProcessingError("Cannot initialize a function data type");
+    throw new ProcessingError("cannot initialize a function data type");
   }
 
   return byteStr;

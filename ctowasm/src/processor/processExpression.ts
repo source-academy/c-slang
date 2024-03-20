@@ -90,7 +90,7 @@ export default function processExpression(
         !isScalarDataType(processedRightExprDataType)
       ) {
         throw new ProcessingError(
-          `Non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExprDataType.type}, right operand: ${processedRightExprDataType.type}`,
+          `non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExprDataType.type}, right operand: ${processedRightExprDataType.type}`,
         );
       }
 
@@ -99,7 +99,7 @@ export default function processExpression(
         processedRightExpr.exprs.length > 1
       ) {
         throw new ProcessingError(
-          "Aggregate expressions cannot be used in binary expressions",
+          "aggregate expressions cannot be used in binary expressions",
           expr.position,
         );
       }
@@ -410,11 +410,11 @@ export default function processExpression(
         convertArrayToPointer: true,
       });
       if (derefedExpressionDataType.type !== "pointer") {
-        throw new ProcessingError(`Cannot dereference non-pointer type`);
+        throw new ProcessingError(`cannot dereference non-pointer type`);
       }
 
       if (derefedExpressionDataType.pointeeType === null) {
-        throw new ProcessingError(`Cannot dereference void pointer`);
+        throw new ProcessingError(`cannot dereference void pointer`);
       }
 
       // if the derefed expression a function pointer, it remains one
@@ -718,7 +718,7 @@ export default function processExpression(
       };
     } else {
       // this should not happen
-      throw new ProcessingError(`Unhandled Expression: ${toJson(expr)}`);
+      throw new ProcessingError(`unhandled Expression: ${toJson(expr)}`);
     }
   } catch (e) {
     if (e instanceof ProcessingError && e.position === null) {
