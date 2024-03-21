@@ -46,71 +46,6 @@ function isRelationalOperator(op: BinaryOperator) {
 }
 
 /**
- * Checks that a given binary expression is valid based on the data types of operands and the operator used.
- */
-export function checkBinaryExpressionDataTypesValidity(
-  leftExprDataType: DataType,
-  rightExprDataType: DataType,
-  operator: BinaryOperator
-) {
-  if (
-    !isScalarDataType(leftExprDataType) ||
-    !isScalarDataType(rightExprDataType)
-  ) {
-    throw new ProcessingError(
-      `'${operator}' expression cannot be performed on non-scalar type`
-    );
-  }
-
-  leftExprDataType = leftExprDataType as ScalarDataType;
-  rightExprDataType = rightExprDataType as ScalarDataType;
-
-  if (
-    leftExprDataType.type === "pointer" &&
-    rightExprDataType.type === "pointer"
-  ) {
-    if (isVoidPointer(leftExprDataType) || isVoidPointer(rightExprDataType)) {
-      throw new ProcessingError("cannot perform arithmetic on void pointer");
-    }
-    if (operator !== "-" && !isRelationalOperator(operator)) {
-      throw new ProcessingError(
-        `cannot perform '${operator}' binary operation on 2 pointer type operands'`
-      );
-    }
-  } else if (leftExprDataType.type === "pointer") {
-    if (isVoidPointer(leftExprDataType)) {
-      throw new ProcessingError("cannot perform arithmetic on void pointer");
-    }
-    if (operator !== "+" && operator !== "-") {
-      throw new ProcessingError(
-        `cannot perform '${operator}' binary operation on pointer and non-pointer type`
-      );
-    }
-    if (!isIntegralDataType(rightExprDataType)) {
-      throw new ProcessingError(
-        `cannot perform '${operator}' binary operation on pointer and non-integral type`
-      );
-    }
-  } else if (rightExprDataType.type === "pointer") {
-    if (isVoidPointer(rightExprDataType)) {
-      throw new ProcessingError("cannot perform arithmetic on void pointer");
-    }
-    if (operator !== "+" && operator !== "-") {
-      throw new ProcessingError(
-        `cannot perform '${operator}' binary operation on pointer and non-pointer type`
-      );
-    }
-    if (!isIntegralDataType(leftExprDataType)) {
-      throw new ProcessingError(
-        `cannot perform '${operator}' binary operation on pointer and non-integral type`
-      );
-    }
-  } else {
-    // TODO: add more data type checks here in future
-  }
-}
-
-/**
  * Extracts the ScalarCDataType of a dataType.
  * @throws ProcessingError if the argument is not actually scalar data type.
  */
@@ -149,7 +84,7 @@ export function determineConditionalExpressionDataType(
  * Determines the type that operands in a binary expression should be converted to before the operation,
  * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
  * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
- *  The data type of all relational operator expressions is signed int, as per the standard.
+ * The data type of all relational operator expressions is signed int, as per the standard.
  */
 export function determineOperandTargetDataTypeOfBinaryExpression(
   leftExprDataType: ScalarDataType,

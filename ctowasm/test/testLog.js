@@ -652,132 +652,225 @@ const testLog = {
     },
     redefined_tags: {
       title: "Redefinition of tags",
-      expectedErrorMessages: ["Error: redefinition of 'X' as wrong kind of tag", "Error: redefinition of 'A' as wrong kind of tag", "Error: redefinition of 'struct X'", "Error: redefinition of 'Y' as wrong kind of tag"]
+      expectedErrorMessages: [
+        "Error: redefinition of 'X' as wrong kind of tag",
+        "Error: redefinition of 'A' as wrong kind of tag",
+        "Error: redefinition of 'struct X'",
+        "Error: redefinition of 'Y' as wrong kind of tag",
+      ],
     },
     typedef_diff_types: {
       title: "Redefintion of typedefs",
-      expectedErrorMessages: ["Error: redeclaration of 't'", "Error: redeclaration of 'b' with conflicting type"]
+      expectedErrorMessages: [
+        "Error: redeclaration of 't'",
+        "Error: redeclaration of 'b' with conflicting type",
+      ],
     },
     fn_param_redefinition: {
       title: "Redefintion of function parameter",
-      expectedErrorMessages: ["Error: redefinition of parameter 'x'"]
+      expectedErrorMessages: ["Error: redefinition of parameter 'x'"],
     },
     undeclared_fn: {
       title: "Call of undeclared function",
-      expectedErrorMessages: ["Error: 'f' undeclared"]
+      expectedErrorMessages: ["Error: 'f' undeclared"],
     },
     fn_call_with_wrong_args_1: {
       title: "Function call with too many args",
-      expectedErrorMessages: ["Error: number of arguments provided to function call does not match number of parameters specfied in prototype"]
+      expectedErrorMessages: [
+        "Error: number of arguments provided to function call does not match number of parameters specfied in prototype",
+      ],
     },
     fn_call_with_wrong_args_2: {
       title: "Function call with too few args",
-      expectedErrorMessages: ["Error: number of arguments provided to function call does not match number of parameters specfied in prototype"]
+      expectedErrorMessages: [
+        "Error: number of arguments provided to function call does not match number of parameters specfied in prototype",
+      ],
     },
     fn_call_with_wrong_args_3: {
       title: "Function call with wrong argument type",
-      expectedErrorMessages: ["Error: cannot assign function call argument to parameter"]
-    },  
+      expectedErrorMessages: [
+        "Error: cannot assign function call argument to parameter",
+      ],
+    },
     absent_main: {
       title: "Undefined main function",
-      expectedErrorMessages: ["Error: main function not defined"] 
+      expectedErrorMessages: ["Error: main function not defined"],
     },
     variable_redeclaration: {
       title: "Redeclared variable with no linkage",
-      expectedErrorMessages: ["Error: redeclaration of 'x'"]
+      expectedErrorMessages: ["Error: redeclaration of 'x'"],
     },
     undeclared_var_assignment_1: {
       title: "Assignment to undeclared variable 1",
-      expectedErrorMessages: ["Error: 'x' undeclared"]
+      expectedErrorMessages: ["Error: 'x' undeclared"],
     },
     undeclared_var_assignment_2: {
       title: "Assignment to undeclared variable 2",
-      expectedErrorMessages: ["Error: 'y' undeclared"]
+      expectedErrorMessages: ["Error: 'y' undeclared"],
     },
     undeclared_var_return: {
       title: "Attempt return of undeclared variable",
-      expectedErrorMessages: ["Error: 'x' undeclared"]
+      expectedErrorMessages: ["Error: 'x' undeclared"],
     },
     typedef_variable_dec_conflict: {
       title: "Redeclaring symbol as typedef and vice versa",
-      expectedErrorMessages: ["Error: redeclaration of 'x'", "Error: redeclaration of 'y'"]
+      expectedErrorMessages: [
+        "Error: redeclaration of 'x'",
+        "Error: redeclaration of 'y'",
+      ],
     },
     array_subscript_non_pointer_type: {
       title: "Array subscript expression on non pointer type",
-      expectedErrorMessages: ["Error: cannot dereference non-pointer type"]
+      expectedErrorMessages: ["Error: cannot dereference non-pointer type"],
     },
     declare_var_incomplete_type: {
       title: "Declaring variable with incomplete type",
-      expectedErrorMessages: ["Error: 'X' is an incomplete type"]
+      expectedErrorMessages: ["Error: 'X' is an incomplete type"],
     },
     struct_member_access_nonexistent_field: {
       title: "Access nonexistent member in struct",
-      expectedErrorMessages: ["Error: struct X has no member named 'y'"]
+      expectedErrorMessages: ["Error: struct X has no member named 'y'"],
     },
     non_struct_member_access: {
       title: "Member access in non struct type",
-      expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
+      expectedErrorMessages: [
+        "Error: request for member 'field' in something that is not a structure",
+      ],
     },
     non_struct_pointer_member_access: {
       title: "Member access in non struct pointer",
-      expectedErrorMessages: ["Error: request for member 'field' in something that is not a structure"]
+      expectedErrorMessages: [
+        "Error: request for member 'field' in something that is not a structure",
+      ],
     },
     struct_ptr_member_access_nonexistent_field: {
       title: "Access nonexistent member in struct pointer",
-      expectedErrorMessages: ["Error: struct X has no member named 'y'"]
+      expectedErrorMessages: ["Error: struct X has no member named 'y'"],
     },
     increment_non_real_var: {
       title: "Increment non-real and non-pointer type",
-      expectedErrorMessages: ["Error: wrong type argument to increment"]
+      expectedErrorMessages: ["Error: wrong type argument to increment"],
     },
     increment_non_modifiable_lvalue: {
       title: "Increment non-modifiable lvalue",
-      expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
+      expectedErrorMessages: [
+        "Error: argument to increment is not a modifiable lvalue",
+      ],
     },
     decrement_non_modifiable_lvalue: {
       title: "Decrement non-modifiable lvalue",
-      expectedErrorMessages: ["Error: argument to decrement is not a modifiable lvalue"]
+      expectedErrorMessages: [
+        "Error: argument to decrement is not a modifiable lvalue",
+      ],
     },
     decrement_non_real_var: {
       title: "Decrement non-real and non-pointer type",
-      expectedErrorMessages: ["Error: wrong type argument to decrement"]
+      expectedErrorMessages: ["Error: wrong type argument to decrement"],
     },
     enumerator_not_lvalue: {
       title: "Using an enumerator where lvalue is expected",
-      expectedErrorMessages: ["Error: argument to increment is not a modifiable lvalue"]
+      expectedErrorMessages: [
+        "Error: argument to increment is not a modifiable lvalue",
+      ],
     },
     addressof_non_lvalue: {
       title: "Addressof of non-lvalue",
-      expectedErrorMessages: ["Error: lvalue required for unary '&' operand"]
+      expectedErrorMessages: ["Error: lvalue required for unary '&' operand"],
     },
     deref_non_pointer: {
       title: "Dereferencing an expression that is not a pointer",
-      expectedErrorMessages: ["Error: cannot dereference non-pointer type"]
+      expectedErrorMessages: ["Error: cannot dereference non-pointer type"],
     },
     "prefix_+_non_arithmetic": {
       title: "Prefix '+' on non-arithmetic type",
-      expectedErrorMessages: ["Error: wrong type argument to unary '+' expression; arithmetic type required"]
+      expectedErrorMessages: [
+        "Error: wrong type argument to unary '+' expression; arithmetic type required",
+      ],
     },
     "prefix_-_non_arithmetic": {
       title: "Prefix '-' on non-arithmetic type",
-      expectedErrorMessages: ["Error: wrong type argument to unary '-' expression; arithmetic type required"]
+      expectedErrorMessages: [
+        "Error: wrong type argument to unary '-' expression; arithmetic type required",
+      ],
     },
     "prefix_~_non_integer": {
       title: "Prefix '~' on non integer type",
-      expectedErrorMessages: ["Error: wrong type argument in unary '~' expression; integer type required"]
+      expectedErrorMessages: [
+        "Error: wrong type argument in unary '~' expression; integer type required",
+      ],
     },
     "prefix_!_non_scalar": {
       title: "Prefix '!' on non scalar type",
-      expectedErrorMessages: ["Error: wrong type argument in unary '!' expression; scalar type required"]
+      expectedErrorMessages: [
+        "Error: wrong type argument in unary '!' expression; scalar type required",
+      ],
     },
     sizeof_function_type: {
       title: "Sizeof expression on function type",
-      expectedErrorMessages: ["Error: invalid application of 'sizeof' to function type"]
+      expectedErrorMessages: [
+        "Error: invalid application of 'sizeof' to function type",
+      ],
     },
     sizeof_incomplete_type: {
       title: "Sizeof expression on incomplete type",
-      expectedErrorMessages: ["Error: invalid application of 'sizeof' to incomplete type"]
-    }
+      expectedErrorMessages: [
+        "Error: invalid application of 'sizeof' to incomplete type",
+      ],
+    },
+    "binary_expression_errors/addition": {
+      title: "Violation of addition constraints - add to struct",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '+' (have 'struct A' and 'signed int')",
+      ],
+    },
+    "binary_expression_errors/subtraction": {
+      title: "Violation of subtraction constraints - subtract from struct",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '-' (have 'struct A' and 'signed int')",
+      ],
+    },
+    "binary_expression_errors/multiplication": {
+      title: "Violation of multiplication constraints - multiply pointer",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '*' (have 'pointer to signed int' and 'signed int')",
+      ],
+    },
+    "binary_expression_errors/remainder": {
+      title: "Violation of remainder constraints - remainder on float",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '%' (have 'float' and 'signed int')",
+      ],
+    },
+    "binary_expression_errors/bitwise_shift": {
+      title: "Violation of bitwise shift constraints - remainder on float",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '<<' (have 'float' and 'signed int')",
+      ],
+    },
+    "binary_expression_errors/relational": {
+      title: "Violation of relational constraints - relational on a struct",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '<' (have 'struct X' and 'signed int')",
+      ],
+    },
+    "binary_expression_errors/equality": {
+      title: "Violation of equality constraints - equality comparison on two incompatible pointers",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '!=' (have 'pointer to signed int' and 'pointer to signed char')",
+      ],
+    },
+    "binary_expression_errors/bitwise_and": {
+      title: "Violation of bitwise and constraints - bitwise and on float",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '&' (have 'float' and 'float')",
+      ],
+    },
+    "binary_expression_errors/logical_and": {
+      title: "Violation of logical and constraints - logical and on struct",
+      expectedErrorMessages: [
+        "Error: invalid operands to binary '&&' (have 'struct A' and 'signed int')",
+      ],
+    },
   },
 };
 

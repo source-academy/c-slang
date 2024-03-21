@@ -10,7 +10,6 @@ import {
 } from "~src/processor/c-ast/expression/expressions";
 import { MemoryLoad } from "~src/processor/c-ast/memory";
 import {
-  checkBinaryExpressionDataTypesValidity,
   determineConditionalExpressionDataType,
   determineOperandTargetDataTypeOfBinaryExpression,
   determineResultDataTypeOfBinaryExpression,
@@ -47,6 +46,7 @@ import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { StatementP } from "~src/processor/c-ast/core";
 import { addWarning } from "~src/processor/warningUtil";
+import { checkBinaryExpressionConstraints } from "~src/processor/constraintChecks";
 
 /**
  * Processes an Expression node in the context where value(s) are expected to be loaded from memory for use in a statement (action).
@@ -88,39 +88,7 @@ export default function processExpression(
         convertFunctionToPointer: true
       });
 
-      // Future work: add more specific type checking for binray expressions with different operators
-      if (
-        !isScalarDataType(processedLeftExprDataType) ||
-        !isScalarDataType(processedRightExprDataType)
-      ) {
-        throw new ProcessingError(
-          `non-scalar operand to ${expr.operator} binary expression: left operand: ${processedLeftExprDataType.type}, right operand: ${processedRightExprDataType.type}`,
-        );
-      }
-
-      if (
-        processedLeftExpr.exprs.length > 1 ||
-        processedRightExpr.exprs.length > 1
-      ) {
-        throw new ProcessingError(
-          "aggregate expressions cannot be used in binary expressions",
-          expr.position,
-        );
-      }
-
-      try {
-        checkBinaryExpressionDataTypesValidity(
-          processedLeftExprDataType,
-          processedRightExprDataType,
-          expr.operator,
-        );
-      } catch (e) {
-        if (e instanceof ProcessingError) {
-          e.addPositionInfo(expr.position);
-          throw e;
-        }
-        throw e;
-      }
+      checkBinaryExpressionConstraints(expr, processedLeftExpr, processedRightExpr)
 
       const binaryExpressionDataType =
         determineResultDataTypeOfBinaryExpression(
