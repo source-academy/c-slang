@@ -1552,6 +1552,14 @@
       addTagToSymbolTable(s.tag, {type: "struct", dataType: s});
     })
   }
+
+  function createSizeOfDataTypeExpression(dataType) {
+    if (dataType.type === "incomplete") {
+      error("invalid application of 'sizeof' to incomplete type");
+    }
+    return generateNode("SizeOfExpression", { subtype: "dataType", dataType });
+  }
+
 }
 // ======== Beginning of Grammar rules =========
 
@@ -1882,7 +1890,7 @@ function_argument_list
   = assignment_expression|1.., _ "," _|
 
 primary_expression
-  = "sizeof" _ "(" _ dataType:type_name _ ")" { return generateNode("SizeOfExpression", { type: "SizeOfExpression", subtype: "dataType", dataType }); } // TODO: check this, since no postfix opreator can be applied to result of sizeof, putting it here should be fine
+  = "sizeof" _ "(" _ dataType:type_name _ ")" { return createSizeOfDataTypeExpression(dataType); }
   / name:identifier { return generateNode("IdentifierExpression", { name }); } // for variables 
   / constant
   / string_literal

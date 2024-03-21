@@ -132,6 +132,13 @@ export function getDecayedArrayPointerType(
   };
 }
 
+export function getFunctionPointerOfFunction(fn: FunctionDataType): PointerDataType {
+  return {
+    type: "pointer",
+    pointeeType: fn,
+  }
+}
+
 // export function checkPrimaryDataTypeCompatibility(dataTypeA: PrimaryCDataType, dataTypeB: PrimaryCDataType) {
 //   return
 // }

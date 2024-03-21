@@ -7,7 +7,7 @@ import { ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { getDecayedArrayPointerType, isScalarDataType } from "~src/processor/dataTypeUtil";
+import { getDecayedArrayPointerType, getFunctionPointerOfFunction, isScalarDataType } from "~src/processor/dataTypeUtil";
 import {
   DataType,
   FunctionDataType,
@@ -24,6 +24,7 @@ export function processCondition(
   const dataTypeOfConditionExpression = getDataTypeOfExpression({
     expression: processedCondition,
     convertArrayToPointer: true,
+    convertFunctionToPointer: true
   });
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
@@ -50,12 +51,17 @@ export function createMemoryOffsetIntegerConstant(
 export function getDataTypeOfExpression({
   expression,
   convertArrayToPointer,
+  convertFunctionToPointer
 }: {
   expression: ExpressionWrapperP;
   convertArrayToPointer?: boolean;
+  convertFunctionToPointer?: boolean;
 }): DataType {
   if (convertArrayToPointer && expression.originalDataType.type === "array") {
     return getDecayedArrayPointerType(expression.originalDataType);
+  }
+  if (convertFunctionToPointer && expression.originalDataType.type === "function") {
+    return getFunctionPointerOfFunction(expression.originalDataType);
   }
   return expression.originalDataType;
 }
@@ -67,10 +73,7 @@ export function createFunctionTableIndexExpressionWrapper(
 ): ExpressionWrapperP {
   const indexInFunctionTable = symbolTable.getFunctionIndex(functionName);
   return {
-    originalDataType: {
-      type: "pointer",
-      pointeeType: functionDataType,
-    },
+    originalDataType: functionDataType, // leave as function data type. Dependding on where this expression is used, it will be interpreted as pointer of function as per 6.3.2.1/4 of C17 standard
     exprs: [
       {
         type: "FunctionTableIndex",

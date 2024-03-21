@@ -157,6 +157,7 @@ export function convertFunctionCallToFunctionCallP(
   const dataTypeOfCalledExpr = getDataTypeOfExpression({
     expression: processedCalledExpr,
     convertArrayToPointer: true,
+    convertFunctionToPointer: true
   });
 
   const functionDataType =
@@ -187,7 +188,7 @@ function processFunctionCallArgs(
   for (const arg of args) {
     const expr = processExpression(arg, symbolTable);
     argDataTypes.push(
-      getDataTypeOfExpression({ expression: expr, convertArrayToPointer: true })
+      getDataTypeOfExpression({ expression: expr, convertArrayToPointer: true, convertFunctionToPointer: true })
     );
     // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
     // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)

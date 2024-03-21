@@ -770,6 +770,14 @@ const testLog = {
       title: "Prefix '!' on non scalar type",
       expectedErrorMessages: ["Error: wrong type argument in unary '!' expression; scalar type required"]
     },
+    sizeof_function_type: {
+      title: "Sizeof expression on function type",
+      expectedErrorMessages: ["Error: invalid application of 'sizeof' to function type"]
+    },
+    sizeof_incomplete_type: {
+      title: "Sizeof expression on incomplete type",
+      expectedErrorMessages: ["Error: invalid application of 'sizeof' to incomplete type"]
+    }
   },
 };
 

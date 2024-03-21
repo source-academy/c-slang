@@ -79,11 +79,13 @@ export default function processExpression(
       const processedLeftExprDataType = getDataTypeOfExpression({
         expression: processedLeftExpr,
         convertArrayToPointer: true,
+        convertFunctionToPointer: true
       });
       const processedRightExpr = processExpression(expr.rightExpr, symbolTable);
       const processedRightExprDataType = getDataTypeOfExpression({
         expression: processedRightExpr,
         convertArrayToPointer: true,
+        convertFunctionToPointer: true
       });
 
       // Future work: add more specific type checking for binray expressions with different operators
@@ -410,6 +412,7 @@ export default function processExpression(
       const derefedExpressionDataType = getDataTypeOfExpression({
         expression: derefedExpression,
         convertArrayToPointer: true,
+        convertFunctionToPointer: true
       });
       if (derefedExpressionDataType.type !== "pointer") {
         throw new ProcessingError(`cannot dereference non-pointer type`);
@@ -489,16 +492,25 @@ export default function processExpression(
       }
     } else if (expr.type === "SizeOfExpression") {
       let dataTypeToGetSizeOf;
+
       if (expr.subtype === "expression") {
         // sizeof used on expression
-        dataTypeToGetSizeOf = processExpression(
+        dataTypeToGetSizeOf = getDataTypeOfExpression({ expression: processExpression(
           expr.expr,
           symbolTable,
-        ).originalDataType;
+        )});
       } else {
         // sizeof used on datatype
         dataTypeToGetSizeOf = expr.dataType;
       }
+
+      // check constraints are met as per 6.5.3.4/1 of C17 standard
+      // incomplete pointer check already done at parser
+
+      if (dataTypeToGetSizeOf.type === "function") {
+        throw new ProcessingError("invalid application of 'sizeof' to function type");
+      }
+
 
       return {
         originalDataType: {
@@ -517,6 +529,8 @@ export default function processExpression(
       const processedExpr = processExpression(expr.expr, symbolTable); // process the underlying expression being operated on
       const dataTypeOfExpr = getDataTypeOfExpression({
         expression: processedExpr,
+        convertArrayToPointer: true,
+        convertFunctionToPointer: true
       });
       if (dataTypeOfExpr.type !== "struct") {
         throw new ProcessingError(
@@ -672,6 +686,7 @@ export default function processExpression(
       const dataTypeOfTrueExpression = getDataTypeOfExpression({
         expression: processedTrueExpression,
         convertArrayToPointer: true,
+        convertFunctionToPointer: true
       });
       const processedFalseExpression = processExpression(
         expr.falseExpression,
@@ -680,6 +695,7 @@ export default function processExpression(
       const dataTypeOfFalseExpression = getDataTypeOfExpression({
         expression: processedFalseExpression,
         convertArrayToPointer: true,
+        convertFunctionToPointer: true
       });
       // TODO: check data type compatibility between true & false exprs
 

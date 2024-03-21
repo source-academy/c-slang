@@ -158,7 +158,6 @@ export default function processBlockItem(
       );
       const dataTypeOfTargetExpression = getDataTypeOfExpression({
         expression: processedTargetExpression,
-        convertArrayToPointer: true,
       });
       if (!isIntegralDataType(dataTypeOfTargetExpression)) {
         throw new ProcessingError("switch quantity is not an integer");
