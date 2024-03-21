@@ -5,7 +5,11 @@ export interface Warning {
   position: Position
 }
 
-export const warnings: Warning[] = [];
+export let warnings: Warning[] = [];
+
+export function clearWarnings() {
+  warnings = [];
+}
 
 export function addWarning(message: string, position: Position) {
   warnings.push({message, position});

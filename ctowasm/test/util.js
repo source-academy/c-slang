@@ -67,7 +67,7 @@ export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
     throw new CompilationFailure(`Compilation failed due to following errors:\n${errorMessage}`);
   }
   if (warnings.length > 0) {
-    console.log(`Compilation succeeded with warnings: ${warnings.join("\n")}`)
+    console.log(`${testFileName}: Compilation succeeded with warnings:\n${warnings.join("\n")}`)
   }
   fs.mkdirSync(path.dirname(watFilePath), { recursive: true });
   fs.writeFileSync(watFilePath, watOutput);

@@ -23,6 +23,8 @@ import {
   isVoidPointer,
   isScalarDataType,
   getIntegerPromotedDataType,
+  isFloatDataType,
+  isPointer,
 } from "~src/processor/dataTypeUtil";
 import {
   PostfixExpression,
@@ -34,6 +36,7 @@ import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
 import { getDataTypeOfExpression } from "~src/processor/util";
 import { checkPrePostfixTypeConstraint } from "~src/processor/constraintChecks";
 import { PTRDIFF_T } from "~src/common/constants";
+import { PrimaryDataType } from "~dist";
 
 function isRelationalOperator(op: BinaryOperator) {
   return (
@@ -47,7 +50,7 @@ function isRelationalOperator(op: BinaryOperator) {
 }
 
 function isLogicalOperator(op: BinaryOperator) {
-  return (op === "&&" || op === "||");
+  return op === "&&" || op === "||";
 }
 
 /**
@@ -71,18 +74,51 @@ export function convertDataTypeToScalarCDataType(
 
 /**
  * Determine the overall datatype of a ConditionalExpression (e.g. 1 ? 2 : 3).
- * Follows same rules as binary expressions ("+" used as placeholder).
+ * Follows the rules in 6.5.15 of C17 standard.
+ * Can assume valid combination of types, as constraints would have been checked already.
  */
 export function determineConditionalExpressionDataType(
-  leftExprDataType: ScalarDataType,
-  rightExprDataType: ScalarDataType
-) {
-  const dataType = determineResultDataTypeOfBinaryExpression(
-    leftExprDataType,
-    rightExprDataType,
-    "+"
+  leftExprDataType: DataType,
+  rightExprDataType: DataType
+): DataType {
+  if (
+    isArithmeticDataType(leftExprDataType) &&
+    isArithmeticDataType(rightExprDataType)
+  ) {
+    return performArithmeticConversions(
+      leftExprDataType as PrimaryDataType,
+      rightExprDataType as PrimaryDataType
+    );
+  }
+  if (leftExprDataType.type === "struct" || leftExprDataType.type === "void") {
+    return leftExprDataType;
+  }
+  if (isVoidPointer(leftExprDataType) || isVoidPointer(rightExprDataType)) {
+    return {
+      type: "pointer",
+      pointeeType: {
+        isConst: leftExprDataType.isConst || rightExprDataType.isConst,
+        type: "void",
+      },
+    };
+  }
+  // at least one of the operands must be non void pointer (other might be the same pointer, of a null pointer constant)
+  if (isPointer(leftExprDataType)) {
+    return {
+      ...leftExprDataType,
+      isConst: leftExprDataType.isConst || rightExprDataType.isConst,
+    };
+  }
+  if (isPointer(rightExprDataType)) {
+    return {
+      ...rightExprDataType,
+      isConst: leftExprDataType.isConst || rightExprDataType.isConst,
+    };
+  }
+  // shouldnt happen
+  throw new Error(
+    "determineConditionalExpressionDataType(): error in function"
   );
-  return dataType.type === "pointer" ? "pointer" : dataType.primaryDataType;
 }
 
 /**
@@ -99,77 +135,52 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
   // no need to check for validity of operand types, as this will have been checked before the function was called
   // if either data type are pointers, then target data type is pointer (unsigned int)
   // if both are pointer, it can only be a subtraction, in which case the resultant data type is PTRDIFF
-  if (leftExprDataType.type === "pointer" && rightExprDataType.type === "pointer") {
+  if (
+    leftExprDataType.type === "pointer" &&
+    rightExprDataType.type === "pointer"
+  ) {
     return {
       type: "primary",
-      primaryDataType: PTRDIFF_T
+      primaryDataType: PTRDIFF_T,
     };
   } else if (leftExprDataType.type === "pointer") {
     return leftExprDataType;
   } else if (rightExprDataType.type === "pointer") {
     return rightExprDataType;
-  } else {
-    return {
-      type: "primary",
-      primaryDataType: determineOperandTargetDataTypeOfArithmeticExpression(
-        leftExprDataType.primaryDataType,
-        rightExprDataType.primaryDataType,
-        operator
-      ),
-    };
+  } else if (operator === "<<" || operator === ">>") {
+    return leftExprDataType;
   }
-}
-
-/**
- * Returns the data type of the result of an arithmetic expression between two primary data types.
- */
-export function determineResultDataTypeOfArithmeticExpression(
-  leftExprDataType: PrimaryCDataType,
-  rightExprDataType: PrimaryCDataType,
-  operator: BinaryOperator
-): PrimaryCDataType {
-  if (isRelationalOperator(operator)) {
-    return "signed int";
-  }
-  return determineOperandTargetDataTypeOfArithmeticExpression(
+  return performArithmeticConversions(
     leftExprDataType,
-    rightExprDataType,
-    operator
+    rightExprDataType
   );
 }
 
-export function determineOperandTargetDataTypeOfArithmeticExpression(
-  leftExprDataType: PrimaryCDataType,
-  rightExprDataType: PrimaryCDataType,
-  operator: BinaryOperator
-): PrimaryCDataType {
-  if (isFloatType(leftExprDataType) && isFloatType(rightExprDataType)) {
+export function performArithmeticConversions(
+  leftExprDataType: PrimaryDataType,
+  rightExprDataType: PrimaryDataType
+): PrimaryDataType {
+  if (isFloatDataType(leftExprDataType) && isFloatDataType(rightExprDataType)) {
     // take more higher ranking float type
     if (
-      primaryDataTypeSizes[rightExprDataType] >
-      primaryDataTypeSizes[leftExprDataType]
+      primaryDataTypeSizes[leftExprDataType.primaryDataType] >
+      primaryDataTypeSizes[rightExprDataType.primaryDataType]
     ) {
       return leftExprDataType;
     } else {
       return rightExprDataType;
     }
-  } else if (isFloatType(leftExprDataType)) {
+  } else if (isFloatDataType(leftExprDataType)) {
     // float types have greater precedence than any integer types
     return leftExprDataType;
-  } else if (isFloatType(rightExprDataType)) {
+  } else if (isFloatDataType(rightExprDataType)) {
     return rightExprDataType;
   } else {
-    // both types are integers
-    // special handling for bitwise shift, which does not follow usual arithmetic implicit conversion rules
-    if (operator === "<<" || operator === ">>") {
-      return leftExprDataType;
-    }
-
     if (
-      primaryDataTypeSizes[rightExprDataType] >
-      primaryDataTypeSizes[leftExprDataType]
+      primaryDataTypeSizes[leftExprDataType.primaryDataType] >
+      primaryDataTypeSizes[rightExprDataType.primaryDataType]
     ) {
-      return rightExprDataType;
+      return leftExprDataType;
     } else {
       return rightExprDataType;
     }
@@ -177,7 +188,7 @@ export function determineOperandTargetDataTypeOfArithmeticExpression(
 }
 
 /**
- * Returns the correct varaible type for both the result of a binary expression,
+ * Returns the correct variable type for both the result of a binary expression,
  * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
  * This should be the same as the operand target data type, except for relational operators.
  *

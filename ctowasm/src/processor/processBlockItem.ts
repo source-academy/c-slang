@@ -17,8 +17,8 @@ import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentNodes } from "~src/processor/lvalueUtil";
 import { BlockItem } from "~src/parser/c-ast/core";
 import {
-  determineOperandTargetDataTypeOfArithmeticExpression,
-  determineResultDataTypeOfArithmeticExpression,
+  determineOperandTargetDataTypeOfBinaryExpression,
+  determineResultDataTypeOfBinaryExpression,
   getArithmeticPrePostfixExpressionNodes,
 } from "~src/processor/expressionUtil";
 import { processLocalDeclaration } from "~src/processor/processDeclaration";
@@ -26,8 +26,9 @@ import processExpression from "~src/processor/processExpression";
 import { isIntegralDataType } from "~src/processor/dataTypeUtil";
 import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
-import { PrimaryCDataType } from "~src/common/types";
+import { IntegerDataType, PrimaryCDataType } from "~src/common/types";
 import { addWarning } from "~src/processor/warningUtil";
+import { PrimaryDataType, ScalarDataType } from "~dist";
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -165,6 +166,10 @@ export default function processBlockItem(
       }
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
+        const dataTypeOfLabel = getDataTypeOfExpression({expression: processExpression(switchStatementCase.conditionMatch, symbolTable, enclosingFunc)});
+        if (!isIntegralDataType(dataTypeOfLabel)) {
+          throw new ProcessingError("case label does not reduce to an integer constant");
+        }
         const evaluatedConstant = evaluateCompileTimeExpression(
           switchStatementCase.conditionMatch,
         );
@@ -176,23 +181,19 @@ export default function processBlockItem(
           );
         }
         // the conditon of each switch case is adjusted to be a relational expression: targetExpression == case value
+        const dataTypeOfSwitchCaseOperandAndTarget = (determineResultDataTypeOfBinaryExpression(
+          dataTypeOfTargetExpression as PrimaryDataType,
+          dataTypeOfLabel as PrimaryDataType,
+          "==",
+        ) as PrimaryDataType).primaryDataType;
         processedCases.push({
           condition: {
             type: "BinaryExpression",
             leftExpr: processedTargetExpression.exprs[0],
             rightExpr: evaluatedConstant,
             operator: "==",
-            operandTargetDataType:
-              determineOperandTargetDataTypeOfArithmeticExpression(
-                processedTargetExpression.exprs[0].dataType as PrimaryCDataType,
-                evaluatedConstant.dataType,
-                "==",
-              ),
-            dataType: determineResultDataTypeOfArithmeticExpression(
-              processedTargetExpression.exprs[0].dataType as PrimaryCDataType,
-              evaluatedConstant.dataType,
-              "==",
-            ),
+            operandTargetDataType: dataTypeOfSwitchCaseOperandAndTarget,
+            dataType: dataTypeOfSwitchCaseOperandAndTarget,
           },
           statements: processedStatements,
         });

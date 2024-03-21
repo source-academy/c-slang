@@ -9,7 +9,7 @@ import { processGlobalScopeDeclaration } from "~src/processor/processDeclaration
 import { SymbolTable } from "~src/processor/symbolTable";
 import ModuleRepository, { ModuleName } from "~src/modules";
 import { ProcessingError } from "~src/errors";
-import { Warning, warnings } from "~src/processor/warningUtil";
+import { Warning, clearWarnings, warnings } from "~src/processor/warningUtil";
 
 
 /**
@@ -22,6 +22,7 @@ export default function process(
   ast: CAstRoot,
   moduleRepository: ModuleRepository,
 ): { astRootNode: CAstRootP; includedModules: ModuleName[]; warnings: Warning[] } {
+  clearWarnings();
   const includedModules: ModuleName[] = [];
   const symbolTable = new SymbolTable();
   const processedExternalFunctions = symbolTable.setExternalFunctions(
