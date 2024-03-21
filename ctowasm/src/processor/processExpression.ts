@@ -692,7 +692,7 @@ export default function processExpression(
       );
 
       return {
-        originalDataType: dataTypeOfTrueExpression,
+        originalDataType: resultDataType, 
         exprs: processedTrueExpression.exprs.map((truePrimaryExpr, index) => ({
           type: "ConditionalExpression",
           condition: processedCondition.exprs[0],
