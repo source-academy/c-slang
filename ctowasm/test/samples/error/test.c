@@ -1,5 +1,5 @@
 #include <source_stdlib>
-int main() { 
-  120;
-}
 
+int main() {
+  int *p =0;
+}

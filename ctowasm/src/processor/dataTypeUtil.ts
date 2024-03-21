@@ -197,7 +197,7 @@ export function stringifyDataType(dataType: DataType): string {
     return `${dataType.isConst ? "const " : ""}${dataType.primaryDataType}`;
   } else if (dataType.type === "array") {
     return `${dataType.isConst ? "const " : ""}array with size ${
-      dataType.numElements
+      evaluateCompileTimeExpression(dataType.numElements).value
     } of ${stringifyDataType(dataType.elementDataType)}`;
   } else if (dataType.type === "pointer") {
     return `${dataType.isConst ? "const " : ""}pointer to ${stringifyDataType(
@@ -548,16 +548,15 @@ export function checkAssignability(
   expr: ExpressionWrapperP, // the expression being assigned
   ignoreConst = false
 ) {
+  if (lvalue.type === "array" || lvalue.type === "function" || lvalue.type === "void") {
+    return false;
+  }
+
   const exprDataType = getDataTypeOfExpression({
     expression: expr,
     convertArrayToPointer: true,
     convertFunctionToPointer: true,
   });
-
-  console.assert(
-    lvalue.type !== "function" && exprDataType.type !== "function",
-    "checkAssignability called on function types"
-  );
 
   if (!ignoreConst && lvalue.isConst) {
     return false;

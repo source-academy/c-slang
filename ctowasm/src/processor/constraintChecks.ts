@@ -135,10 +135,7 @@ export function checkBinaryExpressionConstraints(
       if (
         !(
           checkBothOperandsHaveType(isArithmeticDataType) ||
-          checkOperandsTypeCombination(
-            isPointerToCompleteDataType,
-            isIntegralDataType
-          ) ||
+          isPointerToCompleteDataType(leftDataType) && isIntegralDataType(rightDataType) ||
           checkPointerCompatibilityIgnoringQualifiers()
         )
       ) {

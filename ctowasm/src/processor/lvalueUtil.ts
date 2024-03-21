@@ -10,7 +10,8 @@ import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 import { Expression } from "~src/parser/c-ast/core";
-import { isScalarDataType } from "~src/processor/dataTypeUtil";
+import { checkAssignability, isScalarDataType, stringifyDataType } from "~src/processor/dataTypeUtil";
+import { getDataTypeOfExpression } from "~src/processor/util";
 
 function isAllowableLValueType(dataType: DataType, specialCase = false) {
   return (
@@ -54,7 +55,7 @@ export function isModifiableLValue(
   expression: Expression,
   dataType: DataType,
   symbolTable: SymbolTable,
-  specialCase =  false
+  specialCase = false
 ) {
   return (
     !dataType.isConst &&
@@ -93,50 +94,60 @@ export function getAssignmentNodes(
   memoryLoadExpressions: MemoryLoad[];
   dataType: DataType;
 } {
-  try {
-    // the memory load instructions from processing the expression being assigned to as an expression
-    const assignedMemoryLoadExprs = processExpression(
-      assignmentNode.lvalue,
-      symbolTable
-    );
-    const assigneeExprs = processExpression(assignmentNode.expr, symbolTable);
+  // the memory load instructions from processing the expression being assigned to as an expression
+  const assignedMemoryLoadExprs = processExpression(
+    assignmentNode.lvalue,
+    symbolTable
+  );
+  const lvalueDataType = getDataTypeOfExpression({expression: assignedMemoryLoadExprs});
+  const assignee = processExpression(assignmentNode.expr, symbolTable);
+  const assigneeDataType = getDataTypeOfExpression({expression: assignee, convertArrayToPointer: true, convertFunctionToPointer: true});
 
-    const result = {
-      memoryStoreStatements: [] as MemoryStore[],
-      memoryLoadExpressions: assignedMemoryLoadExprs.exprs as MemoryLoad[],
-      dataType: assignedMemoryLoadExprs.originalDataType,
-    };
-
-    // TODO: do dataType checks
-    // assigned and assignee number of primary data expression should match in length
-    console.assert(
-      assignedMemoryLoadExprs.exprs.length === assigneeExprs.exprs.length,
-      "getAssignmentMemoryStoreNodes: assigned and assignee number of primary data expression should match in length"
-    );
-
-    // merely need to convert each memoryload into a store of the corresponding assignee expression
-    for (let i = 0; i < assignedMemoryLoadExprs.exprs.length; ++i) {
-      const memoryLoadExpr = assignedMemoryLoadExprs.exprs[i];
-      const assigneeValue = assigneeExprs.exprs[i];
-      if (memoryLoadExpr.type !== "MemoryLoad") {
-        throw new ProcessingError(
-          "lvalue required as left operand of assignment",
-          assignmentNode.position
-        );
-      }
-      result.memoryStoreStatements.push({
-        type: "MemoryStore",
-        address: memoryLoadExpr.address,
-        value: assigneeValue,
-        dataType: memoryLoadExpr.dataType,
-      });
-    }
-
-    return result;
-  } catch (e) {
-    if (e instanceof ProcessingError) {
-      e.addPositionInfo(assignmentNode.position);
-    }
-    throw e;
+  if (lvalueDataType.type === "array" || lvalueDataType.type === "function") {
+    throw new ProcessingError(`assignment to expression with type '${stringifyDataType(lvalueDataType)}'`);
   }
+
+  if (!isLValue(assignmentNode.lvalue, lvalueDataType, symbolTable)) {
+    throw new ProcessingError(`assignment to expression that is not a lvalue`);
+  }
+
+  if (!isModifiableLValue(assignmentNode.lvalue, lvalueDataType, symbolTable)) {
+    throw new ProcessingError(`assignment to non-modifiable lvalue with type '${stringifyDataType(lvalueDataType)}'`);
+  }
+
+  if (!checkAssignability(lvalueDataType, assignee)) {
+    throw new ProcessingError(`cannot assign expression with type '${stringifyDataType(lvalueDataType)}' to '${assigneeDataType}'`);
+  }
+
+  const result = {
+    memoryStoreStatements: [] as MemoryStore[],
+    memoryLoadExpressions: assignedMemoryLoadExprs.exprs as MemoryLoad[],
+    dataType: assignedMemoryLoadExprs.originalDataType,
+  };
+
+  // assigned and assignee number of primary data expression should match in length
+  console.assert(
+    assignedMemoryLoadExprs.exprs.length === assignee.exprs.length,
+    "getAssignmentMemoryStoreNodes: assigned and assignee number of primary data expression should match in length"
+  );
+
+  // merely need to convert each memoryload into a store of the corresponding assignee expression
+  for (let i = 0; i < assignedMemoryLoadExprs.exprs.length; ++i) {
+    const memoryLoadExpr = assignedMemoryLoadExprs.exprs[i];
+    const assigneeValue = assignee.exprs[i];
+    if (memoryLoadExpr.type !== "MemoryLoad") {
+      throw new ProcessingError(
+        "lvalue required as left operand of assignment",
+        assignmentNode.position
+      );
+    }
+    result.memoryStoreStatements.push({
+      type: "MemoryStore",
+      address: memoryLoadExpr.address,
+      value: assigneeValue,
+      dataType: memoryLoadExpr.dataType,
+    });
+  }
+
+  return result;
 }

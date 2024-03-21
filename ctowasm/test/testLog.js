@@ -883,6 +883,22 @@ const testLog = {
         "Error: type mismatch in conditional expression (have 'struct X' and 'signed int')",
       ],
     },
+    "assignment/assign_to_const": {
+      title: "Assignment to a const expression",
+      expectedErrorMessages: ["Error: assignment to non-modifiable lvalue with type 'const signed int'"]
+    },
+    "assignment/assign_to_array": {
+      title: "Assignment to a array",
+      expectedErrorMessages: ["Error: assignment to expression with type 'array with size 1 of signed int'"]
+    },
+    "assignment/assign_to_fn": {
+      title: "Assignment to a array",
+      expectedErrorMessages: ["Error: assignment to expression with type 'function () returning signed int'"]
+    }, 
+    "assignment/compound_addition": {
+      title: "Compound assignment (addition) to non-lvalue",
+      expectedErrorMessages: ["Error: assignment to expression that is not a lvalue"]
+    },  
   },
 };
 
