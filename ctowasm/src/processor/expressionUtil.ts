@@ -33,6 +33,7 @@ import processExpression from "~src/processor/processExpression";
 import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
 import { getDataTypeOfExpression } from "~src/processor/util";
 import { checkPrePostfixTypeConstraint } from "~src/processor/constraintChecks";
+import { PTRDIFF_T } from "~src/common/constants";
 
 function isRelationalOperator(op: BinaryOperator) {
   return (
@@ -43,6 +44,10 @@ function isRelationalOperator(op: BinaryOperator) {
     op === ">=" ||
     op === ">"
   );
+}
+
+function isLogicalOperator(op: BinaryOperator) {
+  return (op === "&&" || op === "||");
 }
 
 /**
@@ -91,8 +96,15 @@ export function determineOperandTargetDataTypeOfBinaryExpression(
   rightExprDataType: ScalarDataType,
   operator: BinaryOperator
 ): ScalarDataType {
-  // if either data type are pointers, then target data type is pointer TODO: check this
-  if (leftExprDataType.type === "pointer") {
+  // no need to check for validity of operand types, as this will have been checked before the function was called
+  // if either data type are pointers, then target data type is pointer (unsigned int)
+  // if both are pointer, it can only be a subtraction, in which case the resultant data type is PTRDIFF
+  if (leftExprDataType.type === "pointer" && rightExprDataType.type === "pointer") {
+    return {
+      type: "primary",
+      primaryDataType: PTRDIFF_T
+    };
+  } else if (leftExprDataType.type === "pointer") {
     return leftExprDataType;
   } else if (rightExprDataType.type === "pointer") {
     return rightExprDataType;
@@ -175,7 +187,7 @@ export function determineResultDataTypeOfBinaryExpression(
   rightExprDataType: ScalarDataType,
   operator: BinaryOperator
 ): ScalarDataType {
-  if (isRelationalOperator(operator)) {
+  if (isRelationalOperator(operator) || isLogicalOperator(operator)) {
     return {
       type: "primary",
       primaryDataType: "signed int",

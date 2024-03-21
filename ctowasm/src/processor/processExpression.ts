@@ -90,6 +90,8 @@ export default function processExpression(
 
       checkBinaryExpressionConstraints(expr, processedLeftExpr, processedRightExpr)
 
+      // at this point all the operands can only be scalar data types
+
       const binaryExpressionDataType =
         determineResultDataTypeOfBinaryExpression(
           processedLeftExprDataType as ScalarDataType,
@@ -99,7 +101,7 @@ export default function processExpression(
 
       const operandTargetDataType =
         determineOperandTargetDataTypeOfBinaryExpression(
-          processedLeftExprDataType as ScalarDataType, // already checked that is scalar in checkBinaryExpressionDataTypesValidity
+          processedLeftExprDataType as ScalarDataType, 
           processedRightExprDataType as ScalarDataType,
           expr.operator,
         );
