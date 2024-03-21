@@ -22,6 +22,7 @@ import {
   isIntegralDataType,
   isVoidPointer,
   isScalarDataType,
+  getIntegerPromotedDataType,
 } from "~src/processor/dataTypeUtil";
 import {
   PostfixExpression,
@@ -375,11 +376,28 @@ export function processPrefixExpression(
     }
 
     if (prefixExpression.operator === "+") {
-      // "+" does nothing
+      // "+" does nothing except integer promotion
+      processedExpression.originalDataType = getIntegerPromotedDataType(
+        processedExpression.originalDataType
+      );
       return processedExpression;
     } else {
+      let resultDataType: DataType;
+      switch (prefixExpression.operator) {
+        case "-":
+        case "~":
+          resultDataType = getIntegerPromotedDataType(
+            processedExpression.originalDataType
+          );
+          break;
+        case "!":
+          resultDataType = {
+            type: "primary",
+            primaryDataType: "signed int",
+          };
+      }
       return {
-        originalDataType: dataType,
+        originalDataType: resultDataType,
         exprs: [
           {
             type: "UnaryExpression",

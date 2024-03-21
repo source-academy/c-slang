@@ -7,6 +7,7 @@ import {
   DataType,
   FunctionDataType,
   PointerDataType,
+  PrimaryDataType,
   StructDataType,
   StructField,
   StructSelfPointer,
@@ -582,3 +583,19 @@ export function isFieldInStruct(dataType: StructDataType, fieldTag: string) {
   }
   return false;
 }
+
+const integerPromotableTypes = new Set(["unsigned char", "signed char", "unsigned short", "signed short"]);
+
+/**
+ * Returns the integer promoted version of the given datatype
+ * @param dataType 
+ */
+export function getIntegerPromotedDataType(dataType: DataType): DataType {
+  if (isIntegralDataType(dataType) && integerPromotableTypes.has((dataType as PrimaryDataType).primaryDataType)) {
+    return {
+      type: "primary",
+      primaryDataType: "signed int"
+    }
+  }
+  return dataType;
+} 

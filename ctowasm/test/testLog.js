@@ -766,7 +766,7 @@ const testLog = {
       title: "Prefix '~' on non integer type",
       expectedErrorMessages: ["Error: wrong type argument in unary '~' expression; integer type required"]
     },
-    "prefix_!_non_integer": {
+    "prefix_!_non_scalar": {
       title: "Prefix '!' on non scalar type",
       expectedErrorMessages: ["Error: wrong type argument in unary '!' expression; scalar type required"]
     },
