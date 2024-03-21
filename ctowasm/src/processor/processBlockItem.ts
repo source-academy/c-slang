@@ -27,6 +27,7 @@ import { isIntegralDataType } from "~src/processor/dataTypeUtil";
 import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { PrimaryCDataType } from "~src/common/types";
+import { addWarning } from "~src/processor/warningUtil";
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -238,6 +239,7 @@ export default function processBlockItem(
       });
       return processedExpressions;
     } else if (node.type === "ConditionalExpression") {
+      processExpression(node, symbolTable, enclosingFunc);
       // break this conditional into a simple if else expression (expressions inside condtional may have side effects)
       return [
         {
@@ -263,10 +265,14 @@ export default function processBlockItem(
       node.type === "IdentifierExpression" ||
       node.type === "PointerDereference" ||
       node.type === "SizeOfExpression" ||
-      node.type === "StructMemberAccess"
+      node.type === "StructMemberAccess" 
     ) {
+      addWarning("statement with no effect", node.position);
       processExpression(node, symbolTable, enclosingFunc);
       // all these expression statements can be safely ignored as they have no side effects
+      return [];
+    } else if (node.type === "StringLiteral") {
+      addWarning("statement with no effect", node.position);
       return [];
     } else if (node.type === "Declaration" || node.type === "EnumDeclaration") {
       return processLocalDeclaration(node, symbolTable, enclosingFunc);

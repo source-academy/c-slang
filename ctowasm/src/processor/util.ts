@@ -7,7 +7,7 @@ import { ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { getDecayedArrayPointerType, getFunctionPointerOfFunction, isScalarDataType } from "~src/processor/dataTypeUtil";
+import { getDecayedArrayPointerType, getFunctionPointerOfFunction, isScalarDataType, stringifyDataType } from "~src/processor/dataTypeUtil";
 import {
   DataType,
   FunctionDataType,
@@ -28,7 +28,7 @@ export function processCondition(
   });
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
-      `cannot use ${dataTypeOfConditionExpression.type} where scalar is required`,
+      `used '${stringifyDataType(dataTypeOfConditionExpression)}' where scalar is required`,
     );
   }
   return processedCondition.exprs[0];

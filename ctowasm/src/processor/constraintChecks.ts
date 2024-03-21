@@ -193,3 +193,58 @@ export function checkBinaryExpressionConstraints(
       }
   }
 }
+
+export function checkConditionalExpressionOperands(
+  processedCondition: ExpressionWrapperP,
+  processedTrueExpression: ExpressionWrapperP,
+  processedFalseExpression: ExpressionWrapperP
+) {
+  // check condition
+  const dataTypeOfConditionExpression = getDataTypeOfExpression({
+    expression: processedCondition,
+    convertArrayToPointer: true,
+    convertFunctionToPointer: true,
+  });
+  if (!isScalarDataType(dataTypeOfConditionExpression)) {
+    throw new ProcessingError(
+      `used '${stringifyDataType(
+        dataTypeOfConditionExpression
+      )}' in first operand of conditional expression where scalar is required`
+    );
+  }
+
+  const dataTypeOfTrueOperand = getDataTypeOfExpression({
+    expression: processedTrueExpression,
+    convertArrayToPointer: true,
+    convertFunctionToPointer: true,
+  });
+  const dataTypeOfFalseOperand = getDataTypeOfExpression({
+    expression: processedFalseExpression,
+    convertArrayToPointer: true,
+    convertFunctionToPointer: true,
+  });
+  // check 2nd and 3rd operand constraints
+  if (
+    !(
+      (isArithmeticDataType(dataTypeOfTrueOperand) &&
+        isArithmeticDataType(dataTypeOfFalseOperand)) ||
+      checkDataTypeCompatibility(
+        dataTypeOfTrueOperand,
+        dataTypeOfFalseOperand,
+        true
+      ) ||
+      (isPointer(dataTypeOfTrueOperand) &&
+        (isNullPointerConstant(processedFalseExpression) ||
+          isVoidPointer(dataTypeOfFalseOperand))) ||
+      (isPointer(dataTypeOfFalseOperand) &&
+        (isNullPointerConstant(processedTrueExpression) ||
+          isVoidPointer(dataTypeOfTrueOperand)))
+    )
+  ) {
+    throw new ProcessingError(
+      `type mismatch in conditional expression (have '${stringifyDataType(
+        dataTypeOfTrueOperand
+      )}' and '${stringifyDataType(dataTypeOfFalseOperand)}')`
+    );
+  }
+}

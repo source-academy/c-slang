@@ -871,6 +871,18 @@ const testLog = {
         "Error: invalid operands to binary '&&' (have 'struct A' and 'signed int')",
       ],
     },
+    "conditional_expression_errors/non_scalar_first_operand": {
+      title: "First operand of conditional expression not scalar type",
+      expectedErrorMessages: [
+        "Error: used 'struct X' in first operand of conditional expression where scalar is required",
+      ],
+    },
+    "conditional_expression_errors/mismatch_operand_types": {
+      title: "Conditional expression 2nd and 3rd operands do not fulfill constraints",
+      expectedErrorMessages: [
+        "Error: type mismatch in conditional expression (have 'struct X' and 'signed int')",
+      ],
+    },
   },
 };
 

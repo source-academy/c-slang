@@ -46,7 +46,7 @@ import processBlockItem from "~src/processor/processBlockItem";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
 import { StatementP } from "~src/processor/c-ast/core";
 import { addWarning } from "~src/processor/warningUtil";
-import { checkBinaryExpressionConstraints } from "~src/processor/constraintChecks";
+import { checkBinaryExpressionConstraints, checkConditionalExpressionOperands } from "~src/processor/constraintChecks";
 
 /**
  * Processes an Expression node in the context where value(s) are expected to be loaded from memory for use in a statement (action).
@@ -648,7 +648,7 @@ export default function processExpression(
         ],
       };
     } else if (expr.type === "ConditionalExpression") {
-      const processedCondition = processCondition(expr.condition, symbolTable);
+      const processedCondition = processExpression(expr.condition, symbolTable, enclosingFunc);
       const processedTrueExpression = processExpression(
         expr.trueExpression,
         symbolTable,
@@ -667,7 +667,8 @@ export default function processExpression(
         convertArrayToPointer: true,
         convertFunctionToPointer: true
       });
-      // TODO: check data type compatibility between true & false exprs
+
+      checkConditionalExpressionOperands(processedCondition, processedTrueExpression, processedFalseExpression);
 
       let scalarConditionalDataType: ScalarCDataType;
       if (isScalarDataType(dataTypeOfTrueExpression)) {
@@ -681,7 +682,7 @@ export default function processExpression(
         originalDataType: dataTypeOfTrueExpression,
         exprs: processedTrueExpression.exprs.map((truePrimaryExpr, index) => ({
           type: "ConditionalExpression",
-          condition: processedCondition,
+          condition: processedCondition.exprs[0],
           trueExpression: truePrimaryExpr,
           falseExpression: processedFalseExpression.exprs[index],
           dataType: isScalarDataType(dataTypeOfTrueExpression)

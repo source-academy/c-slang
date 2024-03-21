@@ -208,7 +208,7 @@ export function stringifyDataType(dataType: DataType): string {
       .map(stringifyDataType)
       .join(", ")}) returning ${stringifyDataType(dataType.returnType)}`;
   } else if (dataType.type === "struct") {
-    return `struct ${dataType.tag}`;
+    return `struct ${dataType.tag ? dataType.tag : " "}`;
   } else if (dataType.type === "enum") {
     return `enum ${dataType.tag}`;
   } else if (dataType.type === "void") {
@@ -336,6 +336,8 @@ export function checkDataTypeCompatibility(
     );
   } else if (a.type === "enum" && b.type === "enum") {
     // all enums in this implementation are equivalent to "signed int" and thus are compatibile with one another
+    return true;
+  } else if (a.type === "void" && b.type === "void") {
     return true;
   } else {
     console.assert(false, "checkDataTypeCompatibility(): Unhandled case");
