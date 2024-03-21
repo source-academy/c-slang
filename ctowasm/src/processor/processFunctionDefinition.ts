@@ -35,9 +35,7 @@ export default function processFunctionDefinition(
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
   symbolTable.setFunctionIsDefinedFlag(node.name);
-  if (
-    node.dataType.returnType.type === "array"
-  ) {
+  if (node.dataType.returnType.type === "array") {
     throw new ProcessingError("arrays cannot be returned from a function");
   }
 
@@ -157,7 +155,7 @@ export function convertFunctionCallToFunctionCallP(
   const dataTypeOfCalledExpr = getDataTypeOfExpression({
     expression: processedCalledExpr,
     convertArrayToPointer: true,
-    convertFunctionToPointer: true
+    convertFunctionToPointer: true,
   });
 
   const functionDataType =
@@ -184,18 +182,16 @@ function processFunctionCallArgs(
   symbolTable: SymbolTable
 ): ExpressionP[] {
   const argExpressions = [];
-  const argDataTypes = [];
+  const argExpressionWrappers: ExpressionWrapperP[]= [];
   for (const arg of args) {
     const expr = processExpression(arg, symbolTable);
-    argDataTypes.push(
-      getDataTypeOfExpression({ expression: expr, convertArrayToPointer: true, convertFunctionToPointer: true })
-    );
+    argExpressionWrappers.push(expr);
     // each inidividual expression is concatenated in reverse order, as stack grows from high to low,
     // whereas indiviudal primary data types within larger aggergates go from low to high (reverse direction)
     argExpressions.push(...expr.exprs.reverse());
   }
 
-  checkFunctionCallArgsAreCompatible(fnDataType, args, argDataTypes);
+  checkFunctionCallArgsAreCompatible(fnDataType, argExpressionWrappers);
   return argExpressions;
 }
 
@@ -207,8 +203,7 @@ function processFunctionCallArgs(
  */
 function checkFunctionCallArgsAreCompatible(
   fnDataType: FunctionDataType,
-  args: Expression[],
-  argsDataTypes: DataType[]
+  args: ExpressionWrapperP[]
 ) {
   if (args.length != fnDataType.parameters.length) {
     throw new ProcessingError(
@@ -216,18 +211,17 @@ function checkFunctionCallArgsAreCompatible(
     );
   }
   for (let i = 0; i < args.length; ++i) {
-    if (
-      !checkAssignability(
-        fnDataType.parameters[i],
-        args[i],
-        argsDataTypes[i],
-        true
-      )
-    ) {
+    if (!checkAssignability(fnDataType.parameters[i], args[i], true)) {
       throw new ProcessingError(
         `cannot assign function call argument to parameter\nFunction parameter type: "${stringifyDataType(
           fnDataType.parameters[i]
-        )}"\nFunction argument type: "${stringifyDataType(argsDataTypes[i])}"`
+        )}"\nFunction argument type: "${stringifyDataType(
+          getDataTypeOfExpression({
+            expression: args[i],
+            convertArrayToPointer: true,
+            convertFunctionToPointer: true,
+          })
+        )}"`
       );
     }
   }

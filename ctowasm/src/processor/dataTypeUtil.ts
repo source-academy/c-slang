@@ -27,6 +27,8 @@ import {
 import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
 import { FunctionDetails } from "~src/processor/c-ast/function";
 import { Expression } from "~src/parser/c-ast/core";
+import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
+import { getDataTypeOfExpression } from "~src/processor/util";
 
 function getNumberOfElementsInArray(dataType: ArrayDataType): number {
   try {
@@ -82,8 +84,7 @@ export function getDataTypeSize(
     return primaryDataTypeSizes[ENUM_DATA_TYPE];
   } else if (dataType.type === "void") {
     throw new ProcessingError(`void value not ignored as it should be`);
-  } 
-  else {
+  } else {
     throw new Error(
       `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`
     );
@@ -100,6 +101,10 @@ export function isScalarDataType(dataType: DataType) {
     dataType.type === "pointer" ||
     dataType.type === "enum"
   ); // enums are signed ints, thus scalar
+}
+
+export function isRealDataType(dataType: DataType) {
+  return isScalarDataType(dataType);
 }
 
 export function isIntegralDataType(dataType: DataType) {
@@ -121,6 +126,13 @@ export function isVoidPointer(dataType: DataType) {
   return dataType.type === "pointer" && dataType.pointeeType.type === "void";
 }
 
+export function isPointerToCompleteDataType(dataType: DataType) {
+  return dataType.type === "pointer" && dataType.pointeeType.type !== "void";
+}
+
+export function isPointer(dataType: DataType) {
+  return dataType.type === "pointer";
+}
 
 export function getDecayedArrayPointerType(
   dataType: ArrayDataType
@@ -132,11 +144,13 @@ export function getDecayedArrayPointerType(
   };
 }
 
-export function getFunctionPointerOfFunction(fn: FunctionDataType): PointerDataType {
+export function getFunctionPointerOfFunction(
+  fn: FunctionDataType
+): PointerDataType {
   return {
     type: "pointer",
     pointeeType: fn,
-  }
+  };
 }
 
 // export function checkPrimaryDataTypeCompatibility(dataTypeA: PrimaryCDataType, dataTypeB: PrimaryCDataType) {
@@ -186,15 +200,13 @@ export function stringifyDataType(dataType: DataType): string {
       dataType.numElements
     } of ${stringifyDataType(dataType.elementDataType)}`;
   } else if (dataType.type === "pointer") {
-    return `${dataType.isConst ? "const " : ""}pointer to ${
-      stringifyDataType(dataType.pointeeType)
-    }`;
+    return `${dataType.isConst ? "const " : ""}pointer to ${stringifyDataType(
+      dataType.pointeeType
+    )}`;
   } else if (dataType.type === "function") {
     return `function (${dataType.parameters
       .map(stringifyDataType)
-      .join(", ")}) returning ${
-     stringifyDataType(dataType.returnType)
-    }`;
+      .join(", ")}) returning ${stringifyDataType(dataType.returnType)}`;
   } else if (dataType.type === "struct") {
     return `struct ${dataType.tag}`;
   } else if (dataType.type === "enum") {
@@ -518,39 +530,39 @@ export function convertFunctionDataTypeToFunctionDetails(
   return functionDetails;
 }
 
+export function isNullPointerConstant(expr: ExpressionWrapperP) {
+  return (
+    expr.exprs[0].type === "IntegerConstant" &&
+    Number(expr.exprs[0].value) === 0
+  );
+}
+
 /**
  * Checks if expr with a given datatype can be assigned to lvalue of another datatype.
  * Follows constraints on simple assignment as listed in 6.5.16.1 of C17 standard.
  */
 export function checkAssignability(
   lvalue: DataType,
-  expr: Expression, // the expression being assigned
-  exprDataType: DataType,
+  expr: ExpressionWrapperP, // the expression being assigned
   ignoreConst = false
 ) {
+  const exprDataType = getDataTypeOfExpression({
+    expression: expr,
+    convertArrayToPointer: true,
+    convertFunctionToPointer: true,
+  });
+
   console.assert(
     lvalue.type !== "function" && exprDataType.type !== "function",
     "checkAssignability called on function types"
   );
-
-  // implicit array decay
-  if (lvalue.type === "array") {
-    lvalue = getDecayedArrayPointerType(lvalue);
-  }
-  if (exprDataType.type === "array") {
-    exprDataType = getDecayedArrayPointerType(exprDataType);
-  }
 
   if (!ignoreConst && lvalue.isConst) {
     return false;
   }
 
   // assigning null pointer constant
-  if (
-    lvalue.type === "pointer" &&
-    isCompileTimeExpression(expr) &&
-    Number(evaluateCompileTimeExpression(expr).value) === 0
-  ) {
+  if (lvalue.type === "pointer" && isNullPointerConstant(expr)) {
     return true;
   }
 
@@ -591,18 +603,26 @@ export function isFieldInStruct(dataType: StructDataType, fieldTag: string) {
   return false;
 }
 
-const integerPromotableTypes = new Set(["unsigned char", "signed char", "unsigned short", "signed short"]);
+const integerPromotableTypes = new Set([
+  "unsigned char",
+  "signed char",
+  "unsigned short",
+  "signed short",
+]);
 
 /**
  * Returns the integer promoted version of the given datatype
- * @param dataType 
+ * @param dataType
  */
 export function getIntegerPromotedDataType(dataType: DataType): DataType {
-  if (isIntegralDataType(dataType) && integerPromotableTypes.has((dataType as PrimaryDataType).primaryDataType)) {
+  if (
+    isIntegralDataType(dataType) &&
+    integerPromotableTypes.has((dataType as PrimaryDataType).primaryDataType)
+  ) {
     return {
       type: "primary",
-      primaryDataType: "signed int"
-    }
+      primaryDataType: "signed int",
+    };
   }
   return dataType;
-} 
+}
