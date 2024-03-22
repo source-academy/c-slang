@@ -1,8 +1,9 @@
 // Struct with incomplete type as member
+// Violates 6.7.2.1/2 of C17 standard.
 
-struct A;
 int main() {
-  struct B {
-    int a;
+  struct B;
+  struct A {
+    struct B b;
   };
 }

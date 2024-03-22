@@ -8,6 +8,12 @@
       end: thisParser.tokenPositions.get(Math.max(loc.start, loc.end - 1)).end
     }
   }
+  
+  function throwErrorWithLocation(message) {
+    const e = new Error(message);
+    e.location = location();
+    throw e;
+  }
 
   /**
    * Helper function to create and return a Node with position and type information
@@ -114,9 +120,13 @@
     return entries[entries.length - 1].type === "type";
   }
 
+  function isIdentifierDefined(name) {
+    return name in symbolTable.identifiers && symbolTable.identifiers[name].length > 0;
+  }
+
   function getIdentifierSymbolEntry(name) {
     if (!(name in symbolTable.identifiers) || symbolTable.identifiers[name].length <= 0) {
-      throw new Error(`'${name}' not declared`);
+      throwErrorWithLocation(`'${name}' not declared`);
     }
     const entries = symbolTable.identifiers[name];
     return entries[entries.length - 1];
@@ -128,7 +138,7 @@
 
   function getTagSymbolEntry(name) {
     if (!(name in symbolTable.tags) || symbolTable.tags[name].length <= 0) {
-      throw new Error(`'${name}' not declared`);
+      throwErrorWithLocation(`'${name}' not declared`);
     }
     const entries = symbolTable.tags[name];
     return entries[entries.length - 1];
@@ -137,14 +147,14 @@
   // pop off the latest symbol entry for a symbol (to be done at end of scopes)
   function removeIdentifierSymbolEntry(name) {
     if (!(name in symbolTable.identifiers) || symbolTable.identifiers[name].length <= 0) {
-      throw new Error(`'${name}' not declared`);
+      throwErrorWithLocation(`'${name}' not declared`);
     }
     symbolTable.identifiers[name].pop();
   }
 
   function removeTagSymbolEntry(name) {
     if (!(name in symbolTable.tags) || symbolTable.tags[name].length <= 0) {
-      throw new Error(`'${name}' undeclared`);
+      throwErrorWithLocation(`'${name}' undeclared`);
     }
     return symbolTable.tags[name].pop();
   }
@@ -400,13 +410,13 @@
     if ((typeof tagDefinitions === "undefined" || tagDefinitions.length === 0)) {
       if (noType) {
         if (constPresent) {
-          error("useless type qualifier in empty declaration")
+          throwErrorWithLocation("useless type qualifier in empty declaration")
         }
         if (storageClass) {
-          error("useless storage class qualifier in empty declaration");
+          throwErrorWithLocation("useless storage class qualifier in empty declaration");
         }
       } else {
-        error("empty declaration")
+        throwErrorWithLocation("empty declaration")
       }
       return generateNode("Declaration", { declarations: [], identifierDefinitions: [] });
     }
@@ -835,13 +845,15 @@
         return { dataType: { type: "void" } };
       } else if (firstTypeSpecifier.type === "UserNamedTypeSpecifier") {
         if (!isIdentifierAType(firstTypeSpecifier.typeName)) {
-          error(`Type '${firstTypeSpecifier.typeName}'`);
+          error(`undeclared type '${firstTypeSpecifier.typeName}'`);
         }
         return {
           dataType: getIdentifierSymbolEntry(firstTypeSpecifier.typeName)
             .dataType,
         };
       }
+    } else if (firstTypeSpecifier.type === "UnknownTypeSpecifier") {
+      throwErrorWithLocation(`unknown type name '${firstTypeSpecifier.typeName}'`);
     } else {
       // only dealing with primary data types now
       let lengthSpecifier;
@@ -872,7 +884,7 @@
       }
 
       if (!primaryDataTypeSpecifier && !lengthSpecifier && !intSpecifier) {
-        error("Type specifier required in declaration specifiers");
+        error("type specifier required in declaration specifiers");
       }
 
       if (
@@ -1243,7 +1255,7 @@
       // actually a typedef declaration
       if (hasTypeDefSpecifier) {
         if (declaration.initializer) {
-          error("Typedef is initialized");
+          error("typedef is initialized");
         }
         identifierDefinitions.push(
           addIdentifierToSymbolTable(declaration.name, {
@@ -1512,8 +1524,10 @@
     const dataType = declaration.dataType;
     const name = declaration.name;
     if (!functionDefinitionInfo || dataType.type !== "function") {
-      error("Compound statement can only follow a function declarator");
+      error("compound statement can only follow a function declarator");
     }
+
+    addIdentifierToSymbolTable(declaration.name, {type: "variable", dataType});  
 
     const incompletePointers = body.incompletePointers;
     delete body.incompletePointers;
@@ -1573,6 +1587,23 @@
     }
 
     return generateNode("ForLoop", { clause: { type: "Declaration", value: declarations }, condition, update, body });
+  }
+
+  function addIncludedModuleDefinitions(includedModuleName) {
+    addIncludedModuleFunctionDefinitions(includedModuleName);
+    addIncludedModuleStructDefinitions(includedModuleName); 
+  }
+  
+  function addIncludedModuleFunctionDefinitions(includedModuleName) {
+   if (!(includedModuleName in thisParser.moduleRepository.modules)) {
+      // included module is not found
+      error(`Included module "${includedModuleName}" does not exist`);
+    }
+
+    // add all the defined structs in the module
+    Object.entries(thisParser.moduleRepository.modules[includedModuleName].moduleFunctions).forEach(([name, fnDataType]) => {
+      addIdentifierToSymbolTable(name, {type: "variable", dataType: fnDataType});
+    }) 
   }
 
   function addIncludedModuleStructDefinitions(includedModuleName) {
@@ -1635,8 +1666,9 @@ block_item_list
   = items:block_item|1.., _|
 
 block_item
-  = declaration
-  / statement
+  = statement
+  / declaration
+
 
 // ========= Jump Statement ==========
 
@@ -1925,7 +1957,7 @@ function_argument_list
 
 primary_expression
   = "sizeof" _ "(" _ dataType:type_name _ ")" { return createSizeOfDataTypeExpression(dataType); }
-  / name:identifier { return generateNode("IdentifierExpression", { name }); } // for variables 
+  / name:identifier !{ return isIdentifierAType(name); } { return generateNode("IdentifierExpression", { name }); } // for variables 
   / constant
   / string_literal
   / "(" _ @expression _ ")"
@@ -1954,7 +1986,7 @@ token
   / punctuator 
 
 include  // custom keyword for specifying modules to import
-  = "#include <" identifier:identifier ">" { addIncludedModuleStructDefinitions(identifier); return identifier; } // add all the structs declared in the module into the namespace
+  = "#include <" identifier:identifier ">" { addIncludedModuleDefinitions(identifier); return identifier; } // add all the functions and structs declared in the module into the namespace
 
 keyword  // must be ordered in descending order of length, as longer keywords take precedence in matching
   = "_Static_assert"/"_Thread_local"/"_Imaginary"/"_Noreturn"/"continue"/"register"/"restrict"/"unsigned"/"volatile"/"_Alignas"/"_Alignof"/"_Complex"/"_Generic"/"default"/"typedef"/"_Atomic"/"extern"/"inline"/"double"/"return"/"signed"/"sizeof"/"static"/"struct"/"switch"/"break"/"float"/"const"/"short"/"union"/"while"/"_Bool"/"auto"/"case"/"char"/"goto"/"long"/"else"/"enum"/"void"/"for"/"int"/"if"/"do"
@@ -2039,7 +2071,7 @@ floating_suffix
 // =======================================================
 
 enumeration_constant
-  = identifier
+  = name:identifier !{ return isIdentifierAType(name); } { return name; }
 
 // ================== Character Constants =================
 

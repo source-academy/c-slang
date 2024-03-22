@@ -1,5 +1,9 @@
 #include <source_stdlib>
 
+/**
+ * Static storage class tests.
+ */
+
 int main() {
-  int *p =0;
+  x * y;
 }

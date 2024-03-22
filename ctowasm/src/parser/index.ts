@@ -35,36 +35,60 @@ export default function parse(
   moduleRepository: ModuleRepository
 ) {
   try {
-// eslint-disable-next-line
-  // @ts-ignore
-  parser.moduleRepository = moduleRepository; // make moduleRepository available to parser object
-  const preprocessedOutput = preprocessor.parse(sourceCode);
-  // eslint-disable-next-line
-  // @ts-ignore
-  lexer.falseNewlinePositions = preprocessor.falseNewlinePositions;
-  const lexedOutput = lexer.parse(preprocessedOutput);
-  // eslint-disable-next-line
-  // @ts-ignore
-  parser.tokenPositions = lexer.tokenPositions;
-  const { rootNode, compilationErrors, warnings } = parser.parse(lexedOutput);
-  if (compilationErrors.length > 0) {
-    throw new ParserCompilationErrors(
-      sourceCode,
-      compilationErrors as { message: string; position: Position }[]
-    );
-  }
-  return {
-    cAstRoot: rootNode,
-    warnings: warnings.map((w: { message: string; position: Position }) =>
-      generateCompilationWarningMessage(w.message, sourceCode, w.position)
-    ),
-  };
+    // eslint-disable-next-line
+    // @ts-ignore
+    parser.moduleRepository = moduleRepository; // make moduleRepository available to parser object
+    const preprocessedOutput = preprocessor.parse(sourceCode);
+    // eslint-disable-next-line
+    // @ts-ignore
+    lexer.falseNewlinePositions = preprocessor.falseNewlinePositions;
+    const lexedOutput = lexer.parse(preprocessedOutput);
+    // eslint-disable-next-line
+    // @ts-ignore
+    parser.tokenPositions = lexer.tokenPositions;
+
+    try {
+      const { rootNode, compilationErrors, warnings } =
+        parser.parse(lexedOutput);
+
+      if (compilationErrors.length > 0) {
+        // this handles any errors that were detected but didnt stop parsing
+        throw new ParserCompilationErrors(
+          sourceCode,
+          compilationErrors as { message: string; position: Position }[]
+        );
+      }
+      return {
+        cAstRoot: rootNode,
+        warnings: warnings.map((w: { message: string; position: Position }) =>
+          generateCompilationWarningMessage(w.message, sourceCode, w.position)
+        ),
+      };
+    } catch (e) {
+      // catch syntax errors detected by peggy js
+      // or any error that required immediately ending of parsing
+      if ("location" in (e as object)) {
+        // parser locations from syntax errors (or any thrown immediate errors) need to be adjusted
+        const adjustedLocation = {
+          start: (lexer as any).tokenPositions.get((e as any).location.start.offset)
+            .start,
+          end: (lexer as any).tokenPositions.get(
+            Math.max((e as any).location.start.offset, (e as any).location.end.offset - 1)
+          ).end,
+        };
+        throw new ParserCompilationErrors(sourceCode, [
+          { message: (e as any).message, position: adjustedLocation },
+        ]);
+      }
+      throw e;
+    }
   } catch (e) {
-    // catch syntax errors detected by peggy js
-    if ("location" in (e as object)) {
-      throw new ParserCompilationErrors(sourceCode, [{message: (e as any).message, position: (e as any).location}]);
+    // catch any other errors
+    if (!(e instanceof ParserCompilationErrors) && "location" in (e as object)) {
+      throw new ParserCompilationErrors(sourceCode, [
+        { message: (e as any).message, position: (e as any).location },
+      ]);
     }
     throw e;
   }
-  
 }

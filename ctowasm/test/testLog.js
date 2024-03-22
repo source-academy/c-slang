@@ -927,6 +927,10 @@ const testLog = {
       title: "Non-anonymous struct with no members",
       expectedErrorMessages: ["Error: struct has no members"]
     },
+    "declarations/incomplete_struct_member": {
+      title: "Struct with incomplete member",
+      expectedErrorMessages: ["Error: 'B' is an incomplete type"]
+    },
   },
 };
 
