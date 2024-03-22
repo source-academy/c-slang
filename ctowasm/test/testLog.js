@@ -898,6 +898,22 @@ const testLog = {
     "assignment/compound_addition": {
       title: "Compound assignment (addition) to non-lvalue",
       expectedErrorMessages: ["Error: assignment to expression that is not a lvalue"]
+    },
+    "declarations/no_type_specifiers": {
+      title: "Declaration with no type specifiers",
+      expectedErrorMessages: ["Error: at least 1 type specifier required in declaration specifiers of declaration"]
+    },
+    "declarations/empty_declaration_with_storage_class": {
+      title: "Empty declaration with storage class qualifier",
+      expectedErrorMessages: ["Error: useless storage class qualifier in empty declaration"]
+    }, 
+    "declarations/empty_declaration_with_const": {
+      title: "Empty declaration with no const type qualifier",
+      expectedErrorMessages: ["Error: useless type qualifier in empty declaration"]
+    },  
+    "declarations/empty_declaration": {
+      title: "Empty declaration",
+      expectedErrorMessages: ["Error: empty declaration"]
     },  
   },
 };

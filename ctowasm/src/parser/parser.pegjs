@@ -391,15 +391,28 @@
    * Process declarations that do not have a declarator - i.e they should be declaring a struct/enum type.
    */
   function processDeclarationWithoutDeclarator(declarationSpecifiers) {
-    const { enumDeclarations, tagDefinitions, storageClass, incompletePointers, hasTypeDefSpecifier } =
+    const { enumDeclarations, tagDefinitions, storageClass, incompletePointers, hasTypeDefSpecifier, constPresent, noType } =
       unpackDeclarationSpecifiers(declarationSpecifiers);
     const identifierDefinitions = [];
     const declarations = [];
-    if (storageClass) {
-      warn("Useless storage class in type defintion");
+    
+    // if no tags (struct or enum) were declared, then this violates 6.7/2 of C17 standard.
+    if ((typeof tagDefinitions === "undefined" || tagDefinitions.length === 0)) {
+      if (noType) {
+        if (constPresent) {
+          error("useless type qualifier in empty declaration")
+        }
+        if (storageClass) {
+          error("useless storage class qualifier in empty declaration");
+        }
+      } else {
+        error("empty declaration")
+      }
+      return generateNode("Declaration", { declarations: [], identifierDefinitions: [] });
     }
-    if (!hasTypeDefSpecifier && (typeof tagDefinitions === "undefined" || tagDefinitions.length === 0)) {
-      warn("Useless type name in empty declaration");
+
+    if (storageClass) {
+      warn("useless storage class qualifier in empty declaration");
     }
 
     // add all enum variables that could have been defined in enum specifier
@@ -687,6 +700,10 @@
       }
     });
 
+    if (typeSpecifiers.length < 1) {
+      return { dataType: createPrimaryDataType("signed int"), noType: true, storageClass, constPresent: isConst }; // placeholder data type (other compilers would default to int, but full standard compliance means an error)
+    }
+
     const { dataType, enumDeclarations, tagDefinitions, incompletePointers } =
       processTypeSpecifiers(typeSpecifiers);
     if (isConst) {
@@ -700,6 +717,7 @@
       incompletePointers,
       storageClass,
       hasTypeDefSpecifier,
+      constPresent: isConst // only used when processing declarations with no declarator
     };
   }
 
@@ -711,9 +729,6 @@
    * tagDefinitions are any structs that are being
    */
   function processTypeSpecifiers(typeSpecifiers) {
-    if (typeSpecifiers.length < 1) {
-      error("Type specifier required in declaration specifiers");
-    }
     const firstTypeSpecifier = typeSpecifiers[0];
     if (
       firstTypeSpecifier.type === "StructTypeSpecifier" ||
@@ -1191,7 +1206,12 @@
       tagDefinitions,
       hasTypeDefSpecifier,
       incompletePointers: incompletePointersFromSpecifiers,
+      noType
     } = unpackDeclarationSpecifiers(declarationSpecifiers);
+
+    if (noType) {
+      error("at least 1 type specifier required in declaration specifiers of declaration");
+    }
 
     const incompletePointers = incompletePointersFromSpecifiers ?? [];
     // add all enum fields as enum declarations to the array of all declarations
@@ -1344,7 +1364,13 @@
       incompletePointers,
       storageClass,
       hasTypeDefSpecifier,
+      noType
     } = unpackDeclarationSpecifiers(declarationSpecifiers);
+
+    if (noType) {
+      error("at least 1 type specifier required in declaration specifiers of declaration");
+    }
+
     if (storageClass || hasTypeDefSpecifier) {
       error(`Cannot specify storage class for function parameter`);
     }
