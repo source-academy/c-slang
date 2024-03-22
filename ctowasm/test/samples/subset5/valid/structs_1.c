@@ -12,7 +12,6 @@ struct A {
   int *p;
   long arr[12];
 } a;
-struct {} b;
 struct C { int x;} c = { 1 };
 struct { struct A aa;} d;
 int main() {

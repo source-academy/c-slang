@@ -3,6 +3,6 @@
 struct A;
 int main() {
   struct B {
-    A a;
+    int a;
   };
 }
