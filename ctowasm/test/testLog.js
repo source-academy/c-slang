@@ -914,7 +914,19 @@ const testLog = {
     "declarations/empty_declaration": {
       title: "Empty declaration",
       expectedErrorMessages: ["Error: empty declaration"]
-    },  
+    },
+    "declarations/duplicate_static": {
+      title: "Duplicate static storage class specifier",
+      expectedErrorMessages: ["Error: multiple storage class specifiers: 'static' and 'static'"]
+    },
+    "declarations/typedef_and_static": {
+      title: "Duplicate storage class specifiers - typedef and static",
+      expectedErrorMessages: ["Error: multiple storage class specifiers in declaration specifiers: 'typedef' and 'static'"]
+    },
+    "declarations/empty_struct_declaration_list": {
+      title: "Non-anonymous struct with no members",
+      expectedErrorMessages: ["Error: struct has no members"]
+    },
   },
 };
 

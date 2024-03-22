@@ -392,7 +392,7 @@
    */
   function processDeclarationWithoutDeclarator(declarationSpecifiers) {
     const { enumDeclarations, tagDefinitions, storageClass, incompletePointers, hasTypeDefSpecifier, constPresent, noType } =
-      unpackDeclarationSpecifiers(declarationSpecifiers);
+      unpackDeclarationSpecifiers(declarationSpecifiers, true);
     const identifierDefinitions = [];
     const declarations = [];
     
@@ -660,11 +660,18 @@
    * Unpack and process declaration specifiers
    * @returns { dataType: DataType | { type: "void" }, enumDeclarations?: { type: "EnumDeclaration", enumerators: { name: string, value?: Expression }[]}[], tagDefinition?: { name: string, dataType: DataType }, storageClass: "auto" | "static", hasTypeDefSpecifier: boolean, incompletePointers?: PointerDataType[]}
    */
-  function unpackDeclarationSpecifiers(declarationSpecifiers) {
+  function unpackDeclarationSpecifiers(declarationSpecifiers, reportErrors = false) {
     const typeSpecifiers = [];
     let storageClass;
     let isConst = false; // only type qualifier that is supported
     let hasTypeDefSpecifier = false;
+
+    function declarationSpecifierError(message) {
+      if (reportErrors) {
+        error(message)
+      }
+    }
+
     declarationSpecifiers.forEach((specifier) => {
       switch (specifier.type) {
         case "TypeSpecifier":
@@ -673,28 +680,28 @@
         case "TypeQualifier":
           if (specifier.qualifier !== "const") {
             // should not happen
-            error(`Unknown type qualifier '${specifier.qualifier}'`);
+            declarationSpecifierError(`Unknown type qualifier '${specifier.qualifier}'`);
           }
           isConst = true;
           break;
         case "StorageClassSpecifier":
           if (storageClass) {
             // a storage class specifier already specified
-            error(
-              `Multiple storage class specifiers: '${storageClass}' and '${specifier.specifier}'`
+            declarationSpecifierError(
+              `multiple storage class specifiers: '${storageClass}' and '${specifier.specifier}'`
             );
           }
           if (hasTypeDefSpecifier) {
-            error("Multiple storage class specifier in declaration specifiers");
+            declarationSpecifierError(`multiple storage class specifiers in declaration specifiers: 'typedef' and '${specifier.specifier}'`);
           }
           storageClass = specifier.specifier;
           break;
         case "TypeDefSpecifier":
           if (storageClass) {
-            error("Multiple storage class specifier in declaration specifiers");
-          }
+            declarationSpecifierError(`multiple storage class specifiers in declaration specifiers: '${specifier.specifier}' and 'typedef'`);
+          } 
           if (hasTypeDefSpecifier) {
-            error("duplicate 'typedef'");
+            declarationSpecifierError("duplicate 'typedef'");
           }
           hasTypeDefSpecifier = true;
       }
@@ -1013,6 +1020,7 @@
   }
 
   function createEmptyStructSpecifier(tag) {
+    error("struct has no members");
     return {
       dataType: {
         type: "struct",
@@ -1207,7 +1215,7 @@
       hasTypeDefSpecifier,
       incompletePointers: incompletePointersFromSpecifiers,
       noType
-    } = unpackDeclarationSpecifiers(declarationSpecifiers);
+    } = unpackDeclarationSpecifiers(declarationSpecifiers, true);
 
     if (noType) {
       error("at least 1 type specifier required in declaration specifiers of declaration");
@@ -1285,7 +1293,7 @@
       tagDefinitions,
       storageClass,
       hasTypeDefSpecifier,
-    } = unpackDeclarationSpecifiers(declarationSpecifiers);
+    } = unpackDeclarationSpecifiers(declarationSpecifiers, true);
     if (storageClass || hasTypeDefSpecifier) {
       error("Struct field cannot have storage class specifier");
     }
@@ -1365,7 +1373,7 @@
       storageClass,
       hasTypeDefSpecifier,
       noType
-    } = unpackDeclarationSpecifiers(declarationSpecifiers);
+    } = unpackDeclarationSpecifiers(declarationSpecifiers, true);
 
     if (noType) {
       error("at least 1 type specifier required in declaration specifiers of declaration");
