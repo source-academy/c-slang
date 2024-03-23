@@ -931,6 +931,34 @@ const testLog = {
       title: "Struct with incomplete member",
       expectedErrorMessages: ["Error: 'B' is an incomplete type"]
     },
+    "intializer/excess_elements_array": {
+      title: "Excess elements when initializing array",
+      expectedErrorMessages: ["Error: excess elements in initializer"]
+    },
+    "intializer/excess_elements_struct": {
+      title: "Excess elements when initializing struct",
+      expectedErrorMessages: ["Error: excess elements in initializer"]
+    },
+    "intializer/excess_elements_scalar": {
+      title: "Excess elements when initializing struct",
+      expectedErrorMessages: ["Error: excess elements in initializer"]
+    },
+    "intializer/incompatible_scalar": {
+      title: "Excess elements when initializing scalar",
+      expectedErrorMessages: ["Error: excess elements in initializer"]
+    },
+    "intializer/incompatible_scalar_nested_braces": {
+      title: "Excess elements when initializing scalar (nested braces initializer list)",
+      expectedErrorMessages: ["Error: excess elements in initializer"]
+    },
+    "intializer/incompatible_struct": {
+      title: "Incompatible struct when initializing struct",
+      expectedErrorMessages: ["Error: incompatible types when initializing type 'struct X' using type 'struct Y'"]
+    },
+    "intializer/incompatible_struct_in_arr": {
+      title: "Incompatible struct when initializing array of structs",
+      expectedErrorMessages: ["Error: incompatible types when initializing type 'struct X' using type 'struct Y'"]
+    }
   },
 };
 

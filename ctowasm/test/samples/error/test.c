@@ -1,9 +1,5 @@
 #include <source_stdlib>
 
-/**
- * Static storage class tests.
- */
-
 int main() {
-  x * y;
+  struct { int x; } x = { {1,2} };
 }

@@ -959,7 +959,7 @@
           unpackedResult.enumDeclarations.push(...enumDeclarations);
         }
         if (tagDefinitions) {
-          unpackedResult.enumDeclarations.push(...tagDefinitions);
+          unpackedResult.tagDefinitions.push(...tagDefinitions);
         }
       }
     );
