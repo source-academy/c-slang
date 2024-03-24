@@ -28,7 +28,9 @@ import {
   createMemoryOffsetIntegerConstant,
   getDataTypeOfExpression,
 } from "~src/processor/util";
-import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
+import evaluateCompileTimeExpression, {
+  isCompileTimeExpression,
+} from "~src/processor/evaluateCompileTimeExpression";
 import { DataType, PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import {
@@ -40,6 +42,7 @@ import processEnumDeclaration from "~src/processor/processEnumDeclaration";
 import { addWarning } from "~src/processor/warningUtil";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { PointerDataType, StructDataType, StructSelfPointer } from "~dist";
+import { Expression } from "~src/parser/c-ast/core";
 
 /**
  * Processes a Declaration node that is found within a function.
@@ -50,49 +53,38 @@ export function processLocalDeclaration(
   symbolTable: SymbolTable,
   enclosingFunc: FunctionDefinitionP // reference to enclosing function, if any
 ): StatementP[] {
-  try {
-    if (declaration.type === "Declaration") {
-      let symbolEntry = symbolTable.addEntry(declaration);
-      if (
-        symbolEntry.type === "function" ||
-        symbolEntry.type === "dataSegmentVariable"
-      ) {
-        // if the declaration was of a function or it was of a static variable then there are no statements to carry out in the function
-        return [];
-      }
+  if (declaration.type === "Declaration") {
+    let symbolEntry = symbolTable.addEntry(declaration);
+    if (symbolEntry.type === "function" && typeof declaration.initializer !== "undefined") {
+      throw new ProcessingError(`function '${declaration.name}' is initialized like a variable`);
+    }
 
-      console.assert(
-        symbolEntry.type === "localVariable",
-        "processLocalDeclaration(): symbolEntry does not have type 'localVariable'"
+    console.assert(
+      symbolEntry.type === "localVariable",
+      "processLocalDeclaration(): symbolEntry does not have type 'localVariable'"
+    );
+
+    if (typeof enclosingFunc !== "undefined") {
+      enclosingFunc.sizeOfLocals += getDataTypeSize(declaration.dataType);
+    }
+
+    symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
+
+    if (typeof declaration.initializer !== "undefined") {
+      return unpackLocalVariableInitializerAccordingToDataType(
+        symbolEntry,
+        declaration.initializer,
+        symbolTable
       );
-
-      if (typeof enclosingFunc !== "undefined") {
-        enclosingFunc.sizeOfLocals += getDataTypeSize(declaration.dataType);
-      }
-
-      symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
-
-      if (typeof declaration.initializer !== "undefined") {
-        return unpackLocalVariableInitializerAccordingToDataType(
-          symbolEntry,
-          declaration.initializer,
-          symbolTable
-        );
-      } else {
-        return [];
-      }
-    } else if (declaration.type === "EnumDeclaration") {
-      processEnumDeclaration(declaration, symbolTable);
-      return [];
     } else {
-      console.assert(false, "Unknown declaration type");
       return [];
     }
-  } catch (e) {
-    if (e instanceof ProcessingError) {
-      e.addPositionInfo(declaration.position);
-    }
-    throw e;
+  } else if (declaration.type === "EnumDeclaration") {
+    processEnumDeclaration(declaration, symbolTable);
+    return [];
+  } else {
+    console.assert(false, "Unknown declaration type");
+    return [];
   }
 }
 
@@ -109,7 +101,7 @@ function runInitializerChecks(dataType: DataType, initializer: Initializer) {
     }
   } else if (dataType.type === "function") {
     throw new ProcessingError(
-      `a function cannot be initialized like a variable`
+      `function cannot be initialized like a variable`
     );
   } else if (
     dataType.type === "array" &&
@@ -369,17 +361,20 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             offset >= initializer.values.length ||
             initializer.values[offset].type === "InitializerSingle"
           ) {
-            // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
+            // sub aggregate will take from the same "level" of initializer list, offset will be incremented
             offset = helper(dataType.elementDataType, initializer, offset);
           } else {
-            helperWithExcessInitializerCheck(dataType.elementDataType, initializer.values[offset++]); // fresh offset for sub aggregate
+            helperWithExcessInitializerCheck(
+              dataType.elementDataType,
+              initializer.values[offset++]
+            ); // fresh offset for sub aggregate
           }
         } else if (dataType.elementDataType.type === "array") {
           if (
             offset >= initializer.values.length ||
             initializer.values[offset].type === "InitializerSingle"
           ) {
-            // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
+            // sub aggregate will take from the same "level" of initializer list, offset will be incremented
             offset = helper(dataType.elementDataType, initializer, offset);
           } else {
             helperWithExcessInitializerCheck(
@@ -425,7 +420,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           helperWithExcessInitializerCheck(
             field.dataType,
             initializer.values[offset++]
-          )
+          );
         }
       }
     }
@@ -437,7 +432,10 @@ export function unpackLocalVariableInitializerAccordingToDataType(
     initializer: Initializer
   ) {
     const finalOffset = helper(dataType, initializer, 0);
-    if (initializer.type === "InitializerList" && finalOffset < initializer.values.length) {
+    if (
+      initializer.type === "InitializerList" &&
+      finalOffset < initializer.values.length
+    ) {
       throw new ProcessingError("excess elements in initializer");
     }
   }
@@ -467,29 +465,30 @@ export function processDataSegmentVariableDeclaration(
   node: VariableDeclaration,
   symbolTable: SymbolTable
 ) {
-  try {
-    const symbolEntry = symbolTable.addEntry(node);
-    if (node.dataType.type === "function") {
-      if (typeof node.initializer !== "undefined") {
-        throw new ProcessingError(
-          `function ${node.name} is initialized like a variable`
-        );
-      }
-    }
-
-    // sanity check
-    if (symbolEntry.type === "localVariable") {
+  const symbolEntry = symbolTable.addEntry(node);
+  if (node.dataType.type === "function") {
+    if (typeof node.initializer !== "undefined") {
       throw new ProcessingError(
-        "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'"
+        `function '${node.name}' is initialized like a variable`
       );
     }
-  } catch (e) {
-    if (e instanceof ProcessingError) {
-      e.addPositionInfo(node.position);
-    }
-    throw e;
+    return;
+  }
+
+  // sanity check
+  if (symbolEntry.type === "localVariable") {
+    throw new ProcessingError(
+      "processDataSegmentVariableDeclaration: symbol entry has type 'localVariable'"
+    );
   }
 }
+
+function checkCompileTimeInitializer(initializerValue: Expression) {
+  if (!isCompileTimeExpression(initializerValue)) {
+    throw new ProcessingError("initializer element is not constant");
+  }
+}
+
 /**
  * Function to recursively go through the declaration data type and the intiializer to assign appropriately
  * (and handle zeroing of memory when insufficient intializer exprs are present).
@@ -497,21 +496,25 @@ export function processDataSegmentVariableDeclaration(
  */
 export function unpackDataSegmentInitializerAccordingToDataType(
   dataType: DataType,
-  initalizer: Initializer | null
+  initializer: Initializer | null
 ): string {
   let byteStr = "";
   function helper(
-    dataType: DataType,
+    dataType: DataType | StructSelfPointer,
     initializer: Initializer,
     offset: number
   ): number {
     if (
       dataType.type === "primary" ||
       dataType.type === "pointer" ||
-      dataType.type === "enum"
+      dataType.type === "enum" ||
+      dataType.type === "struct self pointer"
     ) {
       let scalarDataType: ScalarCDataType;
-      if (dataType.type === "pointer") {
+      if (
+        dataType.type === "pointer" ||
+        dataType.type === "struct self pointer"
+      ) {
         scalarDataType = "pointer";
       } else if (dataType.type === "enum") {
         scalarDataType = ENUM_DATA_TYPE;
@@ -519,38 +522,29 @@ export function unpackDataSegmentInitializerAccordingToDataType(
         scalarDataType = dataType.primaryDataType;
       }
       if (initializer.type === "InitializerSingle") {
-        try {
-          const processedConstant = evaluateCompileTimeExpression(
-            initializer.value
-          );
+        checkCompileTimeInitializer(initializer.value);
+        const processedConstant = evaluateCompileTimeExpression(
+          initializer.value
+        );
 
-          byteStr += convertConstantToByteStr(
-            processedConstant,
-            scalarDataType
-          );
-        } catch (e) {
-          if (e instanceof ProcessingError) {
-            throw new ProcessingError(
-              "initializer element is not compile-time constant"
-            );
-          }
-          throw e;
-        }
+        byteStr += convertConstantToByteStr(processedConstant, scalarDataType);
       } else {
         if (offset >= initializer.values.length) {
           byteStr += getZeroInializerByteStrForDataType(dataType);
         } else {
           // unpack the element at offset of the list until hit a single
-          //TODO: perhaps throw warning about braces arnd scalar initializer
           let firstInitializer = initializer.values[offset++];
           while (firstInitializer.type === "InitializerList") {
             if (firstInitializer.values.length === 0) {
               // empty initializer
               byteStr += getZeroInializerByteStrForDataType(dataType);
               return offset;
+            } else if (firstInitializer.values.length > 1) {
+              throw new ProcessingError("excess elements in initializer");
             }
             firstInitializer = firstInitializer.values[0];
           }
+          checkCompileTimeInitializer(firstInitializer.value);
           const processedConstant = evaluateCompileTimeExpression(
             firstInitializer.value
           );
@@ -562,7 +556,6 @@ export function unpackDataSegmentInitializerAccordingToDataType(
       }
     } else if (dataType.type === "array") {
       if (initializer.type === "InitializerSingle") {
-        // TODO: check if this is correct
         throw new ProcessingError("invalid initializer for aggregate type");
       }
       const numElements = evaluateCompileTimeExpression(
@@ -583,19 +576,18 @@ export function unpackDataSegmentInitializerAccordingToDataType(
             offset >= initializer.values.length ||
             initializer.values[offset].type === "InitializerSingle"
           ) {
-            // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
+            // sub aggregate will take from the same "level" of initializer list, offset will be incremented
             offset = helper(dataType.elementDataType, initializer, offset);
           } else {
-            helper(dataType.elementDataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
+            helperWithExcessInitializerCheck(
+              dataType.elementDataType,
+              initializer.values[offset++]
+            ); // fresh offset for sub aggregate
           }
-        } else if (dataType.elementDataType.type === "function") {
-          // should not be possible
-          throw new ProcessingError("cannot have array of functions");
         }
       }
     } else if (dataType.type === "struct") {
       if (initializer.type === "InitializerSingle") {
-        // TODO: check if this is correct
         throw new ProcessingError("invalid initializer for aggregate type");
       }
       for (const field of dataType.fields) {
@@ -613,10 +605,13 @@ export function unpackDataSegmentInitializerAccordingToDataType(
             offset >= initializer.values.length ||
             initializer.values[offset].type === "InitializerSingle"
           ) {
-            // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
+            // sub aggregate will take from the same "level" of initializer list, offset will be incremented
             offset = helper(field.dataType, initializer, offset);
           } else {
-            helper(field.dataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
+            helperWithExcessInitializerCheck(
+              field.dataType,
+              initializer.values[offset++]
+            ); // fresh offset for sub aggregate
           }
         } else if (field.dataType.type === "function") {
           throw new ProcessingError("function is not valid field of struct");
@@ -628,10 +623,23 @@ export function unpackDataSegmentInitializerAccordingToDataType(
     return offset;
   }
 
-  if (initalizer === null) {
+  function helperWithExcessInitializerCheck(
+    dataType: DataType | StructSelfPointer,
+    initializer: Initializer
+  ) {
+    const finalOffset = helper(dataType, initializer, 0);
+    if (
+      initializer.type === "InitializerList" &&
+      finalOffset < initializer.values.length
+    ) {
+      throw new ProcessingError("excess elements in initializer");
+    }
+  }
+
+  if (initializer === null) {
     return getZeroInializerByteStrForDataType(dataType);
   }
 
-  helper(dataType, initalizer, 0);
+  helperWithExcessInitializerCheck(dataType, initializer);
   return byteStr;
 }

@@ -931,33 +931,45 @@ const testLog = {
       title: "Struct with incomplete member",
       expectedErrorMessages: ["Error: 'B' is an incomplete type"]
     },
-    "intializer/excess_elements_array": {
+    "initializer/excess_elements_array": {
       title: "Excess elements when initializing array",
       expectedErrorMessages: ["Error: excess elements in initializer"]
     },
-    "intializer/excess_elements_struct": {
+    "initializer/excess_elements_struct": {
       title: "Excess elements when initializing struct",
       expectedErrorMessages: ["Error: excess elements in initializer"]
     },
-    "intializer/excess_elements_scalar": {
+    "initializer/excess_elements_scalar": {
       title: "Excess elements when initializing scalar",
       expectedErrorMessages: ["Error: excess elements in initializer"]
     },
-    "intializer/incompatible_scalar": {
-      title: "Incompatible intializer for scalar",
+    "initializer/incompatible_scalar": {
+      title: "Incompatible initializer for scalar",
       expectedErrorMessages: ["Error: incompatible types when initializing type 'signed int' using type 'struct X'"]
     },
-    "intializer/incompatible_scalar_nested_braces": {
+    "initializer/incompatible_scalar_nested_braces": {
       title: "Excess elements when initializing scalar (nested braces initializer list)",
       expectedErrorMessages: ["Error: incompatible types when initializing type 'signed int' using type 'struct X'"]
     },
-    "intializer/incompatible_struct": {
+    "initializer/incompatible_struct": {
       title: "Incompatible struct when initializing struct",
       expectedErrorMessages: ["Error: incompatible types when initializing type 'struct X' using type 'struct Y'"]
     },
-    "intializer/incompatible_struct_in_arr": {
+    "initializer/incompatible_struct_in_arr": {
       title: "Incompatible struct when initializing array of structs",
       expectedErrorMessages: ["Error: incompatible types when initializing type 'struct X' using type 'struct Y'"]
+    },
+    "initializer/global/non_constant_element": {
+      title: "Non constant initializer for globlal declaration",
+      expectedErrorMessages: ["Error: initializer element is not constant"] 
+    },
+    "initializer/global/initialize_fn_type": {
+      title: "Global function intialized like a variable",
+      expectedErrorMessages: ["Error: function 'f' is initialized like a variable"]  
+    },
+    "initializer/initialize_fn_type": {
+      title: "Local function declaration intialized like a variable",
+      expectedErrorMessages: ["Error: function 'f' is initialized like a variable"]  
     }
   },
 };
