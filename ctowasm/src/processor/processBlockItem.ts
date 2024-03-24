@@ -162,7 +162,7 @@ export default function processBlockItem(
         expression: processedTargetExpression,
       });
       if (!isIntegralDataType(dataTypeOfTargetExpression)) {
-        throw new ProcessingError("switch quantity is not an integer");
+        throw new ProcessingError("switch controlling expression is not an integer");
       }
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {

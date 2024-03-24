@@ -970,6 +970,10 @@ const testLog = {
     "initializer/initialize_fn_type": {
       title: "Local function declaration intialized like a variable",
       expectedErrorMessages: ["Error: function 'f' is initialized like a variable"]  
+    },
+    "statements/if_control_not_scalar": {
+      title: "Control expression not scalar",
+      expectedErrorMessages: ["Error: used 'struct X' where scalar is required"]  
     }
   },
 };

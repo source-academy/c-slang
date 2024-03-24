@@ -821,6 +821,12 @@
             ],
           }; // all enums defined as having signed int type
         } else if (enumSpecifier.type === "AnonymousEnum") {
+          enumSpecifier.enumerators.forEach((enumerator) => {
+            addIdentifierToSymbolTable(enumerator.name, {
+              type: "variable",
+              dataType: createEnumDataType(enumSpecifier.tag),
+            });
+          });
           return {
             dataType: createEnumDataType(null),
             enumDeclarations: [
