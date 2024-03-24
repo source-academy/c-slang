@@ -146,6 +146,7 @@ export class UnsupportedFeatureError extends Error {
  * Convert aribtrary object to json string. Needed to support bigints.
  */
 export function toJson(obj: any) {
+  const clone = structuredClone(obj)
   function recursionHelper(obj: any) {
     if ((typeof obj !== "object" && !Array.isArray(obj)) || obj === null) {
       return;
@@ -158,6 +159,6 @@ export function toJson(obj: any) {
       }
     }
   }
-  recursionHelper(obj);
-  return JSON.stringify(obj, null, 2);
+  recursionHelper(clone);
+  return JSON.stringify(clone, null, 2);
 }

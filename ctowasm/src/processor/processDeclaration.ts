@@ -1,4 +1,4 @@
-import { ProcessingError } from "~src/errors";
+import { ProcessingError, toJson } from "~src/errors";
 import {
   VariableDeclaration,
   Initializer,
@@ -39,6 +39,7 @@ import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
 import processEnumDeclaration from "~src/processor/processEnumDeclaration";
 import { addWarning } from "~src/processor/warningUtil";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
+import { PointerDataType, StructDataType, StructSelfPointer } from "~dist";
 
 /**
  * Processes a Declaration node that is found within a function.
@@ -118,6 +119,15 @@ function runInitializerChecks(dataType: DataType, initializer: Initializer) {
   }
 }
 
+function createStructSelfPointerDataType(
+  struct: StructDataType
+): PointerDataType {
+  return {
+    type: "pointer",
+    pointeeType: struct,
+  };
+}
+
 export function checkIntializerExpressionAssignability(
   lvalue: DataType,
   expr: ExpressionWrapperP
@@ -147,18 +157,23 @@ export function unpackLocalVariableInitializerAccordingToDataType(
 
   runInitializerChecks(variableSymbolEntry.dataType, initializer);
 
+  let structBeingFilled: StructDataType; // the current struct being filled, used for struct self pointer logic
   function helper(
-    dataType: DataType,
+    dataType: DataType | StructSelfPointer,
     initializer: Initializer,
     offset: number
   ): number {
     if (
       dataType.type === "primary" ||
       dataType.type === "pointer" ||
-      dataType.type === "enum"
+      dataType.type === "enum" ||
+      dataType.type === "struct self pointer"
     ) {
       let scalarDataType: ScalarCDataType;
-      if (dataType.type === "pointer") {
+      if (
+        dataType.type === "pointer" ||
+        dataType.type === "struct self pointer"
+      ) {
         scalarDataType = "pointer";
       } else if (dataType.type === "enum") {
         scalarDataType = ENUM_DATA_TYPE;
@@ -168,7 +183,15 @@ export function unpackLocalVariableInitializerAccordingToDataType(
 
       if (initializer.type === "InitializerSingle") {
         const processedExpr = processExpression(initializer.value, symbolTable);
-        checkIntializerExpressionAssignability(dataType, processedExpr);
+        if (dataType.type === "struct self pointer") {
+          checkIntializerExpressionAssignability(
+            createStructSelfPointerDataType(structBeingFilled),
+            processedExpr
+          );
+        } else {
+          checkIntializerExpressionAssignability(dataType, processedExpr);
+        }
+
         memoryStoreStatements.push({
           type: "MemoryStore",
           address: {
@@ -183,7 +206,10 @@ export function unpackLocalVariableInitializerAccordingToDataType(
       } else {
         if (offset >= initializer.values.length) {
           let zeroExpression: ConstantP;
-          if (isFloatDataType(dataType)) {
+          if (
+            dataType.type !== "struct self pointer" &&
+            isFloatDataType(dataType)
+          ) {
             zeroExpression = {
               type: "FloatConstant",
               value: 0,
@@ -195,7 +221,8 @@ export function unpackLocalVariableInitializerAccordingToDataType(
               type: "IntegerConstant",
               value: 0n,
               dataType:
-                dataType.type === "pointer"
+                dataType.type === "pointer" ||
+                dataType.type === "struct self pointer"
                   ? POINTER_TYPE
                   : dataType.type === "enum"
                   ? ENUM_DATA_TYPE
@@ -214,13 +241,16 @@ export function unpackLocalVariableInitializerAccordingToDataType(
           });
           currOffset += getDataTypeSize(dataType);
         } else {
-          // unpack the elemetn at offset of the list until hit a single
+          // unpack the element at offset of the list until hit a single
           let firstInitializer = initializer.values[offset++];
           while (firstInitializer.type === "InitializerList") {
             if (firstInitializer.values.length === 0) {
               // empty initializer list
               let zeroExpression: ConstantP;
-              if (isFloatDataType(dataType)) {
+              if (
+                dataType.type !== "struct self pointer" &&
+                isFloatDataType(dataType)
+              ) {
                 zeroExpression = {
                   type: "FloatConstant",
                   value: 0,
@@ -232,7 +262,8 @@ export function unpackLocalVariableInitializerAccordingToDataType(
                   type: "IntegerConstant",
                   value: 0n,
                   dataType:
-                    dataType.type === "pointer"
+                    dataType.type === "pointer" ||
+                    dataType.type === "struct self pointer"
                       ? POINTER_TYPE
                       : dataType.type === "enum"
                       ? ENUM_DATA_TYPE
@@ -262,7 +293,14 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             symbolTable
           );
           // check assignability
-          checkIntializerExpressionAssignability(dataType, processedExpr);
+          if (dataType.type === "struct self pointer") {
+            checkIntializerExpressionAssignability(
+              createStructSelfPointerDataType(structBeingFilled),
+              processedExpr
+            );
+          } else {
+            checkIntializerExpressionAssignability(dataType, processedExpr);
+          }
           memoryStoreStatements.push({
             type: "MemoryStore",
             address: {
@@ -300,28 +338,32 @@ export function unpackLocalVariableInitializerAccordingToDataType(
               (initializer.values[offset] as InitializerSingle).value,
               symbolTable
             );
-            checkIntializerExpressionAssignability(
-              dataType.elementDataType,
-              processedExpr
-            );
-            const unpackedStruct = unpackDataType(dataType.elementDataType);
-            for (let i = 0; i < unpackedStruct.length; ++i) {
-              const primaryExpr = processedExpr.exprs[i];
-              const primaryMemoryObj = unpackedStruct[i];
-              memoryStoreStatements.push({
-                type: "MemoryStore",
-                address: {
-                  type: "LocalAddress",
-                  offset: createMemoryOffsetIntegerConstant(currOffset), // offset of this primary data object = offset of variable it belongs to + offset within variable type
-                  dataType: "pointer",
-                },
-                value: primaryExpr,
-                dataType: primaryMemoryObj.dataType,
-              });
-              currOffset += getSizeOfScalarDataType(primaryMemoryObj.dataType);
+            if (processedExpr.originalDataType.type === "struct") {
+              checkIntializerExpressionAssignability(
+                dataType.elementDataType,
+                processedExpr
+              );
+              const unpackedStruct = unpackDataType(dataType.elementDataType);
+              for (let i = 0; i < unpackedStruct.length; ++i) {
+                const primaryExpr = processedExpr.exprs[i];
+                const primaryMemoryObj = unpackedStruct[i];
+                memoryStoreStatements.push({
+                  type: "MemoryStore",
+                  address: {
+                    type: "LocalAddress",
+                    offset: createMemoryOffsetIntegerConstant(currOffset), // offset of this primary data object = offset of variable it belongs to + offset within variable type
+                    dataType: "pointer",
+                  },
+                  value: primaryExpr,
+                  dataType: primaryMemoryObj.dataType,
+                });
+                currOffset += getSizeOfScalarDataType(
+                  primaryMemoryObj.dataType
+                );
+              }
+              ++offset;
+              continue;
             }
-            ++offset;
-            continue;
           }
           if (
             offset >= initializer.values.length ||
@@ -330,7 +372,7 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
             offset = helper(dataType.elementDataType, initializer, offset);
           } else {
-            helper(dataType.elementDataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
+            helperWithExcessInitializerCheck(dataType.elementDataType, initializer.values[offset++]); // fresh offset for sub aggregate
           }
         } else if (dataType.elementDataType.type === "array") {
           if (
@@ -340,7 +382,10 @@ export function unpackLocalVariableInitializerAccordingToDataType(
             // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
             offset = helper(dataType.elementDataType, initializer, offset);
           } else {
-            helper(dataType.elementDataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
+            helperWithExcessInitializerCheck(
+              dataType.elementDataType,
+              initializer.values[offset++]
+            );
           }
         } else if (dataType.elementDataType.type === "function") {
           // should not be possible
@@ -371,40 +416,33 @@ export function unpackLocalVariableInitializerAccordingToDataType(
         return offset;
       }
 
+      structBeingFilled = dataType;
       for (const field of dataType.fields) {
-        if (
-          field.dataType.type === "pointer" ||
-          field.dataType.type === "primary"
-        ) {
+        if (initializer.values[offset].type === "InitializerSingle") {
           // same initializer list, offset shld incr by 1
           offset = helper(field.dataType, initializer, offset);
-        } else if (
-          field.dataType.type === "array" ||
-          field.dataType.type === "struct"
-        ) {
-          if (
-            offset >= initializer.values.length ||
-            initializer.values[offset].type === "InitializerSingle"
-          ) {
-            // sub aggregate will take from the same "level" of initalizer list, offset will be incremented
-            offset = helper(field.dataType, initializer, offset);
-          } else {
-            helper(field.dataType, initializer.values[offset++], 0); // fresh offset for sub aggregate
-          }
-        } 
+        } else {
+          helperWithExcessInitializerCheck(
+            field.dataType,
+            initializer.values[offset++]
+          )
+        }
       }
     }
     return offset;
   }
 
-  const finalOffset = helper(variableSymbolEntry.dataType, initializer, 0);
-
-  if (
-    initializer.type === "InitializerList" &&
-    finalOffset < initializer.values.length
+  function helperWithExcessInitializerCheck(
+    dataType: DataType | StructSelfPointer,
+    initializer: Initializer
   ) {
-    throw new ProcessingError(`excess elements in initializer`);
+    const finalOffset = helper(dataType, initializer, 0);
+    if (initializer.type === "InitializerList" && finalOffset < initializer.values.length) {
+      throw new ProcessingError("excess elements in initializer");
+    }
   }
+
+  helperWithExcessInitializerCheck(variableSymbolEntry.dataType, initializer);
 
   return memoryStoreStatements;
 }

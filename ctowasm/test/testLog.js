@@ -940,16 +940,16 @@ const testLog = {
       expectedErrorMessages: ["Error: excess elements in initializer"]
     },
     "intializer/excess_elements_scalar": {
-      title: "Excess elements when initializing struct",
-      expectedErrorMessages: ["Error: excess elements in initializer"]
-    },
-    "intializer/incompatible_scalar": {
       title: "Excess elements when initializing scalar",
       expectedErrorMessages: ["Error: excess elements in initializer"]
     },
+    "intializer/incompatible_scalar": {
+      title: "Incompatible intializer for scalar",
+      expectedErrorMessages: ["Error: incompatible types when initializing type 'signed int' using type 'struct X'"]
+    },
     "intializer/incompatible_scalar_nested_braces": {
       title: "Excess elements when initializing scalar (nested braces initializer list)",
-      expectedErrorMessages: ["Error: excess elements in initializer"]
+      expectedErrorMessages: ["Error: incompatible types when initializing type 'signed int' using type 'struct X'"]
     },
     "intializer/incompatible_struct": {
       title: "Incompatible struct when initializing struct",

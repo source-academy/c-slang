@@ -1,4 +1,5 @@
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
+import { voidDataType } from "~src/modules/constants";
 import {
   freeFunction,
   mallocFunction,
@@ -43,7 +44,7 @@ export class PixAndFlixLibrary extends Module {
               },
             },
           ],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: (strAddress: number) => {
           const url = extractCStyleStringFromMemory(memory.buffer, strAddress);
@@ -63,7 +64,7 @@ export class PixAndFlixLibrary extends Module {
               },
             },
           ],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: (strAddress: number) => {
           const url = extractCStyleStringFromMemory(memory.buffer, strAddress);
@@ -76,7 +77,7 @@ export class PixAndFlixLibrary extends Module {
         functionType: {
           type: "function",
           parameters: [],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: () => {
           getExternalFunction("start", config)();
@@ -124,7 +125,7 @@ export class PixAndFlixLibrary extends Module {
               primaryDataType: "signed int",
             },
           ],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: (width: number, height: number) => {
           getExternalFunction("set_dimensions", config)(width, height);
@@ -193,11 +194,11 @@ export class PixAndFlixLibrary extends Module {
                     primaryDataType: "signed int",
                   },
                 ],
-                returnType: null,
+                returnType: voidDataType,
               },
             },
           ],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: (funcPtr: number) => {
           const filter = (src: number[][][], dest: number[][][]) => {
@@ -283,7 +284,7 @@ export class PixAndFlixLibrary extends Module {
         functionType: {
           type: "function",
           parameters: [],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: () => {
           getExternalFunction("reset_filter", config)();
@@ -297,7 +298,7 @@ export class PixAndFlixLibrary extends Module {
             type: "primary",
             primaryDataType: "signed int"
           }],
-          returnType: null,
+          returnType: voidDataType,
         },
         jsFunction: () => {
           getExternalFunction("set_fps", config)();

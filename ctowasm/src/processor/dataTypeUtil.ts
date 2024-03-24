@@ -263,7 +263,7 @@ export function checkDataTypeCompatibility(
     return a.primaryDataType === b.primaryDataType;
   } else if (a.type === "array" && b.type === "array") {
     return (
-      a.numElements === b.numElements &&
+      evaluateCompileTimeExpression(a.numElements).value === evaluateCompileTimeExpression(b.numElements).value &&
       checkDataTypeCompatibility(
         a.elementDataType,
         b.elementDataType,
