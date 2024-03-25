@@ -4,7 +4,7 @@
 
 import { ProcessingError } from "~src/errors";
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
-import { DataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, StructSelfPointer } from "~src/parser/c-ast/dataTypes";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { getDataTypeSize } from "~src/processor/dataTypeUtil";
 import { isIntegerType, primaryDataTypeSizes } from "~src/common/utils";
@@ -13,7 +13,6 @@ import {
   IntegerDataType,
   ScalarCDataType,
 } from "~src/common/types";
-import { StructSelfPointer } from "~dist";
 
 export function getZeroInializerByteStrForDataType(
   dataType: DataType | StructSelfPointer

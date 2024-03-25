@@ -28,7 +28,7 @@ import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionSt
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { IntegerDataType, PrimaryCDataType } from "~src/common/types";
 import { addWarning } from "~src/processor/warningUtil";
-import { PrimaryDataType, ScalarDataType } from "~dist";
+import { PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 
 // some auxillary information used during processing
 let auxInfo = {

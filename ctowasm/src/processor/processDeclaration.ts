@@ -31,7 +31,7 @@ import {
 import evaluateCompileTimeExpression, {
   isCompileTimeExpression,
 } from "~src/processor/evaluateCompileTimeExpression";
-import { DataType, PrimaryDataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, PointerDataType, PrimaryDataType, StructDataType, StructSelfPointer } from "~src/parser/c-ast/dataTypes";
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import {
   convertConstantToByteStr,
@@ -41,7 +41,6 @@ import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
 import processEnumDeclaration from "~src/processor/processEnumDeclaration";
 import { addWarning } from "~src/processor/warningUtil";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
-import { PointerDataType, StructDataType, StructSelfPointer } from "~dist";
 import { Expression } from "~src/parser/c-ast/core";
 
 /**

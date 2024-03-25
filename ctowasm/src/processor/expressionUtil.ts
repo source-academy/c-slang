@@ -13,7 +13,7 @@ import {
   isIntegerType,
   primaryDataTypeSizes,
 } from "~src/common/utils";
-import { DataType, ScalarDataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, PrimaryDataType, ScalarDataType } from "~src/parser/c-ast/dataTypes";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { ProcessingError } from "~src/errors";
 import {
@@ -36,7 +36,6 @@ import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
 import { getDataTypeOfExpression } from "~src/processor/util";
 import { checkPrePostfixTypeConstraint } from "~src/processor/constraintChecks";
 import { PTRDIFF_T } from "~src/common/constants";
-import { PrimaryDataType } from "~dist";
 
 function isRelationalOperator(op: BinaryOperator) {
   return (
