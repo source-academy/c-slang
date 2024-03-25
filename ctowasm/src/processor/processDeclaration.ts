@@ -55,14 +55,14 @@ export function processLocalDeclaration(
 ): StatementP[] {
   if (declaration.type === "Declaration") {
     let symbolEntry = symbolTable.addEntry(declaration);
-    if (symbolEntry.type === "function" && typeof declaration.initializer !== "undefined") {
-      throw new ProcessingError(`function '${declaration.name}' is initialized like a variable`);
+    if (
+      symbolEntry.type === "function" &&
+      typeof declaration.initializer !== "undefined"
+    ) {
+      throw new ProcessingError(
+        `function '${declaration.name}' is initialized like a variable`
+      );
     }
-
-    console.assert(
-      symbolEntry.type === "localVariable",
-      "processLocalDeclaration(): symbolEntry does not have type 'localVariable'"
-    );
 
     if (typeof enclosingFunc !== "undefined") {
       enclosingFunc.sizeOfLocals += getDataTypeSize(declaration.dataType);
@@ -100,9 +100,7 @@ function runInitializerChecks(dataType: DataType, initializer: Initializer) {
       throw new ProcessingError("excess elements in scalar intializer"); // undefined behaviour, for not throw TODO: perhaps toggle based on flag
     }
   } else if (dataType.type === "function") {
-    throw new ProcessingError(
-      `function cannot be initialized like a variable`
-    );
+    throw new ProcessingError(`function cannot be initialized like a variable`);
   } else if (
     dataType.type === "array" &&
     initializer.type === "InitializerSingle"

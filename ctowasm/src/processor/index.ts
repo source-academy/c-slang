@@ -10,6 +10,7 @@ import { SymbolTable } from "~src/processor/symbolTable";
 import ModuleRepository, { ModuleName } from "~src/modules";
 import { ProcessingError } from "~src/errors";
 import { Warning, clearWarnings, warnings } from "~src/processor/warningUtil";
+import { resetProcessorAuxInfo } from "~src/processor/processBlockItem";
 
 
 /**
@@ -59,7 +60,8 @@ export default function process(
 
   ast.children.forEach((child) => {
     // special handling for function definitions
-    if (child.type === "FunctionDefinition") {
+    resetProcessorAuxInfo();
+    if (child.type === "FunctionDefinition") {   
       processedAst.functions.push(
         processFunctionDefinition(child, symbolTable),
       );

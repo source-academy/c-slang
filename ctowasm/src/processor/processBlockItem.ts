@@ -15,7 +15,7 @@ import {
 } from "./processFunctionDefinition";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentNodes } from "~src/processor/lvalueUtil";
-import { BlockItem } from "~src/parser/c-ast/core";
+import { BlockItem, Statement } from "~src/parser/c-ast/core";
 import {
   determineOperandTargetDataTypeOfBinaryExpression,
   determineResultDataTypeOfBinaryExpression,
@@ -29,6 +29,27 @@ import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExp
 import { IntegerDataType, PrimaryCDataType } from "~src/common/types";
 import { addWarning } from "~src/processor/warningUtil";
 import { PrimaryDataType, ScalarDataType } from "~dist";
+
+// some auxillary information used during processing
+let auxInfo = {
+  inLoop: false,
+  inSwitch: false
+}
+
+export function resetProcessorAuxInfo() {
+  auxInfo = {
+    inLoop: false,
+    inSwitch: false
+  }
+}
+
+function processLoopBody(bodyStaement: BlockItem, symbolTable: SymbolTable, enclosingFunc: FunctionDefinitionP) {
+  const originalInLoop = auxInfo.inLoop;
+  auxInfo.inLoop = true;
+  const body = processBlockItem(bodyStaement, symbolTable, enclosingFunc);
+  auxInfo.inLoop = originalInLoop;
+  return body;
+}
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -96,7 +117,7 @@ export default function processBlockItem(
           node.update !== null
             ? processBlockItem(node.update, forLoopSymbolTable, enclosingFunc)
             : [],
-        body: processBlockItem(node.body, forLoopSymbolTable, enclosingFunc),
+        body: processLoopBody(node.body,forLoopSymbolTable, enclosingFunc),
       };
 
       return [processedForLoopNode];
@@ -105,7 +126,7 @@ export default function processBlockItem(
         {
           type: node.type,
           condition: processCondition(node.condition, symbolTable),
-          body: processBlockItem(node.body, symbolTable, enclosingFunc), // processing a block always gives array of statements
+          body: processLoopBody(node.body, symbolTable, enclosingFunc), // processing a block always gives array of statements
         },
       ];
     } else if (node.type === "ReturnStatement") {
@@ -144,9 +165,23 @@ export default function processBlockItem(
         },
       ];
     } else if (
-      node.type === "BreakStatement" ||
+      node.type === "BreakStatement"
+    ) {
+      if (!auxInfo.inLoop && !auxInfo.inSwitch) {
+        throw new ProcessingError("break statement not within a switch or loop body")
+      }
+      return [
+        {
+          type: node.type,
+        },
+      ];
+      // start of processing Expression nodes which may have side effects
+    }  else if (
       node.type === "ContinueStatement"
     ) {
+      if (!auxInfo.inLoop) {
+        throw new ProcessingError("continue statement not within a loop body")
+      }
       return [
         {
           type: node.type,
@@ -162,18 +197,25 @@ export default function processBlockItem(
         expression: processedTargetExpression,
       });
       if (!isIntegralDataType(dataTypeOfTargetExpression)) {
-        throw new ProcessingError("switch controlling expression is not an integer");
+        throw new ProcessingError("switch quantity is not an integer");
       }
+
+      if (node.cases.length === 0 && node.defaultStatements.length === 0) {
+        // empty switch statement, just process the expression as block item
+        return processBlockItem(node.targetExpression, symbolTable, enclosingFunc);
+      }
+
+      const originalInSwitch = auxInfo.inSwitch;
+      auxInfo.inSwitch = true;
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
         const dataTypeOfLabel = getDataTypeOfExpression({expression: processExpression(switchStatementCase.conditionMatch, symbolTable, enclosingFunc)});
         if (!isIntegralDataType(dataTypeOfLabel)) {
-          throw new ProcessingError("case label does not reduce to an integer constant");
+          throw new ProcessingError("case value not an integer constant expression", switchStatementCase.position);
         }
         const evaluatedConstant = evaluateCompileTimeExpression(
           switchStatementCase.conditionMatch,
         );
-        // TODO: refine error message if not compile time expression
         const processedStatements: StatementP[] = [];
         for (const statement of switchStatementCase.statements) {
           processedStatements.push(
@@ -204,6 +246,7 @@ export default function processBlockItem(
           ...processBlockItem(defaultStatement, symbolTable, enclosingFunc),
         );
       }
+      auxInfo.inSwitch = originalInSwitch;
       return [
         {
           type: "SwitchStatement",

@@ -296,20 +296,24 @@
       defaultStatements: [],
       incompletePointers: []
     });
+    const removedTags = new Set();
+    const removedIdentifiers = new Set();
     for (const switchCase of cases) {
       const switchStatementCase = {
+        type: "SwitchStatementCase",
+        position: switchCase.position,
         conditionMatch: switchCase.conditionMatch,
         statements: []
       }
       for (const statement of switchCase.statements) {
-        const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, switchStatementNode.incompletePointers);
+        const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, switchStatementNode.incompletePointers, removedTags, removedIdentifiers);
         switchStatementCase.statements.push(...unpackedStatements);
         switchStatementNode.incompletePointers = incompletePointers;
       }
       switchStatementNode.cases.push(switchStatementCase);
     }
     for (const statement of defaultStatements) {
-      const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, switchStatementNode.incompletePointers);
+      const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, switchStatementNode.incompletePointers, removedTags, removedIdentifiers);
       switchStatementNode.defaultStatements.push(...unpackedStatements);
       switchStatementNode.incompletePointers = incompletePointers;
     }
@@ -1675,7 +1679,6 @@ block_item
   = statement
   / declaration
 
-
 // ========= Jump Statement ==========
 
 jump_statement
@@ -1703,16 +1706,17 @@ selection_statement
   = "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement _ "else" _ elseStatement:statement { return generateNode("SelectionStatement", { condition, ifStatement, elseStatement }); } 
   / "if" _ "(" _ condition:expression _ ")" _ ifStatement:statement { return generateNode( "SelectionStatement", { condition, ifStatement }); }
   / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ cases:switch_statement_case|1.., _| defaultStatements:(_ @switch_default_case)? _ "}"  { return createSwitchStatementNode(targetExpression, cases, defaultStatements ?? []); }
-  / "switch" _ "(" _ @expression _ ")" _ "{" _ "}" // functionally useless except for potentially side effect expression
-  / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed"); return targetExpression; } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
+  / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ defaultStatements:switch_default_case _ "}"  { return createSwitchStatementNode(targetExpression, [], defaultStatements); }
+  / "switch" _ "(" _ targetExpression:expression _ ")" _ "{" _ "}" { return createSwitchStatementNode(targetExpression, [], []); } // functionally useless except for potentially side effect expression
+  / "switch" _ "(" _ targetExpression:expression _ ")" _  statement { warn("Statement will never be executed"); return createSwitchStatementNode(targetExpression, [], []); } // useless switch statement (accpeted during parsing but functonally useless, except for potential side effets in expression)
 
 switch_default_case
   = "default" _ ":" _ @block_item_list
   / "default" _ ":" { return []; }
 
 switch_statement_case
-  = "case" _ conditionMatch:constant_expression _ ":" _ statements:block_item_list { return { conditionMatch, statements }; }
-  / "case" _ conditionMatch:constant_expression _ ":" { return { conditionMatch, statements: [] }; }
+  = "case" _ conditionMatch:constant_expression _ ":" _ statements:block_item_list { return generateNode("SwitchStatementCase", { conditionMatch, statements }); }
+  / "case" _ conditionMatch:constant_expression _ ":" { return generateNode("SwitchStatementCase", { conditionMatch, statements: [] }); }
 
 // ======== Declarations ========
 
