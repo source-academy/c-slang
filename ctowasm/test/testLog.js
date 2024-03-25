@@ -640,6 +640,13 @@ const testLog = {
         "4294967296",
       ],
     },
+    switch_scoping: {
+      title: "Variables scoped with switch statements",
+      expectedCode: false,
+      expectedValues: [
+        50, 10, 10, 20
+      ],
+    }
   },
   error: {
     enum_redeclaration: {
@@ -974,7 +981,27 @@ const testLog = {
     "statements/if_control_not_scalar": {
       title: "Control expression not scalar",
       expectedErrorMessages: ["Error: used 'struct X' where scalar is required"]  
-    }
+    },
+    "statements/switch_control_not_int": {
+      title: "Control expression not integer",
+      expectedErrorMessages: ["Error: switch quantity is not an integer"]
+    },
+    "statements/switch_case_not_int": {
+      title: "Value of case of switch statement not integer",
+      expectedErrorMessages: ["Error: case value not an integer constant expression"]
+    }, 
+    "statements/while_control_not_scalar": {
+      title: "While control not scalar",
+      expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
+    }, 
+    "statements/for_control_not_scalar": {
+      title: "For loop control not scalar",
+      expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
+    },
+    "statements/do_loop_control_not_scalar": {
+      title: "Do loop control not scalar",
+      expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
+    },  
   },
 };
 

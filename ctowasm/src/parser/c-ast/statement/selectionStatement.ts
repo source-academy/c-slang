@@ -18,7 +18,8 @@ export interface SwitchStatement extends CNodeBase {
   defaultStatements: Statement[]; // statements for default case
 }
 
-interface SwitchStatementCase {
+interface SwitchStatementCase extends CNodeBase {
+  type: "SwitchStatementCase";
   conditionMatch: Expression; // the constant expression to match the targetExpression against
   statements: Statement[]; // the statements under this case to run
 }

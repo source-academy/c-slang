@@ -162,18 +162,23 @@ export default function processBlockItem(
         expression: processedTargetExpression,
       });
       if (!isIntegralDataType(dataTypeOfTargetExpression)) {
-        throw new ProcessingError("switch controlling expression is not an integer");
+        throw new ProcessingError("switch quantity is not an integer");
       }
+
+      if (node.cases.length === 0 && node.defaultStatements.length === 0) {
+        // empty switch statement, just process the expression as block item
+        return processBlockItem(node.targetExpression, symbolTable, enclosingFunc);
+      }
+
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
         const dataTypeOfLabel = getDataTypeOfExpression({expression: processExpression(switchStatementCase.conditionMatch, symbolTable, enclosingFunc)});
         if (!isIntegralDataType(dataTypeOfLabel)) {
-          throw new ProcessingError("case label does not reduce to an integer constant");
+          throw new ProcessingError("case value not an integer constant expression", switchStatementCase.position);
         }
         const evaluatedConstant = evaluateCompileTimeExpression(
           switchStatementCase.conditionMatch,
         );
-        // TODO: refine error message if not compile time expression
         const processedStatements: StatementP[] = [];
         for (const statement of switchStatementCase.statements) {
           processedStatements.push(
