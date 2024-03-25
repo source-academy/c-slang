@@ -1679,7 +1679,6 @@ block_item
   = statement
   / declaration
 
-
 // ========= Jump Statement ==========
 
 jump_statement

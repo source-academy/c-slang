@@ -1001,7 +1001,15 @@ const testLog = {
     "statements/do_loop_control_not_scalar": {
       title: "Do loop control not scalar",
       expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
-    },  
+    },
+    "statements/continue_not_in_loop": {
+      title: "Continue statement not in loop body",
+      expectedErrorMessages: ["Error: continue statement not within a loop body"]
+    }, 
+    "statements/break_not_in_loop_or_switch": {
+      title: "Break statement not in loop or switch body",
+      expectedErrorMessages: ["Error: break statement not within a switch or loop body"]
+    },   
   },
 };
 
