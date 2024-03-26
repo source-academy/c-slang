@@ -9,6 +9,11 @@
   "devDependencies": {
     "subpackage": "^1.1.0"
   },
+  "dependencies": {
+    "bignumber.js": "^9.1.2",
+    "peggy": "^3.0.2",
+    "wabt": "^1.0.32"
+  },
   "scripts": {
     "install-all": "subpkg install",
     "build": "subpkg run build"
