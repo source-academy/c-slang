@@ -8,11 +8,6 @@
   "type": "module",
   "source": "src/index.ts",
   "main": "dist/index.js",
-  "targets": {
-    "main": {
-      "includeNodeModules": {}
-    }
-  },
   "types": "dist/index.d.ts",
   "files": [
     "dist"
