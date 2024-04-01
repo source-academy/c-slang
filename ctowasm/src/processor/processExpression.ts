@@ -24,7 +24,7 @@ import {
   processCondition,
   isFunctionPointer,
 } from "~src/processor/util";
-import { convertFunctionCallToFunctionCallP } from "./processFunctionDefinition";
+import { convertFunctionCallToFunctionCallP } from "~src/processor/processFunctionDefinition";
 import { getAssignmentNodes, isLValue } from "~src/processor/lvalueUtil";
 import {
   determineIndexAndDataTypeOfFieldInStruct,

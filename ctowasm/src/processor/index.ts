@@ -57,7 +57,6 @@ export default function process(
       },
     );
   }
-
   ast.children.forEach((child) => {
     // special handling for function definitions
     resetProcessorAuxInfo();

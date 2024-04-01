@@ -1779,7 +1779,6 @@ declarator
   = pointers:pointer _ directDeclarator:direct_declarator { return createPointerDeclaratorNode(pointers, directDeclarator); }
   / directDeclarator:direct_declarator { return directDeclarator; }
 
-// TODO: add type qualifiers to pointer
 pointer 
   = pointer_with_qualifier|1.., _|
 

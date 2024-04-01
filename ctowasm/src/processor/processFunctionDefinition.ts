@@ -211,7 +211,7 @@ function checkFunctionCallArgsAreCompatible(
     );
   }
   for (let i = 0; i < args.length; ++i) {
-    if (!checkAssignability(fnDataType.parameters[i], args[i], true)) {
+    if (!checkAssignability(fnDataType.parameters[i], args[i])) {
       throw new ProcessingError(
         `cannot assign function call argument to parameter\nFunction parameter type: "${stringifyDataType(
           fnDataType.parameters[i]

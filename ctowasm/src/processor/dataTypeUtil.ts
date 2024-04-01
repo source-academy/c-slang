@@ -545,8 +545,7 @@ export function isNullPointerConstant(expr: ExpressionWrapperP) {
  */
 export function checkAssignability(
   lvalue: DataType,
-  expr: ExpressionWrapperP, // the expression being assigned
-  ignoreConst = false
+  expr: ExpressionWrapperP // the expression being assigned
 ) {
   if (lvalue.type === "array" || lvalue.type === "function" || lvalue.type === "void") {
     return false;
@@ -557,10 +556,6 @@ export function checkAssignability(
     convertArrayToPointer: true,
     convertFunctionToPointer: true,
   });
-
-  if (!ignoreConst && lvalue.isConst) {
-    return false;
-  }
 
   // assigning null pointer constant
   if (lvalue.type === "pointer" && isNullPointerConstant(expr)) {
@@ -573,18 +568,14 @@ export function checkAssignability(
       checkDataTypeCompatibility(lvalue, exprDataType)) ||
     (lvalue.type === "pointer" &&
       exprDataType.type === "pointer" &&
-      checkAssignabilityOfPointers(lvalue, exprDataType, ignoreConst))
+      checkAssignabilityOfPointers(lvalue, exprDataType))
   );
 }
 
 export function checkAssignabilityOfPointers(
   left: PointerDataType,
-  right: PointerDataType,
-  ignoreConst = false
+  right: PointerDataType
 ) {
-  if (!ignoreConst && left.isConst) {
-    return false;
-  }
   if (isVoidPointer(left) || isVoidPointer(right)) {
     return true;
   }

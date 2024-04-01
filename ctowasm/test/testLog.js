@@ -648,6 +648,13 @@ const testLog = {
       ],
     }
   },
+  "misc": {
+    assign_with_const: {
+      title: "Test intialization an assignment with const qualifier that should not affect it",
+      expectedCode: false,
+      expectedValues: [2, 2]
+    } 
+  },
   error: {
     enum_redeclaration: {
       title: "Redeclaration of enum type",
@@ -906,6 +913,14 @@ const testLog = {
       title: "Compound assignment (addition) to non-lvalue",
       expectedErrorMessages: ["Error: assignment to expression that is not a lvalue"]
     },
+    "assignment/assign_to_pointer_to_const": {
+      title: "Assignment of pointer to const to a pointer to non const",
+      expectedErrorMessages: ["Error: incompatible types when initializing type 'const pointer to signed int' using type 'pointer to const signed int'"]
+    }, 
+    "assignment/init_pointer_to_const": {
+      title: "Initialization of pointer to non const with pointer to const",
+      expectedErrorMessages: ["Error: incompatible types when initializing type 'pointer to signed int' using type 'pointer to const signed int'"]
+    },  
     "declarations/no_type_specifiers": {
       title: "Declaration with no type specifiers",
       expectedErrorMessages: ["Error: at least 1 type specifier required in declaration specifiers of declaration"]
@@ -1009,8 +1024,8 @@ const testLog = {
     "statements/break_not_in_loop_or_switch": {
       title: "Break statement not in loop or switch body",
       expectedErrorMessages: ["Error: break statement not within a switch or loop body"]
-    },   
-  },
+    }, 
+  }
 };
 
 export default testLog;

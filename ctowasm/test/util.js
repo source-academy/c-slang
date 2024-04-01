@@ -13,27 +13,24 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const TEMP_DIRECTORY = path.resolve(__dirname, "temp");
-const getExpectedCodeFilePath = (subset, fileName) => {
+const getExpectedCodeFilePath = (testGroup, fileName) => {
   return path.resolve(
     __dirname,
-    `samples/subset${subset.toString()}/valid/expected/${fileName}.wat`,
+    `samples/${testGroup}/valid/expected/${fileName}.wat`,
   );
 };
 
 export const COMPILATION_SUCCESS = "success";
 
 export async function compileAndRunFile({
-  subset,
-  testType,
+  testGroup,
   testFileName,
   modulesConfig,
 }) {
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
-      `samples/subset${subset.toString()}/${
-        testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`,
+      `samples/${testGroup}/${testFileName}.c`,
     ),
     "utf-8",
   );
@@ -47,17 +44,15 @@ class CompilationFailure extends Error {
   }
 }
 
-export function compileAndSaveFileToWat({ subset, testType, testFileName }) {
+export function compileAndSaveFileToWat({ testGroup, testFileName }) {
   const watFilePath = path.resolve(
     TEMP_DIRECTORY,
-    `subset${subset.toString()}/wat/${testFileName}.wat`,
+    `${testGroup}/wat/${testFileName}.wat`,
   );
   const input = fs.readFileSync(
     path.resolve(
       __dirname,
-      `samples/subset${subset.toString()}/${
-        testType === "assertCorrectness" ? "valid" : "error"
-      }/${testFileName}.c`,
+      `samples/${testGroup}/${testFileName}.c`,
     ),
     "utf-8",
   );
@@ -128,33 +123,32 @@ export function checkErrorMessages(actual, expectedMsgs) {
   return COMPILATION_FAILURE_TEST_SUCCESS;
 }
 
-export async function testFileCompilationSuccess(subset, testFileName) {
+export async function testFileCompilationSuccess(testGroup, testFileName) {
   // Test 1: checks that C program is compilable to WAT
   try {
     const output = compileAndSaveFileToWat({
-      subset,
-      testType: "assertCorrectness",
+      testGroup,
       testFileName,
     });
 
     // if there already exists a verified expected output for this file, simply check that the output WAT is the same as expected
     if (
-      testLog[`subset${subset.toString()}`][testFileName].expectedCode === true
+      testLog[testGroup][testFileName].expectedCode === true
     ) {
       const expected = fs.readFileSync(
-        getExpectedCodeFilePath(subset, testFileName),
+        getExpectedCodeFilePath(testGroup, testFileName),
         "utf-8",
       );
       if (expected === output) {
         return COMPILATION_SUCCESS;
       } else {
         return `WAT DOES NOT MATCH EXPECTED:\nexpected file: ${getExpectedCodeFilePath(
-          subset,
+          testGroup,
           testFileName,
         )}\nactual file: ${path
           .resolve(
             TEMP_DIRECTORY,
-            `subset${subset.toString()}/wat/${testFileName}.wat`,
+            `${testGroup}/wat/${testFileName}.wat`,
           )
           .toString()}`;
       }
@@ -169,17 +163,16 @@ export async function testFileCompilationSuccess(subset, testFileName) {
         try {
           // if there is a expectedValues for variables in the file, check that they are equal
           await compileAndRunFile({
-            subset,
-            testType: "assertCorrectness",
+            testGroup,
             testFileName,
             modulesConfig,
           });
           if (
-            "customTest" in testLog[`subset${subset.toString()}`][testFileName]
+            "customTest" in testLog[testGroup][testFileName]
           ) {
             // if a custom test has been defined for this test case, use that instead
             if (
-              !testLog[`subset${subset.toString()}`][testFileName].customTest(
+              !testLog[testGroup][testFileName].customTest(
                 programOutput,
               )
             ) {
@@ -189,8 +182,8 @@ export async function testFileCompilationSuccess(subset, testFileName) {
             const actualValues = programOutput.toString();
             const expectedValues =
               "expectedValues" in
-              testLog[`subset${subset.toString()}`][testFileName]
-                ? testLog[`subset${subset.toString()}`][
+              testLog[testGroup][testFileName]
+                ? testLog[testGroup][
                     testFileName
                   ].expectedValues.toString()
                 : [].toString();
