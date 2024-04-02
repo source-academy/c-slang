@@ -69,9 +69,10 @@ export async function runWasm(
   moduleRepository.setBasePointerValue(numberOfInitialPagesNeeded * WASM_PAGE_SIZE);
   moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4); // align to 4 bytes
 
+  const wasmImports = await moduleRepository.createWasmImportsObject(importedModules);
   await WebAssembly.instantiate(
     wasm,
-    moduleRepository.createWasmImportsObject(importedModules),
+    wasmImports
   );
 }
 

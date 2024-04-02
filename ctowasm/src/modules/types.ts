@@ -28,6 +28,7 @@ export abstract class Module {
   freeList: MemoryBlock[] = [];
   allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
+  instantiate?: () => Promise<void> // any instantiation of the module that must be done before use
   abstract moduleDeclaredStructs: StructDataType[];
   abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
 

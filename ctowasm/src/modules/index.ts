@@ -1,3 +1,4 @@
+import { MathStdLibModule, mathStdlibName } from "~src/modules/math";
 import {
   PixAndFlixLibrary,
   pixAndFlixLibraryModuleImportName,
@@ -27,7 +28,8 @@ export interface SharedWasmGlobalVariables {
 // all the names of the modules
 export type ModuleName =
   | typeof sourceStandardLibraryModuleImportName
-  | typeof pixAndFlixLibraryModuleImportName;
+  | typeof pixAndFlixLibraryModuleImportName
+  | typeof mathStdlibName;
 
 /**
  * Holds all the modules that define functions that can be imported and used in C source program.
@@ -80,6 +82,10 @@ export default class ModuleRepository {
         this.config,
         this.sharedWasmGlobalVariables
       ),
+      [mathStdlibName]: new MathStdLibModule(this.memory,
+        this.functionTable,
+        this.config,
+        this.sharedWasmGlobalVariables)
     };
   }
 
@@ -103,7 +109,7 @@ export default class ModuleRepository {
    * Returns the object that can be used as argument to Webassembly.instantiate.
    * @param importedModules the names of all modules that are being imported and used in a particular compiled wasm output file.
    */
-  createWasmImportsObject(importedModules: ModuleName[]): WebAssembly.Imports {
+  async createWasmImportsObject(importedModules: ModuleName[]): Promise<WebAssembly.Imports> {
     const imports: WebAssembly.Imports = {
       js: {
         mem: this.memory,
@@ -114,9 +120,12 @@ export default class ModuleRepository {
       },
     };
 
-    importedModules.forEach((moduleName) => {
+    for (const moduleName of importedModules ){
       const module = this.modules[moduleName];
       const moduleImportObject: WebAssembly.ModuleImports = {};
+      if (typeof this.modules[moduleName].instantiate !== "undefined") {
+        await (this.modules[moduleName].instantiate as () => Promise<void>)();
+      }
       Object.keys(this.modules[moduleName].moduleFunctions).map(
         (moduleFunctionName) => {
           moduleImportObject[moduleFunctionName] =
@@ -124,7 +133,7 @@ export default class ModuleRepository {
         }
       );
       imports[moduleName] = moduleImportObject;
-    });
+    }
     return imports;
   }
 }

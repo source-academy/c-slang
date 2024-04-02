@@ -24,6 +24,7 @@
     "@parcel/transformer-js": "^2.10.1",
     "@parcel/transformer-react-refresh-wrap": "^2.10.1",
     "@parcel/transformer-typescript-types": "2.10.1",
+    "@types/emscripten": "^1.39.10",
     "@types/jest": "^29.5.12",
     "@types/yargs": "^17.0.24",
     "@typescript-eslint/eslint-plugin": "^6.4.0",
@@ -36,6 +37,7 @@
     "nodemon": "^3.0.1",
     "parcel": "^2.10.1",
     "prettier": "^3.0.2",
+    "rimraf": "^5.0.5",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.1",
     "ts-pegjs": "^4.2.1",
@@ -43,7 +45,7 @@
     "yargs": "^17.7.2"
   },
   "scripts": {
-    "build": "parcel build --no-cache",
+    "build": "yarn clean-dist && parcel build --no-cache",
     "lint": "eslint . --fix",
     "prettify": "prettier . --write",
     "compile": "yarn build && node cmd.js compile",
@@ -54,7 +56,8 @@
     "gen-wat-ast": "yarn build && node cmd.js generate-wat-ast",
     "test": "yarn build && NODE_OPTIONS=--experimental-vm-modules jest",
     "unit-test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=unit_tests",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "clean-dist": "rimraf dist"
   },
   "dependencies": {
     "bignumber.js": "^9.1.2",
