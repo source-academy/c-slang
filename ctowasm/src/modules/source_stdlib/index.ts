@@ -7,7 +7,10 @@ import {
   printStack,
 } from "~src/modules/source_stdlib/memory";
 import { Module, ModuleFunction } from "~src/modules/types";
-import { convertFloatToCStyleString, extractCStyleStringFromMemory } from "~src/modules/util";
+import {
+  convertFloatToCStyleString,
+  extractCStyleStringFromMemory,
+} from "~src/modules/util";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
 
 // the name that this module is imported into wasm by,
@@ -23,7 +26,7 @@ export class SourceStandardLibraryModule extends Module {
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
     config: ModulesGlobalConfig,
-    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables
   ) {
     super(memory, functionTable, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
@@ -39,7 +42,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "signed int",
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (int: number) => {
           // to print the correct int (4 bytes), need to handle signage
@@ -62,7 +65,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "unsigned int",
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (val: number) => {
           // need to intepret val as unsigned 4 byte int
@@ -84,7 +87,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "signed char",
             },
           ],
-          returnType: { type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (char: number) => {
           // signed int overflow is undefined, no need to worry about handling that
@@ -102,7 +105,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "signed long",
             },
           ],
-          returnType: { type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (long: bigint) => {
           // to prlong the correct long (4 bytes), need to handle signage
@@ -125,7 +128,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "unsigned long",
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (val: bigint) => {
           // need to intepret val as unsigned 8 byte unsigned int
@@ -146,7 +149,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "float",
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (float: number) =>
           this.print(convertFloatToCStyleString(float)),
@@ -161,7 +164,7 @@ export class SourceStandardLibraryModule extends Module {
               primaryDataType: "double",
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (float: number) =>
           this.print(convertFloatToCStyleString(float)),
@@ -174,10 +177,10 @@ export class SourceStandardLibraryModule extends Module {
           parameters: [
             {
               type: "pointer",
-              pointeeType: {type: "void"}
+              pointeeType: { type: "void" },
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (val: number) => {
           // need to intepret val as unsigned 4 byte int
@@ -202,7 +205,7 @@ export class SourceStandardLibraryModule extends Module {
               },
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (strAddress: number) => {
           // need to intepret val as unsigned 4 byte int
@@ -222,7 +225,7 @@ export class SourceStandardLibraryModule extends Module {
           ],
           returnType: {
             type: "pointer",
-            pointeeType: {type: "void"},
+            pointeeType: { type: "void" },
           },
         },
         jsFunction: (numBytes: number) =>
@@ -241,10 +244,10 @@ export class SourceStandardLibraryModule extends Module {
           parameters: [
             {
               type: "pointer",
-              pointeeType: {type: "void"},
+              pointeeType: { type: "void" },
             },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (address: number) =>
           freeFunction({
@@ -258,13 +261,13 @@ export class SourceStandardLibraryModule extends Module {
         functionType: {
           type: "function",
           parameters: [],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: () =>
           printHeap(
             this.memory,
             this.heapAddress,
-            this.sharedWasmGlobalVariables.heapPointer.value,
+            this.sharedWasmGlobalVariables.heapPointer.value
           ),
       },
       print_stack: {
@@ -272,13 +275,55 @@ export class SourceStandardLibraryModule extends Module {
         functionType: {
           type: "function",
           parameters: [],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: () =>
           printStack(
             this.memory,
-            this.sharedWasmGlobalVariables.stackPointer.value,
+            this.sharedWasmGlobalVariables.stackPointer.value
           ),
+      },
+      // only works in browser environment, node.js support can be added in future
+      prompt_int: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+          ],
+          returnType: { type: "primary", primaryDataType: "signed int" },
+        },
+        jsFunction: () => prompt("Enter an integer"),
+      },
+      // only works in browser environment, node.js support can be added in future
+      prompt_string: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+            {
+              type: "pointer",
+              pointeeType: {
+                type: "primary",
+                primaryDataType: "signed char",
+              },
+            }, 
+          ],
+          returnType: {type: "void"},
+        },
+        jsFunction: (strAddr: number) => {
+          const str = prompt("Enter a string");
+          const encoder = new TextEncoder();
+          const strBuffer = new Uint8Array(this.memory.buffer, strAddr);
+          if (str === null) {
+            strBuffer[0] = 0;
+            return;
+          }
+          const buf = encoder.encode(str);
+          for (let i = 0; i < str.length; ++i) {
+            strBuffer[i] = buf[i];
+          }
+          strBuffer[str.length] = 0;
+        },
       },
       // EXAMPLE of how to have a function taking aggregate type and returning aggreate type - TESTED AND WORKING
       // adjust_a: {
