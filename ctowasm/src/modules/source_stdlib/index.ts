@@ -208,7 +208,6 @@ export class SourceStandardLibraryModule extends Module {
           returnType: { type: "void" },
         },
         jsFunction: (strAddress: number) => {
-          // need to intepret val as unsigned 4 byte int
           const str = extractCStyleStringFromMemory(memory.buffer, strAddress);
           this.print(str);
         },
