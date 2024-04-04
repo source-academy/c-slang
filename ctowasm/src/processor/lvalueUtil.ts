@@ -116,7 +116,7 @@ export function getAssignmentNodes(
   }
 
   if (!checkAssignability(lvalueDataType, assignee)) {
-    throw new ProcessingError(`cannot assign expression with type '${stringifyDataType(lvalueDataType)}' to '${assigneeDataType}'`);
+    throw new ProcessingError(`cannot assign expression with type '${stringifyDataType(lvalueDataType)}' to '${stringifyDataType(assigneeDataType)}'`);
   }
 
   const result = {
