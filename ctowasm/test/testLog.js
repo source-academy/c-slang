@@ -643,17 +643,16 @@ const testLog = {
     switch_scoping: {
       title: "Variables scoped with switch statements",
       expectedCode: false,
-      expectedValues: [
-        50, 10, 10, 20
-      ],
-    }
+      expectedValues: [50, 10, 10, 20],
+    },
   },
-  "misc": {
+  misc: {
     assign_with_const: {
-      title: "Test intialization an assignment with const qualifier that should not affect it",
+      title:
+        "Test intialization an assignment with const qualifier that should not affect it",
       expectedCode: false,
-      expectedValues: [2, 2]
-    } 
+      expectedValues: [2, 2],
+    },
   },
   error: {
     enum_redeclaration: {
@@ -868,7 +867,8 @@ const testLog = {
       ],
     },
     "binary_expression_errors/equality": {
-      title: "Violation of equality constraints - equality comparison on two incompatible pointers",
+      title:
+        "Violation of equality constraints - equality comparison on two incompatible pointers",
       expectedErrorMessages: [
         "Error: invalid operands to binary '!=' (have 'pointer to signed int' and 'pointer to signed char')",
       ],
@@ -892,140 +892,190 @@ const testLog = {
       ],
     },
     "conditional_expression_errors/mismatch_operand_types": {
-      title: "Conditional expression 2nd and 3rd operands do not fulfill constraints",
+      title:
+        "Conditional expression 2nd and 3rd operands do not fulfill constraints",
       expectedErrorMessages: [
         "Error: type mismatch in conditional expression (have 'struct X' and 'signed int')",
       ],
     },
     "assignment/assign_to_const": {
       title: "Assignment to a const expression",
-      expectedErrorMessages: ["Error: assignment to non-modifiable lvalue with type 'const signed int'"]
+      expectedErrorMessages: [
+        "Error: assignment to non-modifiable lvalue with type 'const signed int'",
+      ],
     },
     "assignment/assign_to_array": {
       title: "Assignment to a array",
-      expectedErrorMessages: ["Error: assignment to expression with type 'array with size 1 of signed int'"]
+      expectedErrorMessages: [
+        "Error: assignment to expression with type 'array with size 1 of signed int'",
+      ],
     },
     "assignment/assign_to_fn": {
       title: "Assignment to a array",
-      expectedErrorMessages: ["Error: assignment to expression with type 'function () returning signed int'"]
-    }, 
+      expectedErrorMessages: [
+        "Error: assignment to expression with type 'function () returning signed int'",
+      ],
+    },
     "assignment/compound_addition": {
       title: "Compound assignment (addition) to non-lvalue",
-      expectedErrorMessages: ["Error: assignment to expression that is not a lvalue"]
+      expectedErrorMessages: [
+        "Error: assignment to expression that is not a lvalue",
+      ],
     },
     "assignment/assign_to_pointer_to_const": {
       title: "Assignment of pointer to const to a pointer to non const",
-      expectedErrorMessages: ["Error: incompatible types when initializing type 'const pointer to signed int' using type 'pointer to const signed int'"]
-    }, 
+      expectedErrorMessages: [
+        "Error: incompatible types when initializing type 'const pointer to signed int' using type 'pointer to const signed int'",
+      ],
+    },
     "assignment/init_pointer_to_const": {
       title: "Initialization of pointer to non const with pointer to const",
-      expectedErrorMessages: ["Error: incompatible types when initializing type 'pointer to signed int' using type 'pointer to const signed int'"]
-    },  
+      expectedErrorMessages: [
+        "Error: incompatible types when initializing type 'pointer to signed int' using type 'pointer to const signed int'",
+      ],
+    },
     "declarations/no_type_specifiers": {
       title: "Declaration with no type specifiers",
-      expectedErrorMessages: ["Error: at least 1 type specifier required in declaration specifiers of declaration"]
+      expectedErrorMessages: [
+        "Error: at least 1 type specifier required in declaration specifiers of declaration",
+      ],
     },
     "declarations/empty_declaration_with_storage_class": {
       title: "Empty declaration with storage class qualifier",
-      expectedErrorMessages: ["Error: useless storage class qualifier in empty declaration"]
-    }, 
+      expectedErrorMessages: [
+        "Error: useless storage class qualifier in empty declaration",
+      ],
+    },
     "declarations/empty_declaration_with_const": {
       title: "Empty declaration with no const type qualifier",
-      expectedErrorMessages: ["Error: useless type qualifier in empty declaration"]
-    },  
+      expectedErrorMessages: [
+        "Error: useless type qualifier in empty declaration",
+      ],
+    },
     "declarations/empty_declaration": {
       title: "Empty declaration",
-      expectedErrorMessages: ["Error: empty declaration"]
+      expectedErrorMessages: ["Error: empty declaration"],
     },
     "declarations/duplicate_static": {
       title: "Duplicate static storage class specifier",
-      expectedErrorMessages: ["Error: multiple storage class specifiers: 'static' and 'static'"]
+      expectedErrorMessages: [
+        "Error: multiple storage class specifiers: 'static' and 'static'",
+      ],
     },
     "declarations/typedef_and_static": {
       title: "Duplicate storage class specifiers - typedef and static",
-      expectedErrorMessages: ["Error: multiple storage class specifiers in declaration specifiers: 'typedef' and 'static'"]
+      expectedErrorMessages: [
+        "Error: multiple storage class specifiers in declaration specifiers: 'typedef' and 'static'",
+      ],
     },
     "declarations/empty_struct_declaration_list": {
       title: "Non-anonymous struct with no members",
-      expectedErrorMessages: ["Error: struct has no members"]
+      expectedErrorMessages: ["Error: struct has no members"],
     },
     "declarations/incomplete_struct_member": {
       title: "Struct with incomplete member",
-      expectedErrorMessages: ["Error: 'B' is an incomplete type"]
+      expectedErrorMessages: ["Error: 'B' is an incomplete type"],
     },
     "initializer/excess_elements_array": {
       title: "Excess elements when initializing array",
-      expectedErrorMessages: ["Error: excess elements in initializer"]
+      expectedErrorMessages: ["Error: excess elements in initializer"],
     },
     "initializer/excess_elements_struct": {
       title: "Excess elements when initializing struct",
-      expectedErrorMessages: ["Error: excess elements in initializer"]
+      expectedErrorMessages: ["Error: excess elements in initializer"],
     },
     "initializer/excess_elements_scalar": {
       title: "Excess elements when initializing scalar",
-      expectedErrorMessages: ["Error: excess elements in initializer"]
+      expectedErrorMessages: ["Error: excess elements in initializer"],
     },
     "initializer/incompatible_scalar": {
       title: "Incompatible initializer for scalar",
-      expectedErrorMessages: ["Error: incompatible types when initializing type 'signed int' using type 'struct X'"]
+      expectedErrorMessages: [
+        "Error: incompatible types when initializing type 'signed int' using type 'struct X'",
+      ],
     },
     "initializer/incompatible_scalar_nested_braces": {
-      title: "Excess elements when initializing scalar (nested braces initializer list)",
-      expectedErrorMessages: ["Error: incompatible types when initializing type 'signed int' using type 'struct X'"]
+      title:
+        "Excess elements when initializing scalar (nested braces initializer list)",
+      expectedErrorMessages: [
+        "Error: incompatible types when initializing type 'signed int' using type 'struct X'",
+      ],
     },
     "initializer/incompatible_struct": {
       title: "Incompatible struct when initializing struct",
-      expectedErrorMessages: ["Error: incompatible types when initializing type 'struct X' using type 'struct Y'"]
+      expectedErrorMessages: [
+        "Error: incompatible types when initializing type 'struct X' using type 'struct Y'",
+      ],
     },
     "initializer/incompatible_struct_in_arr": {
       title: "Incompatible struct when initializing array of structs",
-      expectedErrorMessages: ["Error: incompatible types when initializing type 'struct X' using type 'struct Y'"]
+      expectedErrorMessages: [
+        "Error: incompatible types when initializing type 'struct X' using type 'struct Y'",
+      ],
     },
     "initializer/global/non_constant_element": {
       title: "Non constant initializer for globlal declaration",
-      expectedErrorMessages: ["Error: initializer element is not constant"] 
+      expectedErrorMessages: ["Error: initializer element is not constant"],
     },
     "initializer/global/initialize_fn_type": {
       title: "Global function intialized like a variable",
-      expectedErrorMessages: ["Error: function 'f' is initialized like a variable"]  
+      expectedErrorMessages: [
+        "Error: function 'f' is initialized like a variable",
+      ],
     },
     "initializer/initialize_fn_type": {
       title: "Local function declaration intialized like a variable",
-      expectedErrorMessages: ["Error: function 'f' is initialized like a variable"]  
+      expectedErrorMessages: [
+        "Error: function 'f' is initialized like a variable",
+      ],
     },
     "statements/if_control_not_scalar": {
       title: "Control expression not scalar",
-      expectedErrorMessages: ["Error: used 'struct X' where scalar is required"]  
+      expectedErrorMessages: [
+        "Error: used 'struct X' where scalar is required",
+      ],
     },
     "statements/switch_control_not_int": {
       title: "Control expression not integer",
-      expectedErrorMessages: ["Error: switch quantity is not an integer"]
+      expectedErrorMessages: ["Error: switch quantity is not an integer"],
     },
     "statements/switch_case_not_int": {
       title: "Value of case of switch statement not integer",
-      expectedErrorMessages: ["Error: case value not an integer constant expression"]
-    }, 
+      expectedErrorMessages: [
+        "Error: case value not an integer constant expression",
+      ],
+    },
     "statements/while_control_not_scalar": {
       title: "While control not scalar",
-      expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
-    }, 
+      expectedErrorMessages: [
+        "Error: used 'struct A' where scalar is required",
+      ],
+    },
     "statements/for_control_not_scalar": {
       title: "For loop control not scalar",
-      expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
+      expectedErrorMessages: [
+        "Error: used 'struct A' where scalar is required",
+      ],
     },
     "statements/do_loop_control_not_scalar": {
       title: "Do loop control not scalar",
-      expectedErrorMessages: ["Error: used 'struct A' where scalar is required"]
+      expectedErrorMessages: [
+        "Error: used 'struct A' where scalar is required",
+      ],
     },
     "statements/continue_not_in_loop": {
       title: "Continue statement not in loop body",
-      expectedErrorMessages: ["Error: continue statement not within a loop body"]
-    }, 
+      expectedErrorMessages: [
+        "Error: continue statement not within a loop body",
+      ],
+    },
     "statements/break_not_in_loop_or_switch": {
       title: "Break statement not in loop or switch body",
-      expectedErrorMessages: ["Error: break statement not within a switch or loop body"]
-    }, 
-  }
+      expectedErrorMessages: [
+        "Error: break statement not within a switch or loop body",
+      ],
+    },
+  },
 };
 
 export default testLog;

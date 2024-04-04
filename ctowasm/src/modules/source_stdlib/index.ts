@@ -292,7 +292,38 @@ export class SourceStandardLibraryModule extends Module {
           ],
           returnType: { type: "primary", primaryDataType: "signed int" },
         },
-        jsFunction: () => prompt("Enter an integer"),
+        jsFunction: () => prompt("Enter a signed integer"),
+      },
+      prompt_long: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+          ],
+          returnType: { type: "primary", primaryDataType: "signed long" },
+        },
+        jsFunction: () => prompt("Enter a long signed integer"),
+      },
+      // only works in browser environment, node.js support can be added in future
+      prompt_float: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+          ],
+          returnType: { type: "primary", primaryDataType: "float" },
+        },
+        jsFunction: () => prompt("Enter a float"),
+      },
+      prompt_double: {
+        parentImportedObject: sourceStandardLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+          ],
+          returnType: { type: "primary", primaryDataType: "double" },
+        },
+        jsFunction: () => prompt("Enter a double"),
       },
       // only works in browser environment, node.js support can be added in future
       prompt_string: {
