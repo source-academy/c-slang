@@ -144,45 +144,63 @@ export class PixAndFlixLibrary extends Module {
                   {
                     type: "pointer",
                     pointeeType: {
-                      type: "pointer",
-                      pointeeType: {
                         type: "array",
                         elementDataType: {
-                          type: "primary",
-                          primaryDataType: "signed char",
+                          type: "array",
+                          elementDataType: {
+                            type: "primary",
+                            primaryDataType: "signed char"
+                          },
+                          numElements:{
+                            type: "IntegerConstant",
+                            value: 4n,
+                            suffix: null,
+                            position: {
+                              start: { line: 0, offset: 0, column: 0 },
+                              end: { line: 0, offset: 0, column: 0 },
+                            },
+                          }, 
                         },
                         numElements: {
                           type: "IntegerConstant",
-                          value: 3n,
+                          value: 400n,
                           suffix: null,
                           position: {
                             start: { line: 0, offset: 0, column: 0 },
                             end: { line: 0, offset: 0, column: 0 },
                           },
                         },
-                      },
                     },
                   },
                   {
                     type: "pointer",
                     pointeeType: {
-                      type: "pointer",
-                      pointeeType: {
                         type: "array",
                         elementDataType: {
-                          type: "primary",
-                          primaryDataType: "signed char",
+                          type: "array",
+                          elementDataType: {
+                            type: "primary",
+                            primaryDataType: "signed char"
+                          },
+                          numElements:{
+                            type: "IntegerConstant",
+                            value: 4n,
+                            suffix: null,
+                            position: {
+                              start: { line: 0, offset: 0, column: 0 },
+                              end: { line: 0, offset: 0, column: 0 },
+                            },
+                          }, 
                         },
                         numElements: {
                           type: "IntegerConstant",
-                          value: 3n,
+                          value: 400n,
                           suffix: null,
                           position: {
                             start: { line: 0, offset: 0, column: 0 },
                             end: { line: 0, offset: 0, column: 0 },
                           },
                         },
-                      },
                     },
                   },
                   {
