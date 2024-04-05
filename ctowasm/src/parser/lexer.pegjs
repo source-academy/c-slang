@@ -63,7 +63,7 @@ extended_source_character_set
 
 token
   = include
-  / keyword 
+  / (@keyword ![a-z_]i) // make sure keywords is not folllowed immediately by identifier character, else it should be identifier
   / identifier
   / (@constant ![a-z_]i) // make sure constant is not followed immediately by a indentifier character
   / string_literal 
