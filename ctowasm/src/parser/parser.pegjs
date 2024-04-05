@@ -242,8 +242,8 @@
     // remove the declarations that were made in this block from the scope and unpack declarations
     const unpackedBlockStatements = [];
     let unresolvedIncompletePointers = [];
-    const removedIdentifiers = new Set();
-    const removedTags = new Set();
+    const removedIdentifiers = {};
+    const removedTags = {};
     for (const statement of statements) {
       const { unpackedStatements, incompletePointers } = unpackScopedStatement(statement, unresolvedIncompletePointers, removedTags, removedIdentifiers);
       unpackedBlockStatements.push(...unpackedStatements);
@@ -296,8 +296,8 @@
       defaultStatements: [],
       incompletePointers: []
     });
-    const removedTags = new Set();
-    const removedIdentifiers = new Set();
+    const removedTags = {};
+    const removedIdentifiers = {};
     for (const switchCase of cases) {
       const switchStatementCase = {
         type: "SwitchStatementCase",
