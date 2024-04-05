@@ -22,7 +22,7 @@ import {
   IntegerDataType,
   ScalarCDataType,
 } from "~src/common/types";
-import { getSizeOfScalarDataType } from "~src/common/utils";
+import { getSizeOfScalarDataType, primaryDataTypeSizes } from "~src/common/utils";
 import { MemoryStore } from "~src/processor/c-ast/memory";
 import {
   createMemoryOffsetIntegerConstant,
@@ -35,6 +35,7 @@ import { DataType, PointerDataType, PrimaryDataType, StructDataType, StructSelfP
 import { ConstantP } from "~src/processor/c-ast/expression/constants";
 import {
   convertConstantToByteStr,
+  convertIntegerToByteString,
   getZeroInializerByteStrForDataType,
 } from "~src/processor/byteStrUtil";
 import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
@@ -489,11 +490,12 @@ function checkCompileTimeInitializer(initializerValue: Expression) {
 /**
  * Function to recursively go through the declaration data type and the intiializer to assign appropriately
  * (and handle zeroing of memory when insufficient intializer exprs are present).
- * Returns byte string of bytes to intialize the memory in the data segment that the declared variabled occupies.
+ * Returns byte string of bytes to intialize the memory in the data segment that the declared variable occupies.
  */
 export function unpackDataSegmentInitializerAccordingToDataType(
   dataType: DataType,
-  initializer: Initializer | null
+  initializer: Initializer | null,
+  symbolTable: SymbolTable
 ): string {
   let byteStr = "";
   function helper(
@@ -519,12 +521,17 @@ export function unpackDataSegmentInitializerAccordingToDataType(
         scalarDataType = dataType.primaryDataType;
       }
       if (initializer.type === "InitializerSingle") {
-        checkCompileTimeInitializer(initializer.value);
-        const processedConstant = evaluateCompileTimeExpression(
-          initializer.value
-        );
-
-        byteStr += convertConstantToByteStr(processedConstant, scalarDataType);
+        // special handling for string literal
+        if (initializer.value.type === "StringLiteral") {
+          const dataSegmentOffset = symbolTable.addDataSegmentObject(initializer.value.chars);
+          byteStr += convertIntegerToByteString(BigInt(dataSegmentOffset), primaryDataTypeSizes[POINTER_TYPE]);
+        } else {
+          checkCompileTimeInitializer(initializer.value);
+          const processedConstant = evaluateCompileTimeExpression(
+            initializer.value
+          );
+          byteStr += convertConstantToByteStr(processedConstant, scalarDataType);
+        }
       } else {
         if (offset >= initializer.values.length) {
           byteStr += getZeroInializerByteStrForDataType(dataType);

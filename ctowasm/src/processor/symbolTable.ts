@@ -124,13 +124,14 @@ export class SymbolTable {
       if (this.parentTable === null || declaration.storageClass === "static") {
         // the declaration is either a global or static
         // allocate space for and the initializer bytes for this declared object in data segment
-        this.dataSegmentByteStr.value +=
+        const byteStr =
           unpackDataSegmentInitializerAccordingToDataType(
             declaration.dataType,
             typeof declaration.initializer === "undefined"
               ? null
-              : declaration.initializer,
+              : declaration.initializer, this
           );
+        this.dataSegmentByteStr.value += byteStr;
       }
       return this.addVariableEntry(
         declaration.name,

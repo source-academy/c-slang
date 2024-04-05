@@ -653,6 +653,12 @@ const testLog = {
       expectedCode: false,
       expectedValues: [2, 2],
     },
+    global_str_literal: {
+      title:
+        "Test intialization of global char pointer with string literal",
+      expectedCode: false,
+      expectedValues: ["hello"],
+    }, 
   },
   error: {
     enum_redeclaration: {

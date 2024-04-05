@@ -5,8 +5,8 @@
 
 int compare_ints(const void* a, const void* b)
 {
-    const int *pa = a;
-    const int *pb = b;
+    const int *pa = a; // need to do this as typecasting not yet supported
+    const int *pb = b; // need to do this as typecasting not yet supported
     int arg1 = *pa;
     int arg2 = *pb;
  
