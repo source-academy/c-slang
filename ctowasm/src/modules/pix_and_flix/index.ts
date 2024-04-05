@@ -93,9 +93,7 @@ export class PixAndFlixLibrary extends Module {
             primaryDataType: "signed int",
           },
         },
-        jsFunction: () => {
-          getExternalFunction("image_height", config)();
-        },
+        jsFunction: () => getExternalFunction("image_height", config)(),
       },
       image_width: {
         parentImportedObject: pixAndFlixLibraryModuleImportName,
@@ -107,9 +105,7 @@ export class PixAndFlixLibrary extends Module {
             primaryDataType: "signed int",
           },
         },
-        jsFunction: () => {
-          getExternalFunction("image_width", config)();
-        },
+        jsFunction: () => getExternalFunction("image_width", config)(),
       },
       set_dimensions: {
         parentImportedObject: pixAndFlixLibraryModuleImportName,
@@ -144,63 +140,63 @@ export class PixAndFlixLibrary extends Module {
                   {
                     type: "pointer",
                     pointeeType: {
+                      type: "array",
+                      elementDataType: {
                         type: "array",
                         elementDataType: {
-                          type: "array",
-                          elementDataType: {
-                            type: "primary",
-                            primaryDataType: "signed char"
-                          },
-                          numElements:{
-                            type: "IntegerConstant",
-                            value: 4n,
-                            suffix: null,
-                            position: {
-                              start: { line: 0, offset: 0, column: 0 },
-                              end: { line: 0, offset: 0, column: 0 },
-                            },
-                          }, 
+                          type: "primary",
+                          primaryDataType: "signed char",
                         },
                         numElements: {
                           type: "IntegerConstant",
-                          value: 400n,
+                          value: 4n,
                           suffix: null,
                           position: {
                             start: { line: 0, offset: 0, column: 0 },
                             end: { line: 0, offset: 0, column: 0 },
                           },
                         },
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 400n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
                     },
                   },
                   {
                     type: "pointer",
                     pointeeType: {
+                      type: "array",
+                      elementDataType: {
                         type: "array",
                         elementDataType: {
-                          type: "array",
-                          elementDataType: {
-                            type: "primary",
-                            primaryDataType: "signed char"
-                          },
-                          numElements:{
-                            type: "IntegerConstant",
-                            value: 4n,
-                            suffix: null,
-                            position: {
-                              start: { line: 0, offset: 0, column: 0 },
-                              end: { line: 0, offset: 0, column: 0 },
-                            },
-                          }, 
+                          type: "primary",
+                          primaryDataType: "signed char",
                         },
                         numElements: {
                           type: "IntegerConstant",
-                          value: 400n,
+                          value: 4n,
                           suffix: null,
                           position: {
                             start: { line: 0, offset: 0, column: 0 },
                             end: { line: 0, offset: 0, column: 0 },
                           },
                         },
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 400n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
                     },
                   },
                   {
@@ -252,25 +248,32 @@ export class PixAndFlixLibrary extends Module {
             const stackFrameArgs: StackFrameArg[] = [
               {
                 value: BigInt(srcAddress),
-                type: "unsigned int"
+                type: "unsigned int",
               },
               {
                 value: BigInt(destAddress),
-                type: "unsigned int"
+                type: "unsigned int",
               },
               {
                 value: BigInt(src.length),
-                type: "unsigned int"
+                type: "unsigned int",
               },
               {
                 value: BigInt(src[0].length),
-                type: "unsigned int"
+                type: "unsigned int",
               },
             ];
 
             // call the function pointer
-            wrapFunctionPtrCall(memory, functionTable, funcPtr, sharedWasmGlobalVariables, stackFrameArgs, []);
-            
+            wrapFunctionPtrCall(
+              memory,
+              functionTable,
+              funcPtr,
+              sharedWasmGlobalVariables,
+              stackFrameArgs,
+              []
+            );
+
             // copy the values out
             const destArr = new Uint8Array(memory.buffer, destAddress, memSize);
             currAddress = 0;
@@ -306,22 +309,24 @@ export class PixAndFlixLibrary extends Module {
         },
         jsFunction: () => {
           getExternalFunction("reset_filter", config)();
-        }, 
+        },
       },
       set_fps: {
         parentImportedObject: pixAndFlixLibraryModuleImportName,
         functionType: {
           type: "function",
-          parameters: [{
-            type: "primary",
-            primaryDataType: "signed int"
-          }],
+          parameters: [
+            {
+              type: "primary",
+              primaryDataType: "signed int",
+            },
+          ],
           returnType: voidDataType,
         },
         jsFunction: () => {
           getExternalFunction("set_fps", config)();
-        }, 
-      }
+        },
+      },
     };
   }
 }

@@ -24,7 +24,21 @@ export class MathStdLibModule extends Module {
     this.instantiate = async () => {
       const mathModule = await mathModuleFactoryFn();
       // need to set the jsFunctions of all moduleFunctions here
-      this.moduleFunctions.sin.jsFunction = mathModule._sin;
+      this.moduleFunctions.acos.jsFunction = mathModule._acos;
+      this.moduleFunctions.asin.jsFunction = mathModule._asin; 
+      this.moduleFunctions.atan.jsFunction = mathModule._atan; 
+      this.moduleFunctions.cos.jsFunction = mathModule._cos; 
+      this.moduleFunctions.cosh.jsFunction = mathModule._cosh; 
+      this.moduleFunctions.sin.jsFunction = mathModule._sin; 
+      this.moduleFunctions.sinh.jsFunction = mathModule._sinh; 
+      this.moduleFunctions.tanh.jsFunction = mathModule._tanh; 
+      this.moduleFunctions.exp.jsFunction = mathModule._exp; 
+      this.moduleFunctions.log.jsFunction = mathModule._log; 
+      this.moduleFunctions.log10.jsFunction = mathModule._log10; 
+      this.moduleFunctions.pow.jsFunction = mathModule._pow; 
+      this.moduleFunctions.sqrt.jsFunction = mathModule._sqrt; 
+      this.moduleFunctions.ceil.jsFunction = mathModule._ceil; 
+      this.moduleFunctions.floor.jsFunction = mathModule._floor;
     };
     this.moduleFunctions = {
       acos: {

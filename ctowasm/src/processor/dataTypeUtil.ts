@@ -580,9 +580,15 @@ export function checkAssignabilityOfPointers(
     return true;
   }
 
+  if (!left.pointeeType.isConst && right.pointeeType.isConst) {
+    // right pointer has more pointee qualifiers than left
+    return false;
+  }
+
   return checkDataTypeCompatibility(
     left.pointeeType as DataType,
-    right.pointeeType as DataType
+    right.pointeeType as DataType,
+    true
   );
 }
 

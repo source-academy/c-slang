@@ -8,6 +8,7 @@ import {
   sourceStandardLibraryModuleImportName,
 } from "~src/modules/source_stdlib";
 import { Module } from "~src/modules/types";
+import { UtilityStdLibModule, utilityStdLibName } from "~src/modules/utility";
 import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 
 export interface ModulesGlobalConfig {
@@ -29,7 +30,8 @@ export interface SharedWasmGlobalVariables {
 export type ModuleName =
   | typeof sourceStandardLibraryModuleImportName
   | typeof pixAndFlixLibraryModuleImportName
-  | typeof mathStdlibName;
+  | typeof mathStdlibName
+  | typeof utilityStdLibName;
 
 /**
  * Holds all the modules that define functions that can be imported and used in C source program.
@@ -82,10 +84,18 @@ export default class ModuleRepository {
         this.config,
         this.sharedWasmGlobalVariables
       ),
-      [mathStdlibName]: new MathStdLibModule(this.memory,
+      [mathStdlibName]: new MathStdLibModule(
+        this.memory,
         this.functionTable,
         this.config,
-        this.sharedWasmGlobalVariables)
+        this.sharedWasmGlobalVariables
+      ),
+      [utilityStdLibName]: new UtilityStdLibModule(
+        this.memory,
+        this.functionTable,
+        this.config,
+        this.sharedWasmGlobalVariables
+      ),
     };
   }
 
@@ -109,18 +119,20 @@ export default class ModuleRepository {
    * Returns the object that can be used as argument to Webassembly.instantiate.
    * @param importedModules the names of all modules that are being imported and used in a particular compiled wasm output file.
    */
-  async createWasmImportsObject(importedModules: ModuleName[]): Promise<WebAssembly.Imports> {
+  async createWasmImportsObject(
+    importedModules: ModuleName[]
+  ): Promise<WebAssembly.Imports> {
     const imports: WebAssembly.Imports = {
       js: {
         mem: this.memory,
         function_table: this.functionTable,
         sp: this.sharedWasmGlobalVariables.stackPointer,
         hp: this.sharedWasmGlobalVariables.heapPointer,
-        bp: this.sharedWasmGlobalVariables.basePointer
+        bp: this.sharedWasmGlobalVariables.basePointer,
       },
     };
 
-    for (const moduleName of importedModules ){
+    for (const moduleName of importedModules) {
       const module = this.modules[moduleName];
       const moduleImportObject: WebAssembly.ModuleImports = {};
       if (typeof this.modules[moduleName].instantiate !== "undefined") {
