@@ -658,7 +658,13 @@ const testLog = {
         "Test intialization of global char pointer with string literal",
       expectedCode: false,
       expectedValues: ["hello"],
-    }, 
+    },
+    keywords_in_identifiers: {
+      title:
+        "Ensure parser can handle keywords being present in identifiers",
+      expectedCode: false,
+      expectedValues: [1, 1],
+    },  
   },
   error: {
     enum_redeclaration: {
