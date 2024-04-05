@@ -69,11 +69,29 @@ export default function parse(
       // or any error that required immediately ending of parsing
       if ("location" in (e as object)) {
         // parser locations from syntax errors (or any thrown immediate errors) need to be adjusted
+        if (
+          !(lexer as any).tokenPositions.has((lexer as any).tokenPositions.get)
+        ) {
+          // in case the location was a artificial whitespace separating tokens
+          throw new ParserCompilationErrors(sourceCode, [
+            {
+              message: "syntax error in program",
+              position: {
+                start: { offset: 0, line: 0, column: 0 },
+                end: { offset: 0, line: 0, column: 0 },
+              },
+            },
+          ]);
+        }
         const adjustedLocation = {
-          start: (lexer as any).tokenPositions.get((e as any).location.start.offset)
-            .start,
+          start: (lexer as any).tokenPositions.get(
+            (e as any).location.start.offset
+          ).start,
           end: (lexer as any).tokenPositions.get(
-            Math.max((e as any).location.start.offset, (e as any).location.end.offset - 1)
+            Math.max(
+              (e as any).location.start.offset,
+              (e as any).location.end.offset - 1
+            )
           ).end,
         };
         throw new ParserCompilationErrors(sourceCode, [
@@ -84,7 +102,10 @@ export default function parse(
     }
   } catch (e) {
     // catch any other errors
-    if (!(e instanceof ParserCompilationErrors) && "location" in (e as object)) {
+    if (
+      !(e instanceof ParserCompilationErrors) &&
+      "location" in (e as object)
+    ) {
       throw new ParserCompilationErrors(sourceCode, [
         { message: (e as any).message, position: (e as any).location },
       ]);
