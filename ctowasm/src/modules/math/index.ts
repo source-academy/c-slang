@@ -39,6 +39,7 @@ export class MathStdLibModule extends Module {
       this.moduleFunctions.sqrt.jsFunction = mathModule._sqrt; 
       this.moduleFunctions.ceil.jsFunction = mathModule._ceil; 
       this.moduleFunctions.floor.jsFunction = mathModule._floor;
+      this.moduleFunctions.tan.jsFunction = mathModule._tan;
     };
     this.moduleFunctions = {
       acos: {
@@ -126,6 +127,20 @@ export class MathStdLibModule extends Module {
         jsFunction: () => {}, // temp value for now, will be set later
       },
       sinh: {
+        parentImportedObject: mathStdlibName,
+        functionType: {
+          type: "function",
+          parameters: [
+            {
+              type: "primary",
+              primaryDataType: "double",
+            },
+          ],
+          returnType: { type: "primary", primaryDataType: "double" },
+        },
+        jsFunction: () => {}, // temp value for now, will be set later
+      },
+      tan: {
         parentImportedObject: mathStdlibName,
         functionType: {
           type: "function",

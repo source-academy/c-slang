@@ -70,7 +70,7 @@ export default function parse(
       if ("location" in (e as object)) {
         // parser locations from syntax errors (or any thrown immediate errors) need to be adjusted
         if (
-          !(lexer as any).tokenPositions.has((lexer as any).tokenPositions.get)
+          !(lexer as any).tokenPositions.has((e as any).location.start.offset)
         ) {
           // in case the location was a artificial whitespace separating tokens
           throw new ParserCompilationErrors(sourceCode, [

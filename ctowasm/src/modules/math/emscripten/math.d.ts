@@ -8,6 +8,7 @@ interface MathModule extends EmscriptenModule {
   _cosh(x: number): number;
   _sin(x: number): number;
   _sinh(x: number): number;
+  _tan(x: number): number;
   _tanh(x: number): number;
   _exp(x: number): number;
   _log(x: number): number;
