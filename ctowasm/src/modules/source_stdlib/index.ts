@@ -202,6 +202,7 @@ export class SourceStandardLibraryModule extends Module {
               pointeeType: {
                 type: "primary",
                 primaryDataType: "signed char",
+                isConst: true
               },
             },
           ],

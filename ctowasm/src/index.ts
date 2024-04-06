@@ -3,7 +3,7 @@ import ModuleRepository, {
   ModulesGlobalConfig,
 } from "~src/modules";
 import {
-  compile,
+  compile as originalCompile,
   compileToWat as originalCompileToWat,
   generate_C_AST as original_generate_C_AST,
   generate_WAT_AST as originalGenerate_WAT_AST,
@@ -24,27 +24,46 @@ export function generate_WAT_AST(program: string) {
   return originalGenerate_WAT_AST(program, defaultModuleRepository);
 }
 
-export { compile } ;
+export async function compile(program: string): Promise<CompilationResult> {
+  const compilationResult = await originalCompile(
+    program,
+    defaultModuleRepository
+  );
+
+  // check if compilation failed
+  if (compilationResult.status === "failure") {
+    return compilationResult;
+  }
+
+  return compilationResult;
+}
 
 /**
  * Compiles the given C program, including all default imported functions.
  */
 export async function compileAndRun(
   program: string,
-  modulesConfig?: ModulesGlobalConfig,
+  modulesConfig?: ModulesGlobalConfig
 ): Promise<CompilationResult> {
-  const compilationResult = await compile(
+  const compilationResult = await originalCompile(
     program,
-    defaultModuleRepository,
+    defaultModuleRepository
   );
 
   // check if compilation failed
   if (compilationResult.status === "failure") {
-    return compilationResult; 
+    return compilationResult;
   }
 
-  const { wasm, dataSegmentSize, functionTableSize, importedModules } = compilationResult;
-  await runWasm(wasm, dataSegmentSize, functionTableSize, importedModules, modulesConfig);
+  const { wasm, dataSegmentSize, functionTableSize, importedModules } =
+    compilationResult;
+  await runWasm(
+    wasm,
+    dataSegmentSize,
+    functionTableSize,
+    importedModules,
+    modulesConfig
+  );
 
   return compilationResult;
 }
@@ -54,26 +73,26 @@ export async function runWasm(
   dataSegmentSize: number,
   functionTableSize: number,
   importedModules: ModuleName[],
-  modulesConfig?: ModulesGlobalConfig,
+  modulesConfig?: ModulesGlobalConfig
 ) {
   const numberOfInitialPagesNeeded =
     calculateNumberOfPagesNeededForBytes(dataSegmentSize);
   const moduleRepository = new ModuleRepository(
     new WebAssembly.Memory({ initial: numberOfInitialPagesNeeded }),
     new WebAssembly.Table({ element: "anyfunc", initial: functionTableSize }),
-    modulesConfig,
+    modulesConfig
   );
   moduleRepository.setStackPointerValue(
-    numberOfInitialPagesNeeded * WASM_PAGE_SIZE,
+    numberOfInitialPagesNeeded * WASM_PAGE_SIZE
   );
-  moduleRepository.setBasePointerValue(numberOfInitialPagesNeeded * WASM_PAGE_SIZE);
+  moduleRepository.setBasePointerValue(
+    numberOfInitialPagesNeeded * WASM_PAGE_SIZE
+  );
   moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4); // align to 4 bytes
 
-  const wasmImports = await moduleRepository.createWasmImportsObject(importedModules);
-  await WebAssembly.instantiate(
-    wasm,
-    wasmImports
-  );
+  const wasmImports =
+    await moduleRepository.createWasmImportsObject(importedModules);
+  await WebAssembly.instantiate(wasm, wasmImports);
 }
 
 export function generate_processed_C_AST(program: string) {

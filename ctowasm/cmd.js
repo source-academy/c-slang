@@ -61,7 +61,20 @@ let isSuccess = true;
 switch (argv._[0]) {
   case "compile":
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wasm");
-    output = await compile(input);
+    result = await compile(input);
+    if (result.status === "failure") {
+      isSuccess = false;
+      console.log(`Compilation failed with the following errors:\n${result.errorMessage}`);
+      break;
+    }
+    if (result.warnings.length > 0) {
+      console.log(
+        `Compilation finished with the following warnings:\n${result.warnings.join(
+          "\n"
+        )}`
+      );
+    }
+    output = result.wasm;
     break;
   case "compile-to-wat":
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
