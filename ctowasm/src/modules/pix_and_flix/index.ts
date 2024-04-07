@@ -235,7 +235,7 @@ export class PixAndFlixLibrary extends Module {
             });
 
             // copy the values in
-            let currAddress = srcAddress;
+            let currAddress = 0;
             const srcArr = new Uint8Array(memory.buffer, srcAddress, memSize);
             for (let i = 0; i < src.length; ++i) {
               for (let j = 0; j < src[0].length; ++j) {
