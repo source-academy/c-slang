@@ -4,13 +4,10 @@
 
 import {
   BinaryOperator,
-  PrimaryCDataType,
   ScalarCDataType,
 } from "~src/common/types";
 
 import {
-  isFloatType,
-  isIntegerType,
   primaryDataTypeSizes,
 } from "~src/common/utils";
 import { DataType, PrimaryDataType, ScalarDataType } from "~src/parser/c-ast/dataTypes";

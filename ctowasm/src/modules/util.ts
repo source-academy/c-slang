@@ -1,11 +1,8 @@
 import BigNumber from "bignumber.js";
-import { WASM_ADDR_SIZE } from "~src/common/constants";
 import {
   calculateNumberOfPagesNeededForBytes,
-  getSizeOfScalarDataType,
 } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
-import { StackFrameArg } from "~src/modules/types";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>

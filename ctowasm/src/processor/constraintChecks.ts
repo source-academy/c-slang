@@ -2,7 +2,6 @@
  * This file contains various utility functions to help in checking the fulfillment of constraints of different language features.
  */
 
-import { BinaryOperator } from "~src/common/types";
 import { ProcessingError } from "~src/errors";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import { BinaryExpression } from "~src/parser/c-ast/expression/binaryExpression";

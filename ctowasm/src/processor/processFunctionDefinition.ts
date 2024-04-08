@@ -22,7 +22,6 @@ import { FunctionCall } from "~src/parser/c-ast/expression/unaryExpression";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import {
   checkAssignability,
-  checkDataTypeCompatibility,
   convertFunctionDataTypeToFunctionDetails,
   stringifyDataType,
 } from "~src/processor/dataTypeUtil";

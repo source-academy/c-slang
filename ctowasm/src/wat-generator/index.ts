@@ -4,7 +4,6 @@
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import {
-  FUNCTION_TABLE_NAME,
   FUNCTION_TYPE_LABEL,
 } from "~src/wat-generator/constants";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";

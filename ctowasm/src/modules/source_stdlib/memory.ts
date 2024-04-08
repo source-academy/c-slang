@@ -2,7 +2,6 @@
  * The js functions used for memory related imported functions - malloc, free etc.
  */
 
-import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { SharedWasmGlobalVariables } from "~src/modules";
 import { checkAndExpandMemoryIfNeeded } from "~src/modules/util";
 

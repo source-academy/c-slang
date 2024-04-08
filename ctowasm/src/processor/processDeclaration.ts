@@ -1,4 +1,4 @@
-import { ProcessingError, toJson } from "~src/errors";
+import { ProcessingError } from "~src/errors";
 import {
   VariableDeclaration,
   Initializer,
@@ -40,7 +40,6 @@ import {
 } from "~src/processor/byteStrUtil";
 import { ENUM_DATA_TYPE, POINTER_TYPE } from "~src/common/constants";
 import processEnumDeclaration from "~src/processor/processEnumDeclaration";
-import { addWarning } from "~src/processor/warningUtil";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { Expression } from "~src/parser/c-ast/core";
 

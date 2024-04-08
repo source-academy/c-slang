@@ -15,9 +15,8 @@ import {
 } from "./processFunctionDefinition";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
 import { getAssignmentNodes } from "~src/processor/lvalueUtil";
-import { BlockItem, Statement } from "~src/parser/c-ast/core";
+import { BlockItem } from "~src/parser/c-ast/core";
 import {
-  determineOperandTargetDataTypeOfBinaryExpression,
   determineResultDataTypeOfBinaryExpression,
   getArithmeticPrePostfixExpressionNodes,
 } from "~src/processor/expressionUtil";
@@ -26,7 +25,6 @@ import processExpression from "~src/processor/processExpression";
 import { isIntegralDataType } from "~src/processor/dataTypeUtil";
 import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
 import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
-import { IntegerDataType, PrimaryCDataType } from "~src/common/types";
 import { addWarning } from "~src/processor/warningUtil";
 import { PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 

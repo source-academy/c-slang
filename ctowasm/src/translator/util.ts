@@ -6,7 +6,6 @@ import { WasmDataType, WasmIntType } from "~src/translator/wasm-ast/dataTypes";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import {
   STACK_POINTER,
-  WASM_PAGE_SIZE,
   BASE_POINTER,
   HEAP_POINTER,
   REG_1,
@@ -28,7 +27,6 @@ import { ExpressionP } from "~src/processor/c-ast/core";
 import translateExpression from "~src/translator/translateExpression";
 import { FunctionTable } from "~src/processor/symbolTable";
 import { WasmFunctionTable } from "~src/translator/wasm-ast/functionTable";
-import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 
 /**
  * Converts a given unary opeartor to its corresponding binary operator

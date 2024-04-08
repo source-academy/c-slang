@@ -14,9 +14,7 @@ import {
 } from "~src/parser/c-ast/dataTypes";
 
 import { ProcessingError, toJson } from "~src/errors";
-import evaluateCompileTimeExpression, {
-  isCompileTimeExpression,
-} from "~src/processor/evaluateCompileTimeExpression";
+import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
 import { ScalarCDataType } from "~src/common/types";
 import {
   getSizeOfScalarDataType,
@@ -26,7 +24,6 @@ import {
 } from "~src/common/utils";
 import { ENUM_DATA_TYPE, POINTER_SIZE } from "~src/common/constants";
 import { FunctionDetails } from "~src/processor/c-ast/function";
-import { Expression } from "~src/parser/c-ast/core";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { getDataTypeOfExpression } from "~src/processor/util";
 

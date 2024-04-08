@@ -21,7 +21,6 @@ import {
   createFunctionTableIndexExpressionWrapper,
   createMemoryOffsetIntegerConstant,
   getDataTypeOfExpression,
-  processCondition,
   isFunctionPointer,
 } from "~src/processor/util";
 import { convertFunctionCallToFunctionCallP } from "~src/processor/processFunctionDefinition";
@@ -29,11 +28,10 @@ import { getAssignmentNodes, isLValue } from "~src/processor/lvalueUtil";
 import {
   determineIndexAndDataTypeOfFieldInStruct,
   getDataTypeSize,
-  isScalarDataType,
   isVoidPointer,
   unpackDataType,
 } from "~src/processor/dataTypeUtil";
-import { IntegerDataType, ScalarCDataType } from "~src/common/types";
+import { IntegerDataType } from "~src/common/types";
 import processConstant from "~src/processor/processConstant";
 import { PTRDIFF_T, SIZE_T } from "~src/common/constants";
 import {
