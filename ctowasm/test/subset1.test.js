@@ -20,9 +20,7 @@ function checkSubstrsPresent(errorMessage, substrings) {
  */
 function generateSuccessTests(testGroup) {
   describe("Compilation Success Tests", () => {
-    for (const [testFile, testDetails] of Object.entries(
-      testLog[testGroup]
-    )) {
+    for (const [testFile, testDetails] of Object.entries(testLog[testGroup])) {
       test(testDetails.title, async () => {
         const result = await testFileCompilationSuccess(testGroup, testFile);
         expect(result).toBe(COMPILATION_SUCCESS);
@@ -35,7 +33,7 @@ describe("Compilation Error Tests", () => {
   for (const [testFile, testDetails] of Object.entries(testLog["error"])) {
     test(testDetails.title, async () => {
       expect(
-        testFileCompilationError(testFile, testDetails.expectedErrorMessages)
+        testFileCompilationError(testFile, testDetails.expectedErrorMessages),
       ).toBe(COMPILATION_FAILURE_TEST_SUCCESS);
     });
   }

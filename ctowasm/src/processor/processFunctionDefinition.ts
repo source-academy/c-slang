@@ -30,7 +30,7 @@ import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions"
 
 export default function processFunctionDefinition(
   node: FunctionDefinition,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): FunctionDefinitionP {
   symbolTable.addFunctionEntry(node.name, node.dataType);
   symbolTable.setFunctionIsDefinedFlag(node.name);
@@ -45,7 +45,7 @@ export default function processFunctionDefinition(
     funcSymbolTable.addVariableEntry(
       node.parameterNames[i],
       node.dataType.parameters[i],
-      "auto" // all function parameters must have "auto" storage class
+      "auto", // all function parameters must have "auto" storage class
     );
   }
 
@@ -61,7 +61,7 @@ export default function processFunctionDefinition(
   const body = processBlockItem(
     node.body,
     funcSymbolTable,
-    functionDefinitionNode
+    functionDefinitionNode,
   );
   functionDefinitionNode.body = body; // body is a Block, an array of StatementP will be returned
   return functionDefinitionNode;
@@ -73,7 +73,7 @@ export default function processFunctionDefinition(
  */
 export function processFunctionReturnStatement(
   expr: Expression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): StatementP[] {
   const statements: StatementP[] = [];
   const processedExpr = processExpression(expr, symbolTable);
@@ -120,7 +120,7 @@ export function processFunctionReturnStatement(
  */
 export function convertFunctionCallToFunctionCallP(
   node: FunctionCall,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): { functionCallP: FunctionCallP; returnType: DataType } {
   // direct call of a function
   if (
@@ -128,7 +128,7 @@ export function convertFunctionCallToFunctionCallP(
     symbolTable.getSymbolEntry(node.expr.name).type === "function"
   ) {
     const symbolEntry = symbolTable.getSymbolEntry(
-      node.expr.name
+      node.expr.name,
     ) as FunctionSymbolEntry;
 
     return {
@@ -142,7 +142,7 @@ export function convertFunctionCallToFunctionCallP(
         args: processFunctionCallArgs(
           node.args,
           symbolEntry.dataType,
-          symbolTable
+          symbolTable,
         ),
       },
       returnType: symbolEntry.dataType.returnType,
@@ -178,10 +178,10 @@ export function convertFunctionCallToFunctionCallP(
 function processFunctionCallArgs(
   args: Expression[],
   fnDataType: FunctionDataType,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): ExpressionP[] {
   const argExpressions = [];
-  const argExpressionWrappers: ExpressionWrapperP[]= [];
+  const argExpressionWrappers: ExpressionWrapperP[] = [];
   for (const arg of args) {
     const expr = processExpression(arg, symbolTable);
     argExpressionWrappers.push(expr);
@@ -202,25 +202,25 @@ function processFunctionCallArgs(
  */
 function checkFunctionCallArgsAreCompatible(
   fnDataType: FunctionDataType,
-  args: ExpressionWrapperP[]
+  args: ExpressionWrapperP[],
 ) {
   if (args.length != fnDataType.parameters.length) {
     throw new ProcessingError(
-      "number of arguments provided to function call does not match number of parameters specfied in prototype"
+      "number of arguments provided to function call does not match number of parameters specfied in prototype",
     );
   }
   for (let i = 0; i < args.length; ++i) {
     if (!checkAssignability(fnDataType.parameters[i], args[i])) {
       throw new ProcessingError(
         `cannot assign function call argument to parameter\nFunction parameter type: "${stringifyDataType(
-          fnDataType.parameters[i]
+          fnDataType.parameters[i],
         )}"\nFunction argument type: "${stringifyDataType(
           getDataTypeOfExpression({
             expression: args[i],
             convertArrayToPointer: true,
             convertFunctionToPointer: true,
-          })
-        )}"`
+          }),
+        )}"`,
       );
     }
   }

@@ -30,7 +30,7 @@ import { getDataTypeOfExpression } from "~src/processor/util";
 function getNumberOfElementsInArray(dataType: ArrayDataType): number {
   try {
     const numElementsConstant = evaluateCompileTimeExpression(
-      dataType.numElements
+      dataType.numElements,
     );
     if (numElementsConstant.type === "FloatConstant") {
       throw new ProcessingError("array size must be an integer-type");
@@ -39,7 +39,7 @@ function getNumberOfElementsInArray(dataType: ArrayDataType): number {
   } catch (e) {
     if (e instanceof ProcessingError) {
       throw new ProcessingError(
-        "Array size must be compile-time constant expression (Variable Length Arrays not supported)"
+        "Array size must be compile-time constant expression (Variable Length Arrays not supported)",
       );
     } else {
       throw e;
@@ -51,7 +51,7 @@ function getNumberOfElementsInArray(dataType: ArrayDataType): number {
  * Returns the size in bytes of a data type.
  */
 export function getDataTypeSize(
-  dataType: DataType | StructSelfPointer
+  dataType: DataType | StructSelfPointer,
 ): number {
   if (
     dataType.type === "primary" ||
@@ -61,7 +61,7 @@ export function getDataTypeSize(
     return getSizeOfScalarDataType(
       dataType.type === "pointer" || dataType.type === "struct self pointer"
         ? "pointer"
-        : dataType.primaryDataType
+        : dataType.primaryDataType,
     );
   } else if (dataType.type === "array") {
     return (
@@ -75,7 +75,7 @@ export function getDataTypeSize(
         (field.dataType.type === "struct self pointer"
           ? POINTER_SIZE
           : getDataTypeSize(field.dataType)),
-      0
+      0,
     );
   } else if (dataType.type === "enum") {
     return primaryDataTypeSizes[ENUM_DATA_TYPE];
@@ -83,7 +83,7 @@ export function getDataTypeSize(
     throw new ProcessingError(`void value not ignored as it should be`);
   } else {
     throw new Error(
-      `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`
+      `getDataTypeSize(): unhandled data type: ${toJson(dataType)}`,
     );
   }
 }
@@ -132,7 +132,7 @@ export function isPointer(dataType: DataType) {
 }
 
 export function getDecayedArrayPointerType(
-  dataType: ArrayDataType
+  dataType: ArrayDataType,
 ): PointerDataType {
   return {
     type: "pointer",
@@ -142,7 +142,7 @@ export function getDecayedArrayPointerType(
 }
 
 export function getFunctionPointerOfFunction(
-  fn: FunctionDataType
+  fn: FunctionDataType,
 ): PointerDataType {
   return {
     type: "pointer",
@@ -198,7 +198,7 @@ export function stringifyDataType(dataType: DataType): string {
     } of ${stringifyDataType(dataType.elementDataType)}`;
   } else if (dataType.type === "pointer") {
     return `${dataType.isConst ? "const " : ""}pointer to ${stringifyDataType(
-      dataType.pointeeType
+      dataType.pointeeType,
     )}`;
   } else if (dataType.type === "function") {
     return `function (${dataType.parameters
@@ -222,7 +222,7 @@ export function stringifyDataType(dataType: DataType): string {
 function checkStructFieldCompatibility(
   a: StructField,
   b: StructField,
-  ignoreQualifiers = false
+  ignoreQualifiers = false,
 ) {
   if (a.tag !== b.tag) {
     return false;
@@ -247,7 +247,7 @@ function checkStructFieldCompatibility(
 export function checkDataTypeCompatibility(
   a: DataType,
   b: DataType,
-  ignoreQualifiers = false
+  ignoreQualifiers = false,
 ): boolean {
   if (
     a.type !== b.type ||
@@ -260,11 +260,12 @@ export function checkDataTypeCompatibility(
     return a.primaryDataType === b.primaryDataType;
   } else if (a.type === "array" && b.type === "array") {
     return (
-      evaluateCompileTimeExpression(a.numElements).value === evaluateCompileTimeExpression(b.numElements).value &&
+      evaluateCompileTimeExpression(a.numElements).value ===
+        evaluateCompileTimeExpression(b.numElements).value &&
       checkDataTypeCompatibility(
         a.elementDataType,
         b.elementDataType,
-        ignoreQualifiers
+        ignoreQualifiers,
       )
     );
   } else if (a.type === "function" && b.type === "function") {
@@ -279,7 +280,7 @@ export function checkDataTypeCompatibility(
         !checkDataTypeCompatibility(
           a.returnType,
           b.returnType,
-          ignoreQualifiers
+          ignoreQualifiers,
         )
       ) {
         return false;
@@ -293,7 +294,7 @@ export function checkDataTypeCompatibility(
         !checkDataTypeCompatibility(
           a.parameters[i],
           b.parameters[i],
-          ignoreQualifiers
+          ignoreQualifiers,
         )
       ) {
         return false;
@@ -312,7 +313,7 @@ export function checkDataTypeCompatibility(
         !checkStructFieldCompatibility(
           a.fields[i],
           b.fields[i],
-          ignoreQualifiers
+          ignoreQualifiers,
         )
       ) {
         return false;
@@ -329,7 +330,7 @@ export function checkDataTypeCompatibility(
     return checkDataTypeCompatibility(
       a.pointeeType,
       b.pointeeType,
-      ignoreQualifiers
+      ignoreQualifiers,
     );
   } else if (a.type === "enum" && b.type === "enum") {
     // all enums in this implementation are equivalent to "signed int" and thus are compatibile with one another
@@ -353,7 +354,7 @@ export interface PrimaryDataTypeMemoryObjectDetails {
  * Unpacks an data type into its constituent primary data types (including multi dim arrays and structs)
  */
 export function unpackDataType(
-  dataType: DataType
+  dataType: DataType,
 ): PrimaryDataTypeMemoryObjectDetails[] {
   let currOffset = 0;
   const memoryObjects: PrimaryDataTypeMemoryObjectDetails[] = [];
@@ -397,7 +398,7 @@ export function unpackDataType(
     } else {
       // should not happen
       throw new Error(
-        `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`
+        `unpackDataType(): Invalid data type to unpack: ${toJson(dataType)}`,
       );
     }
   }
@@ -418,7 +419,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
   } else if (dataType.type === "array") {
     try {
       const numElementsConstant = evaluateCompileTimeExpression(
-        dataType.numElements
+        dataType.numElements,
       );
       if (numElementsConstant.type === "FloatConstant") {
         throw new ProcessingError("array size must be an integer-type");
@@ -430,7 +431,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
     } catch (e) {
       if (e instanceof ProcessingError) {
         throw new ProcessingError(
-          "array size must be compile-time constant expression (Variable Length Arrays not supported)"
+          "array size must be compile-time constant expression (Variable Length Arrays not supported)",
         );
       } else {
         throw e;
@@ -443,13 +444,13 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
         (field.dataType.type === "struct self pointer"
           ? 1
           : getDataTypeNumberOfPrimaryObjects(field.dataType)),
-      0
+      0,
     );
   } else {
     throw new Error(
       `getDataTypeNumberOfPrimaryObjects(): unhandled data type: ${toJson(
-        dataType
-      )}`
+        dataType,
+      )}`,
     );
   }
 }
@@ -461,7 +462,7 @@ function getDataTypeNumberOfPrimaryObjects(dataType: DataType): number {
  */
 export function determineIndexAndDataTypeOfFieldInStruct(
   structDataType: StructDataType,
-  fieldTag: string
+  fieldTag: string,
 ): { fieldIndex: number; fieldDataType: DataType | StructSelfPointer } {
   let currIndex = 0;
   for (const field of structDataType.fields) {
@@ -476,12 +477,12 @@ export function determineIndexAndDataTypeOfFieldInStruct(
   throw new ProcessingError(
     `struct${
       structDataType.tag !== null ? " " + structDataType.tag : ""
-    } has no member named '${fieldTag}'`
+    } has no member named '${fieldTag}'`,
   );
 }
 
 export function convertFunctionDataTypeToFunctionDetails(
-  dataType: FunctionDataType
+  dataType: FunctionDataType,
 ): FunctionDetails {
   const functionDetails: FunctionDetails = {
     sizeOfParams: 0,
@@ -493,7 +494,7 @@ export function convertFunctionDataTypeToFunctionDetails(
   if (dataType.returnType.type !== "void") {
     if (dataType.returnType.type === "array") {
       throw new ProcessingError(
-        "array is not a valid return type from a function"
+        "array is not a valid return type from a function",
       );
     }
 
@@ -502,7 +503,7 @@ export function convertFunctionDataTypeToFunctionDetails(
       (scalarDataType) => ({
         dataType: scalarDataType.dataType,
         offset: scalarDataType.offset,
-      })
+      }),
     );
   }
 
@@ -512,7 +513,7 @@ export function convertFunctionDataTypeToFunctionDetails(
     if (param.type === "array") {
       console.assert(
         param.type !== "array",
-        "Compiler error: The type of a function parameter should not be an array after parsing"
+        "Compiler error: The type of a function parameter should not be an array after parsing",
       );
     }
     const dataTypeSize = getDataTypeSize(param);
@@ -542,9 +543,13 @@ export function isNullPointerConstant(expr: ExpressionWrapperP) {
  */
 export function checkAssignability(
   lvalue: DataType,
-  expr: ExpressionWrapperP // the expression being assigned
+  expr: ExpressionWrapperP, // the expression being assigned
 ) {
-  if (lvalue.type === "array" || lvalue.type === "function" || lvalue.type === "void") {
+  if (
+    lvalue.type === "array" ||
+    lvalue.type === "function" ||
+    lvalue.type === "void"
+  ) {
     return false;
   }
 
@@ -571,7 +576,7 @@ export function checkAssignability(
 
 export function checkAssignabilityOfPointers(
   left: PointerDataType,
-  right: PointerDataType
+  right: PointerDataType,
 ) {
   if (isVoidPointer(left) || isVoidPointer(right)) {
     return true;
@@ -585,7 +590,7 @@ export function checkAssignabilityOfPointers(
   return checkDataTypeCompatibility(
     left.pointeeType as DataType,
     right.pointeeType as DataType,
-    true
+    true,
   );
 }
 

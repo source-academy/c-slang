@@ -1,4 +1,8 @@
-import { FloatDataType, IntegerDataType, PointerCDataType } from "~src/common/types";
+import {
+  FloatDataType,
+  IntegerDataType,
+  PointerCDataType,
+} from "~src/common/types";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { MemoryBlock } from "~src/modules/source_stdlib/memory";
 import { FunctionDataType, StructDataType } from "~src/parser/c-ast/dataTypes";
@@ -28,7 +32,7 @@ export abstract class Module {
   freeList: MemoryBlock[] = [];
   allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
-  instantiate?: () => Promise<void> // any instantiation of the module that must be done before use
+  instantiate?: () => Promise<void>; // any instantiation of the module that must be done before use
   abstract moduleDeclaredStructs: StructDataType[];
   abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
 
@@ -36,7 +40,7 @@ export abstract class Module {
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
     config: ModulesGlobalConfig,
-    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
     this.memory = memory;
     this.functionTable = functionTable;

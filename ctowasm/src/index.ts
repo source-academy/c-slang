@@ -27,7 +27,7 @@ export function generate_WAT_AST(program: string) {
 export async function compile(program: string): Promise<CompilationResult> {
   const compilationResult = await originalCompile(
     program,
-    defaultModuleRepository
+    defaultModuleRepository,
   );
 
   // check if compilation failed
@@ -43,11 +43,11 @@ export async function compile(program: string): Promise<CompilationResult> {
  */
 export async function compileAndRun(
   program: string,
-  modulesConfig?: ModulesGlobalConfig
+  modulesConfig?: ModulesGlobalConfig,
 ): Promise<CompilationResult> {
   const compilationResult = await originalCompile(
     program,
-    defaultModuleRepository
+    defaultModuleRepository,
   );
 
   // check if compilation failed
@@ -62,7 +62,7 @@ export async function compileAndRun(
     dataSegmentSize,
     functionTableSize,
     importedModules,
-    modulesConfig
+    modulesConfig,
   );
 
   return compilationResult;
@@ -73,20 +73,20 @@ export async function runWasm(
   dataSegmentSize: number,
   functionTableSize: number,
   importedModules: ModuleName[],
-  modulesConfig?: ModulesGlobalConfig
+  modulesConfig?: ModulesGlobalConfig,
 ) {
   const numberOfInitialPagesNeeded =
     calculateNumberOfPagesNeededForBytes(dataSegmentSize);
   const moduleRepository = new ModuleRepository(
     new WebAssembly.Memory({ initial: numberOfInitialPagesNeeded }),
     new WebAssembly.Table({ element: "anyfunc", initial: functionTableSize }),
-    modulesConfig
+    modulesConfig,
   );
   moduleRepository.setStackPointerValue(
-    numberOfInitialPagesNeeded * WASM_PAGE_SIZE
+    numberOfInitialPagesNeeded * WASM_PAGE_SIZE,
   );
   moduleRepository.setBasePointerValue(
-    numberOfInitialPagesNeeded * WASM_PAGE_SIZE
+    numberOfInitialPagesNeeded * WASM_PAGE_SIZE,
   );
   moduleRepository.setHeapPointerValue(Math.ceil(dataSegmentSize / 4) * 4); // align to 4 bytes
 

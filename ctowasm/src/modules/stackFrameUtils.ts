@@ -21,18 +21,18 @@ export default function wrapFunctionPtrCall(
   functionPtr: number,
   sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   stackFrameArgs: StackFrameArg[],
-  returnTypes: ScalarCDataType[] // data type of the returns of the function
+  returnTypes: ScalarCDataType[], // data type of the returns of the function
 ): (number | bigint)[] {
   const sizeOfReturns = returnTypes.reduce(
     (prv, curr) => prv + getSizeOfScalarDataType(curr),
-    0
+    0,
   );
   // instantiate stack frame
   const stackFrameSize = loadStackFrame(
     memory,
     sharedWasmGlobalVariables,
     stackFrameArgs,
-    sizeOfReturns
+    sizeOfReturns,
   );
 
   // call the function pointed to be functionPtr
@@ -41,7 +41,7 @@ export default function wrapFunctionPtrCall(
   const stackFrameReturnObjectView = new DataView(
     memory.buffer,
     sharedWasmGlobalVariables.basePointer.value + WASM_ADDR_SIZE,
-    sizeOfReturns
+    sizeOfReturns,
   );
 
   const returnValues: (number | bigint)[] = [];
@@ -50,12 +50,12 @@ export default function wrapFunctionPtrCall(
     switch (returnType) {
       case "double":
         returnValues.push(
-          stackFrameReturnObjectView.getFloat64(currOffset, true)
+          stackFrameReturnObjectView.getFloat64(currOffset, true),
         );
         break;
       case "float":
         returnValues.push(
-          stackFrameReturnObjectView.getFloat32(currOffset, true)
+          stackFrameReturnObjectView.getFloat32(currOffset, true),
         );
         break;
       case "signed char":
@@ -67,32 +67,32 @@ export default function wrapFunctionPtrCall(
         break;
       case "signed short":
         returnValues.push(
-          stackFrameReturnObjectView.getInt16(currOffset, true)
+          stackFrameReturnObjectView.getInt16(currOffset, true),
         );
         break;
       case "unsigned short":
         returnValues.push(
-          stackFrameReturnObjectView.getUint16(currOffset, true)
+          stackFrameReturnObjectView.getUint16(currOffset, true),
         );
         break;
       case "signed int":
         returnValues.push(
-          stackFrameReturnObjectView.getInt32(currOffset, true)
+          stackFrameReturnObjectView.getInt32(currOffset, true),
         );
         break;
       case "unsigned int":
         returnValues.push(
-          stackFrameReturnObjectView.getUint32(currOffset, true)
+          stackFrameReturnObjectView.getUint32(currOffset, true),
         );
         break;
       case "signed long":
         returnValues.push(
-          stackFrameReturnObjectView.getBigInt64(currOffset, true)
+          stackFrameReturnObjectView.getBigInt64(currOffset, true),
         );
         break;
       case "unsigned long":
         returnValues.push(
-          stackFrameReturnObjectView.getBigUint64(currOffset, true)
+          stackFrameReturnObjectView.getBigUint64(currOffset, true),
         );
         break;
     }
@@ -103,7 +103,7 @@ export default function wrapFunctionPtrCall(
     memory,
     stackFrameSize,
     sharedWasmGlobalVariables.stackPointer,
-    sharedWasmGlobalVariables.basePointer
+    sharedWasmGlobalVariables.basePointer,
   );
 
   return returnValues;
@@ -113,11 +113,11 @@ function loadStackFrame(
   memory: WebAssembly.Memory,
   sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   stackFrameArgs: StackFrameArg[],
-  sizeOfReturn: number
+  sizeOfReturn: number,
 ): number {
   const totalArgsSize = stackFrameArgs.reduce(
     (prv, curr) => prv + getSizeOfScalarDataType(curr.type),
-    0
+    0,
   );
   const bytesNeeded = totalArgsSize + sizeOfReturn + WASM_ADDR_SIZE; // need to add base pointer
   checkAndExpandMemoryIfNeeded(memory, bytesNeeded, sharedWasmGlobalVariables);
@@ -125,14 +125,14 @@ function loadStackFrame(
   const stackFrameDataView = new DataView(
     memory.buffer,
     sharedWasmGlobalVariables.stackPointer.value - bytesNeeded,
-    bytesNeeded
+    bytesNeeded,
   );
 
   // fill in old bp
   stackFrameDataView.setUint32(
     totalArgsSize,
     sharedWasmGlobalVariables.basePointer.value,
-    true //little endian
+    true, //little endian
   );
 
   // fill in param values
@@ -190,13 +190,13 @@ function tearDownStackFrame(
   memory: WebAssembly.Memory,
   stackFrameSize: number,
   stackPointer: WebAssembly.Global,
-  basePointer: WebAssembly.Global
+  basePointer: WebAssembly.Global,
 ) {
   stackPointer.value += stackFrameSize;
   const dataView = new DataView(
     memory.buffer,
     basePointer.value,
-    WASM_ADDR_SIZE
+    WASM_ADDR_SIZE,
   );
   basePointer.value = dataView.getUint32(0, true);
 }

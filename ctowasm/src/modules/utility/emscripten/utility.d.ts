@@ -12,8 +12,13 @@ interface UtilityEmscriptenModule extends EmscriptenModule {
   _abs: (x: number) => number;
   _labs: (x: bigint) => bigint;
   _rand: () => number;
-  _srand: (x: number) => void; 
-  _qsort: (ptr: number, count: number, size: number, fnPtr: (aPtr: number, bPtr: number) => number) => void; 
+  _srand: (x: number) => void;
+  _qsort: (
+    ptr: number,
+    count: number,
+    size: number,
+    fnPtr: (aPtr: number, bPtr: number) => number,
+  ) => void;
 
   // memory of the emscripten module
   wasmMemory: WebAssembly.Memory;

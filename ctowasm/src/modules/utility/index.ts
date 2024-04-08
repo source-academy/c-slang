@@ -5,7 +5,10 @@ import { SIZE_T } from "~src/common/constants";
 import utilityEmscriptenModuleFactoryFn from "~src/modules/utility/emscripten/utility";
 import { extractCStyleStringFromMemory } from "~src/modules/util";
 import wrapFunctionPtrCall from "~src/modules/stackFrameUtils";
-import { freeFunction, mallocFunction } from "~src/modules/source_stdlib/memory";
+import {
+  freeFunction,
+  mallocFunction,
+} from "~src/modules/source_stdlib/memory";
 
 // the name that this module is imported into wasm by,
 // as well as the include name to use in C program file.
@@ -35,7 +38,7 @@ export class UtilityStdLibModule extends Module {
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
     config: ModulesGlobalConfig,
-    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
     super(memory, functionTable, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
@@ -237,7 +240,7 @@ export class UtilityStdLibModule extends Module {
           ptr: number,
           count: number,
           size: number,
-          funcPtr: number
+          funcPtr: number,
         ) => {
           const sortFn = (a: number, b: number) => {
             // need to allocate and copy a and b pointer objects to our memory (they are pointers to emscripten memory)
@@ -255,10 +258,26 @@ export class UtilityStdLibModule extends Module {
               allocatedBlocks: this.allocatedBlocks,
               bytesRequested: size,
             });
-            const copiedABuff = new Uint8Array(this.memory.buffer, copiedAAddr, size);
-            const copiedBBuff = new Uint8Array(this.memory.buffer, copiedBAddr, size);
-            const origABuff = new Uint8Array(this.emscriptenMemory!.buffer, a, size);
-            const origBBuff = new Uint8Array(this.emscriptenMemory!.buffer, b, size);
+            const copiedABuff = new Uint8Array(
+              this.memory.buffer,
+              copiedAAddr,
+              size,
+            );
+            const copiedBBuff = new Uint8Array(
+              this.memory.buffer,
+              copiedBAddr,
+              size,
+            );
+            const origABuff = new Uint8Array(
+              this.emscriptenMemory!.buffer,
+              a,
+              size,
+            );
+            const origBBuff = new Uint8Array(
+              this.emscriptenMemory!.buffer,
+              b,
+              size,
+            );
             for (let i = 0; i < size; ++i) {
               copiedABuff[i] = origABuff[i];
               copiedBBuff[i] = origBBuff[i];
@@ -277,7 +296,7 @@ export class UtilityStdLibModule extends Module {
               funcPtr,
               sharedWasmGlobalVariables,
               stackFrameArgs,
-              ["signed int"]
+              ["signed int"],
             )[0];
 
             freeFunction({
@@ -292,7 +311,7 @@ export class UtilityStdLibModule extends Module {
             });
             return result;
           };
-          // create funcPtr for the emscripten compiled module - 2nd arg is the function siganture, 
+          // create funcPtr for the emscripten compiled module - 2nd arg is the function siganture,
           // see https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html
           // section on "Calling JavaScript functions as function pointers from C"
           const emscriptenFuncPtr = this.addFunction(sortFn, "iii");
@@ -307,7 +326,7 @@ export class UtilityStdLibModule extends Module {
           const destBuffer = new Uint8Array(
             this.emscriptenMemory!.buffer,
             copiedObjectAddress,
-            memSize
+            memSize,
           );
           for (let i = 0; i < memSize; ++i) {
             destBuffer[i] = srcBuffer[i];

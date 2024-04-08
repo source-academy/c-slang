@@ -99,10 +99,13 @@ export function performUnaryOperation(a: any, operator: UnaryOperator) {
  * Returns true if a given expression can be evaluated at compile-time.
  */
 export function isCompileTimeExpression(expr: Expression): boolean {
-  if(expr.type === "FloatConstant" || expr.type === "IntegerConstant") {
+  if (expr.type === "FloatConstant" || expr.type === "IntegerConstant") {
     return true;
   } else if (expr.type === "BinaryExpression") {
-    return isCompileTimeExpression(expr.leftExpr) && isCompileTimeExpression(expr.rightExpr);
+    return (
+      isCompileTimeExpression(expr.leftExpr) &&
+      isCompileTimeExpression(expr.rightExpr)
+    );
   } else if (
     expr.type === "PrefixExpression" ||
     expr.type === "PostfixExpression"
@@ -138,9 +141,7 @@ export default function evaluateCompileTimeExpression(
     );
 
     if (dataType.type !== "primary") {
-      throw new ProcessingError(
-        "invalid compile-time expression",
-      );
+      throw new ProcessingError("invalid compile-time expression");
     }
 
     if (isIntegerType(dataType.primaryDataType)) {

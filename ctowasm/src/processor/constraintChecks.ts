@@ -33,7 +33,7 @@ import { getDataTypeOfExpression } from "~src/processor/util";
 export function checkPrePostfixTypeConstraint(
   expression: PrefixExpression | PostfixExpression,
   processedUnderlyingExpr: ExpressionWrapperP,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ) {
   const dataType = getDataTypeOfExpression({
     expression: processedUnderlyingExpr,
@@ -43,7 +43,7 @@ export function checkPrePostfixTypeConstraint(
     throw new ProcessingError(
       `wrong type argument to ${
         expression.operator === "++" ? "increment" : "decrement"
-      }`
+      }`,
     );
   }
 
@@ -51,7 +51,7 @@ export function checkPrePostfixTypeConstraint(
     throw new ProcessingError(
       `argument to ${
         expression.operator === "++" ? "increment" : "decrement"
-      } is not a modifiable lvalue`
+      } is not a modifiable lvalue`,
     );
   }
 }
@@ -62,7 +62,7 @@ export function checkPrePostfixTypeConstraint(
 export function checkBinaryExpressionConstraints(
   binaryExpr: BinaryExpression,
   processedLeftExpr: ExpressionWrapperP,
-  processedRightExpr: ExpressionWrapperP
+  processedRightExpr: ExpressionWrapperP,
 ) {
   const leftDataType = getDataTypeOfExpression({
     expression: processedLeftExpr,
@@ -79,8 +79,8 @@ export function checkBinaryExpressionConstraints(
       `invalid operands to binary '${
         binaryExpr.operator
       }' (have '${stringifyDataType(leftDataType)}' and '${stringifyDataType(
-        rightDataType
-      )}')`
+        rightDataType,
+      )}')`,
     );
   }
 
@@ -90,7 +90,7 @@ export function checkBinaryExpressionConstraints(
 
   function checkOperandsTypeCombination(
     checker1: (dataType: DataType) => boolean,
-    checker2: (dataType: DataType) => boolean
+    checker2: (dataType: DataType) => boolean,
   ) {
     return (
       (checker1(leftDataType) && checker2(rightDataType)) ||
@@ -123,7 +123,7 @@ export function checkBinaryExpressionConstraints(
           checkBothOperandsHaveType(isArithmeticDataType) ||
           checkOperandsTypeCombination(
             isPointerToCompleteDataType,
-            isIntegralDataType
+            isIntegralDataType,
           )
         )
       ) {
@@ -134,7 +134,8 @@ export function checkBinaryExpressionConstraints(
       if (
         !(
           checkBothOperandsHaveType(isArithmeticDataType) ||
-          isPointerToCompleteDataType(leftDataType) && isIntegralDataType(rightDataType) ||
+          (isPointerToCompleteDataType(leftDataType) &&
+            isIntegralDataType(rightDataType)) ||
           checkPointerCompatibilityIgnoringQualifiers()
         )
       ) {
@@ -193,7 +194,7 @@ export function checkBinaryExpressionConstraints(
 export function checkConditionalExpressionOperands(
   processedCondition: ExpressionWrapperP,
   processedTrueExpression: ExpressionWrapperP,
-  processedFalseExpression: ExpressionWrapperP
+  processedFalseExpression: ExpressionWrapperP,
 ) {
   // check condition
   const dataTypeOfConditionExpression = getDataTypeOfExpression({
@@ -204,8 +205,8 @@ export function checkConditionalExpressionOperands(
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
       `used '${stringifyDataType(
-        dataTypeOfConditionExpression
-      )}' in first operand of conditional expression where scalar is required`
+        dataTypeOfConditionExpression,
+      )}' in first operand of conditional expression where scalar is required`,
     );
   }
 
@@ -227,7 +228,7 @@ export function checkConditionalExpressionOperands(
       checkDataTypeCompatibility(
         dataTypeOfTrueOperand,
         dataTypeOfFalseOperand,
-        true
+        true,
       ) ||
       (isPointer(dataTypeOfTrueOperand) &&
         (isNullPointerConstant(processedFalseExpression) ||
@@ -239,8 +240,8 @@ export function checkConditionalExpressionOperands(
   ) {
     throw new ProcessingError(
       `type mismatch in conditional expression (have '${stringifyDataType(
-        dataTypeOfTrueOperand
-      )}' and '${stringifyDataType(dataTypeOfFalseOperand)}')`
+        dataTypeOfTrueOperand,
+      )}' and '${stringifyDataType(dataTypeOfFalseOperand)}')`,
     );
   }
 }

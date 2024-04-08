@@ -25,7 +25,7 @@ export class PixAndFlixLibrary extends Module {
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
     config: ModulesGlobalConfig,
-    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
     super(memory, functionTable, config, sharedWasmGlobalVariables);
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
@@ -271,7 +271,7 @@ export class PixAndFlixLibrary extends Module {
               funcPtr,
               sharedWasmGlobalVariables,
               stackFrameArgs,
-              []
+              [],
             );
 
             // copy the values out

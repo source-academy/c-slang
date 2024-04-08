@@ -3,9 +3,7 @@
  */
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { WasmModule } from "~src/translator/wasm-ast/core";
-import {
-  FUNCTION_TYPE_LABEL,
-} from "~src/wat-generator/constants";
+import { FUNCTION_TYPE_LABEL } from "~src/wat-generator/constants";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";
 import generateWatStatement from "~src/wat-generator/generateWatStatement";
 import { generateLine } from "~src/wat-generator/util";
@@ -16,9 +14,9 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
   // add the memory import
   watStr += generateLine(
     `(import "js" "mem" (memory ${calculateNumberOfPagesNeededForBytes(
-      module.dataSegmentSize
+      module.dataSegmentSize,
     )}))`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add the imported functions
@@ -41,7 +39,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
               .join(" ")
           : ""
       }))`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -52,14 +50,14 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
       }") (${importedGlobal.isConst ? "" : "mut"} ${
         importedGlobal.wasmDataType
       }))`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
   // add the table of functions
   watStr += generateLine(
     `(import "js" "function_table" (table ${module.functionTable.size} funcref))`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add all the wasm global variable declarations
@@ -72,27 +70,27 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
           ? generateWatExpression(global.initializerValue)
           : ""
       })`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
   // add all the global variables (in linear memory) intiializations
   watStr += generateLine(
     `(data (i32.const 0) "${module.dataSegmentByteStr}")`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add the type of all user defined functions (to wasm the functions simply take no params, no return (memory model handles these))
   watStr += generateLine(
     `(type ${FUNCTION_TYPE_LABEL} (func))`,
-    baseIndentation + 1
+    baseIndentation + 1,
   );
 
   // add all functions into the table
   for (const f of module.functionTable.elements) {
     watStr += generateLine(
       `(elem (i32.const ${f.index}) $${f.functionName})`,
-      baseIndentation + 1
+      baseIndentation + 1,
     );
   }
 
@@ -103,7 +101,7 @@ export function generateWat(module: WasmModule, baseIndentation: number = 0) {
     for (const statement of func.body) {
       watStr += generateLine(
         generateWatStatement(statement),
-        baseIndentation + 2
+        baseIndentation + 2,
       );
     }
     watStr += generateLine(")", baseIndentation + 1);

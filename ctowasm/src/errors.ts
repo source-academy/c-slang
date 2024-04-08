@@ -7,7 +7,7 @@ import { Position } from "~src/parser/c-ast/misc";
 function generateCompilationMessage(
   message: string,
   sourceCode: string,
-  position: Position
+  position: Position,
 ) {
   let errorMessage = `${message}\n${position.start.line} | `;
   let currLine = position.start.line;
@@ -32,7 +32,7 @@ function generateCompilationMessage(
 function generateCompilationErrorMessage(
   message: string,
   sourceCode: string,
-  position: Position
+  position: Position,
 ): string {
   return `Error: ${generateCompilationMessage(message, sourceCode, position)}`;
 }
@@ -47,12 +47,12 @@ function generateCompilationErrorMessage(
 export function generateCompilationWarningMessage(
   message: string,
   sourceCode: string,
-  position: Position
+  position: Position,
 ): string {
   return `Warning: ${generateCompilationMessage(
     message,
     sourceCode,
-    position
+    position,
   )}`;
 }
 
@@ -82,7 +82,7 @@ export class SourceCodeError extends Error {
       this.message = generateCompilationErrorMessage(
         this.message,
         sourceCode,
-        this.position
+        this.position,
       );
     } else {
       this.message = `Error: ${this.message}\n`;
@@ -97,14 +97,14 @@ export class SourceCodeError extends Error {
 export class ParserCompilationErrors extends Error {
   constructor(
     sourceCode: string,
-    errors: { message: string; position: Position }[]
+    errors: { message: string; position: Position }[],
   ) {
     super(
       errors
         .map((e) =>
-          generateCompilationErrorMessage(e.message, sourceCode, e.position)
+          generateCompilationErrorMessage(e.message, sourceCode, e.position),
         )
-        .join("\n")
+        .join("\n"),
     );
   }
 }
@@ -146,7 +146,7 @@ export class UnsupportedFeatureError extends Error {
  * Convert aribtrary object to json string. Needed to support bigints.
  */
 export function toJson(obj: any) {
-  const clone = structuredClone(obj)
+  const clone = structuredClone(obj);
   function recursionHelper(obj: any) {
     if ((typeof obj !== "object" && !Array.isArray(obj)) || obj === null) {
       return;

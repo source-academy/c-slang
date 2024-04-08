@@ -29,15 +29,15 @@ const argv = yargs(hideBin(process.argv))
   .command("compile-to-wat", "Compile the given file to WAT")
   .command(
     "generate-c-ast",
-    "Generate the initial C AST from parsing as a JSON file for visualisation"
+    "Generate the initial C AST from parsing as a JSON file for visualisation",
   )
   .command(
     "generate-processed-c-ast",
-    "Generate the processed C AST as a JSON file for visualisation"
+    "Generate the processed C AST as a JSON file for visualisation",
   )
   .command(
     "generate-wat-ast",
-    "Generate the WAT AST as a JSON file for visualisation"
+    "Generate the WAT AST as a JSON file for visualisation",
   )
   .demandCommand(2).argv;
 
@@ -64,14 +64,16 @@ switch (argv._[0]) {
     result = await compile(input);
     if (result.status === "failure") {
       isSuccess = false;
-      console.log(`Compilation failed with the following errors:\n${result.errorMessage}`);
+      console.log(
+        `Compilation failed with the following errors:\n${result.errorMessage}`,
+      );
       break;
     }
     if (result.warnings.length > 0) {
       console.log(
         `Compilation finished with the following warnings:\n${result.warnings.join(
-          "\n"
-        )}`
+          "\n",
+        )}`,
       );
     }
     output = result.wasm;
@@ -87,8 +89,8 @@ switch (argv._[0]) {
     if (result.warnings.length > 0) {
       console.log(
         `Compilation finished with the following warnings:\n${result.warnings.join(
-          "\n"
-        )}`
+          "\n",
+        )}`,
       );
     }
     output = result.watOutput;
@@ -99,14 +101,16 @@ switch (argv._[0]) {
     result = compileToWat(input);
     if (result.status === "failure") {
       isSuccess = false;
-      console.log(`Compilation failed with the following errors:\n${result.errorMessage}`);
+      console.log(
+        `Compilation failed with the following errors:\n${result.errorMessage}`,
+      );
       break;
     }
     if (result.warnings.length > 0) {
       console.log(
         `Compilation finished with the following warnings:\n${result.warnings.join(
-          "\n"
-        )}`
+          "\n",
+        )}`,
       );
     }
     output = result.watOutput;

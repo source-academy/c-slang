@@ -55,7 +55,7 @@ import {
 export default function processExpression(
   expr: Expression,
   symbolTable: SymbolTable,
-  enclosingFunc?: FunctionDefinitionP
+  enclosingFunc?: FunctionDefinitionP,
 ): ExpressionWrapperP {
   try {
     if (expr.type === "Assignment") {
@@ -92,7 +92,7 @@ export default function processExpression(
       checkBinaryExpressionConstraints(
         expr,
         processedLeftExpr,
-        processedRightExpr
+        processedRightExpr,
       );
 
       // at this point all the operands can only be scalar data types
@@ -101,14 +101,14 @@ export default function processExpression(
         determineResultDataTypeOfBinaryExpression(
           processedLeftExprDataType as ScalarDataType,
           processedRightExprDataType as ScalarDataType,
-          expr.operator
+          expr.operator,
         );
 
       const operandTargetDataType =
         determineOperandTargetDataTypeOfBinaryExpression(
           processedLeftExprDataType as ScalarDataType,
           processedRightExprDataType as ScalarDataType,
-          expr.operator
+          expr.operator,
         );
 
       let leftExpr = processedLeftExpr.exprs[0];
@@ -126,7 +126,9 @@ export default function processExpression(
           rightExpr: {
             type: "IntegerConstant",
             value: BigInt(
-              getDataTypeSize(processedLeftExprDataType.pointeeType as DataType)
+              getDataTypeSize(
+                processedLeftExprDataType.pointeeType as DataType,
+              ),
             ), // void pointer already checked for
             dataType: rightExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
@@ -145,8 +147,8 @@ export default function processExpression(
             type: "IntegerConstant",
             value: BigInt(
               getDataTypeSize(
-                processedRightExprDataType.pointeeType as DataType
-              )
+                processedRightExprDataType.pointeeType as DataType,
+              ),
             ),
             dataType: leftExpr.dataType as IntegerDataType, // datatype is confirmed by determineDataTypeOfBinaryExpression
           },
@@ -182,8 +184,8 @@ export default function processExpression(
                 type: "IntegerConstant",
                 value: BigInt(
                   getDataTypeSize(
-                    processedRightExprDataType.pointeeType as DataType
-                  )
+                    processedRightExprDataType.pointeeType as DataType,
+                  ),
                 ),
                 dataType: PTRDIFF_T,
               },
@@ -283,7 +285,7 @@ export default function processExpression(
         return createFunctionTableIndexExpressionWrapper(
           expr.name,
           symbolEntry.dataType,
-          symbolTable
+          symbolTable,
         );
       }
 
@@ -328,7 +330,7 @@ export default function processExpression(
                   ? "DataSegmentAddress"
                   : "LocalAddress",
               offset: createMemoryOffsetIntegerConstant(
-                symbolEntry.offset + primaryDataObject.offset
+                symbolEntry.offset + primaryDataObject.offset,
               ),
               dataType: "pointer",
             },
@@ -345,7 +347,7 @@ export default function processExpression(
           return createFunctionTableIndexExpressionWrapper(
             expr.expr.name,
             symbolEntry.dataType,
-            symbolTable
+            symbolTable,
           );
         }
 
@@ -442,7 +444,7 @@ export default function processExpression(
         };
       } else {
         const unpackedStruct = unpackDataType(
-          derefedExpressionDataType.pointeeType
+          derefedExpressionDataType.pointeeType,
         );
         return {
           originalDataType: derefedExpressionDataType.pointeeType,
@@ -454,7 +456,7 @@ export default function processExpression(
                 type: "BinaryExpression",
                 leftExpr: derefedExpression.exprs[0], // value of dereferenced expression (starting address of the pointed to struct)
                 rightExpr: createMemoryOffsetIntegerConstant(
-                  primaryDataObject.offset
+                  primaryDataObject.offset,
                 ), // offset of particular primary data object in struct
                 operator: "+",
                 operandTargetDataType: "pointer",
@@ -484,7 +486,7 @@ export default function processExpression(
 
       if (dataTypeToGetSizeOf.type === "function") {
         throw new ProcessingError(
-          "invalid application of 'sizeof' to function type"
+          "invalid application of 'sizeof' to function type",
         );
       }
 
@@ -510,7 +512,7 @@ export default function processExpression(
       });
       if (dataTypeOfExpr.type !== "struct") {
         throw new ProcessingError(
-          `request for member '${expr.fieldTag}' in something that is not a structure`
+          `request for member '${expr.fieldTag}' in something that is not a structure`,
         );
       }
       const { fieldIndex, fieldDataType } =
@@ -530,7 +532,7 @@ export default function processExpression(
             const memLoad = processedExpr.exprs[0].expr;
             if (memLoad.type !== "MemoryLoad") {
               throw new ProcessingError(
-                `request for member '${expr.fieldTag}' in something that is not a structure or union`
+                `request for member '${expr.fieldTag}' in something that is not a structure or union`,
               );
             }
             memoryLoadExpr = memLoad;
@@ -538,7 +540,7 @@ export default function processExpression(
             const memLoad = processedExpr.exprs[fieldIndex];
             if (memLoad.type !== "MemoryLoad") {
               throw new ProcessingError(
-                `request for member '${expr.fieldTag}' in something that is not a structure or union`
+                `request for member '${expr.fieldTag}' in something that is not a structure or union`,
               );
             }
             memoryLoadExpr = memLoad;
@@ -597,7 +599,7 @@ export default function processExpression(
             totalBytesLoaded += getSizeOfScalarDataType(loadExpr.dataType);
           } else {
             throw new ProcessingError(
-              `request for member '${expr.fieldTag}' in something that is not a structure or union`
+              `request for member '${expr.fieldTag}' in something that is not a structure or union`,
             );
           }
         }
@@ -606,14 +608,14 @@ export default function processExpression(
           if (processedExpr.exprs[currLoadIndex].type !== "MemoryLoad") {
             // only "MemoryLoads" can possibly indicate an lvalue
             throw new ProcessingError(
-              `request for member '${expr.fieldTag}' in something that is not a structure or union`
+              `request for member '${expr.fieldTag}' in something that is not a structure or union`,
             );
           }
           totalBytesLoaded += getSizeOfScalarDataType(
-            (processedExpr.exprs[currLoadIndex] as MemoryLoad).dataType
+            (processedExpr.exprs[currLoadIndex] as MemoryLoad).dataType,
           );
           memoryLoadExprs.push(
-            processedExpr.exprs[currLoadIndex++] as MemoryLoad
+            processedExpr.exprs[currLoadIndex++] as MemoryLoad,
           );
         }
         return {
@@ -629,7 +631,7 @@ export default function processExpression(
       // process the first expressions as statements
       const processedLastExpr = processExpression(
         expr.expressions[expr.expressions.length - 1],
-        symbolTable
+        symbolTable,
       );
       const precedingExpressionsAsStatements: StatementP[] = [];
       for (let i = 0; i < expr.expressions.length - 1; ++i) {
@@ -637,8 +639,8 @@ export default function processExpression(
           ...processBlockItem(
             expr.expressions[i],
             symbolTable,
-            enclosingFunc as FunctionDefinitionP
-          )
+            enclosingFunc as FunctionDefinitionP,
+          ),
         );
       }
       return {
@@ -657,11 +659,11 @@ export default function processExpression(
       const processedCondition = processExpression(
         expr.condition,
         symbolTable,
-        enclosingFunc
+        enclosingFunc,
       );
       const processedTrueExpression = processExpression(
         expr.trueExpression,
-        symbolTable
+        symbolTable,
       );
       const dataTypeOfTrueExpression = getDataTypeOfExpression({
         expression: processedTrueExpression,
@@ -670,7 +672,7 @@ export default function processExpression(
       });
       const processedFalseExpression = processExpression(
         expr.falseExpression,
-        symbolTable
+        symbolTable,
       );
       const dataTypeOfFalseExpression = getDataTypeOfExpression({
         expression: processedFalseExpression,
@@ -681,16 +683,16 @@ export default function processExpression(
       checkConditionalExpressionOperands(
         processedCondition,
         processedTrueExpression,
-        processedFalseExpression
+        processedFalseExpression,
       );
 
       const resultDataType = determineConditionalExpressionDataType(
         dataTypeOfTrueExpression,
-        dataTypeOfFalseExpression
+        dataTypeOfFalseExpression,
       );
 
       return {
-        originalDataType: resultDataType, 
+        originalDataType: resultDataType,
         exprs: processedTrueExpression.exprs.map((truePrimaryExpr, index) => ({
           type: "ConditionalExpression",
           condition: processedCondition.exprs[0],

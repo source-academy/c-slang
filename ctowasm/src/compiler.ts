@@ -6,7 +6,12 @@ import process from "./processor";
 import { generateWat } from "./wat-generator";
 import { compileWatToWasm } from "./wat-to-wasm";
 import translate from "~src/translator";
-import { ParserCompilationErrors, SourceCodeError, generateCompilationWarningMessage, toJson } from "~src/errors";
+import {
+  ParserCompilationErrors,
+  SourceCodeError,
+  generateCompilationWarningMessage,
+  toJson,
+} from "~src/errors";
 import ModuleRepository, { ModuleName } from "~src/modules";
 
 export interface SuccessfulCompilationResult {
@@ -29,15 +34,20 @@ export type CompilationResult =
 
 export async function compile(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ): Promise<CompilationResult> {
   try {
     const { cAstRoot, warnings } = parse(cSourceCode, moduleRepository);
-    const { astRootNode, includedModules, warnings: processorWarnings } = process(
-      cAstRoot,
-      moduleRepository
+    const {
+      astRootNode,
+      includedModules,
+      warnings: processorWarnings,
+    } = process(cAstRoot, moduleRepository);
+    warnings.push(
+      ...processorWarnings.map((w) =>
+        generateCompilationWarningMessage(w.message, cSourceCode, w.position),
+      ),
     );
-    warnings.push(...(processorWarnings.map(w => generateCompilationWarningMessage(w.message, cSourceCode, w.position))));
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = await compileWatToWasm(generateWat(wasmModule));
     return {
@@ -82,15 +92,19 @@ export type WatCompilationResult =
 
 export function compileToWat(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ): WatCompilationResult {
   try {
     const { cAstRoot, warnings } = parse(cSourceCode, moduleRepository);
     const { astRootNode, warnings: processorWarnings } = process(
       cAstRoot,
-      moduleRepository
+      moduleRepository,
     );
-    warnings.push(...(processorWarnings.map(w => generateCompilationWarningMessage(w.message, cSourceCode, w.position))));
+    warnings.push(
+      ...processorWarnings.map((w) =>
+        generateCompilationWarningMessage(w.message, cSourceCode, w.position),
+      ),
+    );
     const wasmModule = translate(astRootNode, moduleRepository);
     const output = generateWat(wasmModule);
     return {
@@ -117,7 +131,7 @@ export function compileToWat(
 
 export function generate_C_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   try {
     const parsedResult = parse(cSourceCode, moduleRepository);
@@ -132,7 +146,7 @@ export function generate_C_AST(
 
 export function generate_processed_C_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   try {
     const { cAstRoot } = parse(cSourceCode, moduleRepository);
@@ -148,7 +162,7 @@ export function generate_processed_C_AST(
 
 export function generate_WAT_AST(
   cSourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   const { cAstRoot } = parse(cSourceCode, moduleRepository);
   const { astRootNode } = process(cAstRoot, moduleRepository);

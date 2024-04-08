@@ -15,7 +15,7 @@ import {
 } from "~src/common/types";
 
 export function getZeroInializerByteStrForDataType(
-  dataType: DataType | StructSelfPointer
+  dataType: DataType | StructSelfPointer,
 ) {
   let byteStr = "";
   if (
@@ -30,10 +30,10 @@ export function getZeroInializerByteStrForDataType(
     }
   } else if (dataType.type === "array") {
     const numElements = evaluateCompileTimeExpression(
-      dataType.numElements
+      dataType.numElements,
     ).value;
     const elementZeroStr = getZeroInializerByteStrForDataType(
-      dataType.elementDataType
+      dataType.elementDataType,
     );
     for (let i = 0; i < numElements; i++) {
       byteStr += elementZeroStr;
@@ -62,7 +62,7 @@ export function getZeroInializerByteStrForDataType(
  */
 export function convertConstantToByteStr(
   constant: ConstantP,
-  targetDataType: ScalarCDataType
+  targetDataType: ScalarCDataType,
 ) {
   // shouldnt be assigning ints to pointer. THis is a constraint violation TODO: consider an error here to user based on a flag set on compiler
   if (targetDataType === "pointer") {
@@ -75,12 +75,12 @@ export function convertConstantToByteStr(
       // need to truncate the value
       return convertIntegerToByteString(
         BigInt(Math.trunc(constant.value)),
-        primaryDataTypeSizes[targetDataType]
+        primaryDataTypeSizes[targetDataType],
       );
     } else {
       return convertIntegerToByteString(
         constant.value,
-        primaryDataTypeSizes[targetDataType]
+        primaryDataTypeSizes[targetDataType],
       );
     }
   } else {
@@ -89,7 +89,7 @@ export function convertConstantToByteStr(
       // Number will automatically handle converting to the next representable value TODO: check if this is next highest or lowest
       return convertFloatNumberToByteString(
         Number(constant.value),
-        targetDataType
+        targetDataType,
       );
     } else {
       // need to get a float byte string
@@ -103,7 +103,7 @@ export function convertConstantToByteStr(
  */
 export function convertIntegerToByteString(
   integer: bigint,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (integer < 0) {
     // convert to 2's complement equivalent in terms of positive number
@@ -131,7 +131,7 @@ export function convertIntegerToByteString(
 
 function convertFloatNumberToByteString(
   floatValue: number,
-  targetDataType: FloatDataType
+  targetDataType: FloatDataType,
 ) {
   const buffer = new ArrayBuffer(primaryDataTypeSizes[targetDataType]);
   let integerValue;
@@ -151,6 +151,6 @@ function convertFloatNumberToByteString(
   // convert the integer view of the float variable to a byte string
   return convertIntegerToByteString(
     BigInt(integerValue),
-    primaryDataTypeSizes[targetDataType]
+    primaryDataTypeSizes[targetDataType],
   );
 }

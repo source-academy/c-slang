@@ -28,13 +28,10 @@ export async function compileAndRunFile({
   modulesConfig,
 }) {
   const input = fs.readFileSync(
-    path.resolve(
-      __dirname,
-      `samples/${testGroup}/${testFileName}.c`,
-    ),
+    path.resolve(__dirname, `samples/${testGroup}/${testFileName}.c`),
     "utf-8",
   );
-  
+
   await compileAndRun(input, modulesConfig);
 }
 
@@ -50,19 +47,22 @@ export function compileAndSaveFileToWat({ testGroup, testFileName }) {
     `${testGroup}/wat/${testFileName}.wat`,
   );
   const input = fs.readFileSync(
-    path.resolve(
-      __dirname,
-      `samples/${testGroup}/${testFileName}.c`,
-    ),
+    path.resolve(__dirname, `samples/${testGroup}/${testFileName}.c`),
     "utf-8",
   );
 
   const { watOutput, status, warnings, errorMessage } = compileToWat(input);
   if (status === "failure") {
-    throw new CompilationFailure(`Compilation failed due to following errors:\n${errorMessage}`);
+    throw new CompilationFailure(
+      `Compilation failed due to following errors:\n${errorMessage}`,
+    );
   }
   if (warnings.length > 0) {
-    console.log(`${testFileName}: Compilation succeeded with warnings:\n${warnings.join("\n")}`)
+    console.log(
+      `${testFileName}: Compilation succeeded with warnings:\n${warnings.join(
+        "\n",
+      )}`,
+    );
   }
   fs.mkdirSync(path.dirname(watFilePath), { recursive: true });
   fs.writeFileSync(watFilePath, watOutput);
@@ -76,15 +76,14 @@ export const COMPILATION_FAILURE_TEST_SUCCESS = true;
  */
 export function testFileCompilationError(testFileName, expectedMessages) {
   const input = fs.readFileSync(
-    path.resolve(
-      __dirname,
-      `samples/error/${testFileName}.c`,
-    ),
+    path.resolve(__dirname, `samples/error/${testFileName}.c`),
     "utf-8",
   );
   const { status, errorMessage } = compileToWat(input);
   if (status !== "failure") {
-    throw new Error("Test compilation error failed: No compilation error occured.")
+    throw new Error(
+      "Test compilation error failed: No compilation error occured.",
+    );
   }
   return checkErrorMessages(errorMessage, expectedMessages);
 }
@@ -95,7 +94,7 @@ export function testFileCompilationError(testFileName, expectedMessages) {
  */
 export function checkErrorMessages(actual, expectedMsgs) {
   const errorMsgRegex = /Error:.*\n/g;
-  const actualErrors = [...actual.match(errorMsgRegex)].map(s => s.trim());
+  const actualErrors = [...actual.match(errorMsgRegex)].map((s) => s.trim());
   const extraErrors = [];
   const missingErrors = [];
 
@@ -112,14 +111,14 @@ export function checkErrorMessages(actual, expectedMsgs) {
       extraErrors.push(actualMsg);
     }
   }
-  
+
   if (extraErrors.length > 0 || missingErrors.length > 0) {
     return {
       extraErrors: extraErrors,
-      missingErrors: missingErrors
-    }
+      missingErrors: missingErrors,
+    };
   }
-  
+
   return COMPILATION_FAILURE_TEST_SUCCESS;
 }
 
@@ -132,9 +131,7 @@ export async function testFileCompilationSuccess(testGroup, testFileName) {
     });
 
     // if there already exists a verified expected output for this file, simply check that the output WAT is the same as expected
-    if (
-      testLog[testGroup][testFileName].expectedCode === true
-    ) {
+    if (testLog[testGroup][testFileName].expectedCode === true) {
       const expected = fs.readFileSync(
         getExpectedCodeFilePath(testGroup, testFileName),
         "utf-8",
@@ -146,10 +143,7 @@ export async function testFileCompilationSuccess(testGroup, testFileName) {
           testGroup,
           testFileName,
         )}\nactual file: ${path
-          .resolve(
-            TEMP_DIRECTORY,
-            `${testGroup}/wat/${testFileName}.wat`,
-          )
+          .resolve(TEMP_DIRECTORY, `${testGroup}/wat/${testFileName}.wat`)
           .toString()}`;
       }
     } else {
@@ -167,25 +161,16 @@ export async function testFileCompilationSuccess(testGroup, testFileName) {
             testFileName,
             modulesConfig,
           });
-          if (
-            "customTest" in testLog[testGroup][testFileName]
-          ) {
+          if ("customTest" in testLog[testGroup][testFileName]) {
             // if a custom test has been defined for this test case, use that instead
-            if (
-              !testLog[testGroup][testFileName].customTest(
-                programOutput,
-              )
-            ) {
+            if (!testLog[testGroup][testFileName].customTest(programOutput)) {
               return `CUSTOM TEST FAILED. Actual values: ${programOutput.toString()}`;
             }
           } else {
             const actualValues = programOutput.toString();
             const expectedValues =
-              "expectedValues" in
-              testLog[testGroup][testFileName]
-                ? testLog[testGroup][
-                    testFileName
-                  ].expectedValues.toString()
+              "expectedValues" in testLog[testGroup][testFileName]
+                ? testLog[testGroup][testFileName].expectedValues.toString()
                 : [].toString();
 
             if (expectedValues !== actualValues) {

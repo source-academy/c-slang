@@ -31,17 +31,21 @@ import { PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 // some auxillary information used during processing
 let auxInfo = {
   inLoop: false,
-  inSwitch: false
-}
+  inSwitch: false,
+};
 
 export function resetProcessorAuxInfo() {
   auxInfo = {
     inLoop: false,
-    inSwitch: false
-  }
+    inSwitch: false,
+  };
 }
 
-function processLoopBody(bodyStaement: BlockItem, symbolTable: SymbolTable, enclosingFunc: FunctionDefinitionP) {
+function processLoopBody(
+  bodyStaement: BlockItem,
+  symbolTable: SymbolTable,
+  enclosingFunc: FunctionDefinitionP,
+) {
   const originalInLoop = auxInfo.inLoop;
   auxInfo.inLoop = true;
   const body = processBlockItem(bodyStaement, symbolTable, enclosingFunc);
@@ -115,7 +119,7 @@ export default function processBlockItem(
           node.update !== null
             ? processBlockItem(node.update, forLoopSymbolTable, enclosingFunc)
             : [],
-        body: processLoopBody(node.body,forLoopSymbolTable, enclosingFunc),
+        body: processLoopBody(node.body, forLoopSymbolTable, enclosingFunc),
       };
 
       return [processedForLoopNode];
@@ -162,11 +166,11 @@ export default function processBlockItem(
             : null,
         },
       ];
-    } else if (
-      node.type === "BreakStatement"
-    ) {
+    } else if (node.type === "BreakStatement") {
       if (!auxInfo.inLoop && !auxInfo.inSwitch) {
-        throw new ProcessingError("break statement not within a switch or loop body")
+        throw new ProcessingError(
+          "break statement not within a switch or loop body",
+        );
       }
       return [
         {
@@ -174,11 +178,9 @@ export default function processBlockItem(
         },
       ];
       // start of processing Expression nodes which may have side effects
-    }  else if (
-      node.type === "ContinueStatement"
-    ) {
+    } else if (node.type === "ContinueStatement") {
       if (!auxInfo.inLoop) {
-        throw new ProcessingError("continue statement not within a loop body")
+        throw new ProcessingError("continue statement not within a loop body");
       }
       return [
         {
@@ -200,16 +202,29 @@ export default function processBlockItem(
 
       if (node.cases.length === 0 && node.defaultStatements.length === 0) {
         // empty switch statement, just process the expression as block item
-        return processBlockItem(node.targetExpression, symbolTable, enclosingFunc);
+        return processBlockItem(
+          node.targetExpression,
+          symbolTable,
+          enclosingFunc,
+        );
       }
 
       const originalInSwitch = auxInfo.inSwitch;
       auxInfo.inSwitch = true;
       const processedCases: SwitchStatementCaseP[] = [];
       for (const switchStatementCase of node.cases) {
-        const dataTypeOfLabel = getDataTypeOfExpression({expression: processExpression(switchStatementCase.conditionMatch, symbolTable, enclosingFunc)});
+        const dataTypeOfLabel = getDataTypeOfExpression({
+          expression: processExpression(
+            switchStatementCase.conditionMatch,
+            symbolTable,
+            enclosingFunc,
+          ),
+        });
         if (!isIntegralDataType(dataTypeOfLabel)) {
-          throw new ProcessingError("case value not an integer constant expression", switchStatementCase.position);
+          throw new ProcessingError(
+            "case value not an integer constant expression",
+            switchStatementCase.position,
+          );
         }
         const evaluatedConstant = evaluateCompileTimeExpression(
           switchStatementCase.conditionMatch,
@@ -221,11 +236,13 @@ export default function processBlockItem(
           );
         }
         // the conditon of each switch case is adjusted to be a relational expression: targetExpression == case value
-        const dataTypeOfSwitchCaseOperandAndTarget = (determineResultDataTypeOfBinaryExpression(
-          dataTypeOfTargetExpression as PrimaryDataType,
-          dataTypeOfLabel as PrimaryDataType,
-          "==",
-        ) as PrimaryDataType).primaryDataType;
+        const dataTypeOfSwitchCaseOperandAndTarget = (
+          determineResultDataTypeOfBinaryExpression(
+            dataTypeOfTargetExpression as PrimaryDataType,
+            dataTypeOfLabel as PrimaryDataType,
+            "==",
+          ) as PrimaryDataType
+        ).primaryDataType;
         processedCases.push({
           condition: {
             type: "BinaryExpression",
@@ -307,7 +324,7 @@ export default function processBlockItem(
       node.type === "IdentifierExpression" ||
       node.type === "PointerDereference" ||
       node.type === "SizeOfExpression" ||
-      node.type === "StructMemberAccess" 
+      node.type === "StructMemberAccess"
     ) {
       addWarning("statement with no effect", node.position);
       processExpression(node, symbolTable, enclosingFunc);

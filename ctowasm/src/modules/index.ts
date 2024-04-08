@@ -46,7 +46,7 @@ export default class ModuleRepository {
   constructor(
     memory?: WebAssembly.Memory,
     functionTable?: WebAssembly.Table,
-    config?: ModulesGlobalConfig
+    config?: ModulesGlobalConfig,
   ) {
     this.memory = memory ?? new WebAssembly.Memory({ initial: 0 });
     this.functionTable =
@@ -59,15 +59,15 @@ export default class ModuleRepository {
     this.sharedWasmGlobalVariables = {
       stackPointer: new WebAssembly.Global(
         { value: WASM_ADDR_TYPE, mutable: true },
-        0
+        0,
       ),
       basePointer: new WebAssembly.Global(
         { value: WASM_ADDR_TYPE, mutable: true },
-        0
+        0,
       ),
       heapPointer: new WebAssembly.Global(
         { value: WASM_ADDR_TYPE, mutable: true },
-        0
+        0,
       ),
     };
 
@@ -76,25 +76,25 @@ export default class ModuleRepository {
         this.memory,
         this.functionTable,
         this.config,
-        this.sharedWasmGlobalVariables
+        this.sharedWasmGlobalVariables,
       ),
       [pixAndFlixLibraryModuleImportName]: new PixAndFlixLibrary(
         this.memory,
         this.functionTable,
         this.config,
-        this.sharedWasmGlobalVariables
+        this.sharedWasmGlobalVariables,
       ),
       [mathStdlibName]: new MathStdLibModule(
         this.memory,
         this.functionTable,
         this.config,
-        this.sharedWasmGlobalVariables
+        this.sharedWasmGlobalVariables,
       ),
       [utilityStdLibName]: new UtilityStdLibModule(
         this.memory,
         this.functionTable,
         this.config,
-        this.sharedWasmGlobalVariables
+        this.sharedWasmGlobalVariables,
       ),
     };
   }
@@ -120,7 +120,7 @@ export default class ModuleRepository {
    * @param importedModules the names of all modules that are being imported and used in a particular compiled wasm output file.
    */
   async createWasmImportsObject(
-    importedModules: ModuleName[]
+    importedModules: ModuleName[],
   ): Promise<WebAssembly.Imports> {
     const imports: WebAssembly.Imports = {
       js: {
@@ -142,7 +142,7 @@ export default class ModuleRepository {
         (moduleFunctionName) => {
           moduleImportObject[moduleFunctionName] =
             module.moduleFunctions[moduleFunctionName].jsFunction;
-        }
+        },
       );
       imports[moduleName] = moduleImportObject;
     }

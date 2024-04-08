@@ -32,7 +32,7 @@ export interface ParserOutput {
 
 export default function parse(
   sourceCode: string,
-  moduleRepository: ModuleRepository
+  moduleRepository: ModuleRepository,
 ) {
   try {
     // eslint-disable-next-line
@@ -55,13 +55,13 @@ export default function parse(
         // this handles any errors that were detected but didnt stop parsing
         throw new ParserCompilationErrors(
           sourceCode,
-          compilationErrors as { message: string; position: Position }[]
+          compilationErrors as { message: string; position: Position }[],
         );
       }
       return {
         cAstRoot: rootNode,
         warnings: warnings.map((w: { message: string; position: Position }) =>
-          generateCompilationWarningMessage(w.message, sourceCode, w.position)
+          generateCompilationWarningMessage(w.message, sourceCode, w.position),
         ),
       };
     } catch (e) {
@@ -85,13 +85,13 @@ export default function parse(
         }
         const adjustedLocation = {
           start: (lexer as any).tokenPositions.get(
-            (e as any).location.start.offset
+            (e as any).location.start.offset,
           ).start,
           end: (lexer as any).tokenPositions.get(
             Math.max(
               (e as any).location.start.offset,
-              (e as any).location.end.offset - 1
-            )
+              (e as any).location.end.offset - 1,
+            ),
           ).end,
         };
         throw new ParserCompilationErrors(sourceCode, [

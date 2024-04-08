@@ -54,7 +54,11 @@ export function mallocFunction({
   }
 
   // no suitable block on the free list, need to expand heap
-  checkAndExpandMemoryIfNeeded(memory, bytesRequested, sharedWasmGlobalVariables); 
+  checkAndExpandMemoryIfNeeded(
+    memory,
+    bytesRequested,
+    sharedWasmGlobalVariables,
+  );
 
   // enlarge heap segment
   const address = sharedWasmGlobalVariables.heapPointer.value;

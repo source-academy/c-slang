@@ -1,7 +1,5 @@
 import BigNumber from "bignumber.js";
-import {
-  calculateNumberOfPagesNeededForBytes,
-} from "~src/common/utils";
+import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 
 // export function extractImportedFunctionCDetails(
@@ -40,7 +38,7 @@ export function convertFloatToCStyleString(float: number): string {
  */
 export function extractCStyleStringFromMemory(
   buffer: ArrayBuffer,
-  strAddress: number
+  strAddress: number,
 ) {
   const uInt8Arr = new Uint8Array(buffer);
   let str = "";
@@ -54,11 +52,11 @@ export function extractCStyleStringFromMemory(
 
 export function getExternalFunction(
   funcName: string,
-  config: ModulesGlobalConfig
+  config: ModulesGlobalConfig,
 ): Function {
   if (!config.externalFunctions || !(funcName in config.externalFunctions)) {
     throw Error(
-      `External function ${funcName} not provided in compiler configs`
+      `External function ${funcName} not provided in compiler configs`,
     );
   }
   return config.externalFunctions[funcName];
@@ -67,7 +65,7 @@ export function getExternalFunction(
 export function checkAndExpandMemoryIfNeeded(
   memory: WebAssembly.Memory,
   bytesRequested: number,
-  sharedWasmGlobalVariables: SharedWasmGlobalVariables
+  sharedWasmGlobalVariables: SharedWasmGlobalVariables,
 ) {
   const stackPointer = sharedWasmGlobalVariables.stackPointer;
   const heapPointer = sharedWasmGlobalVariables.heapPointer;
@@ -76,7 +74,7 @@ export function checkAndExpandMemoryIfNeeded(
   if (freeSpace < bytesRequested) {
     // need to grow memory
     const additionalPagesNeeded = calculateNumberOfPagesNeededForBytes(
-      bytesRequested - freeSpace
+      bytesRequested - freeSpace,
     );
     const stackSegmentSize = memory.buffer.byteLength - stackPointer.value;
     const oldMemorySize = memory.buffer.byteLength;
@@ -96,7 +94,7 @@ export function checkAndExpandMemoryIfNeeded(
 }
 
 export function printSharedGlobalVariables(
-  sharedWasmGlobalVariables: SharedWasmGlobalVariables
+  sharedWasmGlobalVariables: SharedWasmGlobalVariables,
 ) {
   for (const [name, value] of Object.entries(sharedWasmGlobalVariables)) {
     console.log(`${name}: ${value.value}`);

@@ -1,8 +1,8 @@
 import { Position } from "~src/parser/c-ast/misc";
 
 export interface Warning {
-  message: string,
-  position: Position
+  message: string;
+  position: Position;
 }
 
 export let warnings: Warning[] = [];
@@ -12,5 +12,5 @@ export function clearWarnings() {
 }
 
 export function addWarning(message: string, position: Position) {
-  warnings.push({message, position});
+  warnings.push({ message, position });
 }

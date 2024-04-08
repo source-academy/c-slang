@@ -7,7 +7,12 @@ import { ProcessingError } from "~src/errors";
 import { Expression } from "~src/parser/c-ast/core";
 import processExpression from "~src/processor/processExpression";
 import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
-import { getDecayedArrayPointerType, getFunctionPointerOfFunction, isScalarDataType, stringifyDataType } from "~src/processor/dataTypeUtil";
+import {
+  getDecayedArrayPointerType,
+  getFunctionPointerOfFunction,
+  isScalarDataType,
+  stringifyDataType,
+} from "~src/processor/dataTypeUtil";
 import {
   DataType,
   FunctionDataType,
@@ -24,11 +29,13 @@ export function processCondition(
   const dataTypeOfConditionExpression = getDataTypeOfExpression({
     expression: processedCondition,
     convertArrayToPointer: true,
-    convertFunctionToPointer: true
+    convertFunctionToPointer: true,
   });
   if (!isScalarDataType(dataTypeOfConditionExpression)) {
     throw new ProcessingError(
-      `used '${stringifyDataType(dataTypeOfConditionExpression)}' where scalar is required`,
+      `used '${stringifyDataType(
+        dataTypeOfConditionExpression,
+      )}' where scalar is required`,
     );
   }
   return processedCondition.exprs[0];
@@ -51,7 +58,7 @@ export function createMemoryOffsetIntegerConstant(
 export function getDataTypeOfExpression({
   expression,
   convertArrayToPointer,
-  convertFunctionToPointer
+  convertFunctionToPointer,
 }: {
   expression: ExpressionWrapperP;
   convertArrayToPointer?: boolean;
@@ -60,7 +67,10 @@ export function getDataTypeOfExpression({
   if (convertArrayToPointer && expression.originalDataType.type === "array") {
     return getDecayedArrayPointerType(expression.originalDataType);
   }
-  if (convertFunctionToPointer && expression.originalDataType.type === "function") {
+  if (
+    convertFunctionToPointer &&
+    expression.originalDataType.type === "function"
+  ) {
     return getFunctionPointerOfFunction(expression.originalDataType);
   }
   return expression.originalDataType;
@@ -86,8 +96,7 @@ export function createFunctionTableIndexExpressionWrapper(
 
 export function isFunctionPointer(dataType: DataType) {
   return (
-    dataType.type === "pointer" &&
-    dataType.pointeeType.type === "function"
+    dataType.type === "pointer" && dataType.pointeeType.type === "function"
   );
 }
 

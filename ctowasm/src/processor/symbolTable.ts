@@ -124,13 +124,13 @@ export class SymbolTable {
       if (this.parentTable === null || declaration.storageClass === "static") {
         // the declaration is either a global or static
         // allocate space for and the initializer bytes for this declared object in data segment
-        const byteStr =
-          unpackDataSegmentInitializerAccordingToDataType(
-            declaration.dataType,
-            typeof declaration.initializer === "undefined"
-              ? null
-              : declaration.initializer, this
-          );
+        const byteStr = unpackDataSegmentInitializerAccordingToDataType(
+          declaration.dataType,
+          typeof declaration.initializer === "undefined"
+            ? null
+            : declaration.initializer,
+          this,
+        );
         this.dataSegmentByteStr.value += byteStr;
       }
       return this.addVariableEntry(
@@ -193,9 +193,9 @@ export class SymbolTable {
 
       if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
-          `conflicting types for ${name}:  redeclared as "${stringifyDataType(dataType)}" instead of ${stringifyDataType(
-            symbolEntry.dataType,
-          )}`,
+          `conflicting types for ${name}:  redeclared as "${stringifyDataType(
+            dataType,
+          )}" instead of ${stringifyDataType(symbolEntry.dataType)}`,
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
@@ -278,13 +278,13 @@ export class SymbolTable {
     let curr: SymbolTable | null = this;
     while (curr !== null) {
       if (name in curr.symbols) {
-        return true
+        return true;
       }
       curr = curr.parentTable;
     }
 
     if (name in this.externalFunctions) {
-      return true
+      return true;
     }
     return false;
   }

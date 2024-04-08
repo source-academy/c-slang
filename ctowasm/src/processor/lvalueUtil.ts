@@ -10,7 +10,11 @@ import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
 import { DataType, StructDataType } from "~src/parser/c-ast/dataTypes";
 import { Expression } from "~src/parser/c-ast/core";
-import { checkAssignability, isScalarDataType, stringifyDataType } from "~src/processor/dataTypeUtil";
+import {
+  checkAssignability,
+  isScalarDataType,
+  stringifyDataType,
+} from "~src/processor/dataTypeUtil";
 import { getDataTypeOfExpression } from "~src/processor/util";
 
 function isAllowableLValueType(dataType: DataType, specialCase = false) {
@@ -30,7 +34,7 @@ export function isLValue(
   expression: Expression,
   dataType: DataType,
   symbolTable: SymbolTable,
-  specialCase = false // specialCase refers to certain expressions where types that normally are not lvalues (array/function) are treated as lvalue (sizeof, &)
+  specialCase = false, // specialCase refers to certain expressions where types that normally are not lvalues (array/function) are treated as lvalue (sizeof, &)
 ) {
   if (expression.type === "IdentifierExpression") {
     const symbolEntry = symbolTable.getSymbolEntry(expression.name);
@@ -55,7 +59,7 @@ export function isModifiableLValue(
   expression: Expression,
   dataType: DataType,
   symbolTable: SymbolTable,
-  specialCase = false
+  specialCase = false,
 ) {
   return (
     !dataType.isConst &&
@@ -88,7 +92,7 @@ export function isStructModifiableDataType(dataType: StructDataType) {
  */
 export function getAssignmentNodes(
   assignmentNode: Assignment,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): {
   memoryStoreStatements: MemoryStore[];
   memoryLoadExpressions: MemoryLoad[];
@@ -97,14 +101,24 @@ export function getAssignmentNodes(
   // the memory load instructions from processing the expression being assigned to as an expression
   const assignedMemoryLoadExprs = processExpression(
     assignmentNode.lvalue,
-    symbolTable
+    symbolTable,
   );
-  const lvalueDataType = getDataTypeOfExpression({expression: assignedMemoryLoadExprs});
+  const lvalueDataType = getDataTypeOfExpression({
+    expression: assignedMemoryLoadExprs,
+  });
   const assignee = processExpression(assignmentNode.expr, symbolTable);
-  const assigneeDataType = getDataTypeOfExpression({expression: assignee, convertArrayToPointer: true, convertFunctionToPointer: true});
+  const assigneeDataType = getDataTypeOfExpression({
+    expression: assignee,
+    convertArrayToPointer: true,
+    convertFunctionToPointer: true,
+  });
 
   if (lvalueDataType.type === "array" || lvalueDataType.type === "function") {
-    throw new ProcessingError(`assignment to expression with type '${stringifyDataType(lvalueDataType)}'`);
+    throw new ProcessingError(
+      `assignment to expression with type '${stringifyDataType(
+        lvalueDataType,
+      )}'`,
+    );
   }
 
   if (!isLValue(assignmentNode.lvalue, lvalueDataType, symbolTable)) {
@@ -112,11 +126,19 @@ export function getAssignmentNodes(
   }
 
   if (!isModifiableLValue(assignmentNode.lvalue, lvalueDataType, symbolTable)) {
-    throw new ProcessingError(`assignment to non-modifiable lvalue with type '${stringifyDataType(lvalueDataType)}'`);
+    throw new ProcessingError(
+      `assignment to non-modifiable lvalue with type '${stringifyDataType(
+        lvalueDataType,
+      )}'`,
+    );
   }
 
   if (!checkAssignability(lvalueDataType, assignee)) {
-    throw new ProcessingError(`cannot assign expression with type '${stringifyDataType(lvalueDataType)}' to '${stringifyDataType(assigneeDataType)}'`);
+    throw new ProcessingError(
+      `cannot assign expression with type '${stringifyDataType(
+        lvalueDataType,
+      )}' to '${stringifyDataType(assigneeDataType)}'`,
+    );
   }
 
   const result = {
@@ -128,7 +150,7 @@ export function getAssignmentNodes(
   // assigned and assignee number of primary data expression should match in length
   console.assert(
     assignedMemoryLoadExprs.exprs.length === assignee.exprs.length,
-    "getAssignmentMemoryStoreNodes: assigned and assignee number of primary data expression should match in length"
+    "getAssignmentMemoryStoreNodes: assigned and assignee number of primary data expression should match in length",
   );
 
   // merely need to convert each memoryload into a store of the corresponding assignee expression
@@ -138,7 +160,7 @@ export function getAssignmentNodes(
     if (memoryLoadExpr.type !== "MemoryLoad") {
       throw new ProcessingError(
         "lvalue required as left operand of assignment",
-        assignmentNode.position
+        assignmentNode.position,
       );
     }
     result.memoryStoreStatements.push({

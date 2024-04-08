@@ -26,7 +26,7 @@ export class SourceStandardLibraryModule extends Module {
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
     config: ModulesGlobalConfig,
-    sharedWasmGlobalVariables: SharedWasmGlobalVariables
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
     super(memory, functionTable, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
@@ -202,7 +202,7 @@ export class SourceStandardLibraryModule extends Module {
               pointeeType: {
                 type: "primary",
                 primaryDataType: "signed char",
-                isConst: true
+                isConst: true,
               },
             },
           ],
@@ -267,7 +267,7 @@ export class SourceStandardLibraryModule extends Module {
           printHeap(
             this.memory,
             this.heapAddress,
-            this.sharedWasmGlobalVariables.heapPointer.value
+            this.sharedWasmGlobalVariables.heapPointer.value,
           ),
       },
       print_stack: {
@@ -280,7 +280,7 @@ export class SourceStandardLibraryModule extends Module {
         jsFunction: () =>
           printStack(
             this.memory,
-            this.sharedWasmGlobalVariables.stackPointer.value
+            this.sharedWasmGlobalVariables.stackPointer.value,
           ),
       },
       // only works in browser environment, node.js support can be added in future
@@ -288,8 +288,7 @@ export class SourceStandardLibraryModule extends Module {
         parentImportedObject: sourceStandardLibraryModuleImportName,
         functionType: {
           type: "function",
-          parameters: [
-          ],
+          parameters: [],
           returnType: { type: "primary", primaryDataType: "signed int" },
         },
         jsFunction: () => prompt("Enter a signed integer"),
@@ -298,8 +297,7 @@ export class SourceStandardLibraryModule extends Module {
         parentImportedObject: sourceStandardLibraryModuleImportName,
         functionType: {
           type: "function",
-          parameters: [
-          ],
+          parameters: [],
           returnType: { type: "primary", primaryDataType: "signed long" },
         },
         jsFunction: () => prompt("Enter a long signed integer"),
@@ -309,8 +307,7 @@ export class SourceStandardLibraryModule extends Module {
         parentImportedObject: sourceStandardLibraryModuleImportName,
         functionType: {
           type: "function",
-          parameters: [
-          ],
+          parameters: [],
           returnType: { type: "primary", primaryDataType: "float" },
         },
         jsFunction: () => prompt("Enter a float"),
@@ -319,8 +316,7 @@ export class SourceStandardLibraryModule extends Module {
         parentImportedObject: sourceStandardLibraryModuleImportName,
         functionType: {
           type: "function",
-          parameters: [
-          ],
+          parameters: [],
           returnType: { type: "primary", primaryDataType: "double" },
         },
         jsFunction: () => prompt("Enter a double"),
@@ -337,9 +333,9 @@ export class SourceStandardLibraryModule extends Module {
                 type: "primary",
                 primaryDataType: "signed char",
               },
-            }, 
+            },
           ],
-          returnType: {type: "void"},
+          returnType: { type: "void" },
         },
         jsFunction: (strAddr: number) => {
           const str = prompt("Enter a string");
