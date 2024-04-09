@@ -9,7 +9,7 @@ Read the compiler specification document here: [docs/ctowasm_1.0_compiler_specif
 ## Build
 
 1. Run `yarn install` to install all dependencies.
-2. Run `yarn build` to build the bundle. The bundled output files will be built in the [dist folder](dist).
+2. Run `yarn build` to build the bundle. The bundled output files will be built in the [build folder](build).
 
 ## Commands
 
