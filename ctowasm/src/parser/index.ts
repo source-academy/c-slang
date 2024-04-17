@@ -1,29 +1,15 @@
-import preprocessingGrammar from "bundle-text:./preprocessor.pegjs";
-import lexerGrammar from "bundle-text:./lexer.pegjs";
-import parsingGrammar from "bundle-text:./parser.pegjs";
-import peggy from "peggy";
 import ModuleRepository from "~src/modules";
 import { CAstRoot } from "~src/parser/c-ast/core";
 import {
   ParserCompilationErrors,
   generateCompilationWarningMessage,
 } from "~src/errors";
+
+import preprocessor from "~src/parser/peggyjs/preprocessor"
+import lexer from "~src/parser/peggyjs/lexer"
+import parser from "~src/parser/peggyjs/parser"
 import { Position } from "~src/parser/c-ast/misc";
 
-const preprocessor = peggy.generate(preprocessingGrammar as string, {
-  allowedStartRules: ["program"],
-  cache: true,
-});
-
-const lexer = peggy.generate(lexerGrammar as string, {
-  allowedStartRules: ["program"],
-  cache: true,
-});
-
-const parser = peggy.generate(parsingGrammar as string, {
-  allowedStartRules: ["program"],
-  cache: true,
-});
 
 export interface ParserOutput {
   cAstRoot: CAstRoot;

@@ -36,6 +36,7 @@
     "jest": "^29.7.0",
     "nodemon": "^3.0.1",
     "parcel": "^2.10.1",
+    "peggy": "^4.0.2",
     "prettier": "^3.0.2",
     "rimraf": "^5.0.5",
     "ts-jest": "^29.1.2",
@@ -57,11 +58,14 @@
     "test": "yarn build && NODE_OPTIONS=--experimental-vm-modules jest",
     "unit-test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=unit_tests",
     "check": "tsc --noEmit",
-    "clean-dist": "rimraf dist"
+    "clean-dist": "rimraf dist",
+    "gen-preprocessor": "peggy ./src/parser/peggyjs/preprocessor.pegjs --cache --allowed-start-rules program",
+    "gen-lexer": "peggy ./src/parser/peggyjs/lexer.pegjs --cache --allowed-start-rules program",
+    "gen-parser": "peggy ./src/parser/peggyjs/parser.pegjs --cache --allowed-start-rules program",
+    "gen-parsers": "yarn run gen-preprocessor && yarn run gen-lexer && yarn run gen-parser"
   },
   "dependencies": {
     "bignumber.js": "^9.1.2",
-    "peggy": "^3.0.2",
     "wabt": "^1.0.32"
   }
 }
