@@ -75,13 +75,13 @@ emcc <library name>.c -sEXPORTED_FUNCTIONS=<function names> -sEXPORTED_RUNTIME_M
 An example of the above command that was used to compile `math.h` functions to make available in the the "math" module:
 
 ```
-emcc math.c -sEXPORTED_FUNCTIONS=_acos,_asin,_atan,_cos,_cosh,_sin,_sinh,_tan,_tanh,_exp,_log,_log10,_pow,_sqrt,_ceil,_floor -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sMODULARIZE  -sSINGLE_FILE -o math.js
+emcc math.c -sEXPORTED_FUNCTIONS=_acos,_asin,_atan,_cos,_cosh,_sin,_sinh,_tan,_tanh,_exp,_log,_log10,_pow,_sqrt,_ceil,_floor -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sMODULARIZE  -sSINGLE_FILE -sENVIRONMENT=web -o math.js
 ```
 
 An example of a more complex version of the above command that was used to compile `stdlib.h` functions for the "utility" module:
 
 ```
-emcc utility.c -sEXPORTED_FUNCTIONS=_atoi,_atof,_abs,_labs,_rand,_bsearch,_qsort,_srand,_free,_malloc -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,stringToNewUTF8,addFunction,wasmMemory -sMODULARIZE  -sSINGLE_FILE -sALLOW_TABLE_GROWTH -o utility.js
+emcc utility.c -sEXPORTED_FUNCTIONS=_atoi,_atof,_abs,_labs,_rand,_bsearch,_qsort,_srand,_free,_malloc -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,stringToNewUTF8,addFunction,wasmMemory -sMODULARIZE  -sSINGLE_FILE -sALLOW_TABLE_GROWTH -sENVIRONMENT=web -o utility.js
 ```
 
 4. Move the resultant \<library name>.js file into this project repository, in the module folder. Ensure you define types for importing the functions from this js file in your \<module name>.ts file. See the folders of the [utility](src/modules/utility) and [math](src/modules/math) modules for examples.
