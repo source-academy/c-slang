@@ -37,10 +37,11 @@ export class UtilityStdLibModule extends Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
+    objectReferenceRegistry: Map<string, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, functionTable, config, sharedWasmGlobalVariables);
+    super(memory, functionTable, objectReferenceRegistry, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
     this.moduleDeclaredStructs = [];
     this.instantiate = async () => {
