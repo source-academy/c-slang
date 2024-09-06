@@ -42,10 +42,12 @@ export default class ModuleRepository {
   config: ModulesGlobalConfig;
   modules: Record<ModuleName, Module>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
+  objectReferenceRegistry: Map<string, any>;
 
   constructor(
     memory?: WebAssembly.Memory,
     functionTable?: WebAssembly.Table,
+    objectReferenceRegistry?: Map<string, Object>,
     config?: ModulesGlobalConfig,
   ) {
     this.memory = memory ?? new WebAssembly.Memory({ initial: 0 });
@@ -55,6 +57,7 @@ export default class ModuleRepository {
     this.config = config
       ? { ...defaultModulesGlobalConfig, ...config }
       : defaultModulesGlobalConfig;
+    this.objectReferenceRegistry = objectReferenceRegistry ?? new Map();
 
     this.sharedWasmGlobalVariables = {
       stackPointer: new WebAssembly.Global(
@@ -75,24 +78,28 @@ export default class ModuleRepository {
       [sourceStandardLibraryModuleImportName]: new SourceStandardLibraryModule(
         this.memory,
         this.functionTable,
+        this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
       ),
       [pixAndFlixLibraryModuleImportName]: new PixAndFlixLibrary(
         this.memory,
         this.functionTable,
+        this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
       ),
       [mathStdlibName]: new MathStdLibModule(
         this.memory,
         this.functionTable,
+        this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
       ),
       [utilityStdLibName]: new UtilityStdLibModule(
         this.memory,
         this.functionTable,
+        this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
       ),

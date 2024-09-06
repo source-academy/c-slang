@@ -24,10 +24,11 @@ export class PixAndFlixLibrary extends Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
+    objectReferenceRegistry: Map<string, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, functionTable, config, sharedWasmGlobalVariables);
+    super(memory, functionTable, objectReferenceRegistry, config, sharedWasmGlobalVariables);
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
     this.moduleDeclaredStructs = [];
     this.moduleFunctions = {

@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
+import {mallocFunction} from "~src/modules/source_stdlib/memory";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -99,4 +100,59 @@ export function printSharedGlobalVariables(
   for (const [name, value] of Object.entries(sharedWasmGlobalVariables)) {
     console.log(`${name}: ${value.value}`);
   }
+}
+
+export function storeObjectInMemory(
+    memory: WebAssembly.Memory,
+    objectReferenceRegistry: Map<string, Object>,
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
+    allocatedBlocks: Map<number, number>,
+    freeList: any[],
+    obj: Object,
+) {
+    const uniqueString = crypto.randomUUID();
+    objectReferenceRegistry.set(uniqueString, obj);
+    const mapStringBuffer = stringToBuffer(uniqueString);
+    const objSize = mapStringBuffer.length;
+    const address = mallocFunction(
+        {
+            memory: memory,
+            sharedWasmGlobalVariables: sharedWasmGlobalVariables,
+            bytesRequested: objSize,
+            allocatedBlocks,
+            freeList
+        }
+    )
+    const objArr = new Uint8Array(memory.buffer, address, objSize);
+    for (let i = 0; i < objSize; i++) {
+        objArr[i] = mapStringBuffer[i];
+    }
+    return address;
+}
+
+export function loadObjectFromMemory(
+    memory: WebAssembly.Memory,
+    objectReferenceRegistry: Map<string, Object>,
+    allocatedBlocks: Map<number, number>,
+    address: number,
+): Object {
+    const objArr = new Uint8Array(memory.buffer, address, allocatedBlocks.get(address));
+    const mapKeySt = bufferToString(objArr);
+    const result = objectReferenceRegistry.get(mapKeySt);
+    console.log(mapKeySt, memory.buffer);
+    if (!result) {
+        throw Error("Object not found");
+    }
+    return result;
+}
+
+
+function stringToBuffer(st: string): Uint8Array {
+    const encoder = new TextEncoder();
+    return encoder.encode(st);
+}
+
+function bufferToString(buffer: Uint8Array): string {
+    const decoder = new TextDecoder();
+    return decoder.decode(buffer);
 }
