@@ -73,8 +73,8 @@ export class SymbolTable {
     } else {
       this.externalFunctions = {};
       this.parentTable = null;
-      this.dataSegmentByteStr = { value: "" };
-      this.dataSegmentOffset = { value: 0 };
+      this.dataSegmentByteStr = { value: '\\00\\00\\00\\00'  };
+      this.dataSegmentOffset = { value: 4 };
       this.functionTable = [];
       this.functionTableIndexes = {};
     }
