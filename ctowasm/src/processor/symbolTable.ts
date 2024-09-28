@@ -73,7 +73,9 @@ export class SymbolTable {
     } else {
       this.externalFunctions = {};
       this.parentTable = null;
-      this.dataSegmentByteStr = { value: '\\00\\00\\00\\00'  };
+      // Initial value to reserve for the null space
+      this.dataSegmentByteStr = { value: '\\d0\\e0\\b0\\f0'  };
+      // 4 Bytes are reserved for the null space
       this.dataSegmentOffset = { value: 4 };
       this.functionTable = [];
       this.functionTableIndexes = {};
