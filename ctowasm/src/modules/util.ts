@@ -2,6 +2,7 @@ import BigNumber from "bignumber.js";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import {mallocFunction} from "~src/modules/source_stdlib/memory";
+import {FOREIGN_OBJ_IDENTIFIER, NULL_PTR_ADR, SOURCE_C_IDENTIFIER} from "~src/modules/constants";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -102,18 +103,25 @@ export function printSharedGlobalVariables(
   }
 }
 
-export function storeObjectInMemory(
+/**
+ * Store a Foreign JS Object in memory by attaching a unique identifier and return it to C Side
+ */
+export function storeObjectInMemoryAndRegistry(
     memory: WebAssembly.Memory,
-    objectReferenceRegistry: Map<string, Object>,
+    objectReferenceRegistry: Map<number, Object>,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
     allocatedBlocks: Map<number, number>,
     freeList: any[],
     obj: Object,
 ) {
-    const uniqueString = crypto.randomUUID();
-    objectReferenceRegistry.set(uniqueString, obj);
-    const mapStringBuffer = stringToBuffer(uniqueString);
-    const objSize = mapStringBuffer.length;
+    if (!obj) {
+        throw Error("Cannot store null object in memory");
+    }
+    const objIdentifier = new Uint8Array([
+      (FOREIGN_OBJ_IDENTIFIER >> 8) & 0xFF,  // High byte (0xF0)
+      FOREIGN_OBJ_IDENTIFIER & 0xFF          // Low byte (0xBA)
+    ]);
+    const objSize = objIdentifier.length;
     const address = mallocFunction(
         {
             memory: memory,
@@ -123,36 +131,35 @@ export function storeObjectInMemory(
             freeList
         }
     )
+
     const objArr = new Uint8Array(memory.buffer, address, objSize);
     for (let i = 0; i < objSize; i++) {
-        objArr[i] = mapStringBuffer[i];
+        objArr[i] = objIdentifier[i];
     }
+
+    (obj as any)[SOURCE_C_IDENTIFIER] = address;
+    objectReferenceRegistry.set(address, obj);
+
     return address;
 }
 
-export function loadObjectFromMemory(
-    memory: WebAssembly.Memory,
-    objectReferenceRegistry: Map<string, Object>,
-    allocatedBlocks: Map<number, number>,
+export function getAddressOfRegisteredObj(obj: Object) {
+    return (obj as any)[SOURCE_C_IDENTIFIER];
+}
+
+/**
+ * Load a foreign object from Object Registry using the unique identifier (address)
+ */
+export function loadObjectFromRegistry(
+    objectReferenceRegistry: Map<number, Object>,
     address: number,
 ): Object {
-    const objArr = new Uint8Array(memory.buffer, address, allocatedBlocks.get(address));
-    const mapKeySt = bufferToString(objArr);
-    const result = objectReferenceRegistry.get(mapKeySt);
-    console.log(mapKeySt, memory.buffer);
-    if (!result) {
+    if (address == NULL_PTR_ADR) {
+        throw Error("Null pointer exception");
+    }
+    const result = objectReferenceRegistry.get(address);
+    if (result === undefined) {
         throw Error("Object not found");
     }
     return result;
-}
-
-
-function stringToBuffer(st: string): Uint8Array {
-    const encoder = new TextEncoder();
-    return encoder.encode(st);
-}
-
-function bufferToString(buffer: Uint8Array): string {
-    const decoder = new TextDecoder();
-    return decoder.decode(buffer);
 }

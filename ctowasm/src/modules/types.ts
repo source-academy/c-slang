@@ -29,10 +29,10 @@ export abstract class Module {
   memory: WebAssembly.Memory;
   functionTable: WebAssembly.Table;
   config: ModulesGlobalConfig;
-  freeList: MemoryBlock[] = [];
-  allocatedBlocks: Map<number, number> = new Map(); // allocated memory blocks <address, size>
+  freeList: MemoryBlock[];
+  allocatedBlocks: Map<number, number>; // allocated memory blocks <address, size>
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
-  objectReferenceRegistry: Map<string, Object>;
+  objectReferenceRegistry: Map<number, Object>;
   instantiate?: () => Promise<void>; // any instantiation of the module that must be done before use
   abstract moduleDeclaredStructs: StructDataType[];
   abstract moduleFunctions: Record<string, ModuleFunction>; // all the functions within this module
@@ -40,12 +40,17 @@ export abstract class Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
-    objectReferenceRegistry: Map<string, Object>,
+    allocatedBlocks: Map<number, number>,
+    freeList: MemoryBlock[],
+    objectReferenceRegistry: Map<number, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
     this.memory = memory;
     this.functionTable = functionTable;
+    this.allocatedBlocks = allocatedBlocks;
+    this.freeList = freeList;
+    this.objectReferenceRegistry = objectReferenceRegistry;
     this.config = config;
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
   }

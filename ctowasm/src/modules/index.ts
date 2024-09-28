@@ -11,6 +11,9 @@ import { Module } from "~src/modules/types";
 import { UtilityStdLibModule, utilityStdLibName } from "~src/modules/utility";
 import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
 
+import {BinaryTreeLibrary, binaryTreeLibraryModuleImportName} from "~src/modules/binary_tree";
+import {MemoryBlock} from "~src/modules/source_stdlib/memory";
+
 export interface ModulesGlobalConfig {
   printFunction: (str: string) => void; // the print function to use for printing to "stdout"
   externalFunctions?: { [functionName: string]: Function };
@@ -28,10 +31,11 @@ export interface SharedWasmGlobalVariables {
 
 // all the names of the modules
 export type ModuleName =
-  | typeof sourceStandardLibraryModuleImportName
-  | typeof pixAndFlixLibraryModuleImportName
-  | typeof mathStdlibName
-  | typeof utilityStdLibName;
+    | typeof sourceStandardLibraryModuleImportName
+    | typeof pixAndFlixLibraryModuleImportName
+    | typeof mathStdlibName
+    | typeof utilityStdLibName
+    | typeof binaryTreeLibraryModuleImportName;
 
 /**
  * Holds all the modules that define functions that can be imported and used in C source program.
@@ -42,13 +46,17 @@ export default class ModuleRepository {
   config: ModulesGlobalConfig;
   modules: Record<ModuleName, Module>;
   sharedWasmGlobalVariables: SharedWasmGlobalVariables;
-  objectReferenceRegistry: Map<string, any>;
+  allocatedBlocks: Map<number, number>; // allocated memory blocks <address, size>
+  freeList: MemoryBlock[];
+  objectReferenceRegistry: Map<number, any>;
 
   constructor(
     memory?: WebAssembly.Memory,
     functionTable?: WebAssembly.Table,
-    objectReferenceRegistry?: Map<string, Object>,
     config?: ModulesGlobalConfig,
+    allocatedBlocks?: Map<number, number>,
+    freeList?: MemoryBlock[],
+    objectReferenceRegistry?: Map<string, Object>,
   ) {
     this.memory = memory ?? new WebAssembly.Memory({ initial: 0 });
     this.functionTable =
@@ -57,6 +65,9 @@ export default class ModuleRepository {
     this.config = config
       ? { ...defaultModulesGlobalConfig, ...config }
       : defaultModulesGlobalConfig;
+
+    this.allocatedBlocks = allocatedBlocks ?? new Map();
+    this.freeList = freeList ?? [];
     this.objectReferenceRegistry = objectReferenceRegistry ?? new Map();
 
     this.sharedWasmGlobalVariables = {
@@ -78,6 +89,8 @@ export default class ModuleRepository {
       [sourceStandardLibraryModuleImportName]: new SourceStandardLibraryModule(
         this.memory,
         this.functionTable,
+        this.allocatedBlocks,
+        this.freeList,
         this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
@@ -85,6 +98,8 @@ export default class ModuleRepository {
       [pixAndFlixLibraryModuleImportName]: new PixAndFlixLibrary(
         this.memory,
         this.functionTable,
+        this.allocatedBlocks,
+        this.freeList,
         this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
@@ -92,6 +107,8 @@ export default class ModuleRepository {
       [mathStdlibName]: new MathStdLibModule(
         this.memory,
         this.functionTable,
+        this.allocatedBlocks,
+        this.freeList,
         this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,
@@ -99,6 +116,17 @@ export default class ModuleRepository {
       [utilityStdLibName]: new UtilityStdLibModule(
         this.memory,
         this.functionTable,
+        this.allocatedBlocks,
+        this.freeList,
+        this.objectReferenceRegistry,
+        this.config,
+        this.sharedWasmGlobalVariables,
+      ),
+      [binaryTreeLibraryModuleImportName]: new BinaryTreeLibrary(
+        this.memory,
+        this.functionTable,
+        this.allocatedBlocks,
+        this.freeList,
         this.objectReferenceRegistry,
         this.config,
         this.sharedWasmGlobalVariables,

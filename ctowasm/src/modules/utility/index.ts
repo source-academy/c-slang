@@ -7,7 +7,7 @@ import { extractCStyleStringFromMemory } from "~src/modules/util";
 import wrapFunctionPtrCall from "~src/modules/stackFrameUtils";
 import {
   freeFunction,
-  mallocFunction,
+  mallocFunction, MemoryBlock,
 } from "~src/modules/source_stdlib/memory";
 
 // the name that this module is imported into wasm by,
@@ -37,11 +37,13 @@ export class UtilityStdLibModule extends Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
-    objectReferenceRegistry: Map<string, Object>,
+    allocatedBlocks: Map<number, number>,
+    freeList: MemoryBlock[],
+    objectReferenceRegistry: Map<number, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, functionTable, objectReferenceRegistry, config, sharedWasmGlobalVariables);
+    super(memory, functionTable, allocatedBlocks, freeList, objectReferenceRegistry, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
     this.moduleDeclaredStructs = [];
     this.instantiate = async () => {
@@ -304,11 +306,13 @@ export class UtilityStdLibModule extends Module {
               address: copiedAAddr,
               freeList: this.freeList,
               allocatedBlocks: this.allocatedBlocks,
+              objectReferenceRegistry: this.objectReferenceRegistry,
             });
             freeFunction({
               address: copiedBAddr,
               freeList: this.freeList,
               allocatedBlocks: this.allocatedBlocks,
+              objectReferenceRegistry: this.objectReferenceRegistry,
             });
             return result;
           };
