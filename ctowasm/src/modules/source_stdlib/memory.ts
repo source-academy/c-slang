@@ -72,12 +72,14 @@ interface FreeFunctionParameters {
   address: number;
   allocatedBlocks: Map<number, number>; // map of address of allocated memory block to size
   freeList: MemoryBlock[];
+  objectReferenceRegistry: Map<number, Object>;
 }
 
 export function freeFunction({
   address,
   freeList,
   allocatedBlocks,
+  objectReferenceRegistry,
 }: FreeFunctionParameters) {
   // shrink heap segment
   const sizeOfBlock = allocatedBlocks.get(address);
@@ -88,6 +90,11 @@ export function freeFunction({
   // add the freed memory block to freeList
   freeList.push({ address: address, size: sizeOfBlock });
   allocatedBlocks.delete(address);
+
+  // remove the object from the object reference registry (if present)
+  if (objectReferenceRegistry.get(address)) {
+    objectReferenceRegistry.delete(address);
+  }
 }
 
 /**
