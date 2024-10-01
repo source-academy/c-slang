@@ -2,7 +2,7 @@ import BigNumber from "bignumber.js";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import {mallocFunction} from "~src/modules/source_stdlib/memory";
-import {FOREIGN_OBJ_IDENTIFIER, NULL_PTR_ADR, SOURCE_C_IDENTIFIER} from "~src/modules/constants";
+import {FOREIGN_OBJ_IDENTIFIER, NULL_PTR_ADR, SOURCE_C_IDENTIFIER_KEY} from "~src/modules/constants";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -137,14 +137,14 @@ export function storeObjectInMemoryAndRegistry(
         objArr[i] = objIdentifier[i];
     }
 
-    (obj as any)[SOURCE_C_IDENTIFIER] = address;
+    (obj as any)[SOURCE_C_IDENTIFIER_KEY] = address;
     objectReferenceRegistry.set(address, obj);
 
     return address;
 }
 
 export function getAddressOfRegisteredObj(obj: Object) {
-    return (obj as any)[SOURCE_C_IDENTIFIER];
+    return (obj as any)[SOURCE_C_IDENTIFIER_KEY];
 }
 
 /**
