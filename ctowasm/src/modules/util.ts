@@ -2,7 +2,7 @@ import BigNumber from "bignumber.js";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import {mallocFunction} from "~src/modules/source_stdlib/memory";
-import {FOREIGN_OBJ_IDENTIFIER, NULL_PTR_ADR, SOURCE_C_IDENTIFIER_KEY} from "~src/modules/constants";
+import {NULL_PTR_ADR, SOURCE_C_IDENTIFIER_KEY} from "~src/modules/constants";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -117,9 +117,9 @@ export function storeObjectInMemoryAndRegistry(
     if (!obj) {
         throw Error("Cannot store null object in memory");
     }
+    // Reserve 1 byte of memory for a unique address as an identifier
     const objIdentifier = new Uint8Array([
-      (FOREIGN_OBJ_IDENTIFIER >> 8) & 0xFF,  // High byte (0xF0)
-      FOREIGN_OBJ_IDENTIFIER & 0xFF          // Low byte (0xBA)
+      0x00,
     ]);
     const objSize = objIdentifier.length;
     const address = mallocFunction(
