@@ -2,7 +2,7 @@ import { SIZE_T } from "~src/common/constants";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import {
   freeFunction,
-  mallocFunction,
+  mallocFunction, MemoryBlock,
   printHeap,
   printStack,
 } from "~src/modules/source_stdlib/memory";
@@ -25,10 +25,13 @@ export class SourceStandardLibraryModule extends Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
+    allocatedBlocks: Map<number, number>,
+    freeList: MemoryBlock[],
+    objectReferenceRegistry: Map<number, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, functionTable, config, sharedWasmGlobalVariables);
+    super(memory, functionTable, allocatedBlocks, freeList, objectReferenceRegistry, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
     this.moduleDeclaredStructs = [];
     this.moduleFunctions = {
@@ -254,6 +257,7 @@ export class SourceStandardLibraryModule extends Module {
             address,
             freeList: this.freeList,
             allocatedBlocks: this.allocatedBlocks,
+            objectReferenceRegistry: this.objectReferenceRegistry,
           }),
       },
       print_heap: {
