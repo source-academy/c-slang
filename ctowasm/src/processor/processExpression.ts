@@ -270,6 +270,24 @@ export default function processExpression(
           ...returnObjectMemoryLoads.slice(1),
         ],
       };
+    } else if (expr.type === "TypeCastingExpression") {
+      // type casting is just a way to tell the compiler to treat an expression as another type
+      // no actual conversion is done here
+      const processedExpr = processExpression(expr.expr, symbolTable);
+      const targetDataType = expr.targetDataType;
+
+      return {
+        originalDataType: targetDataType,
+        exprs: [
+          {
+            type: "PreStatementExpression",
+            statements: [],
+            expr: processedExpr.exprs[0],
+            dataType: processedExpr.exprs[0].dataType,
+          },
+          ...processedExpr.exprs.slice(1),
+        ],
+      };
     } else if (expr.type === "PrefixExpression") {
       return processPrefixExpression(expr, symbolTable);
     } else if (expr.type === "PostfixExpression") {
