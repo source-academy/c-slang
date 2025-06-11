@@ -2,7 +2,7 @@ import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { voidDataType } from "~src/modules/constants";
 import {
   freeFunction,
-  mallocFunction,
+  mallocFunction, MemoryBlock,
 } from "~src/modules/source_stdlib/memory";
 import wrapFunctionPtrCall from "~src/modules/stackFrameUtils";
 import { Module, ModuleFunction, StackFrameArg } from "~src/modules/types";
@@ -24,10 +24,13 @@ export class PixAndFlixLibrary extends Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
+    allocatedBlocks: Map<number, number>,
+    freeList: MemoryBlock[],
+    objectReferenceRegistry: Map<number, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, functionTable, config, sharedWasmGlobalVariables);
+    super(memory, functionTable, allocatedBlocks, freeList, objectReferenceRegistry, config, sharedWasmGlobalVariables);
     this.sharedWasmGlobalVariables = sharedWasmGlobalVariables;
     this.moduleDeclaredStructs = [];
     this.moduleFunctions = {
@@ -290,11 +293,13 @@ export class PixAndFlixLibrary extends Module {
               address: srcAddress,
               freeList: this.freeList,
               allocatedBlocks: this.allocatedBlocks,
+              objectReferenceRegistry: this.objectReferenceRegistry,
             });
             freeFunction({
               address: destAddress,
               freeList: this.freeList,
               allocatedBlocks: this.allocatedBlocks,
+              objectReferenceRegistry: this.objectReferenceRegistry,
             });
           };
           getExternalFunction("install_filter", config)(filter);
