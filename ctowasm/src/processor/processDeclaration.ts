@@ -78,7 +78,8 @@ export function processLocalDeclaration(
 
     symbolEntry = symbolEntry as VariableSymbolEntry; // definitely not dealing with a function declaration already
 
-    if (typeof declaration.initializer !== "undefined") {
+    // We have already allocated space for data segment variables, no more memory statements are needed
+    if (typeof declaration.initializer !== "undefined" && symbolEntry.type !== "dataSegmentVariable") {
       return unpackLocalVariableInitializerAccordingToDataType(
         symbolEntry,
         declaration.initializer,
