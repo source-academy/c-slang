@@ -376,9 +376,9 @@
     let correctedSuffix;
     if (suffix.length > 0) {
       correctedSuffix = suffix.toLowerCase();
-      if (correctedSuffix.contains("ll")) {
+      if (correctedSuffix.includes("ll")) {
         // in this implementation long long and long are identical
-        if (correctedSuffix.contains("u")) {
+        if (correctedSuffix.includes("u")) {
           correctedSuffix = "ul";
         } else {
           correctedSuffix = "l";
