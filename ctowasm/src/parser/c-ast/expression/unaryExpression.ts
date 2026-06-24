@@ -2,9 +2,9 @@
  * Definition for unary expression nodes.
  */
 
-import { PostfixOperator, PrefixOperator } from "~src/common/types";
+import { PostfixOperator, PrefixOperator, ScalarCDataType } from "~src/common/types";
 import { CNodeBase, Expression } from "~src/parser/c-ast/core";
-import { DataType } from "~src/parser/c-ast/dataTypes";
+import { DataType, PrimaryDataType } from "~src/parser/c-ast/dataTypes";
 
 type UnaryExpression =
   | PostfixExpression
@@ -13,7 +13,8 @@ type UnaryExpression =
   | StructMemberAccess
   | PointerDereference
   | AddressOfExpression
-  | SizeOfExpression;
+  | SizeOfExpression
+  | TypeCastingExpression;
 
 export default UnaryExpression;
 // All unary expressions should inherit this (like function calls)
@@ -25,6 +26,12 @@ export interface UnaryExpressionBase extends CNodeBase {
 export interface PostfixExpression extends UnaryExpressionBase {
   type: "PostfixExpression";
   operator: PostfixOperator;
+}
+
+export interface TypeCastingExpression extends UnaryExpressionBase {
+  type: "TypeCastingExpression";
+  expr: Expression;
+  targetDataType: PrimaryDataType;
 }
 
 export interface PrefixExpression extends UnaryExpressionBase {
