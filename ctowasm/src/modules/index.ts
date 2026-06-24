@@ -7,6 +7,14 @@ import {
   SourceStandardLibraryModule,
   sourceStandardLibraryModuleImportName,
 } from "~src/modules/source_stdlib";
+import {
+  SoundLibraryModule,
+  soundLibraryModuleImportName,
+} from "~src/modules/sound";
+import {
+  PlotlyLibraryModule,
+  plotlyLibraryModuleImportName,
+} from "~src/modules/plotly";
 import { Module } from "~src/modules/types";
 import { UtilityStdLibModule, utilityStdLibName } from "~src/modules/utility";
 import { WASM_ADDR_TYPE } from "~src/translator/memoryUtil";
@@ -31,7 +39,9 @@ export type ModuleName =
   | typeof sourceStandardLibraryModuleImportName
   | typeof pixAndFlixLibraryModuleImportName
   | typeof mathStdlibName
-  | typeof utilityStdLibName;
+  | typeof utilityStdLibName
+  | typeof soundLibraryModuleImportName
+  | typeof plotlyLibraryModuleImportName;
 
 /**
  * Holds all the modules that define functions that can be imported and used in C source program.
@@ -91,6 +101,18 @@ export default class ModuleRepository {
         this.sharedWasmGlobalVariables,
       ),
       [utilityStdLibName]: new UtilityStdLibModule(
+        this.memory,
+        this.functionTable,
+        this.config,
+        this.sharedWasmGlobalVariables,
+      ),
+      [soundLibraryModuleImportName]: new SoundLibraryModule(
+        this.memory,
+        this.functionTable,
+        this.config,
+        this.sharedWasmGlobalVariables,
+      ),
+      [plotlyLibraryModuleImportName]: new PlotlyLibraryModule(
         this.memory,
         this.functionTable,
         this.config,

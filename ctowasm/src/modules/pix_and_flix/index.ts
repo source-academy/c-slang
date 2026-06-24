@@ -11,6 +11,7 @@ import {
   getExternalFunction,
 } from "~src/modules/util";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
+import { addCustomJsFunctionToTable } from "~src/modules/jsFunctionUtils";
 
 // the name that this module is imported into wasm by,
 // as well as the include name to use in C program file.
@@ -326,6 +327,316 @@ export class PixAndFlixLibrary extends Module {
         jsFunction: () => {
           getExternalFunction("set_fps", config)();
         },
+      },
+      compose_filter: {
+        parentImportedObject: pixAndFlixLibraryModuleImportName,
+        functionType: {
+          type: "function",
+          parameters: [
+            {
+              type: "pointer",
+              pointeeType: {
+                type: "function",
+                parameters: [
+                  {
+                    type: "pointer",
+                    pointeeType: {
+                      type: "array",
+                      elementDataType: {
+                        type: "array",
+                        elementDataType: {
+                          type: "primary",
+                          primaryDataType: "signed char",
+                        },
+                        numElements: {
+                          type: "IntegerConstant",
+                          value: 4n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                        },
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                          value: 400n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                      },
+                    },
+                  },
+                  {
+                    type: "pointer",
+                    pointeeType: {
+                      type: "array",
+                      elementDataType: {
+                        type: "array",
+                        elementDataType: {
+                          type: "primary",
+                          primaryDataType: "signed char",
+                        },
+                        numElements: {
+                          type: "IntegerConstant",
+                          value: 4n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                        },
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 400n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    type: "primary",
+                    primaryDataType: "signed int",
+                  },
+                  {
+                    type: "primary",
+                    primaryDataType: "signed int",
+                  },
+                ],
+                returnType: voidDataType,
+              },
+            },
+            {
+              type: "pointer",
+              pointeeType: {
+                type: "function",
+                parameters: [
+                  {
+                    type: "pointer",
+                    pointeeType: {
+                      type: "array",
+                      elementDataType: {
+                        type: "array",
+                        elementDataType: {
+                          type: "primary",
+                          primaryDataType: "signed char",
+                        },
+                        numElements: {
+                          type: "IntegerConstant",
+                          value: 4n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                        },
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 400n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    type: "pointer",
+                    pointeeType: {
+                      type: "array",
+                      elementDataType: {
+                        type: "array",
+                        elementDataType: {
+                          type: "primary",
+                          primaryDataType: "signed char",
+                        },
+                        numElements: {
+                          type: "IntegerConstant",
+                          value: 4n,
+                          suffix: null,
+                          position: {
+                            start: { line: 0, offset: 0, column: 0 },
+                            end: { line: 0, offset: 0, column: 0 },
+                          },
+                        },
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 400n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    type: "primary",
+                    primaryDataType: "signed int",
+                  },
+                  {
+                    type: "primary",
+                    primaryDataType: "signed int",
+                  },
+                ],
+                returnType: voidDataType,
+              },
+            },
+          ],
+          returnType: {
+            type: "pointer",
+            pointeeType: {
+              type: "function",
+              parameters: [
+                {
+                  type: "pointer",
+                  pointeeType: {
+                    type: "array",
+                    elementDataType: {
+                      type: "array",
+                      elementDataType: {
+                        type: "primary",
+                        primaryDataType: "signed char",
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 4n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
+                    },
+                    numElements: {
+                      type: "IntegerConstant",
+                      value: 400n,
+                      suffix: null,
+                      position: {
+                        start: { line: 0, offset: 0, column: 0 },
+                        end: { line: 0, offset: 0, column: 0 },
+                      },
+                    },
+                  },
+                },
+                {
+                  type: "pointer",
+                  pointeeType: {
+                    type: "array",
+                    elementDataType: {
+                      type: "array",
+                      elementDataType: {
+                        type: "primary",
+                        primaryDataType: "signed char",
+                      },
+                      numElements: {
+                        type: "IntegerConstant",
+                        value: 4n,
+                        suffix: null,
+                        position: {
+                          start: { line: 0, offset: 0, column: 0 },
+                          end: { line: 0, offset: 0, column: 0 },
+                        },
+                      },
+                    },
+                    numElements: {
+                      type: "IntegerConstant",
+                      value: 400n,
+                      suffix: null,
+                      position: {
+                        start: { line: 0, offset: 0, column: 0 },
+                        end: { line: 0, offset: 0, column: 0 },
+                      },
+                    },
+                  },
+                },
+                {
+                  type: "primary",
+                  primaryDataType: "signed int",
+                },
+                {
+                  type: "primary",
+                  primaryDataType: "signed int",
+                },
+              ],
+              returnType: voidDataType,
+            },
+          },
+        },
+        jsFunction: (filter1: number, filter2: number) => {
+          const composedFilterFunction = (srcPtr: number, destPtr: number, height: number, width: number) => {
+            const memSize = height * width * 4;
+            
+            const intermediatePtr = mallocFunction({
+              memory,
+              sharedWasmGlobalVariables,
+              freeList: this.freeList,
+              allocatedBlocks: this.allocatedBlocks,
+              bytesRequested: memSize,
+            });
+            
+            const intermediateBuf = new Uint8Array(memory.buffer, intermediatePtr, memSize);
+            intermediateBuf.fill(0);
+                
+            const args1: StackFrameArg[] = [
+              { value: BigInt(srcPtr), type: "unsigned int" },
+              { value: BigInt(intermediatePtr), type: "unsigned int" },
+              { value: BigInt(height), type: "unsigned int" },
+              { value: BigInt(width), type: "unsigned int" }
+            ];
+            
+            wrapFunctionPtrCall(
+              memory,
+              functionTable,
+              filter1,
+              sharedWasmGlobalVariables,
+              args1,
+              []
+            );
+            
+            const args2: StackFrameArg[] = [
+              { value: BigInt(intermediatePtr), type: "unsigned int" },
+              { value: BigInt(destPtr), type: "unsigned int" },
+              { value: BigInt(height), type: "unsigned int" },
+              { value: BigInt(width), type: "unsigned int" }
+            ];
+            
+            wrapFunctionPtrCall(
+              memory,
+              functionTable,
+              filter2,
+              sharedWasmGlobalVariables,
+              args2,
+              []
+            );
+
+            freeFunction({
+              address: intermediatePtr,
+              freeList: this.freeList,
+              allocatedBlocks: this.allocatedBlocks,
+            });
+          }
+          
+          const composedFuncPtr = addCustomJsFunctionToTable(
+            composedFilterFunction,
+            ["i32", "i32", "i32", "i32"], 
+            null,
+            functionTable,
+            memory,
+            sharedWasmGlobalVariables
+          );
+
+          return composedFuncPtr;
+        }
       },
     };
   }
