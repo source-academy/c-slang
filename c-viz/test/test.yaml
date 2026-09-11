@@ -1,0 +1,56 @@
+---
+assign:
+  file: "assign.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: different types of assignments
+blocks:
+  file: "blocks.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: nested blocks in function
+forward-decl:
+  file: "forward-decl.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: forward declarations for structs
+heap:
+  file: "heap.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: heap allocations
+linked-list:
+  file: "linked-list.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: linked list with self-referential struct
+loops:
+  file: "loops.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: for and while loops with break and continue
+strict-aliasing:
+  file: "strict-aliasing.c"
+  cases:
+    - in: "42"
+      out: "1"
+      fail: true
+      desc: test for strict aliasing undefined behaviour
+struct-init:
+  file: "struct-init.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: list initialization for structs
+struct:
+  file: "struct.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: structures
