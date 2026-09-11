@@ -1,0 +1,91 @@
+// @sourceacademy/conductor is ESM-only; see conductor-modules.d.ts for why these subpaths
+// resolve at all under c-viz's CommonJS tsconfig, and why that's a type-checking concern only.
+import { BasicEvaluator } from "@sourceacademy/conductor/runner";
+import type { IRunnerPlugin } from "@sourceacademy/conductor/runner";
+import { RunnerStatus } from "@sourceacademy/conductor/types";
+import { ConductorError, ConductorInternalError } from "@sourceacademy/conductor/common";
+import cviz from "../index";
+import { Runtime } from "../interpreter/runtime";
+import { DEFAULT_CONFIG } from "../config";
+import { TranslationUnit, TypedTranslationUnit } from "../ast/types";
+import {
+  messageOf,
+  toConfigError,
+  toRuntimeError,
+  toSyntaxError,
+  toTypeCheckError,
+} from "./errors";
+
+/**
+ * Conductor integration for c-viz. Treats each `evaluateChunk` call as "run this whole program"
+ * rather than an incrementally-extended REPL chunk -- C has no REPL concept the way Scheme/Python
+ * do, so that's the simplest correct mapping.
+ *
+ * `cviz.run()` isn't used directly: it bundles parsing, type-checking, and constructing the
+ * `Runtime` into one call, which would make it impossible to tell *which* phase failed from the
+ * outside -- and that's exactly the information needed to pick the right Conductor error
+ * subclass. The three phases are called and caught separately instead.
+ */
+export default class CEvaluator extends BasicEvaluator {
+  constructor(conductor: IRunnerPlugin) {
+    super(conductor);
+  }
+
+  async evaluateChunk(chunk: string): Promise<number | undefined> {
+    this.conductor.updateStatus(RunnerStatus.RUNNING, true);
+    try {
+      let program: TranslationUnit;
+      try {
+        program = cviz.parseProgram(chunk);
+      } catch (e) {
+        throw toSyntaxError(e);
+      }
+
+      let typedProgram: TypedTranslationUnit;
+      try {
+        typedProgram = cviz.typeCheck(program);
+      } catch (e) {
+        throw toTypeCheckError(e);
+      }
+
+      let rt: Runtime;
+      try {
+        rt = new Runtime(typedProgram, DEFAULT_CONFIG);
+      } catch (e) {
+        throw toConfigError(e);
+      }
+
+      // rt.exitCode is guaranteed to become defined before the agenda empties: the Agenda
+      // constructor always pushes a trailing EXIT instruction, so this loop can't run off the
+      // end into Runtime.next()'s "agenda is empty" guard under normal execution.
+      let sentLength = 0;
+      try {
+        while (rt.exitCode === undefined) {
+          rt.next();
+          if (rt.stdout.length > sentLength) {
+            this.conductor.sendOutput(rt.stdout.slice(sentLength));
+            sentLength = rt.stdout.length;
+          }
+        }
+      } catch (e) {
+        // Flush whatever output the failing step produced before it crashed, so it isn't lost.
+        if (rt.stdout.length > sentLength) {
+          this.conductor.sendOutput(rt.stdout.slice(sentLength));
+        }
+        throw toRuntimeError(e);
+      }
+
+      this.conductor.sendResult(rt.exitCode);
+      return rt.exitCode;
+    } catch (e) {
+      // Every throw above already goes through one of the toXError() helpers, so this should
+      // always be a ConductorError -- the fallback wrapping is a last-resort guard against a bug
+      // in this file itself, not an expected path.
+      const err = e instanceof ConductorError ? e : new ConductorInternalError(messageOf(e));
+      this.conductor.sendError(err);
+      return undefined;
+    } finally {
+      this.conductor.updateStatus(RunnerStatus.RUNNING, false);
+    }
+  }
+}

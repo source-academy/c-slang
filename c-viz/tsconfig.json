@@ -29,6 +29,7 @@
     "dist",
     ".eslintrc.cjs",
     "Gruntfile.js",
-    "src/cparser.js"
+    "src/cparser.js",
+    "src/conductor"
   ]
 }

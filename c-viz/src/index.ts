@@ -4,12 +4,13 @@ import { TranslationUnit, TypedTranslationUnit } from "./ast/types";
 import { typeTranslationUnit } from "./typing/main";
 import { Runtime } from "./interpreter/runtime";
 import { DEFAULT_CONFIG, RuntimeConfig } from "./config";
+import { CSyntaxError } from "./errors";
 
 export default {
   parseProgram(source: string): TranslationUnit {
     const res = parse(cparser, source);
     if (res.error != null) {
-      throw new Error("\n" + errorMessage(res.error, true));
+      throw new CSyntaxError(res.error, "\n" + errorMessage(res.error, true));
     }
     return res.ast as TranslationUnit;
   },

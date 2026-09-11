@@ -39,6 +39,7 @@
   },
   "homepage": "https://github.com/caipng/c-viz#readme",
   "dependencies": {
+    "@sourceacademy/conductor": "^0.8.0",
     "lodash": "^4.17.21",
     "pegjs-util": "^1.4.21"
   },

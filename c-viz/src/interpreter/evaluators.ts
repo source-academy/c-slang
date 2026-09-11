@@ -105,6 +105,7 @@ import { SHRT_SIZE } from "../constants";
 import { checkSimpleAssignmentConstraint, getMember } from "../typing/utils";
 import { NO_EFFECTIVE_TYPE } from "./effectiveTypeTable";
 import { AgendaItem } from "./agenda";
+import { NotImplementedError } from "./errors";
 
 export const ASTNodeEvaluator: {
   [NodeType in TypedASTNode["type"]]: (
@@ -231,7 +232,8 @@ export const ASTNodeEvaluator: {
     rt: Runtime,
     { op, left, right }: TypedAssignmentExpressionNode,
   ) => {
-    if (op !== "=") throw new Error("not implemented");
+    if (op !== "=")
+      throw new NotImplementedError(`compound assignment operator '${op}'`);
     if (!isObjectTypeInfo(left.typeInfo)) throw new Error("invalid LHS type");
     rt.agenda.push(assignInstruction());
     rt.agenda.push(right);
@@ -257,10 +259,10 @@ export const ASTNodeEvaluator: {
     rt.agenda.push(left);
   },
   UnaryExpressionIncr: () => {
-    throw new Error("not implemented");
+    throw new NotImplementedError("prefix increment (++x)");
   },
   UnaryExpressionDecr: () => {
-    throw new Error("not implemented");
+    throw new NotImplementedError("prefix decrement (--x)");
   },
   UnaryExpressionSizeof: (
     rt: Runtime,
@@ -435,10 +437,10 @@ export const ASTNodeEvaluator: {
     );
   },
   PostfixIncrement: () => {
-    throw new Error("not implemented");
+    throw new NotImplementedError("postfix increment (x++)");
   },
   PostfixDecrement: () => {
-    throw new Error("not implemented");
+    throw new NotImplementedError("postfix decrement (x--)");
   },
   PrimaryExprIdentifier: (
     rt: Runtime,
@@ -488,7 +490,7 @@ export const ASTNodeEvaluator: {
     rt.stash.pushWithoutConversions(t);
   },
   PrimaryExprString: () => {
-    throw new Error("not implemented");
+    throw new NotImplementedError("string literals");
   },
   PrimaryExprParenthesis: (
     rt: Runtime,
@@ -583,7 +585,7 @@ export const instructionEvaluator: {
         return;
       }
       case "~": {
-        throw new Error("not implemented");
+        throw new NotImplementedError("bitwise NOT (~)");
       }
       case "*": {
         if (!(isTemporaryObject(v) && isPointer(v.typeInfo)))
@@ -737,7 +739,11 @@ export const instructionEvaluator: {
           );
         }
 
-        if (res === undefined) throw new Error("invalid types for - (pointer - pointer not implemented yet)");
+        if (res === undefined) {
+          if (isPointer(t0) && isPointer(t1))
+            throw new NotImplementedError("pointer minus pointer");
+          throw new Error("invalid types for -");
+        }
         rt.stash.pushWithoutConversions(res);
         return;
       }
@@ -866,7 +872,7 @@ export const instructionEvaluator: {
       case "&":
       case "|": {
         // apply usual arithmetic conversions
-        throw new Error("bitwise binary operators not implemented");
+        throw new NotImplementedError(`bitwise binary operator '${op}'`);
       }
       case "&&": 
       case "||": {
