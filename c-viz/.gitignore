@@ -132,5 +132,6 @@ dist/*.js.map
 lib/
 .tscache
 src/cparser.js
+.conductor-test-bundle.mjs
 .vscode/settings.json
 c-viz.code-workspace
