@@ -1,5 +1,11 @@
-// @sourceacademy/conductor is ESM-only; see conductor-modules.d.ts for why these subpaths
-// resolve at all under c-viz's CommonJS tsconfig, and why that's a type-checking concern only.
+// @sourceacademy/conductor is ESM-only (no "require" export condition), while the rest of c-viz
+// compiles to CommonJS. These imports type-check because src/conductor/tsconfig.json overrides
+// module/moduleResolution to ESM-flavored settings for this directory only (see that file) --
+// but that only makes tsc happy. Actually running this file needs a real bundle (yarn
+// test:conductor, or the future multi-evaluator build) rather than a plain `node`/`ts-node`
+// invocation, because Node's own module loader enforces the same CommonJS/ESM boundary tsc's
+// classic resolution does, and no compiler flag can make a CommonJS `require()` load a
+// "import"-only package.
 import { BasicEvaluator } from "@sourceacademy/conductor/runner";
 import type { IRunnerPlugin } from "@sourceacademy/conductor/runner";
 import { RunnerStatus } from "@sourceacademy/conductor/types";

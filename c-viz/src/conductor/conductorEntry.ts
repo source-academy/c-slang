@@ -1,4 +1,4 @@
-// See conductor-modules.d.ts re: ESM-only @sourceacademy/conductor.
+// See CEvaluator.ts's header comment re: ESM-only @sourceacademy/conductor.
 import { initialise } from "@sourceacademy/conductor/runner";
 import CEvaluator from "./CEvaluator";
 

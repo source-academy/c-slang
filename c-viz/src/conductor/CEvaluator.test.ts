@@ -1,11 +1,11 @@
 /**
  * Exercises CEvaluator against a mocked IRunnerPlugin -- no real Worker, host, or Rollup bundle
- * needed. Run via `yarn test:conductor` (see package.json): that script compiles this directory
- * through the ESM-targeting src/conductor/tsconfig.json and runs the result with plain `node`,
- * because @sourceacademy/conductor is ESM-only and CEvaluator's own CommonJS-compiled `require()`
- * calls can't resolve it -- only genuine ESM `import` (real compiled output, not `tsc --noEmit`)
- * can. See CEvaluator.ts's header comment and the "Problems hit" note in weekly-log.md for the
- * full story.
+ * needed. Run via `yarn test:conductor` (see package.json): that script bundles this file with
+ * esbuild (not just `tsc`) and runs the result with plain `node`, because @sourceacademy/
+ * conductor is ESM-only and CEvaluator's own CommonJS-compiled `require()` calls can't resolve
+ * it -- only a real bundler, resolving the package's exports map and flattening every import
+ * into one file, gets this to actually execute. See CEvaluator.ts's header comment for the full
+ * CommonJS/ESM story.
  */
 import assert from "node:assert/strict";
 import CEvaluator from "./CEvaluator";

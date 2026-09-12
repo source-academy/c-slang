@@ -1,4 +1,5 @@
-// See conductor-modules.d.ts.
+// See CEvaluator.ts's header comment re: ESM-only @sourceacademy/conductor and this
+// directory's own tsconfig.json.
 import {
   ConductorError,
   ConductorInternalError,
