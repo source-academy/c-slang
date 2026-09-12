@@ -5,8 +5,11 @@
  * matching on the message string.
  */
 export class NotImplementedError extends Error {
+  readonly feature: string;
+
   constructor(feature: string) {
     super(`c-viz does not yet support: ${feature}`);
+    this.feature = feature;
     Object.setPrototypeOf(this, NotImplementedError.prototype);
   }
 }
