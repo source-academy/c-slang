@@ -1,11 +1,11 @@
 // @sourceacademy/conductor is ESM-only (no "require" export condition), while the rest of c-viz
 // compiles to CommonJS. These imports type-check because src/conductor/tsconfig.json overrides
 // module/moduleResolution to ESM-flavored settings for this directory only (see that file) --
-// but that only makes tsc happy. Actually running this file needs a real bundle (yarn
-// test:conductor, or the future multi-evaluator build) rather than a plain `node`/`ts-node`
-// invocation, because Node's own module loader enforces the same CommonJS/ESM boundary tsc's
-// classic resolution does, and no compiler flag can make a CommonJS `require()` load a
-// "import"-only package.
+// but that only makes tsc happy. Actually running this file needs a real bundle -- either
+// `yarn test:conductor` (esbuild) or the real build (`yarn build:conductor`, see
+// rollup.conductor.config.mjs) -- rather than a plain `node`/`ts-node` invocation, because Node's
+// own module loader enforces the same CommonJS/ESM boundary tsc's classic resolution does, and no
+// compiler flag can make a CommonJS `require()` load an "import"-only package.
 import { BasicEvaluator } from "@sourceacademy/conductor/runner";
 import type { IRunnerPlugin } from "@sourceacademy/conductor/runner";
 import { RunnerStatus } from "@sourceacademy/conductor/types";
@@ -81,7 +81,10 @@ export default class CEvaluator extends BasicEvaluator {
         throw toRuntimeError(e);
       }
 
-      this.conductor.sendResult(rt.exitCode);
+      // BasicEvaluator's own runner loop (startEvaluator) already calls conductor.sendResult on
+      // whatever evaluateChunk returns -- calling it again here double-sends the result, and the
+      // second (framework-driven) call lands on a later microtask than this synchronous one,
+      // arriving out of order relative to any not-yet-flushed sendOutput calls.
       return rt.exitCode;
     } catch (e) {
       // Every throw above already goes through one of the toXError() helpers, so this should

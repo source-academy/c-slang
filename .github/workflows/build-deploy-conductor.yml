@@ -1,0 +1,50 @@
+name: Build and deploy C conductor evaluator
+
+# Modeled directly on source-academy/py-slang's build-deploy.yml. Scoped narrowly to c-viz's
+# Conductor evaluator bundles (yarn build:conductor -> c-viz/dist/CEvaluator.js and
+# CCseEvaluator.js) -- this does not touch c-slang's other existing "yarn build" (the Grunt/
+# Browserify dist build for direct npm/library consumption of c-viz, unrelated to Conductor).
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build C conductor evaluator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: c-viz/yarn.lock
+      - name: Install dependencies
+        working-directory: c-viz
+        run: yarn install --frozen-lockfile
+      - name: Build conductor evaluator bundles
+        working-directory: c-viz
+        run: yarn build:conductor
+      - name: Upload artifacts
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: c-viz/dist/
+
+  deploy:
+    needs: build
+    name: Deploy C conductor evaluator
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
