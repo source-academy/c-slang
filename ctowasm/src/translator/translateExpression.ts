@@ -2,6 +2,7 @@
  * Defines functions for evaluating C AST expression nodes and converting them to corresponding WAT AST nodes.
  */
 
+import { POINTER_TYPE, WASM_ADDR_SIZE } from "~src/common/constants";
 import { ScalarCDataType } from "~src/common/types";
 import { getSizeOfScalarDataType } from "~src/common/utils";
 import { TranslationError, toJson } from "~src/errors";
@@ -14,13 +15,14 @@ import {
 import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 import {
   basePointerGetNode,
-  stackPointerGetNode,
+  getRegisterPointerArithmeticNode,
 } from "~src/translator/memoryUtil";
 import translateBinaryExpression, {
   getBinaryExpressionInstruction,
 } from "~src/translator/translateBinaryExpression";
 import translateStatement from "~src/translator/translateStatement";
 import translateUnaryExpression from "~src/translator/translateUnaryExpression";
+import { createWasmBooleanExpression } from "~src/translator/util";
 import { WasmExpression } from "~src/translator/wasm-ast/core";
 
 /**
@@ -29,7 +31,7 @@ import { WasmExpression } from "~src/translator/wasm-ast/core";
 export default function translateExpression(
   expr: ExpressionP,
   targetType: ScalarCDataType, // the wasm type that is expected for the result of this expression
-  enclosingLoopDetails?: EnclosingLoopDetails
+  enclosingLoopDetails?: EnclosingLoopDetails,
 ): WasmExpression {
   function translateExpressionHelper(): WasmExpression {
     if (expr.type === "BinaryExpression") {
@@ -43,24 +45,24 @@ export default function translateExpression(
       return {
         type: "PreStatementExpression",
         statements: expr.statements.map((statement) =>
-          translateStatement(statement, enclosingLoopDetails)
+          translateStatement(statement, enclosingLoopDetails),
         ),
         expr: translateExpression(
           expr.expr,
           expr.expr.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
       };
     } else if (expr.type === "PostStatementExpression") {
       return {
         type: "PostStatementExpression",
         statements: expr.statements.map((statement) =>
-          translateStatement(statement, enclosingLoopDetails)
+          translateStatement(statement, enclosingLoopDetails),
         ),
         expr: translateExpression(
           expr.expr,
           expr.expr.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
       };
     } else if (expr.type === "UnaryExpression") {
@@ -70,7 +72,7 @@ export default function translateExpression(
       return translateExpression(
         expr.offset,
         expr.offset.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       );
     } else if (expr.type === "LocalAddress") {
       // the locals start at BP
@@ -80,7 +82,7 @@ export default function translateExpression(
         rightExpr: translateExpression(
           expr.offset,
           expr.offset.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
         instruction: getBinaryExpressionInstruction("+", "pointer"),
       };
@@ -88,35 +90,55 @@ export default function translateExpression(
       return translateExpression(
         expr.address,
         expr.address.dataType,
-        enclosingLoopDetails
+        enclosingLoopDetails,
       );
+    } else if (expr.type === "ReturnObjectAddress") {
+      if (expr.subtype === "store") {
+        return getRegisterPointerArithmeticNode(
+          "bp",
+          "+",
+          WASM_ADDR_SIZE + Number(expr.offset.value),
+        );
+      } else {
+        return getRegisterPointerArithmeticNode(
+          "sp",
+          "+",
+          Number(expr.offset.value),
+        );
+      }
     } else if (expr.type === "MemoryLoad") {
       return {
         type: "MemoryLoad",
         addr: translateExpression(
           expr.address,
           expr.address.dataType,
-          enclosingLoopDetails
+          enclosingLoopDetails,
         ),
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
         numOfBytes: getSizeOfScalarDataType(expr.dataType),
       };
-    } else if (expr.type === "FunctionReturnMemoryLoad") {
+    } else if (expr.type === "ConditionalExpression") {
       return {
-        type: "MemoryLoad",
-        addr: {
-          type: "BinaryExpression",
-          leftExpr: stackPointerGetNode,
-          rightExpr: translateExpression(
-            expr.offset,
-            expr.offset.dataType,
-            enclosingLoopDetails
-          ),
-          instruction: getBinaryExpressionInstruction("+", "pointer"),
-        },
+        type: "ConditionalExpression",
+        condition: createWasmBooleanExpression(expr.condition),
+        trueExpression: translateExpression(
+          expr.trueExpression,
+          expr.dataType,
+          enclosingLoopDetails,
+        ),
+        falseExpression: translateExpression(
+          expr.falseExpression,
+          expr.dataType,
+          enclosingLoopDetails,
+        ),
         wasmDataType: convertScalarDataTypeToWasmType(expr.dataType),
-        numOfBytes: getSizeOfScalarDataType(expr.dataType),
       };
+    } else if (expr.type === "FunctionTableIndex") {
+      return translateExpression(
+        expr.index,
+        POINTER_TYPE,
+        enclosingLoopDetails,
+      ); // translate the underlying integer constant
     } else {
       throw new TranslationError(`Unhandled expression: ${toJson(expr)}`);
     }
@@ -126,6 +148,6 @@ export default function translateExpression(
   return getTypeConversionWrapper(
     expr.dataType,
     targetType,
-    translateExpressionHelper()
+    translateExpressionHelper(),
   );
 }

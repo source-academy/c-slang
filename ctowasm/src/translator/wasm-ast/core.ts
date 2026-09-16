@@ -5,9 +5,11 @@ import {
   WasmBranchIf,
   WasmBranch,
   WasmBlock,
+  WasmBranchTable,
 } from "~src/translator/wasm-ast/control";
 import {
   WasmBinaryExpression,
+  WasmConditionalExpression,
   WasmNegateFloatExpression,
   WasmPostStatementExpression,
   WasmPreStatementExpression,
@@ -18,6 +20,7 @@ import {
   WasmImportedFunction,
   WasmFunctionCall,
   WasmRegularFunctionCall,
+  WasmIndirectFunctionCall,
 } from "~src/translator/wasm-ast/functions";
 import {
   WasmMemoryStore,
@@ -32,9 +35,11 @@ import {
   WasmGlobalGet,
   WasmGlobalSet,
   WasmGlobalVariable,
+  WasmImportedGlobalVariable,
   WasmLocalGet,
   WasmLocalSet,
 } from "~src/translator/wasm-ast/variables";
+import { WasmFunctionTable } from "~src/translator/wasm-ast/functionTable";
 
 /**
  * Main file containing all the core wasm AST node definitions.
@@ -47,9 +52,11 @@ export interface WasmModule extends WasmAstNode {
   type: "Module";
   dataSegmentByteStr: string; // string of bytes to set the data segment with
   globalWasmVariables: WasmGlobalVariable[];
+  importedGlobalWasmVariables: WasmImportedGlobalVariable[];
   functions: Record<string, WasmFunction>;
-  memorySize: number; // number of pages of memory needed for this module
+  dataSegmentSize: number; // number of bytes of data segment
   importedFunctions: WasmImportedFunction[];
+  functionTable: WasmFunctionTable;
 }
 
 // A wasm statement is an instruction meant to be used in a situation that does not involve a value being pushed on virtual wasm stack.
@@ -61,12 +68,14 @@ export type WasmStatement =
   | WasmLoop
   | WasmBranchIf
   | WasmBranch
+  | WasmBranchTable
   | WasmBlock
   | WasmMemoryStore
   | WasmMemoryStoreFromWasmStack
   | WasmMemoryGrow
   | WasmRegularFunctionCall
-  | WasmFunctionCall;
+  | WasmFunctionCall
+  | WasmIndirectFunctionCall;
 
 /**
  * Wasm Expressions which consist of 1 instruction pushing 1 wasm value to the stack.
@@ -82,4 +91,5 @@ export type WasmExpression =
   | WasmLocalGet
   | WasmGlobalGet
   | WasmPreStatementExpression
-  | WasmPostStatementExpression;
+  | WasmPostStatementExpression
+  | WasmConditionalExpression;

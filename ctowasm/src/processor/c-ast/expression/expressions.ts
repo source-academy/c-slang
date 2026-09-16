@@ -1,4 +1,4 @@
-import { BinaryOperator, PrefixOperator } from "~src/common/types";
+import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 import { DataType } from "~src/parser/c-ast/dataTypes";
 import {
   ExpressionP,
@@ -11,21 +11,13 @@ export interface BinaryExpressionP extends ExpressionPBase {
   leftExpr: ExpressionP;
   rightExpr: ExpressionP;
   operator: BinaryOperator;
+  operandTargetDataType: ScalarCDataType; // the data type to convert the operands to before the binary operation
 }
 
 export interface UnaryExpressionP extends ExpressionPBase {
   type: "UnaryExpression";
   operator: "-" | "~" | "!"; // only these operators will be handled in this node. Others are handled in other ways.
   expr: ExpressionP;
-}
-
-/**
- * Wrapper node that indicates that the wrapped expression is to be treated as a boolean (int that is 1 or 0)
- */
-export interface BooleanExpressionP extends ExpressionPBase {
-  type: "BooleanExpression";
-  expr: ExpressionP;
-  dataType: "signed int";
 }
 
 /**
@@ -49,9 +41,19 @@ export interface PostStatementExpressionP extends ExpressionPBase {
 }
 
 /**
+ * Represents a inline conditional expression e.g: 1 ? 2 : 3
+ */
+export interface ConditionalExpressionP extends ExpressionPBase {
+  type: "ConditionalExpression";
+  condition: ExpressionP;
+  trueExpression: ExpressionP; // expression to return if condition is not zero (true)
+  falseExpression: ExpressionP;
+}
+
+/**
  * A wrapper for the result of processing expressions, to be used by the processor only (not present in generated AST)
  */
 export interface ExpressionWrapperP {
   originalDataType: DataType;
-  exprs: ExpressionP[] // the resultant processed ExpressionP
+  exprs: ExpressionP[]; // the resultant processed ExpressionP
 }

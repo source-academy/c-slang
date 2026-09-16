@@ -24,7 +24,7 @@ import { ConstantP } from "~src/processor/c-ast/expression/constants";
 
 export function getAdjustedIntValueAccordingToDataType(
   value: bigint,
-  dataType: ScalarCDataType
+  dataType: ScalarCDataType,
 ) {
   let newValue = value;
   // handle integer overflows
@@ -86,7 +86,7 @@ function capNegativeValue(value: bigint, integerType: IntegerDataType): bigint {
  */
 function handlePositiveSignedIntegerOverflow(
   value: bigint,
-  signedType: SignedIntegerType
+  signedType: SignedIntegerType,
 ): bigint {
   const maxVal = getMaxValueOfSignedIntType(signedType);
   if (value <= maxVal) {
@@ -114,7 +114,7 @@ function getCappedIntegerValue(value: bigint, dataType: IntegerDataType) {
     } else {
       return handlePositiveSignedIntegerOverflow(
         value,
-        dataType as SignedIntegerType
+        dataType as SignedIntegerType,
       );
     }
   } else if (value < 0) {
@@ -137,7 +137,7 @@ function getCappedFloatValue(value: number, dataType: FloatDataType) {
  */
 function getCappedConstantValue(
   constant: Constant,
-  dataType: PrimaryCDataType
+  dataType: PrimaryCDataType,
 ): bigint | number {
   if (constant.type === "IntegerConstant") {
     return getCappedIntegerValue(constant.value, dataType as IntegerDataType);

@@ -1,6 +1,10 @@
 build
+dist
 input
 output
 node_modules
 test/temp
 .parcel-cache
+src/parser/peggyjs/preprocessor.js
+src/parser/peggyjs/lexer.js
+src/parser/peggyjs/parser.js

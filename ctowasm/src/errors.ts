@@ -4,16 +4,68 @@
 
 import { Position } from "~src/parser/c-ast/misc";
 
+function generateCompilationMessage(
+  message: string,
+  sourceCode: string,
+  position: Position,
+) {
+  let errorMessage = `${message}\n${position.start.line} | `;
+  let currLine = position.start.line;
+  for (let i = position.start.offset; i < position.end.offset; ++i) {
+    if (sourceCode[i] === "\n") {
+      errorMessage += `\n${++currLine} | `;
+    } else {
+      errorMessage += sourceCode[i];
+    }
+  }
+  errorMessage += "\n";
+  return errorMessage;
+}
+
+/**
+ * Generates a compilation error message with positional information.
+ * @param message
+ * @param sourceCode
+ * @param position
+ * @returns
+ */
+function generateCompilationErrorMessage(
+  message: string,
+  sourceCode: string,
+  position: Position,
+): string {
+  return `Error: ${generateCompilationMessage(message, sourceCode, position)}`;
+}
+
+/**
+ * Generates a compilation warning message with positional information.
+ * @param message
+ * @param sourceCode
+ * @param position
+ * @returns
+ */
+export function generateCompilationWarningMessage(
+  message: string,
+  sourceCode: string,
+  position: Position,
+): string {
+  return `Warning: ${generateCompilationMessage(
+    message,
+    sourceCode,
+    position,
+  )}`;
+}
+
 /**
  * An error that occured in relation to the C source code during compilation.
  * Contains positional information for debugging purposes.
  */
 export class SourceCodeError extends Error {
-  position: Position | undefined;
+  position: Position | null;
   constructor(message: string, position?: Position) {
     super();
     this.message = message;
-    this.position = position;
+    this.position = position ?? null;
   }
 
   addPositionInfo(position: Position) {
@@ -22,34 +74,50 @@ export class SourceCodeError extends Error {
 
   /**
    * Add sourcecode and generate full error message with position info if available.
-   * @param sourceCode
+   * @param sourceCode preprocessed C program where comments are removed
    * @param position
    */
-  generateFullErrorMessage(sourceCode: string) {
-    if (typeof this.position !== "undefined") {
-      this.message = `\n${this.message}\n${this.position.start.line} | `;
-      let currLine = this.position.start.line;
-      for (let i = this.position.start.offset; i < this.position.end.offset; ++i) {
-        if (sourceCode[i] === "\n") {
-          this.message += `\n${++currLine} | `;
-        } else {
-          this.message += sourceCode[i];
-        }
-      }
-      this.message += "\n";
+  generateCompilationErrorMessage(sourceCode: string): string {
+    if (this.position !== null) {
+      this.message = generateCompilationErrorMessage(
+        this.message,
+        sourceCode,
+        this.position,
+      );
+    } else {
+      this.message = `Error: ${this.message}\n`;
     }
+    return this.message;
+  }
+}
+
+/**
+ * Represents an error thrown by
+ */
+export class ParserCompilationErrors extends Error {
+  constructor(
+    sourceCode: string,
+    errors: { message: string; position: Position }[],
+  ) {
+    super(
+      errors
+        .map((e) =>
+          generateCompilationErrorMessage(e.message, sourceCode, e.position),
+        )
+        .join("\n"),
+    );
   }
 }
 
 export class ProcessingError extends SourceCodeError {
   constructor(message: string, position?: Position) {
-    super(`Processing Error: ${message}`, position);
+    super(message, position);
   }
 }
 
 export class SemanticAnalysisError extends SourceCodeError {
   constructor(message: string, position?: Position) {
-    super(`Semantic Analysis Error: ${message}`, position);
+    super(message, position);
   }
 }
 
@@ -78,18 +146,19 @@ export class UnsupportedFeatureError extends Error {
  * Convert aribtrary object to json string. Needed to support bigints.
  */
 export function toJson(obj: any) {
+  const clone = structuredClone(obj);
   function recursionHelper(obj: any) {
     if ((typeof obj !== "object" && !Array.isArray(obj)) || obj === null) {
       return;
     }
     for (const fieldName of Object.keys(obj)) {
       if (typeof obj[fieldName] === "bigint") {
-        obj[fieldName] = obj[fieldName].toString(); // stringify bigints first
+        obj[fieldName] = obj[fieldName].toString() + "n"; // stringify bigints first
       } else {
         recursionHelper(obj[fieldName]);
       }
     }
   }
-  recursionHelper(obj);
-  return JSON.stringify(obj);
+  recursionHelper(clone);
+  return JSON.stringify(clone, null, 2);
 }

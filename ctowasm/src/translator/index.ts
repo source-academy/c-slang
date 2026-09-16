@@ -1,52 +1,47 @@
 /**
  * Translator module which performs translation of C AST to WAT AST.
  */
-import { setPseudoRegisters } from "~src/translator/util";
-import { ImportedFunction } from "~src/wasmModuleImports";
+import {
+  createWasmFunctionTable,
+  setPseudoRegisters,
+} from "~src/translator/util";
 import { WasmModule } from "~src/translator/wasm-ast/core";
 import translateFunction from "~src/translator/translateFunction";
 import { CAstRootP } from "~src/processor/c-ast/core";
-import processImportedFunctions from "~src/translator/processImportedFunctions";
+import processIncludedModules from "~src/translator/processImportedFunctions";
+import ModuleRepository from "~src/modules";
 
 export default function translate(
   CAstRoot: CAstRootP,
-  imports: Record<string, ImportedFunction> = {}
+  moduleRepository: ModuleRepository,
 ) {
   const wasmRoot: WasmModule = {
     type: "Module",
     dataSegmentByteStr: CAstRoot.dataSegmentByteStr, // byte str to set the data segment to
     globalWasmVariables: [], // actual wasm global variables -  used for pseudo registers
+    importedGlobalWasmVariables: [],
     functions: {},
-    memorySize: 1,
+    dataSegmentSize: CAstRoot.dataSegmentSizeInBytes,
     importedFunctions: [],
+    functionTable: createWasmFunctionTable(CAstRoot.functionTable),
   };
 
-  let stackPreAllocateSize = 0; // preallocate space for main function stack frame
-
-  const processedImportedFunctions = processImportedFunctions(imports, CAstRoot.externalFunctions);
+  const processedImportedFunctions = processIncludedModules(
+    moduleRepository,
+    CAstRoot.externalFunctions,
+  );
 
   wasmRoot.importedFunctions = processedImportedFunctions.functionImports;
   // add function wrappers of imported functions
-  processedImportedFunctions.wrappedFunctions.forEach(wrappedFunction => {
-    wasmRoot.functions[wrappedFunction.name] = wrappedFunction
-  })
-
-  for (const func of CAstRoot.functions) {
-    if (func.name === "main") {
-      stackPreAllocateSize = func.sizeOfLocals;
-    }
-    translateFunction(func);
-  }
+  processedImportedFunctions.wrappedFunctions.forEach((wrappedFunction) => {
+    wasmRoot.functions[wrappedFunction.name] = wrappedFunction;
+  });
 
   CAstRoot.functions.forEach((func) => {
     wasmRoot.functions[func.name] = translateFunction(func);
   });
 
-  setPseudoRegisters(
-    wasmRoot,
-    stackPreAllocateSize,
-    CAstRoot.dataSegmentSizeInBytes
-  );
+  setPseudoRegisters(wasmRoot);
 
   return wasmRoot;
 }

@@ -2,7 +2,11 @@
  * Definitions of wasm AST nodes to do with expressions.
  */
 
-import { WasmAstNode, WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
+import {
+  WasmAstNode,
+  WasmExpression,
+  WasmStatement,
+} from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 
 export interface WasmBinaryExpression extends WasmAstNode {
@@ -45,13 +49,25 @@ export interface WasmPostStatementExpression extends WasmAstNode {
 export interface WasmWrapperNode extends WasmAstNode {
   expr: WasmExpression;
 }
+
 /**
  * Special wrapper node to handle converting an expression value to a "boolean" value (1 or 0).
  * Any number except 0 will be converted to 1.
  */
-
 export interface WasmBooleanExpression extends WasmWrapperNode {
   type: "BooleanExpression";
   wasmDataType: WasmDataType;
   isNegated?: boolean;
+}
+
+/**
+ * Custom WasmConditionalExpressin (comprised of multiple basic Wasm nodes as Wasm does not have native support for such a construct)
+ * Wasm Generator will convert this into a if else block that returns the given type.
+ */
+export interface WasmConditionalExpression extends WasmAstNode {
+  type: "ConditionalExpression";
+  condition: WasmBooleanExpression;
+  trueExpression: WasmExpression;
+  falseExpression: WasmExpression;
+  wasmDataType: WasmDataType;
 }

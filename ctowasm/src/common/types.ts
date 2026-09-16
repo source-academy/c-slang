@@ -12,7 +12,7 @@ export type BinaryOperator =
   | LogicalBinaryOperator
   | BitwiseBinaryOperator;
 
-export type UnaryOperator = PrefixOperator | PostfixOperator
+export type UnaryOperator = PrefixOperator | PostfixOperator;
 export type ArithemeticUnaryOperator = "++" | "--";
 export type PostfixOperator = ArithemeticUnaryOperator; // excludes struct field access, function calls and array subscripting
 export type PrefixOperator = "!" | "~" | "-" | "+" | ArithemeticUnaryOperator; // excludes pointer operators

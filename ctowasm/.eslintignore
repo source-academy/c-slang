@@ -4,5 +4,9 @@ test
 output
 input
 build
+dist
 .parcel-cache
 cmd.js
+src/modules
+jest.config.ts
+babel.config.js

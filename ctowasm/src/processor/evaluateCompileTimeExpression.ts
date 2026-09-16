@@ -1,4 +1,4 @@
-import { determineDataTypeOfBinaryExpression } from "./expressionUtil";
+import { determineResultDataTypeOfBinaryExpression } from "./expressionUtil";
 import processConstant, {
   getAdjustedIntValueAccordingToDataType,
 } from "./processConstant";
@@ -21,12 +21,12 @@ import { ConstantP } from "~src/processor/c-ast/expression/constants";
 export function performBinaryOperation<T extends number | bigint>(
   a: T,
   operator: BinaryOperator,
-  b: T
+  b: T,
 ): T;
 export function performBinaryOperation(
   a: any,
   operator: BinaryOperator,
-  b: any
+  b: any,
 ) {
   switch (operator) {
     // arithmetic operators
@@ -74,7 +74,7 @@ export function performBinaryOperation(
 
 export function performUnaryOperation<T extends number | bigint>(
   a: T,
-  operator: UnaryOperator
+  operator: UnaryOperator,
 ): T;
 export function performUnaryOperation(a: any, operator: UnaryOperator) {
   switch (operator) {
@@ -96,10 +96,30 @@ export function performUnaryOperation(a: any, operator: UnaryOperator) {
 }
 
 /**
+ * Returns true if a given expression can be evaluated at compile-time.
+ */
+export function isCompileTimeExpression(expr: Expression): boolean {
+  if (expr.type === "FloatConstant" || expr.type === "IntegerConstant") {
+    return true;
+  } else if (expr.type === "BinaryExpression") {
+    return (
+      isCompileTimeExpression(expr.leftExpr) &&
+      isCompileTimeExpression(expr.rightExpr)
+    );
+  } else if (
+    expr.type === "PrefixExpression" ||
+    expr.type === "PostfixExpression"
+  ) {
+    return isCompileTimeExpression(expr.expr);
+  }
+  return false;
+}
+
+/**
  * Evaluates a compile time expression.
  */
 export default function evaluateCompileTimeExpression(
-  expr: Expression
+  expr: Expression,
 ): ConstantP {
   if (expr.type === "FloatConstant" || expr.type === "IntegerConstant") {
     // alerady a constant
@@ -111,22 +131,25 @@ export default function evaluateCompileTimeExpression(
     let value = performBinaryOperation(
       evaluatedLeftExpr.value,
       expr.operator,
-      evaluatedRightExpr.value
+      evaluatedRightExpr.value,
     );
 
-    const dataType = determineDataTypeOfBinaryExpression(
-      {type: "primary" , primaryDataType: evaluatedLeftExpr.dataType},
-      {type: "primary", primaryDataType: evaluatedRightExpr.dataType},
-      expr.operator
+    const dataType = determineResultDataTypeOfBinaryExpression(
+      { type: "primary", primaryDataType: evaluatedLeftExpr.dataType },
+      { type: "primary", primaryDataType: evaluatedRightExpr.dataType },
+      expr.operator,
     );
 
     if (dataType.type !== "primary") {
-      throw new ProcessingError("Invalid compile-time expression", expr.position)
+      throw new ProcessingError("invalid compile-time expression");
     }
 
     if (isIntegerType(dataType.primaryDataType)) {
       // need to cap integer values correctly
-      value = getAdjustedIntValueAccordingToDataType(value as bigint, dataType.primaryDataType);
+      value = getAdjustedIntValueAccordingToDataType(
+        value as bigint,
+        dataType.primaryDataType,
+      );
 
       return {
         type: "IntegerConstant",
@@ -168,7 +191,7 @@ export default function evaluateCompileTimeExpression(
     }
   } else {
     throw new ProcessingError(
-      "Cannot evaluate non compile-time constant type at compile-time"
+      "cannot evaluate non compile-time constant type at compile-time",
     );
   }
 }

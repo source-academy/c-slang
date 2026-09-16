@@ -1,20 +1,9 @@
-import { WASM_ADDR_SIZE } from "~src/common/constants";
 import { TranslationError } from "~src/errors";
-import { ReturnStatement } from "~src/parser/c-ast/statement/jumpStatement";
 import { StatementP } from "~src/processor/c-ast/core";
-import {
-  getRegisterPointerArithmeticNode,
-  BASE_POINTER,
-} from "~src/translator/memoryUtil";
 import translateExpression from "~src/translator/translateExpression";
 import translateFunctionCall from "~src/translator/translateFunctionCall";
-import {
-  createWasmBooleanExpression,
-  wasmTypeToSize,
-} from "~src/translator/util";
-import { WasmSelectionStatement } from "~src/translator/wasm-ast/control";
+import { createWasmBooleanExpression } from "~src/translator/util";
 import { WasmStatement } from "~src/translator/wasm-ast/core";
-import { WasmBooleanExpression } from "./wasm-ast/expressions";
 import {
   EnclosingLoopDetails,
   createEnclosingLoopDetails,
@@ -23,6 +12,8 @@ import {
 } from "~src/translator/loopUtil";
 import { convertScalarDataTypeToWasmType } from "~src/translator/dataTypeUtil";
 import { getSizeOfScalarDataType } from "~src/common/utils";
+import { FUNCTION_BLOCK_LABEL } from "~src/translator/constants";
+import translateSwitchStatement from "~src/translator/translateSwitchStatement";
 
 /**
  * Visitor function for visting StatementP nodes and translating them to statements to add to enclosingBody.
@@ -31,39 +22,23 @@ import { getSizeOfScalarDataType } from "~src/common/utils";
  */
 export default function translateStatement(
   statement: StatementP,
-  enclosingLoopDetails?: EnclosingLoopDetails // the loop labelname of the loop enclosing this statement Used to translate break statements.
+  enclosingLoopDetails?: EnclosingLoopDetails, // the loop labelname of the loop enclosing this statement Used to translate break statements.
 ): WasmStatement {
   if (statement.type === "MemoryStore") {
     return {
       type: "MemoryStore",
       addr: translateExpression(
         statement.address,
-        statement.dataType,
-        enclosingLoopDetails
+        statement.address.dataType,
+        enclosingLoopDetails,
       ),
       value: translateExpression(
         statement.value,
         statement.dataType,
-        enclosingLoopDetails
-      ),
-      wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
-      numOfBytes: getSizeOfScalarDataType(statement.value.dataType),
-    };
-  } else if (statement.type === "FunctionReturnMemoryStore") {
-    return {
-      type: "MemoryStore",
-      addr: getRegisterPointerArithmeticNode(
-        "bp",
-        "+",
-        WASM_ADDR_SIZE + Number(statement.offset.value)
+        enclosingLoopDetails,
       ),
       wasmDataType: convertScalarDataTypeToWasmType(statement.dataType),
       numOfBytes: getSizeOfScalarDataType(statement.dataType),
-      value: translateExpression(
-        statement.value,
-        statement.dataType,
-        enclosingLoopDetails
-      ),
     };
   } else if (statement.type === "FunctionCall") {
     return translateFunctionCall(statement);
@@ -72,56 +47,62 @@ export default function translateStatement(
       type: "SelectionStatement",
       condition: createWasmBooleanExpression(statement.condition),
       actions: statement.ifStatements.map((s) =>
-        translateStatement(s, enclosingLoopDetails)
+        translateStatement(s, enclosingLoopDetails),
       ),
       elseStatements: statement.elseStatements
         ? statement.elseStatements.map((s) =>
-            translateStatement(s, enclosingLoopDetails)
+            translateStatement(s, enclosingLoopDetails),
           )
         : [],
     };
   } else if (statement.type === "DoWhileLoop") {
-    const loopLabel = generateLoopLabel(enclosingLoopDetails);
-    const condition = createWasmBooleanExpression(statement.condition);
+    const newEnclosingLoopDetails =
+      createEnclosingLoopDetails(enclosingLoopDetails);
+    const loopLabel = generateLoopLabel(newEnclosingLoopDetails);
+    const blockLabel = generateBlockLabel(newEnclosingLoopDetails);
     const body: WasmStatement[] = statement.body.map((s) =>
-      translateStatement(
-        s,
-        createEnclosingLoopDetails(condition, enclosingLoopDetails)
-      )
+      translateStatement(s, newEnclosingLoopDetails),
     );
 
-    // add the branching statement at end of loop body
     body.push({
       type: "BranchIf",
       label: loopLabel,
-      condition: condition,
+      condition: createWasmBooleanExpression(statement.condition),
     });
 
     return {
-      type: "Loop",
-      label: loopLabel,
-      body,
+      type: "Block",
+      label: blockLabel,
+      body: [
+        {
+          type: "Loop",
+          label: loopLabel,
+          body,
+        },
+      ],
     };
   } else if (statement.type === "WhileLoop") {
-    const blockLabel = generateBlockLabel(enclosingLoopDetails);
-    const loopLabel = generateLoopLabel(enclosingLoopDetails);
-    const condition = createWasmBooleanExpression(statement.condition);
+    const newEnclosingLoopDetails =
+      createEnclosingLoopDetails(enclosingLoopDetails);
+    const loopLabel = generateLoopLabel(newEnclosingLoopDetails);
+    const blockLabel = generateBlockLabel(newEnclosingLoopDetails);
+    const negatedCondition = createWasmBooleanExpression(
+      statement.condition,
+      true,
+    );
     const body: WasmStatement[] = [];
-    // add the branch if statement to start of loop body
+
+    // branch out of the loop if the condition is not met
     body.push({
       type: "BranchIf",
       label: blockLabel,
-      condition: condition,
+      condition: negatedCondition,
     });
 
     statement.body.forEach((s) =>
-      body.push(
-        translateStatement(
-          s,
-          createEnclosingLoopDetails(condition, enclosingLoopDetails)
-        )
-      )
+      body.push(translateStatement(s, newEnclosingLoopDetails)),
     );
+
     // add the branching statement at end of loop body
     body.push({
       type: "Branch",
@@ -140,87 +121,86 @@ export default function translateStatement(
       ],
     };
   } else if (statement.type === "ForLoop") {
-    const blockLabel = generateBlockLabel(enclosingLoopDetails);
-    const loopLabel = generateLoopLabel(enclosingLoopDetails);
-    const condition = createWasmBooleanExpression(statement.condition);
-    const body: WasmStatement[] = [];
+    const newEnclosingLoopDetails =
+      createEnclosingLoopDetails(enclosingLoopDetails);
+    const loopLabel = generateLoopLabel(newEnclosingLoopDetails);
+    const blockLabel = generateBlockLabel(newEnclosingLoopDetails);
+    const negatedCondition =
+      statement.condition !== null
+        ? createWasmBooleanExpression(statement.condition, true)
+        : null;
+    const loopBody: WasmStatement[] = [];
 
-    // add clause statements first
-    statement.clause.forEach((s) =>
-      body.push(
-        translateStatement(
-          s,
-          createEnclosingLoopDetails(condition, enclosingLoopDetails)
-        )
-      )
-    );
+    if (negatedCondition !== null) {
+      loopBody.push({
+        type: "BranchIf",
+        label: blockLabel,
+        condition: negatedCondition,
+      });
+    }
 
-    // add condition check
-    body.push({
-      type: "BranchIf",
-      label: blockLabel,
-      condition: condition,
-    });
-
-    // add function body
+    // add for loop body
     statement.body.forEach((s) =>
-      translateStatement(
-        s,
-        createEnclosingLoopDetails(condition, enclosingLoopDetails)
-      )
+      loopBody.push(translateStatement(s, newEnclosingLoopDetails)),
     );
 
     // add the for loop update expression
     statement.update.forEach((s) =>
-      translateStatement(
-        s,
-        createEnclosingLoopDetails(condition, enclosingLoopDetails)
-      )
+      loopBody.push(translateStatement(s, newEnclosingLoopDetails)),
     );
 
     // add the branching statement at end of loop body
-    body.push({
+    loopBody.push({
       type: "Branch",
       label: loopLabel,
+    });
+
+    const blockBody: WasmStatement[] = [];
+    // push on the clause statements
+    statement.clause.forEach((s) =>
+      blockBody.push(translateStatement(s, newEnclosingLoopDetails)),
+    );
+
+    blockBody.push({
+      type: "Loop",
+      label: loopLabel,
+      body: loopBody,
     });
 
     return {
       type: "Block",
       label: blockLabel,
-      body: [
-        {
-          type: "Loop",
-          label: loopLabel,
-          body,
-        },
-      ],
+      body: blockBody,
     };
   } else if (statement.type === "ReturnStatement") {
+    // branch out of the block holding the function body
     return {
-      type: "ReturnStatement",
+      type: "Branch",
+      label: FUNCTION_BLOCK_LABEL,
     };
   } else if (statement.type === "BreakStatement") {
     if (typeof enclosingLoopDetails === "undefined") {
       throw new TranslationError(
-        "Break statement cannot be present outside a loop or switch body"
+        "Break statement cannot be present outside a loop or switch body",
       );
     }
-    return    {
-        type: "Branch",
-        label: generateBlockLabel(enclosingLoopDetails),
-      }
-    ;
+    return {
+      type: "Branch",
+      label: generateBlockLabel(enclosingLoopDetails),
+    };
   } else if (statement.type === "ContinueStatement") {
     if (typeof enclosingLoopDetails === "undefined") {
       throw new TranslationError(
-        "Continue statement cannot be present outside a loop body"
+        "Continue statement cannot be present outside a loop body",
       );
     }
-    return  {
-        type: "BranchIf",
-        label: generateLoopLabel(enclosingLoopDetails),
-        condition: enclosingLoopDetails.condition,
-      }
+    return {
+      type: "Branch",
+      label: generateLoopLabel(enclosingLoopDetails),
+    };
+  } else if (statement.type === "SwitchStatement") {
+    // psuedo-register 2 is used for holding the switch block index
+    return translateSwitchStatement(statement);
   } else {
     throw new TranslationError("Unhandled statement");
   }

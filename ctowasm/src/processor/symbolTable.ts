@@ -1,35 +1,84 @@
+import { ENUM_DATA_TYPE } from "~src/common/constants";
 import { DataType, FunctionDataType } from "../parser/c-ast/dataTypes";
 import { ProcessingError, toJson } from "~src/errors";
-import { Declaration } from "~src/parser/c-ast/declaration";
+import { VariableDeclaration } from "~src/parser/c-ast/declaration";
 import { FunctionDetails } from "~src/processor/c-ast/function";
-import { getDataTypeSize, unpackDataType } from "~src/processor/dataTypeUtil";
+import {
+  convertFunctionDataTypeToFunctionDetails,
+  getDataTypeSize,
+  stringifyDataType,
+} from "~src/processor/dataTypeUtil";
+import ModuleRepository, { ModuleName } from "~src/modules";
+import { unpackDataSegmentInitializerAccordingToDataType } from "~src/processor/processDeclaration";
+import { convertIntegerToByteString } from "~src/processor/byteStrUtil";
 
 /**
  * Definition of symbol table used by processor and semantic analyser
  */
-export type SymbolEntry = FunctionSymbolEntry | VariableSymbolEntry;
+export type SymbolEntry =
+  | FunctionSymbolEntry
+  | VariableSymbolEntry
+  | EnumeratorSymbolEntry;
+
 export interface FunctionSymbolEntry {
   type: "function";
   dataType: FunctionDataType;
-  processedFunctionDetails: FunctionDetails; // process and save the function details
+  functionDetails: FunctionDetails; // process and save the function details
+}
+
+/**
+ * Represent an enumerators present within Enum declarations.
+ * Such enumerators can be used like constants.
+ */
+export interface EnumeratorSymbolEntry {
+  type: "enumerator";
+  dataType: { type: "primary"; primaryDataType: typeof ENUM_DATA_TYPE }; // in this compiler implementation enums directly correspond to signed ints
+  value: bigint;
 }
 
 export interface VariableSymbolEntry {
-  type: "localVariable" | "globalVariable";
+  type: "localVariable" | "dataSegmentVariable";
   dataType: DataType;
   offset: number; // offset in number of bytes of this from the first byte of the first encountered symbol in the same function OR global scope
+}
+
+export type FunctionTable = FunctionTableEntry[];
+
+export interface FunctionTableEntry {
+  functionName: string;
+  functionDetails: FunctionDetails;
+  isDefined: boolean; // whether the given function has been defined
 }
 
 export class SymbolTable {
   parentTable: SymbolTable | null;
   currOffset: { value: number }; // current offset saved as "value" in an object. Used to make it sharable as a reference across tables
+  dataSegmentByteStr: { value: string }; // the string of bytes that forms the data segment
+  dataSegmentOffset: { value: number }; // the current offset at data segment (address of next allocated data segment object)
+  functionTable: FunctionTableEntry[]; // list of all functions declared in the program in one table
+  functionTableIndexes: Record<string, number>; // map function name to index in functionTable for fast lookup
   symbols: Record<string, SymbolEntry>;
   externalFunctions: Record<string, FunctionSymbolEntry>;
 
   constructor(parentTable?: SymbolTable | null) {
-    this.parentTable = parentTable ? parentTable : null;
     this.symbols = {};
-    this.externalFunctions = parentTable ? parentTable.externalFunctions : {};
+
+    if (parentTable) {
+      this.externalFunctions = parentTable.externalFunctions;
+      this.parentTable = parentTable;
+      this.dataSegmentByteStr = parentTable.dataSegmentByteStr;
+      this.dataSegmentOffset = parentTable.dataSegmentOffset;
+      this.functionTable = parentTable.functionTable;
+      this.functionTableIndexes = parentTable.functionTableIndexes;
+    } else {
+      this.externalFunctions = {};
+      this.parentTable = null;
+      this.dataSegmentByteStr = { value: "" };
+      this.dataSegmentOffset = { value: 0 };
+      this.functionTable = [];
+      this.functionTableIndexes = {};
+    }
+
     if (!parentTable || parentTable.parentTable === null) {
       // all tables take the previous tables offset except the top 2 level parenttables
       // root table (1st level) is the global scope
@@ -40,10 +89,26 @@ export class SymbolTable {
     }
   }
 
-  setExternalFunctions(externalFunctions: Record<string, FunctionDataType>) {
+  /**
+   * Add all the functions of imoprted modules to global scope.
+   */
+  setExternalFunctions(
+    includedModules: ModuleName[],
+    moduleRepository: ModuleRepository,
+  ) {
     this.externalFunctions = {};
-    for (const funcName in externalFunctions) {
-      this.addFunctionEntry(funcName, externalFunctions[funcName], true)
+    for (const moduleName of includedModules) {
+      Object.keys(moduleRepository.modules[moduleName].moduleFunctions).forEach(
+        (funcName) => {
+          this.addFunctionEntry(
+            funcName,
+            moduleRepository.modules[moduleName].moduleFunctions[funcName]
+              .functionType,
+            true,
+          );
+          this.setFunctionIsDefinedFlag(funcName);
+        },
+      );
     }
     return this.externalFunctions;
   }
@@ -52,145 +117,176 @@ export class SymbolTable {
     return funcName in this.externalFunctions;
   }
 
-  addEntry(declaration: Declaration): SymbolEntry {
+  addEntry(declaration: VariableDeclaration): SymbolEntry {
     if (declaration.dataType.type === "function") {
       return this.addFunctionEntry(declaration.name, declaration.dataType);
     } else {
-      return this.addVariableEntry(declaration.name, declaration.dataType);
+      if (this.parentTable === null || declaration.storageClass === "static") {
+        // the declaration is either a global or static
+        // allocate space for and the initializer bytes for this declared object in data segment
+        const byteStr = unpackDataSegmentInitializerAccordingToDataType(
+          declaration.dataType,
+          typeof declaration.initializer === "undefined"
+            ? null
+            : declaration.initializer,
+          this,
+        );
+        this.dataSegmentByteStr.value += byteStr;
+      }
+      return this.addVariableEntry(
+        declaration.name,
+        declaration.dataType,
+        declaration.storageClass,
+      );
     }
   }
 
-  addVariableEntry(name: string, dataType: DataType): VariableSymbolEntry {
+  addEnumeratorEntry(
+    enumeratorName: string,
+    enumeratorValue: bigint,
+  ): EnumeratorSymbolEntry {
+    const entry: EnumeratorSymbolEntry = {
+      type: "enumerator",
+      dataType: { type: "primary", primaryDataType: ENUM_DATA_TYPE },
+      value: enumeratorValue,
+    };
+    this.symbols[enumeratorName] = entry;
+    return entry;
+  }
+
+  /**
+   * Allocate bytes on data segment
+   * Adds the initializing bytes to the dataSegmentByteStr as well.
+   * @params the array of bytes (in demical numeric form) to put on data segment.
+   * @returns offset in data segment of the allocated object.
+   */
+  addDataSegmentObject(bytes: number[]): number {
+    bytes.forEach((byte) => {
+      this.dataSegmentByteStr.value += convertIntegerToByteString(
+        BigInt(byte),
+        1,
+      );
+    });
+    const offset = this.dataSegmentOffset.value;
+    this.dataSegmentOffset.value += bytes.length;
+    return offset;
+  }
+
+  addVariableEntry(
+    name: string,
+    dataType: DataType,
+    storageClass: "auto" | "static",
+  ): VariableSymbolEntry {
     if (name in this.symbols) {
       // given variable already exists in given scope
       // multiple declarations only allowed outside of function bodies
       if (this.parentTable !== null) {
-        throw new ProcessingError(`${name} redeclared in scope.`);
+        throw new ProcessingError(`redeclaration of ${name}`);
       }
-      if (this.symbols[name].type === "function") {
-        throw new ProcessingError(
-          `${name} redeclared as variable instead of function`
-        );
+      const symbolEntry = this.symbols[name];
+      if (
+        symbolEntry.type === "function" ||
+        symbolEntry.type === "enumerator"
+      ) {
+        throw new ProcessingError(`redeclaration of ${name}`);
       }
 
-      if (toJson(this.symbols[name].dataType) !== toJson(dataType)) {
+      if (toJson(symbolEntry.dataType) !== toJson(dataType)) {
         throw new ProcessingError(
-          `Conflicting types for ${name}:  redeclared as ${
-            this.symbols[name].dataType
-          } instead of ${toJson(dataType)}`
+          `conflicting types for ${name}:  redeclared as "${stringifyDataType(
+            dataType,
+          )}" instead of ${stringifyDataType(symbolEntry.dataType)}`,
         ); //TODO: stringify there datatype in english instead of just printing json
       }
       return this.symbols[name] as VariableSymbolEntry;
     }
 
+    let entry: SymbolEntry;
     if (this.parentTable === null) {
       // the offset grows inthe positive direction (low to high adress) for globals
-      const entry: SymbolEntry = {
-        type: "globalVariable",
+      entry = {
+        type: "dataSegmentVariable",
         dataType: dataType,
-        offset: this.currOffset.value,
+        offset: this.dataSegmentOffset.value,
       };
-      this.currOffset.value += getDataTypeSize(dataType);
-      return entry;
+      this.dataSegmentOffset.value += getDataTypeSize(dataType);
     } else {
-      // offset grows in negative direction (high to low adderss) for locals
-      this.currOffset.value -= getDataTypeSize(dataType);
-      const entry: SymbolEntry = {
-        type: "localVariable",
-        dataType: dataType,
-        offset: this.currOffset.value,
-      };
-      return entry;
+      if (storageClass === "static") {
+        entry = {
+          type: "dataSegmentVariable",
+          dataType: dataType,
+          offset: this.dataSegmentOffset.value,
+        };
+        this.dataSegmentOffset.value += getDataTypeSize(dataType);
+      } else if (storageClass === "auto") {
+        // offset grows in negative direction (high to low adderss) for locals
+        this.currOffset.value -= getDataTypeSize(dataType);
+        entry = {
+          type: "localVariable",
+          dataType: dataType,
+          offset: this.currOffset.value,
+        };
+      } else {
+        throw new ProcessingError(
+          "addVariableEntry(): Unhandled storage class",
+        );
+      }
     }
+    this.symbols[name] = entry;
+    return entry;
   }
 
   addFunctionEntry(
     name: string,
     dataType: FunctionDataType,
-    isExternalFunction?: boolean 
+    isExternalFunction?: boolean,
   ): FunctionSymbolEntry {
     if (!isExternalFunction && name in this.symbols) {
       // function was already declared before
       // simple check that symbol is a function and the params and return types match
       if (this.symbols[name].type !== "function") {
         throw new ProcessingError(
-          `${name} redeclared as different kind of symbol: function instead of variable`
-        );
-      }
-
-      if (
-        toJson(
-          (this.symbols[name] as FunctionSymbolEntry).dataType.parameters
-        ) !== toJson(dataType.parameters.toString())
-      ) {
-        throw new ProcessingError(
-          `${name} redeclared as function with different signature: different parameters`
-        );
-      }
-
-      if (
-        toJson(
-          (this.symbols[name] as FunctionSymbolEntry).dataType.returnType
-        ) !== toJson(dataType.returnType)
-      ) {
-        throw new ProcessingError(
-          `${name} redeclared as function with different signature: different return type`
+          `redeclaration of ${name} as different kind of symbol: function instead of variable`,
         );
       }
 
       return this.symbols[name] as FunctionSymbolEntry;
     }
 
-    // Create function details
-    const functionDetails: FunctionDetails = {
-      sizeOfParams: 0,
-      sizeOfReturn: 0,
-      parameters: [],
-      returnObjects: null,
-    };
-
-    if (dataType.returnType !== null) {
-      if (dataType.returnType.type === "array") {
-        throw new ProcessingError(
-          "Array is not a valid return type from a function"
-        );
-      }
-
-      functionDetails.sizeOfReturn += getDataTypeSize(dataType.returnType);
-      // offset is relative to 1 byte past the last return object, thus negative (from high to low address)
-      functionDetails.returnObjects = unpackDataType(dataType.returnType).map(
-        (scalarDataType) => ({
-          dataType: scalarDataType.dataType,
-          offset: scalarDataType.offset - functionDetails.sizeOfReturn,
-        })
-      );
-    }
-
-    let offset = 0;
-    for (const param of dataType.parameters) {
-      const dataTypeSize = getDataTypeSize(param);
-      offset -= dataTypeSize;
-      functionDetails.sizeOfParams += dataTypeSize;
-      functionDetails.parameters.push(
-        ...(unpackDataType(param).map((scalarDataType) => ({
-          dataType: scalarDataType.dataType,
-          offset: offset + scalarDataType.offset, // offset of entire aggregate object + offset of particular sacalar data type within object
-        })))
-      );
-    }
-
     const entry: FunctionSymbolEntry = {
       type: "function",
       dataType,
-      processedFunctionDetails: functionDetails
+      functionDetails: convertFunctionDataTypeToFunctionDetails(dataType),
     };
 
     if (isExternalFunction) {
-      this.externalFunctions[name] = entry
+      this.externalFunctions[name] = entry;
     } else {
       this.symbols[name] = entry;
     }
+
+    this.functionTable.push({
+      functionName: name,
+      functionDetails: entry.functionDetails,
+      isDefined: false,
+    });
+    this.functionTableIndexes[name] = this.functionTable.length - 1;
     return entry;
+  }
+
+  hasSymbol(name: string): boolean {
+    let curr: SymbolTable | null = this;
+    while (curr !== null) {
+      if (name in curr.symbols) {
+        return true;
+      }
+      curr = curr.parentTable;
+    }
+
+    if (name in this.externalFunctions) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -208,7 +304,20 @@ export class SymbolTable {
     if (name in this.externalFunctions) {
       return this.externalFunctions[name];
     }
+    throw new ProcessingError(`'${name}' undeclared`);
+  }
 
-    throw new ProcessingError(`Symbol ${name} not found in symbol table`);
+  /**
+   * Returns the index of function with given name in the functionTable
+   */
+  getFunctionIndex(name: string) {
+    return this.functionTableIndexes[name];
+  }
+
+  /**
+   * Set the isDefined flag for the given function to true.
+   */
+  setFunctionIsDefinedFlag(functionName: string) {
+    this.functionTable[this.getFunctionIndex(functionName)].isDefined = true;
   }
 }

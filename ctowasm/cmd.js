@@ -5,12 +5,10 @@ import {
   compile,
   compileAndRun,
   compileToWat,
-  //compileWithLogStatements,
-  //compileToWatWithLogStatements,
   generate_C_AST,
   generate_WAT_AST,
   generate_processed_C_AST,
-} from "./build/index.js";
+} from "./dist/index.js";
 import yargs from "yargs";
 import * as fs from "fs";
 import * as path from "node:path";
@@ -56,20 +54,66 @@ const input = fs.readFileSync(argv._[1], "utf-8");
 
 let outputFile;
 let output;
+let result;
+
+let isSuccess = true;
 
 switch (argv._[0]) {
   case "compile":
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wasm");
-    output = await compile(input);
+    result = await compile(input);
+    if (result.status === "failure") {
+      isSuccess = false;
+      console.log(
+        `Compilation failed with the following errors:\n${result.errorMessage}`,
+      );
+      break;
+    }
+    if (result.warnings.length > 0) {
+      console.log(
+        `Compilation finished with the following warnings:\n${result.warnings.join(
+          "\n",
+        )}`,
+      );
+    }
+    output = result.wasm;
     break;
   case "compile-to-wat":
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
-    output = compileToWat(input);
+    result = compileToWat(input);
+    if (result.status === "failure") {
+      isSuccess = false;
+      console.log(result.errorMessage);
+      break;
+    }
+    if (result.warnings.length > 0) {
+      console.log(
+        `Compilation finished with the following warnings:\n${result.warnings.join(
+          "\n",
+        )}`,
+      );
+    }
+    output = result.watOutput;
     break;
   case "compile-run":
     // save WAT before running
     outputFile = argv.o ? path.resolve(argv.o) : path.resolve("output/a.wat");
-    output = compileToWat(input);
+    result = compileToWat(input);
+    if (result.status === "failure") {
+      isSuccess = false;
+      console.log(
+        `Compilation failed with the following errors:\n${result.errorMessage}`,
+      );
+      break;
+    }
+    if (result.warnings.length > 0) {
+      console.log(
+        `Compilation finished with the following warnings:\n${result.warnings.join(
+          "\n",
+        )}`,
+      );
+    }
+    output = result.watOutput;
     await compileAndRun(input);
     break;
   case "generate-c-ast":
@@ -91,9 +135,12 @@ switch (argv._[0]) {
     output = generate_WAT_AST(input);
     break;
 }
-// create the output directory if output file path provided
-fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
-fs.writeFileSync(outputFile, output);
+if (isSuccess) {
+  // create the output directory if output file path provided
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
-console.log(`Output saved to ${outputFile}`);
+  fs.writeFileSync(outputFile, output);
+
+  console.log(`Output saved to ${outputFile}`);
+}

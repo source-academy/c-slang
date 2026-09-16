@@ -28,11 +28,21 @@ export interface WasmFunction extends WasmAstNode {
   body: WasmStatement[];
 }
 
-export interface WasmFunctionCall extends WasmAstNode {
-  type: "FunctionCall";
-  name: string;
+interface WasmFunctionCallBase extends WasmAstNode {
   stackFrameSetup: WasmStatement[]; // wasm statements to set up the stack for this wasm function call (params, and locals)
   stackFrameTearDown: WasmStatement[]; // statements teardown the stack frame
+}
+
+// Function calls by function label using "call"
+export interface WasmFunctionCall extends WasmFunctionCallBase {
+  type: "FunctionCall";
+  name: string;
+}
+
+// Function calls by function index in function table using "call_indirect"
+export interface WasmIndirectFunctionCall extends WasmFunctionCallBase {
+  type: "IndirectFunctionCall";
+  index: WasmExpression; // the index of the function to call
 }
 
 /**
@@ -43,7 +53,6 @@ export interface WasmRegularFunctionCall extends WasmAstNode {
   name: string;
   args: WasmMemoryLoad[];
 }
-
 
 export interface WasmReturnStatement extends WasmAstNode {
   type: "ReturnStatement";

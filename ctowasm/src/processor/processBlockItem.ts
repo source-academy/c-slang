@@ -8,16 +8,50 @@ import { ProcessingError, toJson } from "~src/errors";
 
 import { StatementP } from "~src/processor/c-ast/core";
 import { FunctionDefinitionP } from "~src/processor/c-ast/function";
-import { processCondition } from "~src/processor/util";
+import { getDataTypeOfExpression, processCondition } from "~src/processor/util";
 import {
   convertFunctionCallToFunctionCallP,
   processFunctionReturnStatement,
 } from "./processFunctionDefinition";
 import { ForLoopP } from "~src/processor/c-ast/statement/iterationStatement";
-import { getAssignmentMemoryStoreNodes } from "~src/processor/lvalueUtil";
+import { getAssignmentNodes } from "~src/processor/lvalueUtil";
 import { BlockItem } from "~src/parser/c-ast/core";
-import { getArithmeticPrePostfixExpressionNodes } from "~src/processor/expressionUtil";
+import {
+  determineResultDataTypeOfBinaryExpression,
+  getArithmeticPrePostfixExpressionNodes,
+} from "~src/processor/expressionUtil";
 import { processLocalDeclaration } from "~src/processor/processDeclaration";
+import processExpression from "~src/processor/processExpression";
+import { isIntegralDataType } from "~src/processor/dataTypeUtil";
+import { SwitchStatementCaseP } from "~src/processor/c-ast/statement/selectionStatement";
+import evaluateCompileTimeExpression from "~src/processor/evaluateCompileTimeExpression";
+import { addWarning } from "~src/processor/warningUtil";
+import { PrimaryDataType } from "~src/parser/c-ast/dataTypes";
+
+// some auxillary information used during processing
+let auxInfo = {
+  inLoop: false,
+  inSwitch: false,
+};
+
+export function resetProcessorAuxInfo() {
+  auxInfo = {
+    inLoop: false,
+    inSwitch: false,
+  };
+}
+
+function processLoopBody(
+  bodyStaement: BlockItem,
+  symbolTable: SymbolTable,
+  enclosingFunc: FunctionDefinitionP,
+) {
+  const originalInLoop = auxInfo.inLoop;
+  auxInfo.inLoop = true;
+  const body = processBlockItem(bodyStaement, symbolTable, enclosingFunc);
+  auxInfo.inLoop = originalInLoop;
+  return body;
+}
 
 /**
  * Visitor function for traversing C Statement AST nodes.
@@ -30,7 +64,7 @@ import { processLocalDeclaration } from "~src/processor/processDeclaration";
 export default function processBlockItem(
   node: BlockItem,
   symbolTable: SymbolTable,
-  enclosingFunc: FunctionDefinitionP
+  enclosingFunc: FunctionDefinitionP,
 ): StatementP[] {
   try {
     if (node.type === "Block") {
@@ -54,16 +88,21 @@ export default function processBlockItem(
       if (node.clause !== null && node.clause.type === "Declaration") {
         // create new scope for this declaration
         forLoopSymbolTable = new SymbolTable(symbolTable);
-        clause = processLocalDeclaration(
-          node.clause.value,
-          forLoopSymbolTable,
-          enclosingFunc
-        );
+        clause = [];
+        for (const declaration of node.clause.value) {
+          clause.push(
+            ...processLocalDeclaration(
+              declaration,
+              forLoopSymbolTable,
+              enclosingFunc,
+            ),
+          );
+        }
       } else if (node.clause !== null && node.clause.type === "Expression") {
         clause = processBlockItem(
           node.clause.value,
           forLoopSymbolTable,
-          enclosingFunc
+          enclosingFunc,
         );
       } else {
         clause = [];
@@ -72,13 +111,15 @@ export default function processBlockItem(
       const processedForLoopNode: ForLoopP = {
         type: "ForLoop",
         clause,
-        condition: processCondition(node.condition, symbolTable),
-        update: processBlockItem(
-          node.update,
-          forLoopSymbolTable,
-          enclosingFunc
-        ),
-        body: processBlockItem(node.body, forLoopSymbolTable, enclosingFunc),
+        condition:
+          node.condition !== null
+            ? processCondition(node.condition, forLoopSymbolTable)
+            : null,
+        update:
+          node.update !== null
+            ? processBlockItem(node.update, forLoopSymbolTable, enclosingFunc)
+            : [],
+        body: processLoopBody(node.body, forLoopSymbolTable, enclosingFunc),
       };
 
       return [processedForLoopNode];
@@ -87,15 +128,15 @@ export default function processBlockItem(
         {
           type: node.type,
           condition: processCondition(node.condition, symbolTable),
-          body: processBlockItem(node.body, symbolTable, enclosingFunc), // processing a block always gives array of statements
+          body: processLoopBody(node.body, symbolTable, enclosingFunc), // processing a block always gives array of statements
         },
       ];
     } else if (node.type === "ReturnStatement") {
       // there must be an enclosing func
       if (typeof enclosingFunc === "undefined") {
         throw new ProcessingError(
-          "Return statement is not valid outside of a function",
-          node.position
+          "return statement is not valid outside of a function",
+          node.position,
         );
       }
 
@@ -109,11 +150,7 @@ export default function processBlockItem(
 
       // there is an expression to return, break up the return into series of memory stores of the expression
       // in the return memory object locations
-      return processFunctionReturnStatement(
-        node.value,
-        symbolTable,
-        enclosingFunc
-      );
+      return processFunctionReturnStatement(node.value, symbolTable);
     } else if (node.type === "SelectionStatement") {
       return [
         {
@@ -122,28 +159,124 @@ export default function processBlockItem(
           ifStatements: processBlockItem(
             node.ifStatement,
             symbolTable,
-            enclosingFunc
+            enclosingFunc,
           ),
           elseStatements: node.elseStatement
             ? processBlockItem(node.elseStatement, symbolTable, enclosingFunc)
             : null,
         },
       ];
-    } else if (
-      node.type === "BreakStatement" ||
-      node.type === "ContinueStatement"
-    ) {
+    } else if (node.type === "BreakStatement") {
+      if (!auxInfo.inLoop && !auxInfo.inSwitch) {
+        throw new ProcessingError(
+          "break statement not within a switch or loop body",
+        );
+      }
       return [
         {
           type: node.type,
         },
       ];
       // start of processing Expression nodes which may have side effects
+    } else if (node.type === "ContinueStatement") {
+      if (!auxInfo.inLoop) {
+        throw new ProcessingError("continue statement not within a loop body");
+      }
+      return [
+        {
+          type: node.type,
+        },
+      ];
+      // start of processing Expression nodes which may have side effects
+    } else if (node.type === "SwitchStatement") {
+      const processedTargetExpression = processExpression(
+        node.targetExpression,
+        symbolTable,
+      );
+      const dataTypeOfTargetExpression = getDataTypeOfExpression({
+        expression: processedTargetExpression,
+      });
+      if (!isIntegralDataType(dataTypeOfTargetExpression)) {
+        throw new ProcessingError("switch quantity is not an integer");
+      }
+
+      if (node.cases.length === 0 && node.defaultStatements.length === 0) {
+        // empty switch statement, just process the expression as block item
+        return processBlockItem(
+          node.targetExpression,
+          symbolTable,
+          enclosingFunc,
+        );
+      }
+
+      const originalInSwitch = auxInfo.inSwitch;
+      auxInfo.inSwitch = true;
+      const processedCases: SwitchStatementCaseP[] = [];
+      for (const switchStatementCase of node.cases) {
+        const dataTypeOfLabel = getDataTypeOfExpression({
+          expression: processExpression(
+            switchStatementCase.conditionMatch,
+            symbolTable,
+            enclosingFunc,
+          ),
+        });
+        if (!isIntegralDataType(dataTypeOfLabel)) {
+          throw new ProcessingError(
+            "case value not an integer constant expression",
+            switchStatementCase.position,
+          );
+        }
+        const evaluatedConstant = evaluateCompileTimeExpression(
+          switchStatementCase.conditionMatch,
+        );
+        const processedStatements: StatementP[] = [];
+        for (const statement of switchStatementCase.statements) {
+          processedStatements.push(
+            ...processBlockItem(statement, symbolTable, enclosingFunc),
+          );
+        }
+        // the conditon of each switch case is adjusted to be a relational expression: targetExpression == case value
+        const dataTypeOfSwitchCaseOperandAndTarget = (
+          determineResultDataTypeOfBinaryExpression(
+            dataTypeOfTargetExpression as PrimaryDataType,
+            dataTypeOfLabel as PrimaryDataType,
+            "==",
+          ) as PrimaryDataType
+        ).primaryDataType;
+        processedCases.push({
+          condition: {
+            type: "BinaryExpression",
+            leftExpr: processedTargetExpression.exprs[0],
+            rightExpr: evaluatedConstant,
+            operator: "==",
+            operandTargetDataType: dataTypeOfSwitchCaseOperandAndTarget,
+            dataType: dataTypeOfSwitchCaseOperandAndTarget,
+          },
+          statements: processedStatements,
+        });
+      }
+      const processedDefaultStatements: StatementP[] = [];
+      for (const defaultStatement of node.defaultStatements) {
+        processedDefaultStatements.push(
+          ...processBlockItem(defaultStatement, symbolTable, enclosingFunc),
+        );
+      }
+      auxInfo.inSwitch = originalInSwitch;
+      return [
+        {
+          type: "SwitchStatement",
+          targetExpression: processedTargetExpression.exprs[0], // since processedtargetexpression has integer type, only has one primary data expression
+          cases: processedCases,
+          defaultStatements: processedDefaultStatements,
+        },
+      ];
     } else if (node.type === "Assignment") {
-      return getAssignmentMemoryStoreNodes(node, symbolTable);
+      return getAssignmentNodes(node, symbolTable).memoryStoreStatements;
     } else if (node.type === "FunctionCall") {
       // in this context, the return (if any) of the functionCall is ignored, as it is used as a statement
-      return [convertFunctionCallToFunctionCallP(node, symbolTable)];
+      return [
+        convertFunctionCallToFunctionCallP(node, symbolTable).functionCallP,
+      ];
     } else if (
       node.type === "PrefixExpression" ||
       node.type === "PostfixExpression"
@@ -153,8 +286,36 @@ export default function processBlockItem(
         return getArithmeticPrePostfixExpressionNodes(node, symbolTable)
           .storeNodes;
       } else {
+        processExpression(node, symbolTable, enclosingFunc);
         return [];
       }
+    } else if (node.type === "CommaSeparatedExpressions") {
+      const processedExpressions: StatementP[] = [];
+      node.expressions.forEach((e) => {
+        processedExpressions.push(
+          ...processBlockItem(e, symbolTable, enclosingFunc),
+        );
+      });
+      return processedExpressions;
+    } else if (node.type === "ConditionalExpression") {
+      processExpression(node, symbolTable, enclosingFunc);
+      // break this conditional into a simple if else expression (expressions inside condtional may have side effects)
+      return [
+        {
+          type: "SelectionStatement",
+          condition: processCondition(node.condition, symbolTable),
+          ifStatements: processBlockItem(
+            node.trueExpression,
+            symbolTable,
+            enclosingFunc,
+          ),
+          elseStatements: processBlockItem(
+            node.falseExpression,
+            symbolTable,
+            enclosingFunc,
+          ),
+        },
+      ];
     } else if (
       node.type === "AddressOfExpression" ||
       node.type === "BinaryExpression" ||
@@ -162,17 +323,23 @@ export default function processBlockItem(
       node.type === "IntegerConstant" ||
       node.type === "IdentifierExpression" ||
       node.type === "PointerDereference" ||
-      node.type === "SizeOfExpression"
+      node.type === "SizeOfExpression" ||
+      node.type === "StructMemberAccess"
     ) {
+      addWarning("statement with no effect", node.position);
+      processExpression(node, symbolTable, enclosingFunc);
       // all these expression statements can be safely ignored as they have no side effects
       return [];
-    } else if (node.type === "Declaration") {
+    } else if (node.type === "StringLiteral") {
+      addWarning("statement with no effect", node.position);
+      return [];
+    } else if (node.type === "Declaration" || node.type === "EnumDeclaration") {
       return processLocalDeclaration(node, symbolTable, enclosingFunc);
     } else {
-      throw new ProcessingError(`Unhandled C AST node: ${toJson(node)}`);
+      throw new ProcessingError(`unhandled C AST node: ${toJson(node)}`);
     }
   } catch (e) {
-    if (e instanceof ProcessingError) {
+    if (e instanceof ProcessingError && e.position === null) {
       e.addPositionInfo(node.position);
     }
     throw e;

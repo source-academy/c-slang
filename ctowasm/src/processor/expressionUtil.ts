@@ -4,125 +4,175 @@
 
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
 
-import {
-  priamryDataTypeSizes,
-  isFloatType,
-  isIntegerType,
-} from "~src/common/utils";
+import { primaryDataTypeSizes } from "~src/common/utils";
 import {
   DataType,
-  PointerDataType,
   PrimaryDataType,
   ScalarDataType,
 } from "~src/parser/c-ast/dataTypes";
 import { ExpressionWrapperP } from "~src/processor/c-ast/expression/expressions";
 import { ProcessingError } from "~src/errors";
 import {
-  areDataTypesEqual,
-  isArithmeticType,
-  isScalarType,
-  unpackDataType,
+  getDataTypeSize,
+  isArithmeticDataType,
+  isIntegralDataType,
+  isVoidPointer,
+  isScalarDataType,
+  getIntegerPromotedDataType,
+  isFloatDataType,
+  isPointer,
 } from "~src/processor/dataTypeUtil";
 import {
-  PointerDereference,
   PostfixExpression,
   PrefixExpression,
 } from "~src/parser/c-ast/expression/unaryExpression";
 import { SymbolTable } from "~src/processor/symbolTable";
 import processExpression from "~src/processor/processExpression";
-import {
-  Address,
-  DynamicAddress,
-  MemoryLoad,
-  MemoryStore,
-} from "~src/processor/c-ast/memory";
-import { createMemoryOffsetIntegerConstant } from "~src/processor/util";
-import { IntegerConstantP } from "~src/processor/c-ast/expression/constants";
+import { MemoryLoad, MemoryStore } from "~src/processor/c-ast/memory";
+import { getDataTypeOfExpression } from "~src/processor/util";
+import { checkPrePostfixTypeConstraint } from "~src/processor/constraintChecks";
+import { PTRDIFF_T } from "~src/common/constants";
+
+function isRelationalOperator(op: BinaryOperator) {
+  return (
+    op === "!=" ||
+    op === "<" ||
+    op === "<=" ||
+    op === "==" ||
+    op === ">=" ||
+    op === ">"
+  );
+}
+
+function isLogicalOperator(op: BinaryOperator) {
+  return op === "&&" || op === "||";
+}
 
 /**
- * Returns the correct varaible type for a binary expression accorsinf to rules of arithemetic conversion 6.3.1.8 in C17 standard.
- * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
+ * Extracts the ScalarCDataType of a dataType.
+ * @throws ProcessingError if the argument is not actually scalar data type.
  */
-export function determineDataTypeOfBinaryExpression(
+export function convertDataTypeToScalarCDataType(
+  dataType: DataType,
+): ScalarCDataType {
+  if (
+    dataType.type !== "pointer" &&
+    dataType.type !== "primary" &&
+    dataType.type !== "array"
+  ) {
+    throw new ProcessingError("non scalar data type");
+  }
+  return dataType.type === "pointer" || dataType.type === "array"
+    ? "pointer"
+    : dataType.primaryDataType;
+}
+
+/**
+ * Determine the overall datatype of a ConditionalExpression (e.g. 1 ? 2 : 3).
+ * Follows the rules in 6.5.15 of C17 standard.
+ * Can assume valid combination of types, as constraints would have been checked already.
+ */
+export function determineConditionalExpressionDataType(
   leftExprDataType: DataType,
   rightExprDataType: DataType,
-  operator: BinaryOperator
-): ScalarDataType {
-  if (!isScalarType(leftExprDataType) || !isScalarType(rightExprDataType)) {
-    throw new ProcessingError(
-      `'${operator}' expression cannot be performed on non-scalar type`
+): DataType {
+  if (
+    isArithmeticDataType(leftExprDataType) &&
+    isArithmeticDataType(rightExprDataType)
+  ) {
+    return performArithmeticConversions(
+      leftExprDataType as PrimaryDataType,
+      rightExprDataType as PrimaryDataType,
     );
   }
-
-  leftExprDataType = leftExprDataType as PointerDataType | PrimaryDataType;
-  rightExprDataType = rightExprDataType as PointerDataType | PrimaryDataType;
-
-  if (leftExprDataType.type === "pointer") {
-    if (operator !== "+" && operator !== "-") {
-      throw new ProcessingError(
-        `Left operand to binary '${operator}' expression cannot be a pointer`
-      );
-    }
-    if (operator === "+") {
-      if (rightExprDataType.type === "pointer") {
-        throw new ProcessingError("Addition between 2 pointers is not allowed");
-      } else if (!isIntegerType(rightExprDataType.primaryDataType)) {
-        throw new ProcessingError(
-          "Cannot add a non-integral type to a pointer"
-        );
-      }
-    } else {
-      if (!areDataTypesEqual(leftExprDataType, rightExprDataType)) {
-        throw new ProcessingError(
-          `Left operand and right operand of binary expression do not point to the same type`
-        );
-      }
-    }
+  if (leftExprDataType.type === "struct" || leftExprDataType.type === "void") {
     return leftExprDataType;
   }
-
-  if (rightExprDataType.type === "pointer") {
-    if (operator !== "+") {
-      throw new ProcessingError(
-        `Right operand of '${operator}' binary expression cannot be a pointer`
-      );
-    }
-    if (!isIntegerType(leftExprDataType.primaryDataType)) {
-      throw new ProcessingError("Cannot add a non-integral type to a pointer");
-    }
-    return rightExprDataType;
+  if (isVoidPointer(leftExprDataType) || isVoidPointer(rightExprDataType)) {
+    return {
+      type: "pointer",
+      pointeeType: {
+        isConst: leftExprDataType.isConst || rightExprDataType.isConst,
+        type: "void",
+      },
+    };
   }
+  // at least one of the operands must be non void pointer (other might be the same pointer, of a null pointer constant)
+  if (isPointer(leftExprDataType)) {
+    return {
+      ...leftExprDataType,
+      isConst: leftExprDataType.isConst || rightExprDataType.isConst,
+    };
+  }
+  if (isPointer(rightExprDataType)) {
+    return {
+      ...rightExprDataType,
+      isConst: leftExprDataType.isConst || rightExprDataType.isConst,
+    };
+  }
+  // shouldnt happen
+  throw new Error(
+    "determineConditionalExpressionDataType(): error in function",
+  );
+}
 
+/**
+ * Determines the type that operands in a binary expression should be converted to before the operation,
+ * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
+ * Follows integer promition rules for integral types. Promotion follows by size of the variable (larger size = higher rank)
+ * The data type of all relational operator expressions is signed int, as per the standard.
+ */
+export function determineOperandTargetDataTypeOfBinaryExpression(
+  leftExprDataType: ScalarDataType,
+  rightExprDataType: ScalarDataType,
+  operator: BinaryOperator,
+): ScalarDataType {
+  // no need to check for validity of operand types, as this will have been checked before the function was called
+  // if either data type are pointers, then target data type is pointer (unsigned int)
+  // if both are pointer, it can only be a subtraction, in which case the resultant data type is PTRDIFF
   if (
-    isFloatType(leftExprDataType.primaryDataType) &&
-    isFloatType(rightExprDataType.primaryDataType)
+    leftExprDataType.type === "pointer" &&
+    rightExprDataType.type === "pointer"
   ) {
+    return {
+      type: "primary",
+      primaryDataType: PTRDIFF_T,
+    };
+  } else if (leftExprDataType.type === "pointer") {
+    return leftExprDataType;
+  } else if (rightExprDataType.type === "pointer") {
+    return rightExprDataType;
+  } else if (operator === "<<" || operator === ">>") {
+    return leftExprDataType;
+  }
+  return performArithmeticConversions(leftExprDataType, rightExprDataType);
+}
+
+export function performArithmeticConversions(
+  leftExprDataType: PrimaryDataType,
+  rightExprDataType: PrimaryDataType,
+): PrimaryDataType {
+  if (isFloatDataType(leftExprDataType) && isFloatDataType(rightExprDataType)) {
     // take more higher ranking float type
     if (
-      priamryDataTypeSizes[rightExprDataType.primaryDataType] >
-      priamryDataTypeSizes[leftExprDataType.primaryDataType]
+      primaryDataTypeSizes[leftExprDataType.primaryDataType] >
+      primaryDataTypeSizes[rightExprDataType.primaryDataType]
     ) {
       return leftExprDataType;
     } else {
       return rightExprDataType;
     }
-  } else if (isFloatType(leftExprDataType.primaryDataType)) {
+  } else if (isFloatDataType(leftExprDataType)) {
     // float types have greater precedence than any integer types
     return leftExprDataType;
-  } else if (isFloatType(rightExprDataType.primaryDataType)) {
+  } else if (isFloatDataType(rightExprDataType)) {
     return rightExprDataType;
   } else {
-    // both types are integers
-    // special handling for bitwise shift, which does not follow usual arithmetic implicit conversion rules
-    if (operator === "<<" || operator === ">>") {
-      return leftExprDataType;
-    }
-
     if (
-      priamryDataTypeSizes[rightExprDataType.primaryDataType] >
-      priamryDataTypeSizes[leftExprDataType.primaryDataType]
+      primaryDataTypeSizes[leftExprDataType.primaryDataType] >
+      primaryDataTypeSizes[rightExprDataType.primaryDataType]
     ) {
-      return rightExprDataType;
+      return leftExprDataType;
     } else {
       return rightExprDataType;
     }
@@ -130,68 +180,27 @@ export function determineDataTypeOfBinaryExpression(
 }
 
 /**
- * Details of the memory of the pointer expression that is being dereferenced.
+ * Returns the correct variable type for both the result of a binary expression,
+ * according to rules of arithemetic conversion 6.3.1.8 in C17 standard.
+ * This should be the same as the operand target data type, except for relational operators.
+ *
  */
-interface DerefExpressionMemoryDetails {
-  originalDataType: DataType; // data type after dereferencing
-  primaryMemoryObjectDetails: {
-    dataType: ScalarCDataType;
-    address: DynamicAddress;
-  }[];
-}
-
-/**
- * Get the details of the primary memory objects of a dereferenced expression.
- */
-export function getDerefExpressionMemoryDetails(
-  expr: PointerDereference,
-  symbolTable: SymbolTable
-): DerefExpressionMemoryDetails {
-  // process the expression being dereferenced first
-  const derefedExpression = processExpression(expr, symbolTable);
-
-  if (derefedExpression.originalDataType.type !== "pointer") {
-    throw new ProcessingError(`Cannot dereference non-pointer type`);
+export function determineResultDataTypeOfBinaryExpression(
+  leftExprDataType: ScalarDataType,
+  rightExprDataType: ScalarDataType,
+  operator: BinaryOperator,
+): ScalarDataType {
+  if (isRelationalOperator(operator) || isLogicalOperator(operator)) {
+    return {
+      type: "primary",
+      primaryDataType: "signed int",
+    };
   }
-
-  if (derefedExpression.originalDataType.pointeeType === null) {
-    throw new ProcessingError(`Cannot dereference void pointer`);
-  }
-
-  const memoryDetails: DerefExpressionMemoryDetails = {
-    originalDataType: derefedExpression.originalDataType.pointeeType,
-    primaryMemoryObjectDetails: [],
-  };
-
-  // the expression being derefed cannot have more than 1 primary data expresssion as it is a pointer
-  // this shouldnt happen - just a sanity check
-  if (derefedExpression.exprs.length !== 1) {
-    throw new ProcessingError("Invalid dereference");
-  }
-
-  const unpackedDataType = unpackDataType(derefedExpression.originalDataType);
-
-  for (let i = 0; i < unpackedDataType.length; ++i) {
-    const primaryDataObject = unpackedDataType[i];
-    memoryDetails.primaryMemoryObjectDetails.push({
-      dataType: primaryDataObject.dataType,
-      address: {
-        type: "DynamicAddress",
-        address: {
-          type: "BinaryExpression",
-          leftExpr: derefedExpression.exprs[0],
-          rightExpr: createMemoryOffsetIntegerConstant(
-            primaryDataObject.offset
-          ),
-          dataType: "pointer",
-          operator: "+",
-        }, // add the offset of the original symbol
-        dataType: primaryDataObject.dataType,
-      },
-    });
-  }
-
-  return memoryDetails;
+  return determineOperandTargetDataTypeOfBinaryExpression(
+    leftExprDataType,
+    rightExprDataType,
+    operator,
+  );
 }
 
 /**
@@ -199,119 +208,61 @@ export function getDerefExpressionMemoryDetails(
  */
 export function getArithmeticPrePostfixExpressionNodes(
   expr: PrefixExpression | PostfixExpression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): { storeNodes: MemoryStore[]; loadNode: MemoryLoad; dataType: DataType } {
-  const memoryStoreNodes: MemoryStore[] = [];
-  let memoryLoad: MemoryLoad;
-  let dataType: DataType;
-
   const binaryOperator = expr.operator === "++" ? "+" : "-";
+  const processedExpr = processExpression(expr.expr, symbolTable);
+  checkPrePostfixTypeConstraint(expr, processedExpr, symbolTable);
+  const dataType = getDataTypeOfExpression({
+    expression: processedExpr,
+  });
 
-  // the integer constant with value 1 being used to perform increment/decrement
-  const oneConstant: IntegerConstantP = {
-    type: "IntegerConstant",
-    value: 1n,
-    dataType: "signed int", //TODO: check this type
-  };
-
-  if (expr.expr.type === "IdentifierExpression") {
-    const symbolEntry = symbolTable.getSymbolEntry(expr.expr.name);
-
-    if (
-      symbolEntry.type === "function" ||
-      (symbolEntry.dataType.type !== "pointer" &&
-        symbolEntry.dataType.type !== "primary")
-    ) {
-      throw new ProcessingError(
-        "wrong type argument in increment or decrement expression"
-      );
-    }
-
-    const unpackedDataType = unpackDataType(symbolEntry.dataType); // will only have 1 element in array since primary/pointer type
-
-    const identifierAddress: Address = {
-      type:
-        symbolEntry.type === "localVariable"
-          ? "LocalAddress"
-          : "DataSegmentAddress",
-      offset: createMemoryOffsetIntegerConstant(symbolEntry.offset), // add the offset of the original symbol
-      dataType: unpackedDataType[0].dataType,
-    };
-
-    memoryLoad = {
-      type: "MemoryLoad",
-      address: identifierAddress,
-      dataType: unpackedDataType[0].dataType,
-    };
-
-    dataType = symbolEntry.dataType;
-
-    memoryStoreNodes.push({
-      type: "MemoryStore",
-      address: identifierAddress,
-      dataType: unpackedDataType[0].dataType,
-      value: {
-        type: "BinaryExpression",
-        leftExpr: memoryLoad,
-        rightExpr: oneConstant,
-        dataType: unpackedDataType[0].dataType,
-        operator: binaryOperator,
-      },
-    });
-  } else if (expr.expr.type === "PointerDereference") {
-    // process the expression being dereferenced first
-    const derefedExpressionMemoryDetails = getDerefExpressionMemoryDetails(
-      expr.expr,
-      symbolTable
-    );
-
-    if (
-      derefedExpressionMemoryDetails.originalDataType.type !== "pointer" &&
-      derefedExpressionMemoryDetails.originalDataType.type !== "primary"
-    ) {
-      throw new ProcessingError(
-        "wrong type argument in increment or decrement expression"
-      );
-    }
-
-    // sanity check - derefedExpressionMemoryDetails should only have one primary memory object as it is scalar type
-    if (derefedExpressionMemoryDetails.primaryMemoryObjectDetails.length > 1) {
-      throw new ProcessingError("Invalid increment/decrement expression");
-    }
-
-    memoryLoad = {
-      type: "MemoryLoad",
-      address:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].address,
-      dataType:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
-    };
-
-    dataType = {
-      type: "pointer",
-      pointeeType: derefedExpressionMemoryDetails.originalDataType,
-    };
-
-    memoryStoreNodes.push({
-      type: "MemoryStore",
-      address:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].address,
-      dataType:
-        derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
-      value: {
-        type: "BinaryExpression",
-        leftExpr: memoryLoad,
-        rightExpr: oneConstant,
-        dataType:
-          derefedExpressionMemoryDetails.primaryMemoryObjectDetails[0].dataType,
-        operator: binaryOperator,
-      },
-    });
-  } else {
+  // do some checks on the operand
+  // simply use the load exprs from the processed expr to create the memory store staements
+  if (processedExpr.exprs[0].type !== "MemoryLoad") {
     throw new ProcessingError(
-      "lvalue required for increment or decrement expression"
+      `lvalue required for '${expr.operator}' expression`,
     );
+  } else if (processedExpr.exprs.length > 1) {
+    throw new ProcessingError(
+      `'${expr.operator}' expression operand must be a scalar type`,
+    );
+  } else if (isVoidPointer(dataType)) {
+    throw new ProcessingError(`cannot perform arithmetic on void pointer`);
   }
+
+  let amountToIncrementBy;
+  if (dataType.type === "pointer") {
+    amountToIncrementBy = BigInt(
+      getDataTypeSize(dataType.pointeeType as DataType),
+    );
+  } else if (dataType.type === "array") {
+    // need increment the underying expression (a pointer) by size of array
+    amountToIncrementBy = BigInt(getDataTypeSize(dataType));
+  } else {
+    amountToIncrementBy = 1n;
+  }
+
+  const memoryLoad = processedExpr.exprs[0] as MemoryLoad;
+  const memoryStoreNodes: MemoryStore[] = [
+    {
+      type: "MemoryStore",
+      address: memoryLoad.address,
+      value: {
+        type: "BinaryExpression",
+        leftExpr: memoryLoad,
+        rightExpr: {
+          type: "IntegerConstant",
+          value: amountToIncrementBy,
+          dataType: "signed int",
+        },
+        dataType: memoryLoad.dataType,
+        operandTargetDataType: memoryLoad.dataType,
+        operator: binaryOperator,
+      },
+      dataType: memoryLoad.dataType,
+    },
+  ];
 
   return {
     loadNode: memoryLoad,
@@ -322,7 +273,7 @@ export function getArithmeticPrePostfixExpressionNodes(
 
 export function processPrefixExpression(
   prefixExpression: PrefixExpression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): ExpressionWrapperP {
   if (
     prefixExpression.operator === "++" ||
@@ -344,41 +295,59 @@ export function processPrefixExpression(
   } else {
     const processedExpression = processExpression(
       prefixExpression.expr,
-      symbolTable
+      symbolTable,
     );
-
-    // check constraints for each opeartor as per 6.5.3.3 of C standard
+    const dataType = getDataTypeOfExpression({
+      expression: processedExpression,
+    });
+    // check constraints for each opeartor as per 6.5.3.3/1 of C standard
     if (
       (prefixExpression.operator === "+" ||
         prefixExpression.operator === "-") &&
-      !isArithmeticType(processedExpression.originalDataType)
+      !isArithmeticDataType(dataType)
     ) {
       throw new ProcessingError(
-        `Arithmetic operand required in prefix '${prefixExpression.operator}' expression`
+        `wrong type argument to unary '${prefixExpression.operator}' expression; arithmetic type required`,
       );
     } else if (
       prefixExpression.operator === "~" &&
-      (processedExpression.originalDataType.type !== "primary" ||
-        !isIntegerType(processedExpression.originalDataType.primaryDataType))
+      !isIntegralDataType(dataType)
     ) {
       throw new ProcessingError(
-        `Integer-type operand required in prefix '${prefixExpression.operator}' expression`
+        `wrong type argument in unary '${prefixExpression.operator}' expression; integer type required`,
       );
     } else if (
       prefixExpression.operator === "!" &&
-      !isScalarType(processedExpression.originalDataType)
+      !isScalarDataType(dataType)
     ) {
       throw new ProcessingError(
-        `Scalar operand required in prefix '${prefixExpression.operator}' expression`
+        `wrong type argument in unary '${prefixExpression.operator}' expression; scalar type required`,
       );
     }
 
     if (prefixExpression.operator === "+") {
-      // "+" does nothing
+      // "+" does nothing except integer promotion
+      processedExpression.originalDataType = getIntegerPromotedDataType(
+        processedExpression.originalDataType,
+      );
       return processedExpression;
     } else {
+      let resultDataType: DataType;
+      switch (prefixExpression.operator) {
+        case "-":
+        case "~":
+          resultDataType = getIntegerPromotedDataType(
+            processedExpression.originalDataType,
+          );
+          break;
+        case "!":
+          resultDataType = {
+            type: "primary",
+            primaryDataType: "signed int",
+          };
+      }
       return {
-        originalDataType: processedExpression.originalDataType,
+        originalDataType: resultDataType,
         exprs: [
           {
             type: "UnaryExpression",
@@ -394,7 +363,7 @@ export function processPrefixExpression(
 
 export function processPostfixExpression(
   postfixExpression: PostfixExpression,
-  symbolTable: SymbolTable
+  symbolTable: SymbolTable,
 ): ExpressionWrapperP {
   const { loadNode, storeNodes, dataType } =
     getArithmeticPrePostfixExpressionNodes(postfixExpression, symbolTable);

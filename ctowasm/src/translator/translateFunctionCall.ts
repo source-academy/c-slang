@@ -10,38 +10,54 @@ import translateExpression from "~src/translator/translateExpression";
 import { WasmExpression } from "~src/translator/wasm-ast/core";
 import {
   WasmFunctionCall,
-  WasmRegularFunctionCall,
+  WasmIndirectFunctionCall,
 } from "~src/translator/wasm-ast/functions";
-import {
-  FunctionCallP,
-} from "~src/processor/c-ast/function";
-import { UnsupportedFeatureError } from "~src/errors";
+import { FunctionCallP } from "~src/processor/c-ast/function";
+import { TranslationError } from "~src/errors";
+import { POINTER_TYPE } from "~src/common/constants";
 
 export default function translateFunctionCall(
-  node: FunctionCallP
-): WasmFunctionCall {
-
+  node: FunctionCallP,
+): WasmFunctionCall | WasmIndirectFunctionCall {
   // translate the arguments
   const functionArgs: WasmExpression[] = [];
-  for (let i = 0; i < node.calledFunction.functionDetails.parameters.length; ++i) {
+  for (let i = 0; i < node.functionDetails.parameters.length; ++i) {
     functionArgs.push(
-      translateExpression(node.args[i], node.calledFunction.functionDetails.parameters[i].dataType)
+      translateExpression(
+        node.args[i],
+        node.functionDetails.parameters[i].dataType,
+      ),
     );
   }
 
-  if (node.calledFunction.type === "FunctionName") {
+  const stackFrameSetup = getFunctionCallStackFrameSetupStatements(
+    node.functionDetails,
+    functionArgs,
+  );
+
+  const stackFrameTearDown = getFunctionCallStackFrameTeardownStatements(
+    node.functionDetails,
+  );
+
+  if (node.calledFunction.type === "DirectlyCalledFunction") {
     return {
       type: "FunctionCall",
-      name: node.calledFunction.name,
-      stackFrameSetup: getFunctionCallStackFrameSetupStatements(
-        node.calledFunction.functionDetails,
-        functionArgs
+      name: node.calledFunction.functionName,
+      stackFrameSetup,
+      stackFrameTearDown,
+    };
+  } else if (node.calledFunction.type === "IndirectlyCalledFunction") {
+    return {
+      type: "IndirectFunctionCall",
+      index: translateExpression(
+        node.calledFunction.functionAddress,
+        POINTER_TYPE,
       ),
-      stackFrameTearDown: getFunctionCallStackFrameTeardownStatements(
-        node.calledFunction.functionDetails
-      ),
-      };
+      stackFrameSetup,
+      stackFrameTearDown,
+    };
   } else {
-    throw new UnsupportedFeatureError("Function pointers not yet supported");
+    console.assert(false, "translateFunctionCall(): unreachable block");
+    throw new TranslationError("");
   }
 }

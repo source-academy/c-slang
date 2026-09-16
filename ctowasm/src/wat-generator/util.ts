@@ -2,6 +2,8 @@
  * Utility functions for WAT generation.
  */
 
+import { REG_2, REG_F32, REG_F64, REG_I64 } from "~src/translator/memoryUtil";
+import { WasmBranchTable } from "~src/translator/wasm-ast/control";
 import { WasmExpression, WasmStatement } from "~src/translator/wasm-ast/core";
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
 import generateWatExpression from "~src/wat-generator/generateWatExpression";
@@ -31,7 +33,7 @@ export function generateBlock(block: string, indentation: number) {
  */
 export function getWasmMemoryLoadInstruction(
   varType: WasmDataType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -44,7 +46,7 @@ export function getWasmMemoryLoadInstruction(
 
 export function getWasmMemoryStoreInstruction(
   varType: WasmDataType,
-  numOfBytes: number
+  numOfBytes: number,
 ) {
   if (
     ((varType === "i32" || varType === "f32") && numOfBytes === 4) ||
@@ -61,18 +63,45 @@ export function getWasmMemoryStoreInstruction(
  * the subexpressions that form the stack values.
  */
 export function generateArgString(exprs: WasmExpression[]) {
+  if (exprs.length === 0) {
+    return "";
+  }
   let argsStr = "";
   for (const arg of exprs) {
     argsStr += generateWatExpression(arg) + " ";
   }
-  return argsStr.trim();
+  return " " + argsStr.trim();
 }
 
 /**
  * Given an array of WASM statement AST nodes, returns a list of WAT statements.
  */
-export function generateStatementsList(
-  statements: WasmStatement[]
-) {
+export function generateStatementsList(statements: WasmStatement[]) {
   return statements.map((s) => generateWatStatement(s)).join(" ");
+}
+
+export function generateBranchTableInstruction(branchTable: WasmBranchTable) {
+  let indexes = "";
+  for (let i = 0; i <= branchTable.maxIndex; ++i) {
+    indexes += `${i} `;
+  }
+  return `(br_table ${indexes}${generateWatExpression(
+    branchTable.indexExpression,
+  )})`;
+}
+
+/**
+ * Returns the name of temp psuedo register for storing temp value of given wasm data type.
+ */
+export function getTempRegister(wasmDataType: WasmDataType) {
+  switch (wasmDataType) {
+    case "i32":
+      return REG_2;
+    case "i64":
+      return REG_I64;
+    case "f32":
+      return REG_F32;
+    case "f64":
+      return REG_F64;
+  }
 }

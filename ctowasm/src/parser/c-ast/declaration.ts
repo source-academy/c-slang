@@ -12,9 +12,21 @@ export interface InitializerSingle extends CNodeBase {
   type: "InitializerSingle";
   value: Expression;
 }
-export interface Declaration extends CNodeBase {
+
+export type Declaration = VariableDeclaration | EnumDeclaration;
+
+export interface VariableDeclaration extends CNodeBase {
   type: "Declaration";
   dataType: DataType;
+  storageClass: "auto" | "static"; // should be auto by default
   name: string;
   initializer?: Initializer; // a declaration may be optionally initialized
+}
+
+/**
+ * Represents a declaration of an enum.
+ */
+export interface EnumDeclaration extends CNodeBase {
+  type: "EnumDeclaration";
+  enumerators: { name: string; value?: Expression }[];
 }

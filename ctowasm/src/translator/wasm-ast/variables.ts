@@ -3,11 +3,7 @@
  */
 
 import { WasmDataType } from "~src/translator/wasm-ast/dataTypes";
-import {
-  WasmAstNode,
-  WasmExpression,
-  WasmStatement,
-} from "~src/translator/wasm-ast/core";
+import { WasmAstNode, WasmExpression } from "~src/translator/wasm-ast/core";
 import { WasmConst } from "~src/translator/wasm-ast/consts";
 
 export interface WasmVariable extends WasmAstNode {
@@ -22,6 +18,13 @@ export interface WasmVariable extends WasmAstNode {
 export interface WasmGlobalVariable extends WasmVariable {
   type: "GlobalVariable";
   initializerValue?: WasmConst;
+}
+
+/**
+ * A wasm global variable imported from JS runtime.
+ */
+export interface WasmImportedGlobalVariable extends WasmVariable {
+  type: "ImportedGlobalVariable";
 }
 
 export interface WasmGlobalSet extends WasmAstNode {

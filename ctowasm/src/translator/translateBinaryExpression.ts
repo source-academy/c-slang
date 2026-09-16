@@ -3,21 +3,16 @@
  */
 
 import { BinaryOperator, ScalarCDataType } from "~src/common/types";
-import { ScalarDataType } from "~src/parser/c-ast/dataTypes";
 import { isUnsignedIntegerType, isSignedIntegerType } from "~src/common/utils";
-import { isScalarType } from "~src/processor/dataTypeUtil";
 import translateExpression from "~src/translator/translateExpression";
-import { getTypeConversionWrapper } from "./dataTypeUtil";
 import { convertScalarDataTypeToWasmType } from "./dataTypeUtil";
 import { WasmBinaryExpression } from "~src/translator/wasm-ast/expressions";
-import { WasmModule } from "~src/translator/wasm-ast/core";
-import { TranslationError } from "~src/errors";
 import { BinaryExpressionP } from "~src/processor/c-ast/expression/expressions";
 import { EnclosingLoopDetails } from "~src/translator/loopUtil";
 
 export default function translateBinaryExpression(
   binaryExpr: BinaryExpressionP,
-  enclosingLoopDetails?: EnclosingLoopDetails
+  enclosingLoopDetails?: EnclosingLoopDetails,
 ): WasmBinaryExpression {
   // special handling for && and || since wasm does not have native instructions for these operations
   if (binaryExpr.operator === "&&" || binaryExpr.operator === "||") {
@@ -26,17 +21,29 @@ export default function translateBinaryExpression(
       type: "BinaryExpression",
       leftExpr: {
         type: "BooleanExpression",
-        expr: translateExpression(binaryExpr.leftExpr, binaryExpr.leftExpr.dataType, enclosingLoopDetails),
-        wasmDataType: convertScalarDataTypeToWasmType(binaryExpr.leftExpr.dataType),
+        expr: translateExpression(
+          binaryExpr.leftExpr,
+          binaryExpr.leftExpr.dataType,
+          enclosingLoopDetails,
+        ),
+        wasmDataType: convertScalarDataTypeToWasmType(
+          binaryExpr.leftExpr.dataType,
+        ),
       },
       rightExpr: {
         type: "BooleanExpression",
-        expr: translateExpression(binaryExpr.rightExpr, binaryExpr.rightExpr.dataType, enclosingLoopDetails),
-        wasmDataType: convertScalarDataTypeToWasmType(binaryExpr.rightExpr.dataType),
+        expr: translateExpression(
+          binaryExpr.rightExpr,
+          binaryExpr.rightExpr.dataType,
+          enclosingLoopDetails,
+        ),
+        wasmDataType: convertScalarDataTypeToWasmType(
+          binaryExpr.rightExpr.dataType,
+        ),
       },
       instruction: getBinaryExpressionInstruction(
         binaryExpr.operator,
-        binaryExpr.dataType
+        binaryExpr.dataType,
       ),
     };
   }
@@ -44,17 +51,21 @@ export default function translateBinaryExpression(
   return {
     type: "BinaryExpression",
     // perform implicit arithmetic type conversions
-    leftExpr: 
-      translateExpression(binaryExpr.leftExpr, binaryExpr.dataType, enclosingLoopDetails)
-    ,
-    rightExpr: 
-      translateExpression(binaryExpr.rightExpr, binaryExpr.dataType, enclosingLoopDetails),
+    leftExpr: translateExpression(
+      binaryExpr.leftExpr,
+      binaryExpr.operandTargetDataType,
+      enclosingLoopDetails,
+    ),
+    rightExpr: translateExpression(
+      binaryExpr.rightExpr,
+      binaryExpr.operandTargetDataType,
+      enclosingLoopDetails,
+    ),
     instruction: getBinaryExpressionInstruction(
       binaryExpr.operator,
-      binaryExpr.dataType
+      binaryExpr.operandTargetDataType,
     ),
-    wasmDataType: convertScalarDataTypeToWasmType(binaryExpr.dataType),
-  } as WasmBinaryExpression;
+  };
 }
 
 const binaryOperatorToInstructionMap: Record<BinaryOperator, string> = {
@@ -90,26 +101,24 @@ function isOperationWithUnsignedSignedVariant(op: string) {
  */
 export function getBinaryExpressionInstruction(
   operator: BinaryOperator,
-  dataType: ScalarCDataType
+  dataType: ScalarCDataType,
 ) {
-  const createBinaryInstruction = (op: string) => {
-    const instruction = `${convertScalarDataTypeToWasmType(dataType)}.${op}`;
-    if (isOperationWithUnsignedSignedVariant(op)) {
-      // these instructions have unsigned vs signed variants for integers
-      if (isUnsignedIntegerType(dataType)) {
-        return instruction + "_u";
-      }
+  const op = binaryOperatorToInstructionMap[operator];
 
-      if (isSignedIntegerType(dataType)) {
-        return instruction + "_s";
-      }
-
-      // floats have no sign prefix
-      return instruction;
+  const instruction = `${convertScalarDataTypeToWasmType(dataType)}.${op}`;
+  if (isOperationWithUnsignedSignedVariant(op)) {
+    // these instructions have unsigned vs signed variants for integers
+    if (isUnsignedIntegerType(dataType) || dataType === "pointer") {
+      return instruction + "_u";
     }
 
-    return instruction;
-  };
+    if (isSignedIntegerType(dataType)) {
+      return instruction + "_s";
+    }
 
-  return createBinaryInstruction(binaryOperatorToInstructionMap[operator]);
+    // floats have no sign prefix
+    return instruction;
+  }
+
+  return instruction;
 }
