@@ -43,7 +43,7 @@ export default function generateWatExpression(node: WasmExpression): string {
   } else if (node.type === "NumericWrapper") {
     return `(${node.instruction} ${generateWatExpression(node.expr)})`;
   } else if (node.type === "NegateFloatExpression") {
-    return `(${node.wasmDataType}.neg ${node.expr})`;
+    return `(${node.wasmDataType}.neg ${generateWatExpression(node.expr)})`;
   } else if (node.type === "PostStatementExpression") {
     return `${generateWatExpression(node.expr)} ${generateStatementsList(
       node.statements,
