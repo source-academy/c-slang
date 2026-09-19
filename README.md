@@ -6,8 +6,8 @@ This repository consists of 2 subprojects:
 
 - ctowasm: a C compiler that generates WebAssembly code, written in TypeScript, intended for teaching C programming in a browser-only environment. 
   _Refer to the [README](ctowasm/README.md) in the ctowasm project directory for more information on ctowasm_
-- c-viz: a C code interpreter & visualizer (vendored directly into this repo; no longer a git
-  submodule, so no separate checkout step is needed)
+- c-interpreter: a C code interpreter & visualizer (originally `caipng/c-viz`, vendored directly
+  into this repo; no longer a git submodule, so no separate checkout step is needed)
 
 ## Build Instructions  
 

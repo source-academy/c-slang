@@ -11,7 +11,7 @@ import { CSyntaxError } from "../errors";
 import { TypeCheckingError } from "../typing/errors";
 
 /**
- * Coerces whatever was thrown into a message string. c-viz doesn't always throw `Error`
+ * Coerces whatever was thrown into a message string. c-interpreter doesn't always throw `Error`
  * instances -- several `typing/main.ts` sites throw bare strings.
  */
 export function messageOf(e: unknown): string {
@@ -31,7 +31,7 @@ export function toSyntaxError(e: unknown): ConductorError {
  * Wraps a `typeCheck()` failure, keeping the structured position `TypeCheckingError` carries.
  *
  * Deliberately `EvaluatorError`, not `EvaluatorTypeError`: that subclass requires structured
- * `expected`/`actual` fields c-viz's type checker doesn't produce (every `typing/main.ts` throw
+ * `expected`/`actual` fields c-interpreter's type checker doesn't produce (every `typing/main.ts` throw
  * site is just a message string) -- inventing placeholder values to fit the stricter shape would
  * be less honest than using the generic "problem in user code" bucket.
  */
@@ -43,7 +43,7 @@ export function toTypeCheckError(e: unknown): ConductorError {
 
 /**
  * Wraps a failure from stepping the `Runtime` (i.e. from inside the `while (exitCode ===
- * undefined) rt.next()` loop). No structured position yet -- c-viz's interpreter doesn't attach
+ * undefined) rt.next()` loop). No structured position yet -- c-interpreter doesn't attach
  * node position to its throws the way the type checker does; a candidate follow-up patch, not
  * done here.
  */

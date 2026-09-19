@@ -1,4 +1,4 @@
-// @sourceacademy/conductor is ESM-only (no "require" export condition), while the rest of c-viz
+// @sourceacademy/conductor is ESM-only (no "require" export condition), while the rest of c-interpreter
 // compiles to CommonJS. These imports type-check because src/conductor/tsconfig.json overrides
 // module/moduleResolution to ESM-flavored settings for this directory only (see that file) --
 // but that only makes tsc happy. Actually running this file needs a real bundle -- either
@@ -23,7 +23,7 @@ import {
 } from "./errors";
 
 /**
- * Conductor integration for c-viz. Treats each `evaluateChunk` call as "run this whole program"
+ * Conductor integration for c-interpreter. Treats each `evaluateChunk` call as "run this whole program"
  * rather than an incrementally-extended REPL chunk -- C has no REPL concept the way Scheme/Python
  * do, so that's the simplest correct mapping.
  *

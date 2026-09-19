@@ -134,4 +134,4 @@ lib/
 src/cparser.js
 .conductor-test-bundle.mjs
 .vscode/settings.json
-c-viz.code-workspace
+c-interpreter.code-workspace

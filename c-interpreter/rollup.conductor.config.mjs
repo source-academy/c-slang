@@ -3,7 +3,7 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 
-// Builds the Conductor evaluator bundles c-viz ships. Each is loaded directly into a fresh Worker
+// Builds the Conductor evaluator bundles c-interpreter ships. Each is loaded directly into a fresh Worker
 // via a blob URL -- there's no module loader present in that context, so each needs to be a fully
 // self-contained IIFE with no import/require left in the output at all. IIFE output can't be
 // split across multiple entries in one build the way esm/cjs output can (an IIFE has no mechanism
@@ -16,7 +16,7 @@ import typescript from "@rollup/plugin-typescript";
 // tsconfig.json: Rollup's own bundling works over real ES module syntax internally regardless of
 // the final output format, so the TypeScript compilation step feeding it needs an ESM-flavored
 // module setting (matching conductor-runner-example's own tsconfig) -- the root tsconfig's
-// CommonJS setting is for the rest of c-viz's unrelated Grunt/Browserify build.
+// CommonJS setting is for the rest of c-interpreter's unrelated Grunt/Browserify build.
 const entries = [
   { name: "CEvaluator", input: "src/conductor/entries/plain.ts" },
   { name: "CCseEvaluator", input: "src/conductor/entries/cse.ts" },

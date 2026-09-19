@@ -63,8 +63,8 @@ async function evaluate(source: string) {
 }
 
 async function testValidProgram() {
-  // print() is one of c-viz's built-in functions (BUILTIN_FUNCTIONS in builtins.ts) -- it's
-  // already in scope without a prototype, and c-viz doesn't support function forward
+  // print() is one of c-interpreter's built-in functions (BUILTIN_FUNCTIONS in builtins.ts) -- it's
+  // already in scope without a prototype, and c-interpreter doesn't support function forward
   // declarations at all (typing/main.ts explicitly rejects them), so this must not declare one.
   const log = await evaluate(`
     int main() { print(42); return 7; }

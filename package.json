@@ -20,10 +20,10 @@
   },
   "subPackages": [
     "ctowasm",
-    "c-viz"
+    "c-interpreter"
   ],
   "files": [
-    "c-viz/dist",
+    "c-interpreter/dist",
     "ctowasm/dist"
   ]
 }
