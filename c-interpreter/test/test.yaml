@@ -54,3 +54,51 @@ struct:
     - in: "42"
       out: "0"
       desc: structures
+short-circuit-and:
+  file: "short-circuit-and.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: "A1 (roadmap): && must not evaluate its right operand when the left is false"
+short-circuit-or:
+  file: "short-circuit-or.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: "A1 (roadmap): || must not evaluate its right operand when the left is true"
+array-decay:
+  file: "array-decay.c"
+  cases:
+    - in: "42"
+      out: "13"
+      desc: "A1 (roadmap): arr[i][j] must decay/subscript with the correct row stride"
+array-nested-write:
+  file: "array-nested-write.c"
+  cases:
+    - in: "42"
+      out: "99"
+      desc: "A1 (roadmap): writing/reading arr[0][0] on a 2D array must not throw a false strict-aliasing violation (EffectiveTypeTable fallback-depth bug, isolated from row-stride decay)"
+address-of-array-subscript:
+  file: "address-of-array-subscript.c"
+  cases:
+    - in: "42"
+      out: "77"
+      desc: "&arr[i] on a 2D array must have type pointer-to-array, not a spurious extra pointer indirection"
+address-of-array-identifier:
+  file: "address-of-array-identifier.c"
+  cases:
+    - in: "42"
+      out: "55"
+      desc: "&arr on a whole 2D array must have type pointer-to-array-of-array, not a spurious extra pointer indirection"
+address-of-struct-array-member:
+  file: "address-of-struct-array-member.c"
+  cases:
+    - in: "42"
+      out: "88"
+      desc: "&s.row on an array-typed struct member must have type pointer-to-array, not a spurious extra pointer indirection"
+array-interior-write:
+  file: "array-interior-write.c"
+  cases:
+    - in: "42"
+      out: "41"
+      desc: "arr[1][1] (a non-edge row and column, not just index-0/index-max corners) must read back the value written to it"

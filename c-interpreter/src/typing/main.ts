@@ -1198,7 +1198,15 @@ const typePostfixExpressionNode = (
         throw "invalid postfix op";
     }
 
-    return { ...t, expr, op, ...exprType };
+    return {
+      ...t,
+      expr,
+      op,
+      ...exprType,
+      start: expr.start,
+      end: o.end,
+      src: expr.src + o.src,
+    };
   });
 
 const typePrimaryExpression = (

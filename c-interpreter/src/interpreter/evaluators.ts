@@ -1,7 +1,6 @@
 import {
   ObjectTypeInfo,
   ScalarType,
-  TypeInfo,
   int,
   isArithmeticType,
   isArray,
@@ -65,6 +64,7 @@ import {
   ForInstruction,
   Instruction,
   InstructionType,
+  LogicalInstruction,
   PushInstruction,
   UnaryOpInstruction,
   WhileInstruction,
@@ -83,6 +83,7 @@ import {
   isContinueMarkInstruction,
   isExitBlockInstruction,
   isMarkInstruction,
+  logicalInstruction,
   markInstruction,
   popInstruction,
   pushInstruction,
@@ -254,6 +255,11 @@ export const ASTNodeEvaluator: {
     rt.agenda.push(cond);
   },
   BinaryExpr: (rt: Runtime, { left, op, right }: TypedBinaryExpressionNode) => {
+    if (op === "&&" || op === "||") {
+      rt.agenda.push(logicalInstruction(op, right));
+      rt.agenda.push(left);
+      return;
+    }
     rt.agenda.push(binaryOpInstruction(op));
     rt.agenda.push(right);
     rt.agenda.push(left);
@@ -375,7 +381,7 @@ export const ASTNodeEvaluator: {
     } else {
       rt.stash.pushWithoutConversions(
         new TemporaryObject(
-          pointer(applyImplicitConversions(typeInfo)),
+          pointer(typeInfo),
           BIGINT_TO_BYTES[Type.Pointer](
             BigInt(addr + relAddr),
             rt.config.endianness,
@@ -428,7 +434,7 @@ export const ASTNodeEvaluator: {
     const typeInfo = m[2];
     rt.stash.pushWithoutConversions(
       new TemporaryObject(
-        pointer(applyImplicitConversions(typeInfo)),
+        pointer(typeInfo),
         BIGINT_TO_BYTES[Type.Pointer](
           addr + BigInt(relAddr),
           rt.config.endianness,
@@ -451,11 +457,7 @@ export const ASTNodeEvaluator: {
     if (evaluateAsLvalue) {
       rt.stash.pushWithoutConversions(
         new TemporaryObject(
-          pointer(
-            isFunction(typeInfo)
-              ? typeInfo
-              : applyImplicitConversions(typeInfo),
-          ),
+          pointer(typeInfo),
           BIGINT_TO_BYTES[Type.Pointer](BigInt(address), rt.config.endianness),
         ),
       );
@@ -874,9 +876,8 @@ export const instructionEvaluator: {
         // apply usual arithmetic conversions
         throw new NotImplementedError(`bitwise binary operator '${op}'`);
       }
-      case "&&": 
+      case "&&":
       case "||": {
-        // TODO: implement short-circuit evaluation
         let isTruthy: boolean | undefined = undefined;
 
         if (isScalarType(t0) && isScalarType(t1)) {
@@ -906,6 +907,29 @@ export const instructionEvaluator: {
       }
     }
     throw new Error("unknown binary operator");
+  },
+  [InstructionType.LOGICAL]: (
+    rt: Runtime,
+    { op, right }: LogicalInstruction,
+  ) => {
+    const lo = rt.stash.pop();
+    if (!(isTemporaryObject(lo) && isScalarType(lo.typeInfo)))
+      throw new Error("expected scalar type for &&, ||");
+    const l = bytesToBigint(lo.bytes, isSigned(lo.typeInfo), rt.config.endianness);
+    const leftTruthy = l !== BigInt(0);
+    const bytes = BIGINT_TO_BYTES[Type.Int](
+      leftTruthy ? BigInt(1) : BigInt(0),
+      rt.config.endianness,
+    );
+
+    if ((op === "&&" && !leftTruthy) || (op === "||" && leftTruthy)) {
+      rt.stash.pushWithoutConversions(new TemporaryObject(int(), bytes));
+      return;
+    }
+
+    rt.agenda.push(binaryOpInstruction(op));
+    rt.agenda.push(right);
+    rt.agenda.push(pushInstruction(new TemporaryObject(int(), bytes)));
   },
   [InstructionType.POP]: (rt: Runtime) => {
     rt.stash.pop();
@@ -1241,7 +1265,7 @@ export const instructionEvaluator: {
     } else {
       rt.stash.pushWithoutConversions(
         new TemporaryObject(
-          pointer(applyImplicitConversions(l.typeInfo.referencedType)),
+          pointer(l.typeInfo.referencedType),
           BIGINT_TO_BYTES[Type.Pointer](BigInt(newAddr), rt.config.endianness),
         ),
       );
@@ -1352,16 +1376,6 @@ const evaluateInitializer = (
     i++;
     evaluateInitializer(initializer, currAddress, currType, rt);
   });
-};
-
-const applyImplicitConversions = (t: TypeInfo): TypeInfo => {
-  if (isArray(t)) {
-    return pointer(t.elementType);
-  }
-  if (isFunction(t)) {
-    return pointer(t);
-  }
-  return t;
 };
 
 const jumpTill = (rt: Runtime, pred: (i: AgendaItem) => boolean): void => {

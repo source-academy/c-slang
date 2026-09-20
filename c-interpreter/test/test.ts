@@ -53,7 +53,7 @@ for (const [testName, testSuite] of Object.entries(tests)) {
 
       it(caseName, () => {
         if (toFail) {
-          assert.throws(() => run(source), Error) 
+          assert.throws(() => run(source), Error)
         } else {
           const out = run(source);
           // writeFileSync(
@@ -66,3 +66,33 @@ for (const [testName, testSuite] of Object.entries(tests)) {
     }
   });
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const findNode = (obj: any, pred: (n: any) => boolean): any => {
+  if (obj === null || typeof obj !== "object") return undefined;
+  if (typeof obj.type === "string" && pred(obj)) return obj;
+  for (const key of Object.keys(obj)) {
+    const found = findNode(obj[key], pred);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+};
+
+describe("postfix expression position tracking", () => {
+  it("a chained subscript's inner sub-expression gets its own start/end/src, not the outer chain's", () => {
+    const source = `int arr[2][5];\n\nint main() {\n  arr[1][2] = 99;\n  return 0;\n}\n`;
+    const typed = cviz.typeCheck(cviz.parseProgram(source));
+
+    const outer = findNode(
+      typed,
+      (n) => n.type === "PostfixExpression" && n.expr?.type === "PostfixExpression",
+    );
+    assert.exists(outer, "expected to find a chained (2-op) postfix expression");
+
+    const inner = outer.expr;
+    assert.equal(outer.src.trim(), "arr[1][2]");
+    assert.equal(inner.src.trim(), "arr[1]");
+    assert.isBelow(inner.end.offset, outer.end.offset);
+    assert.equal(inner.start.offset, outer.start.offset);
+  });
+});

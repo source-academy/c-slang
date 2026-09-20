@@ -191,21 +191,18 @@ export class Memory {
     if (et === NO_EFFECTIVE_TYPE) return true;
     if (isChar(t) || isUnsignedChar(t) || isSignedChar(t)) return true;
 
-    if (t.isCompatible(et)) return true;
-    if (isSignedIntegerType(t) && getUnsignedVersion(t).isCompatible(et))
-      return true;
-    if (isUnsignedIntegerType(t) && getSignedVersion(t).isCompatible(et))
-      return true;
-
     const ot = et;
-    if (isArray(et)) et = et.elementType;
-    else if (isStructure(et)) et = et.members[0].type;
+    for (;;) {
+      if (t.isCompatible(et)) return true;
+      if (isSignedIntegerType(t) && getUnsignedVersion(t).isCompatible(et))
+        return true;
+      if (isUnsignedIntegerType(t) && getSignedVersion(t).isCompatible(et))
+        return true;
 
-    if (t.isCompatible(et)) return true;
-    if (isSignedIntegerType(t) && getUnsignedVersion(t).isCompatible(et))
-      return true;
-    if (isUnsignedIntegerType(t) && getSignedVersion(t).isCompatible(et))
-      return true;
+      if (isArray(et)) et = et.elementType;
+      else if (isStructure(et)) et = et.members[0].type;
+      else break;
+    }
 
     let err = getTypeName(ot);
     if (ot !== et) err += " or " + getTypeName(et);

@@ -27,6 +27,7 @@ export enum InstructionType {
   FOR = "For",
   BREAK_MARK = "BreakMark",
   CONTINUE_MARK = "ContinueMark",
+  LOGICAL = "Logical",
 }
 
 export interface BaseInstruction {
@@ -153,6 +154,21 @@ export const returnInstruction = (): ReturnInstruction => ({
 export const isReturnInstruction = (i: AgendaItem): i is ReturnInstruction =>
   isInstruction(i) && i.type === InstructionType.RETURN;
 
+export interface LogicalInstruction extends BaseInstruction {
+  type: InstructionType.LOGICAL;
+  op: "&&" | "||";
+  right: TypedExpression;
+}
+
+export const logicalInstruction = (
+  op: "&&" | "||",
+  right: TypedExpression,
+): LogicalInstruction => ({
+  type: InstructionType.LOGICAL,
+  op,
+  right,
+});
+
 export interface BranchInstruction extends BaseInstruction {
   type: InstructionType.BRANCH;
   exprIfTrue: TypedExpression | TypedStatement;
@@ -266,4 +282,5 @@ export type Instruction =
   | WhileInstruction
   | ForInstruction
   | BreakMarkInstruction
-  | ContinueMarkInstruction;
+  | ContinueMarkInstruction
+  | LogicalInstruction;

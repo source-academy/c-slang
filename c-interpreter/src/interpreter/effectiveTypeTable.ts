@@ -19,7 +19,10 @@ export class EffectiveTypeTable {
       this.checkNotInTable(address + i);
 
     this.table[address] = t;
+    this.addChildren(address, t);
+  }
 
+  private addChildren(address: number, t: EffectiveTypeTableEntry): void {
     if (t === NO_EFFECTIVE_TYPE || isScalarType(t)) {
       return;
     }
@@ -27,6 +30,9 @@ export class EffectiveTypeTable {
     if (isArray(t)) {
       for (let i = 1; i < t.length; i++)
         this.add(address + i * t.elementType.size, t.elementType);
+      // index 0 shares this address with the array itself, so its own
+      // sub-elements (if it's itself an aggregate) still need entries
+      this.addChildren(address, t.elementType);
       return;
     }
 
@@ -34,6 +40,7 @@ export class EffectiveTypeTable {
       t.members
         .slice(1)
         .forEach((m) => this.add(address + m.relativeAddress, m.type));
+      this.addChildren(address, t.members[0].type);
       return;
     }
 
