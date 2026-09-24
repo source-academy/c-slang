@@ -149,6 +149,7 @@ import {
   isScalarType,
   isStructure,
   isVoid,
+  longInt,
   pointer,
   voidType,
   ScalarType,
@@ -885,7 +886,10 @@ const typeBinaryExpression = (
           isPointer(t1) &&
           t0.referencedType.isCompatible(t1.referencedType)
         )
-          resType = t0;
+          // ptr - ptr yields a count of elements (ptrdiff_t), not a
+          // pointer - this codebase has no distinct ptrdiff_t type, so
+          // long stands in for it, matching pointer size.
+          resType = longInt();
         if (
           isPointer(t0) &&
           isObjectTypeInfo(t0.referencedType) &&

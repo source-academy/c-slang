@@ -102,3 +102,130 @@ array-interior-write:
     - in: "42"
       out: "41"
       desc: "arr[1][1] (a non-edge row and column, not just index-0/index-max corners) must read back the value written to it"
+bitwise-and-or-xor:
+  file: "bitwise-and-or-xor.c"
+  cases:
+    - in: "42"
+      out: "946"
+      desc: "A2 (roadmap): bitwise &, |, ^ on int operands"
+bitwise-shift-basic:
+  file: "bitwise-shift-basic.c"
+  cases:
+    - in: "42"
+      out: "12"
+      desc: "A2 (roadmap): << and >> on positive int operands"
+bitwise-shift-signedness:
+  file: "bitwise-shift-signedness.c"
+  cases:
+    - in: "42"
+      out: "2147483644"
+      desc: "A2 (roadmap): >> on an unsigned int must be a logical (zero-fill) shift, not arithmetic (sign-extending)"
+bitwise-shift-unsigned-overflow:
+  file: "bitwise-shift-unsigned-overflow.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A2 (roadmap): << on an unsigned int that shifts bits out past the type's width is well-defined modular reduction, not UB - distinct from bitwise-shift-narrow-type.c, which covers the signed (UB) case"
+bitwise-shift-narrow-type:
+  file: "bitwise-shift-narrow-type.c"
+  cases:
+    - in: "42"
+      out: "1"
+      fail: true
+      desc: "A2 (roadmap): << keeps the type-checker's (unpromoted) result type - c << 10 on a char computes 1024 then narrows back to char width, which correctly throws as UB (signed overflow), same as any other signed narrowing conversion in this interpreter"
+bitwise-not:
+  file: "bitwise-not.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A2 (roadmap): unary ~ on a positive int (~5 == -6)"
+bitwise-not-unsigned:
+  file: "bitwise-not-unsigned.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A2 (roadmap): unary ~ on unsigned int 0 sets every bit (~0u == UINT_MAX exactly); checked via an unsigned == unsigned comparison, not by returning UINT_MAX itself, since main's hardcoded int return type would need a separate (and separately out-of-scope) unsigned-to-signed narrowing conversion"
+unary-minus-promotion:
+  file: "unary-minus-promotion.c"
+  cases:
+    - in: "42"
+      out: "-200"
+      desc: "A2 (roadmap): unary - must apply integer promotions before negating, same as the type-checker declares (typeUnaryExpressionNode's +/-/~ cases all use applyIntegerPromotions) - -uc on an unsigned char must promote to int first (giving -200), not negate+wrap at unsigned char width (which would silently give 56)"
+prefix-increment:
+  file: "prefix-increment.c"
+  cases:
+    - in: "42"
+      out: "66"
+      desc: "A2 (roadmap): ++x increments in place and evaluates to the new value"
+postfix-increment:
+  file: "postfix-increment.c"
+  cases:
+    - in: "42"
+      out: "65"
+      desc: "A2 (roadmap): x++ increments in place but evaluates to the old value"
+prefix-decrement:
+  file: "prefix-decrement.c"
+  cases:
+    - in: "42"
+      out: "44"
+      desc: "A2 (roadmap): --x decrements in place and evaluates to the new value"
+postfix-decrement:
+  file: "postfix-decrement.c"
+  cases:
+    - in: "42"
+      out: "45"
+      desc: "A2 (roadmap): x-- decrements in place but evaluates to the old value"
+pointer-increment:
+  file: "pointer-increment.c"
+  cases:
+    - in: "42"
+      out: "130"
+      desc: "A2 (roadmap): p++ on a pointer must advance by sizeof(*p), not by one byte"
+compound-assign-arithmetic:
+  file: "compound-assign-arithmetic.c"
+  cases:
+    - in: "42"
+      out: "3"
+      desc: "A2 (roadmap): +=, -=, *=, /=, %= chained on an int"
+compound-assign-bitwise:
+  file: "compound-assign-bitwise.c"
+  cases:
+    - in: "42"
+      out: "10"
+      desc: "A2 (roadmap): &=, |=, ^= chained on an int"
+compound-assign-shift:
+  file: "compound-assign-shift.c"
+  cases:
+    - in: "42"
+      out: "12"
+      desc: "A2 (roadmap): <<=, >>= chained on an int"
+compound-assign-pointer:
+  file: "compound-assign-pointer.c"
+  cases:
+    - in: "42"
+      out: "1300"
+      desc: "A2 (roadmap): += and -= on a pointer must scale by sizeof(*p), same as +/- and ++/--"
+compound-assign-narrowing:
+  file: "compound-assign-narrowing.c"
+  cases:
+    - in: "42"
+      out: "4"
+      desc: "A2 (roadmap): c += 10 on an unsigned char must narrow/wrap the result back to unsigned char width (250+10=260, well-defined wraparound to 4), not leave it at whatever wider type the addition itself computed in"
+pointer-minus-pointer:
+  file: "pointer-minus-pointer.c"
+  cases:
+    - in: "42"
+      out: "2"
+      desc: "A2 (roadmap): ptr - ptr yields a count of elements, not a byte difference"
+pointer-minus-pointer-negative:
+  file: "pointer-minus-pointer-negative.c"
+  cases:
+    - in: "42"
+      out: "-2"
+      desc: "A2 (roadmap): ptr - ptr can be negative when the left pointer is earlier in the array than the right"
+pointer-minus-pointer-row-stride:
+  file: "pointer-minus-pointer-row-stride.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A2 (roadmap): ptr - ptr must divide by the pointed-to type's own size (here, a 20-byte array-of-5-int row), not assume a 4-byte int element"

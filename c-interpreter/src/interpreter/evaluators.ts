@@ -11,11 +11,14 @@ import {
   isSigned,
   isStructure,
   isVoid,
+  longInt,
   pointer,
   shortInt,
   unsignedInt,
 } from "./../typing/types";
 import {
+  AssignmentOperator,
+  BinaryOperator,
   TypedCompoundStatement,
   TypedDeclaration as TypedDeclarationAST,
   TypedBinaryExpressionNode,
@@ -31,6 +34,8 @@ import {
   TypedASTNode,
   TypedInitDeclarator,
   TypedUnaryExpressionNode,
+  TypedUnaryExpressionIncr,
+  TypedUnaryExpressionDecr,
   TypedPrimaryExprIdentifier,
   TypedCastExpressionNode,
   TypedExpressionStatement,
@@ -61,7 +66,9 @@ import {
   BranchInstruction,
   CallInstruction,
   CastInstruction,
+  CompoundAssignInstruction,
   ForInstruction,
+  IncrDecrInstruction,
   Instruction,
   InstructionType,
   LogicalInstruction,
@@ -76,9 +83,11 @@ import {
   breakMarkInstruction,
   callInstruction,
   castInstruction,
+  compoundAssignInstruction,
   continueMarkInstruction,
   exitBlockInstruction,
   forInstruction,
+  incrDecrInstruction,
   isBreakMarkInstruction,
   isContinueMarkInstruction,
   isExitBlockInstruction,
@@ -97,6 +106,7 @@ import { FunctionDesignator, RuntimeObject, TemporaryObject } from "./object";
 import { BIGINT_TO_BYTES, bytesToBigint } from "../typing/representation";
 import { isTemporaryObject } from "./stash";
 import {
+  applyIntegerPromotions,
   applyUsualArithmeticConversions,
   applyImplicitConversions as applyImplicitConversionsToExpression,
 } from "../typing/conversions";
@@ -233,9 +243,13 @@ export const ASTNodeEvaluator: {
     rt: Runtime,
     { op, left, right }: TypedAssignmentExpressionNode,
   ) => {
-    if (op !== "=")
-      throw new NotImplementedError(`compound assignment operator '${op}'`);
     if (!isObjectTypeInfo(left.typeInfo)) throw new Error("invalid LHS type");
+    if (op !== "=") {
+      rt.agenda.push(compoundAssignInstruction(COMPOUND_ASSIGN_OP[op]));
+      rt.agenda.push(right);
+      rt.agenda.pushAsLvalue(left);
+      return;
+    }
     rt.agenda.push(assignInstruction());
     rt.agenda.push(right);
     rt.agenda.pushAsLvalue(left);
@@ -264,11 +278,21 @@ export const ASTNodeEvaluator: {
     rt.agenda.push(right);
     rt.agenda.push(left);
   },
-  UnaryExpressionIncr: () => {
-    throw new NotImplementedError("prefix increment (++x)");
+  UnaryExpressionIncr: (
+    rt: Runtime,
+    { value }: TypedUnaryExpressionIncr,
+    evaluateAsLvalue: boolean,
+  ) => {
+    rt.agenda.push(incrDecrInstruction("+", evaluateAsLvalue, false));
+    rt.agenda.pushAsLvalue(value);
   },
-  UnaryExpressionDecr: () => {
-    throw new NotImplementedError("prefix decrement (--x)");
+  UnaryExpressionDecr: (
+    rt: Runtime,
+    { value }: TypedUnaryExpressionDecr,
+    evaluateAsLvalue: boolean,
+  ) => {
+    rt.agenda.push(incrDecrInstruction("-", evaluateAsLvalue, false));
+    rt.agenda.pushAsLvalue(value);
   },
   UnaryExpressionSizeof: (
     rt: Runtime,
@@ -333,7 +357,13 @@ export const ASTNodeEvaluator: {
       else rt.agenda.pushAsLvalue(expr);
     } else {
       rt.agenda.push(op);
-      rt.agenda.push(expr);
+      // x++/x-- need their operand's address explicitly, the same way
+      // prefix ++/-- do, rather than reading its value and reaching
+      // back through the address that read happens to carry along -
+      // see PostfixIncrement/PostfixDecrement below.
+      if (op.type === "PostfixIncrement" || op.type === "PostfixDecrement")
+        rt.agenda.pushAsLvalue(expr);
+      else rt.agenda.push(expr);
     }
   },
   ArraySubscripting: (
@@ -442,11 +472,11 @@ export const ASTNodeEvaluator: {
       ),
     );
   },
-  PostfixIncrement: () => {
-    throw new NotImplementedError("postfix increment (x++)");
+  PostfixIncrement: (rt: Runtime) => {
+    rt.agenda.push(incrDecrInstruction("+", false, true));
   },
-  PostfixDecrement: () => {
-    throw new NotImplementedError("postfix decrement (x--)");
+  PostfixDecrement: (rt: Runtime) => {
+    rt.agenda.push(incrDecrInstruction("-", false, true));
   },
   PrimaryExprIdentifier: (
     rt: Runtime,
@@ -552,20 +582,24 @@ export const instructionEvaluator: {
     const v = rt.stash.pop();
     switch (op) {
       case "+":
-      case "-": {
+      case "-":
+      case "~": {
         if (!(isTemporaryObject(v) && isIntegerType(v.typeInfo)))
-          throw new Error("operand of unary +/- should be an integer value");
+          throw new Error("operand of unary +/-/~ should be an integer value");
         let n = bytesToBigint(
           v.bytes,
           isSigned(v.typeInfo),
           rt.config.endianness,
         );
         if (op === "-") n = -n;
+        else if (op === "~") n = ~n;
+        // typeUnaryExpressionNode types +/-/~ as applyIntegerPromotions(t0),
+        // not the operand's own (possibly narrower) type - match that here
+        // so e.g. an unsigned char promotes to int before negating, instead
+        // of negating and wrapping at 8-bit width.
+        const pt = applyIntegerPromotions(v.typeInfo);
         rt.stash.pushWithoutConversions(
-          new TemporaryObject(
-            v.typeInfo,
-            BIGINT_TO_BYTES[v.typeInfo.type](n, rt.config.endianness),
-          ),
+          new TemporaryObject(pt, BIGINT_TO_BYTES[pt.type](n, rt.config.endianness)),
         );
         return;
       }
@@ -585,9 +619,6 @@ export const instructionEvaluator: {
           ),
         );
         return;
-      }
-      case "~": {
-        throw new NotImplementedError("bitwise NOT (~)");
       }
       case "*": {
         if (!(isTemporaryObject(v) && isPointer(v.typeInfo)))
@@ -627,286 +658,7 @@ export const instructionEvaluator: {
     const lo = rt.stash.pop();
     if (!(isTemporaryObject(ro) && isTemporaryObject(lo)))
       throw new Error("expected objects for binary operation");
-    const t1 = ro.typeInfo;
-    const t0 = lo.typeInfo;
-
-    switch (op) {
-      case "+": {
-        let res: TemporaryObject | undefined = undefined;
-
-        if (isArithmeticType(t0) && isArithmeticType(t1)) {
-          let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-          let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-          const ct = applyUsualArithmeticConversions(t0, t1);
-          l = convertValue(l, ct, rt.config.endianness);
-          r = convertValue(r, ct, rt.config.endianness);
-          res = new TemporaryObject(
-            ct,
-            BIGINT_TO_BYTES[ct.type](l + r, rt.config.endianness),
-          );
-        }
-        if (
-          isPointer(t0) &&
-          isObjectTypeInfo(t0.referencedType) &&
-          isIntegerType(t1)
-        ) {
-          const iv = Number(
-            bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
-          );
-          const pv = Number(
-            bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
-          );
-          res = new TemporaryObject(
-            t0,
-            BIGINT_TO_BYTES[t0.type](
-              BigInt(pv + iv * t0.referencedType.size),
-              rt.config.endianness,
-            ),
-          );
-        }
-        if (
-          isPointer(t1) &&
-          isObjectTypeInfo(t1.referencedType) &&
-          isIntegerType(t0)
-        ) {
-          const pv = Number(
-            bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
-          );
-          const iv = Number(
-            bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
-          );
-          res = new TemporaryObject(
-            t1,
-            BIGINT_TO_BYTES[t1.type](
-              BigInt(pv + iv * t1.referencedType.size),
-              rt.config.endianness,
-            ),
-          );
-        }
-
-        if (res === undefined) throw new Error("invalid types for +");
-        rt.stash.pushWithoutConversions(res);
-        return;
-      }
-      case "-": {
-        let res: TemporaryObject | undefined = undefined;
-
-        if (isArithmeticType(t0) && isArithmeticType(t1)) {
-          let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-          let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-          const ct = applyUsualArithmeticConversions(t0, t1);
-          l = convertValue(l, ct, rt.config.endianness);
-          r = convertValue(r, ct, rt.config.endianness);
-          res = new TemporaryObject(
-            ct,
-            BIGINT_TO_BYTES[ct.type](l - r, rt.config.endianness),
-          );
-        }
-        if (
-          isPointer(t0) &&
-          isObjectTypeInfo(t0.referencedType) &&
-          isIntegerType(t1)
-        ) {
-          const iv = Number(
-            bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
-          );
-          const pv = Number(
-            bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
-          );
-          res = new TemporaryObject(
-            t0,
-            BIGINT_TO_BYTES[t0.type](
-              BigInt(pv - iv * t0.referencedType.size),
-              rt.config.endianness,
-            ),
-          );
-        }
-        if (
-          isPointer(t1) &&
-          isObjectTypeInfo(t1.referencedType) &&
-          isIntegerType(t0)
-        ) {
-          const pv = Number(
-            bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
-          );
-          const iv = Number(
-            bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
-          );
-          res = new TemporaryObject(
-            t1,
-            BIGINT_TO_BYTES[t1.type](
-              BigInt(pv - iv * t1.referencedType.size),
-              rt.config.endianness,
-            ),
-          );
-        }
-
-        if (res === undefined) {
-          if (isPointer(t0) && isPointer(t1))
-            throw new NotImplementedError("pointer minus pointer");
-          throw new Error("invalid types for -");
-        }
-        rt.stash.pushWithoutConversions(res);
-        return;
-      }
-      case "*":
-      case "/":
-      case "%": {
-        if (!(isArithmeticType(t0) && isArithmeticType(t1)))
-          throw new Error("expected arithmetic types for *, / or %");
-        let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-        let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-        const ct = applyUsualArithmeticConversions(t0, t1);
-        l = convertValue(l, ct, rt.config.endianness);
-        r = convertValue(r, ct, rt.config.endianness);
-        let res: bigint;
-        switch (op) {
-          case "*": {
-            res = l * r;
-            break;
-          }
-          case "/": {
-            res = l / r;
-            break;
-          }
-          case "%": {
-            res = l % r;
-            break;
-          }
-        }
-        const bytes = BIGINT_TO_BYTES[ct.type](res, rt.config.endianness);
-        const t = new TemporaryObject(ct, bytes);
-        rt.stash.pushWithoutConversions(t);
-        return;
-      }
-      case "==":
-      case "!=": {
-        let isTruthy: boolean | undefined = undefined;
-
-        if (isArithmeticType(t0) && isArithmeticType(t1)) {
-          let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-          let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-          const ct = applyUsualArithmeticConversions(t0, t1);
-          l = convertValue(l, ct, rt.config.endianness);
-          r = convertValue(r, ct, rt.config.endianness);
-          switch (op) {
-            case "==": {
-              isTruthy = l == r;
-              break;
-            }
-            case "!=": {
-              isTruthy = l != r;
-              break;
-            }
-          }
-        }
-
-        if (isScalarType(t0) && isScalarType(t1)) { // TODO: improve type checking here for this (supposed to be ptrs)
-          const l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-          const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-          switch (op) {
-            case "==": {
-              isTruthy = l == r;
-              break;
-            }
-            case "!=": {
-              isTruthy = l != r;
-              break;
-            }
-          }
-        }
-
-        if (isTruthy === undefined)
-          throw new Error("invalid types for ==, !=");
-        const res = BIGINT_TO_BYTES[Type.Int](
-          isTruthy ? BigInt(1) : BigInt(0),
-          rt.config.endianness,
-        );
-        const t = new TemporaryObject(int(), res);
-        rt.stash.pushWithoutConversions(t);
-        return;
-      }
-      case "<":
-      case ">":
-      case "<=":
-      case ">=": {
-        let isTruthy: boolean | undefined = undefined;
-
-        if (isArithmeticType(t0) && isArithmeticType(t1)) {
-          let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-          let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-          const ct = applyUsualArithmeticConversions(t0, t1);
-          l = convertValue(l, ct, rt.config.endianness);
-          r = convertValue(r, ct, rt.config.endianness);
-          switch (op) {
-            case "<": {
-              isTruthy = l < r;
-              break;
-            }
-            case ">": {
-              isTruthy = l > r;
-              break;
-            }
-            case "<=": {
-              isTruthy = l <= r;
-              break;
-            }
-            case ">=": {
-              isTruthy = l >= r;
-              break;
-            }
-          }
-        }
-
-        if (isTruthy === undefined)
-          throw new Error("invalid types for >, <, <= or >=");
-        const res = BIGINT_TO_BYTES[Type.Int](
-          isTruthy ? BigInt(1) : BigInt(0),
-          rt.config.endianness,
-        );
-        const t = new TemporaryObject(int(), res);
-        rt.stash.pushWithoutConversions(t);
-        return;
-      }
-      case "<<":
-      case ">>":
-      case "^":
-      case "&":
-      case "|": {
-        // apply usual arithmetic conversions
-        throw new NotImplementedError(`bitwise binary operator '${op}'`);
-      }
-      case "&&":
-      case "||": {
-        let isTruthy: boolean | undefined = undefined;
-
-        if (isScalarType(t0) && isScalarType(t1)) {
-          const l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-          const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-          switch (op) {
-            case "&&": {
-              isTruthy = (l !== BigInt(0)) && (r !== BigInt(0));
-              break;
-            }
-            case "||": {
-              isTruthy = (l !== BigInt(0)) || (r !== BigInt(0));
-              break;
-            }
-          }
-        }
-
-        if (isTruthy === undefined)
-          throw new Error("invalid types for &&, ||");
-        const res = BIGINT_TO_BYTES[Type.Int](
-          isTruthy ? BigInt(1) : BigInt(0),
-          rt.config.endianness,
-        );
-        const t = new TemporaryObject(int(), res);
-        rt.stash.pushWithoutConversions(t);
-        return;
-      }
-    }
-    throw new Error("unknown binary operator");
+    rt.stash.pushWithoutConversions(applyBinaryOp(op, lo, ro, rt));
   },
   [InstructionType.LOGICAL]: (
     rt: Runtime,
@@ -930,6 +682,58 @@ export const instructionEvaluator: {
     rt.agenda.push(binaryOpInstruction(op));
     rt.agenda.push(right);
     rt.agenda.push(pushInstruction(new TemporaryObject(int(), bytes)));
+  },
+  [InstructionType.INCR_DECR]: (
+    rt: Runtime,
+    { op, evaluateAsLvalue, pushOldValue }: IncrDecrInstruction,
+  ) => {
+    const ptr = rt.stash.pop();
+    if (
+      !(
+        isTemporaryObject(ptr) &&
+        isPointer(ptr.typeInfo) &&
+        isObjectTypeInfo(ptr.typeInfo.referencedType)
+      )
+    )
+      throw new Error("expected ptr to object for ++/--");
+    const address = Number(
+      bytesToBigint(ptr.bytes, isSigned(ptr.typeInfo), rt.config.endianness),
+    );
+    const t = ptr.typeInfo.referencedType;
+    if (!isScalarType(t)) throw new Error("expected scalar type for ++/--");
+    const one = new TemporaryObject(
+      int(),
+      BIGINT_TO_BYTES[Type.Int](BigInt(1), rt.config.endianness),
+    );
+    const { oldValue, newValue } = combineAndStore(address, t, op, one, rt);
+    rt.stash.pushWithoutConversions(
+      pushOldValue ? oldValue : evaluateAsLvalue ? ptr : newValue,
+    );
+  },
+  [InstructionType.COMPOUND_ASSIGN]: (
+    rt: Runtime,
+    { op }: CompoundAssignInstruction,
+  ) => {
+    const rhs = rt.stash.pop();
+    if (!isTemporaryObject(rhs))
+      throw new Error("expected object for compound assign");
+    const ptr = rt.stash.pop();
+    if (
+      !(
+        isTemporaryObject(ptr) &&
+        isPointer(ptr.typeInfo) &&
+        isObjectTypeInfo(ptr.typeInfo.referencedType)
+      )
+    )
+      throw new Error("expected ptr to object for compound assign");
+    const address = Number(
+      bytesToBigint(ptr.bytes, isSigned(ptr.typeInfo), rt.config.endianness),
+    );
+    const t = ptr.typeInfo.referencedType;
+    if (!isScalarType(t))
+      throw new Error("expected scalar type for compound assign");
+    const { newValue } = combineAndStore(address, t, op, rhs, rt);
+    rt.stash.pushWithoutConversions(newValue);
   },
   [InstructionType.POP]: (rt: Runtime) => {
     rt.stash.pop();
@@ -1279,6 +1083,369 @@ export const instructionEvaluator: {
       rt.effectiveTypeTable.remove(addr);
     });
   },
+};
+
+const COMPOUND_ASSIGN_OP: Record<Exclude<AssignmentOperator, "=">, BinaryOperator> = {
+  "*=": "*",
+  "/=": "/",
+  "%=": "%",
+  "+=": "+",
+  "-=": "-",
+  "<<=": "<<",
+  ">>=": ">>",
+  "&=": "&",
+  "^=": "^",
+  "|=": "|",
+};
+
+const applyBinaryOp = (
+  op: BinaryOperator,
+  lo: TemporaryObject,
+  ro: TemporaryObject,
+  rt: Runtime,
+): TemporaryObject => {
+  const t1 = ro.typeInfo;
+  const t0 = lo.typeInfo;
+
+  switch (op) {
+    case "+": {
+      let res: TemporaryObject | undefined = undefined;
+
+      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+        let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        const ct = applyUsualArithmeticConversions(t0, t1);
+        l = convertValue(l, ct, rt.config.endianness);
+        r = convertValue(r, ct, rt.config.endianness);
+        res = new TemporaryObject(
+          ct,
+          BIGINT_TO_BYTES[ct.type](l + r, rt.config.endianness),
+        );
+      }
+      if (
+        isPointer(t0) &&
+        isObjectTypeInfo(t0.referencedType) &&
+        isIntegerType(t1)
+      ) {
+        const iv = Number(
+          bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
+        );
+        const pv = Number(
+          bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
+        );
+        res = new TemporaryObject(
+          t0,
+          BIGINT_TO_BYTES[t0.type](
+            BigInt(pv + iv * t0.referencedType.size),
+            rt.config.endianness,
+          ),
+        );
+      }
+      if (
+        isPointer(t1) &&
+        isObjectTypeInfo(t1.referencedType) &&
+        isIntegerType(t0)
+      ) {
+        const pv = Number(
+          bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
+        );
+        const iv = Number(
+          bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
+        );
+        res = new TemporaryObject(
+          t1,
+          BIGINT_TO_BYTES[t1.type](
+            BigInt(pv + iv * t1.referencedType.size),
+            rt.config.endianness,
+          ),
+        );
+      }
+
+      if (res === undefined) throw new Error("invalid types for +");
+      return res;
+    }
+    case "-": {
+      let res: TemporaryObject | undefined = undefined;
+
+      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+        let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        const ct = applyUsualArithmeticConversions(t0, t1);
+        l = convertValue(l, ct, rt.config.endianness);
+        r = convertValue(r, ct, rt.config.endianness);
+        res = new TemporaryObject(
+          ct,
+          BIGINT_TO_BYTES[ct.type](l - r, rt.config.endianness),
+        );
+      }
+      if (
+        isPointer(t0) &&
+        isObjectTypeInfo(t0.referencedType) &&
+        isIntegerType(t1)
+      ) {
+        const iv = Number(
+          bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
+        );
+        const pv = Number(
+          bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
+        );
+        res = new TemporaryObject(
+          t0,
+          BIGINT_TO_BYTES[t0.type](
+            BigInt(pv - iv * t0.referencedType.size),
+            rt.config.endianness,
+          ),
+        );
+      }
+      if (
+        isPointer(t1) &&
+        isObjectTypeInfo(t1.referencedType) &&
+        isIntegerType(t0)
+      ) {
+        const pv = Number(
+          bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness),
+        );
+        const iv = Number(
+          bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness),
+        );
+        res = new TemporaryObject(
+          t1,
+          BIGINT_TO_BYTES[t1.type](
+            BigInt(pv - iv * t1.referencedType.size),
+            rt.config.endianness,
+          ),
+        );
+      }
+
+      if (
+        isPointer(t0) &&
+        isPointer(t1) &&
+        isObjectTypeInfo(t0.referencedType) &&
+        t0.referencedType.isCompatible(t1.referencedType)
+      ) {
+        const a0 = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        const a1 = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        const size = BigInt(t0.referencedType.size);
+        const diff = (a0 - a1) / size;
+        res = new TemporaryObject(
+          longInt(),
+          BIGINT_TO_BYTES[Type.LongInt](diff, rt.config.endianness),
+        );
+      }
+
+      if (res === undefined) throw new Error("invalid types for -");
+      return res;
+    }
+    case "*":
+    case "/":
+    case "%": {
+      if (!(isArithmeticType(t0) && isArithmeticType(t1)))
+        throw new Error("expected arithmetic types for *, / or %");
+      let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+      let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+      const ct = applyUsualArithmeticConversions(t0, t1);
+      l = convertValue(l, ct, rt.config.endianness);
+      r = convertValue(r, ct, rt.config.endianness);
+      let res: bigint;
+      switch (op) {
+        case "*": {
+          res = l * r;
+          break;
+        }
+        case "/": {
+          res = l / r;
+          break;
+        }
+        case "%": {
+          res = l % r;
+          break;
+        }
+      }
+      const bytes = BIGINT_TO_BYTES[ct.type](res, rt.config.endianness);
+      return new TemporaryObject(ct, bytes);
+    }
+    case "==":
+    case "!=": {
+      let isTruthy: boolean | undefined = undefined;
+
+      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+        let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        const ct = applyUsualArithmeticConversions(t0, t1);
+        l = convertValue(l, ct, rt.config.endianness);
+        r = convertValue(r, ct, rt.config.endianness);
+        switch (op) {
+          case "==": {
+            isTruthy = l == r;
+            break;
+          }
+          case "!=": {
+            isTruthy = l != r;
+            break;
+          }
+        }
+      }
+
+      if (isScalarType(t0) && isScalarType(t1)) { // TODO: improve type checking here for this (supposed to be ptrs)
+        const l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        switch (op) {
+          case "==": {
+            isTruthy = l == r;
+            break;
+          }
+          case "!=": {
+            isTruthy = l != r;
+            break;
+          }
+        }
+      }
+
+      if (isTruthy === undefined) throw new Error("invalid types for ==, !=");
+      const res = BIGINT_TO_BYTES[Type.Int](
+        isTruthy ? BigInt(1) : BigInt(0),
+        rt.config.endianness,
+      );
+      return new TemporaryObject(int(), res);
+    }
+    case "<":
+    case ">":
+    case "<=":
+    case ">=": {
+      let isTruthy: boolean | undefined = undefined;
+
+      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+        let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        const ct = applyUsualArithmeticConversions(t0, t1);
+        l = convertValue(l, ct, rt.config.endianness);
+        r = convertValue(r, ct, rt.config.endianness);
+        switch (op) {
+          case "<": {
+            isTruthy = l < r;
+            break;
+          }
+          case ">": {
+            isTruthy = l > r;
+            break;
+          }
+          case "<=": {
+            isTruthy = l <= r;
+            break;
+          }
+          case ">=": {
+            isTruthy = l >= r;
+            break;
+          }
+        }
+      }
+
+      if (isTruthy === undefined)
+        throw new Error("invalid types for >, <, <= or >=");
+      const res = BIGINT_TO_BYTES[Type.Int](
+        isTruthy ? BigInt(1) : BigInt(0),
+        rt.config.endianness,
+      );
+      return new TemporaryObject(int(), res);
+    }
+    case "^":
+    case "&":
+    case "|": {
+      if (!(isIntegerType(t0) && isIntegerType(t1)))
+        throw new Error("expected integer types for &, | or ^");
+      let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+      let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+      const ct = applyUsualArithmeticConversions(t0, t1);
+      l = convertValue(l, ct, rt.config.endianness);
+      r = convertValue(r, ct, rt.config.endianness);
+      let res: bigint;
+      switch (op) {
+        case "&": {
+          res = l & r;
+          break;
+        }
+        case "|": {
+          res = l | r;
+          break;
+        }
+        case "^": {
+          res = l ^ r;
+          break;
+        }
+      }
+      const bytes = BIGINT_TO_BYTES[ct.type](res, rt.config.endianness);
+      return new TemporaryObject(ct, bytes);
+    }
+    case "<<":
+    case ">>": {
+      if (!(isIntegerType(t0) && isIntegerType(t1)))
+        throw new Error("expected integer types for << or >>");
+      const pt0 = applyIntegerPromotions(t0);
+      let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+      l = convertValue(l, pt0, rt.config.endianness);
+      const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+      const res = op === "<<" ? l << r : l >> r;
+      // typeBinaryExpression types the whole shift expression as
+      // left.typeInfo (t0, unpromoted), not the promoted type used
+      // above to compute the shift - narrow back down to match.
+      const bytes = BIGINT_TO_BYTES[t0.type](res, rt.config.endianness);
+      return new TemporaryObject(t0, bytes);
+    }
+    case "&&":
+    case "||": {
+      let isTruthy: boolean | undefined = undefined;
+
+      if (isScalarType(t0) && isScalarType(t1)) {
+        const l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
+        const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        switch (op) {
+          case "&&": {
+            isTruthy = (l !== BigInt(0)) && (r !== BigInt(0));
+            break;
+          }
+          case "||": {
+            isTruthy = (l !== BigInt(0)) || (r !== BigInt(0));
+            break;
+          }
+        }
+      }
+
+      if (isTruthy === undefined) throw new Error("invalid types for &&, ||");
+      const res = BIGINT_TO_BYTES[Type.Int](
+        isTruthy ? BigInt(1) : BigInt(0),
+        rt.config.endianness,
+      );
+      return new TemporaryObject(int(), res);
+    }
+  }
+  throw new Error("unknown binary operator");
+};
+
+// Reads the current value at `address`, combines it with `rhs` via `op`,
+// writes the result back (narrowed/range-checked to `t`, same as any other
+// assignment), and returns both the value before and after the write.
+// Shared by ++/--/compound assignment, which all differ only in what they
+// push onto the stash afterward.
+const combineAndStore = (
+  address: number,
+  t: ScalarType,
+  op: BinaryOperator,
+  rhs: TemporaryObject,
+  rt: Runtime,
+): { oldValue: TemporaryObject; newValue: TemporaryObject } => {
+  const oldValue = new TemporaryObject(t, rt.memory.getObjectBytes(address, t));
+  const combined = applyBinaryOp(op, oldValue, rhs, rt);
+  if (!isScalarType(combined.typeInfo))
+    throw new Error("expected scalar result for ++/--/compound assignment");
+  const n = bytesToBigint(
+    combined.bytes,
+    isSigned(combined.typeInfo),
+    rt.config.endianness,
+  );
+  rt.memory.setScalar(address, n, t, rt.config.endianness);
+  rt.initTable.add(address, t);
+  const newValue = new TemporaryObject(t, BIGINT_TO_BYTES[t.type](n, rt.config.endianness));
+  return { oldValue, newValue };
 };
 
 const convertValue = (

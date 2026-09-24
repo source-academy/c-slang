@@ -28,6 +28,8 @@ export enum InstructionType {
   BREAK_MARK = "BreakMark",
   CONTINUE_MARK = "ContinueMark",
   LOGICAL = "Logical",
+  INCR_DECR = "IncrDecr",
+  COMPOUND_ASSIGN = "CompoundAssign",
 }
 
 export interface BaseInstruction {
@@ -169,6 +171,40 @@ export const logicalInstruction = (
   right,
 });
 
+export interface IncrDecrInstruction extends BaseInstruction {
+  type: InstructionType.INCR_DECR;
+  op: "+" | "-";
+  // prefix (++x): push the new value, or the address itself if the
+  // surrounding context wants ++x as an lvalue. postfix (x++): push
+  // the value from before the operation instead, regardless of
+  // evaluateAsLvalue (postfix is never itself an lvalue).
+  evaluateAsLvalue: boolean;
+  pushOldValue: boolean;
+}
+
+export const incrDecrInstruction = (
+  op: "+" | "-",
+  evaluateAsLvalue: boolean,
+  pushOldValue: boolean,
+): IncrDecrInstruction => ({
+  type: InstructionType.INCR_DECR,
+  op,
+  evaluateAsLvalue,
+  pushOldValue,
+});
+
+export interface CompoundAssignInstruction extends BaseInstruction {
+  type: InstructionType.COMPOUND_ASSIGN;
+  op: BinaryOperator;
+}
+
+export const compoundAssignInstruction = (
+  op: BinaryOperator,
+): CompoundAssignInstruction => ({
+  type: InstructionType.COMPOUND_ASSIGN,
+  op,
+});
+
 export interface BranchInstruction extends BaseInstruction {
   type: InstructionType.BRANCH;
   exprIfTrue: TypedExpression | TypedStatement;
@@ -283,4 +319,6 @@ export type Instruction =
   | ForInstruction
   | BreakMarkInstruction
   | ContinueMarkInstruction
-  | LogicalInstruction;
+  | LogicalInstruction
+  | IncrDecrInstruction
+  | CompoundAssignInstruction;
