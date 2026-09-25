@@ -229,3 +229,28 @@ pointer-minus-pointer-row-stride:
     - in: "42"
       out: "1"
       desc: "A2 (roadmap): ptr - ptr must divide by the pointed-to type's own size (here, a 20-byte array-of-5-int row), not assume a 4-byte int element"
+pointer-init-from-array:
+  file: "pointer-init-from-array.c"
+  cases:
+    - in: "42"
+      out: "10"
+      desc: "bugfix: int *p = arr; (pointer initialized directly from a file-scope array identifier) must decay the array to a pointer, same as plain assignment already does"
+pointer-init-from-array-arithmetic:
+  file: "pointer-init-from-array-arithmetic.c"
+  cases:
+    - in: "42"
+      out: "142"
+      desc: "bugfix: a pointer initialized from an array identifier must behave identically to one built via plain assignment, including pointer arithmetic afterwards"
+pointer-init-from-local-array:
+  file: "pointer-init-from-local-array.c"
+  cases:
+    - in: "42"
+      out: "6"
+      desc: "bugfix: same decay-on-initialization fix, but for a local (stack-frame) array instead of a file-scope one, which computes its address differently"
+pointer-init-from-array-incompatible:
+  file: "pointer-init-from-array-incompatible.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "bugfix regression guard: decaying the array must not loosen the compatibility check - char *p = arr; (int[3]) is still invalid, since char and int are not compatible referenced types"
+      fail: true

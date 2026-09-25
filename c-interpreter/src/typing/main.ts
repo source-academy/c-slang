@@ -367,10 +367,11 @@ const typeInitializer = (
         e = t;
       }
       const res = typeAssignmentExpression(e, env);
+      const rightType = applyImplicitConversions(res).typeInfo;
       if (
         !checkSimpleAssignmentConstraint(
           targetType,
-          res.typeInfo,
+          rightType,
           isNullPtrConst(res),
         )
       )
