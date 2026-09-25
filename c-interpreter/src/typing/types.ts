@@ -134,6 +134,9 @@ export type BasicType = Char | SignedIntegerType | UnsignedIntegerType;
 
 export type CharacterType = Char | SignedChar | UnsignedChar;
 
+export const isCharacterType = (t: TypeInfo): t is CharacterType =>
+  isChar(t) || isSignedChar(t) || isUnsignedChar(t);
+
 export type IntegerType = Char | SignedIntegerType | UnsignedIntegerType;
 
 export const isIntegerType = (t: TypeInfo): t is IntegerType =>

@@ -291,3 +291,34 @@ string-literal-write-is-ub:
       out: "1"
       desc: "A3: modifying a string literal is UB (6.4.5p7) - this interpreter models it concretely as a write to read-only memory, not a silent write"
       fail: true
+string-array-init-exact-fit:
+  file: "string-array-init-exact-fit.c"
+  cases:
+    - in: "42"
+      out: "209"
+      desc: "A3 follow-up (6.7.9p14): char arr[3] = \"hi\"; - the literal's characters plus its terminator fit exactly"
+string-array-init-padded:
+  file: "string-array-init-padded.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: "A3 follow-up: char arr[5] = \"hi\"; - characters, then the terminator, then the remaining elements are zero-filled like any other aggregate with fewer initializers than elements"
+string-array-init-no-terminator:
+  file: "string-array-init-no-terminator.c"
+  cases:
+    - in: "42"
+      out: "209"
+      desc: "A3 follow-up (6.7.9p14 special case): char arr[2] = \"hi\"; - array size equals the character count exactly, so the terminator is legally omitted (a classic non-null-terminated-array footgun, tested deliberately)"
+string-array-init-too-long:
+  file: "string-array-init-too-long.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A3 follow-up: char arr[1] = \"hi\"; must be rejected at type-check time - the array is too small even to hold the characters, let alone the terminator"
+      fail: true
+string-array-init-mutable:
+  file: "string-array-init-mutable.c"
+  cases:
+    - in: "42"
+      out: "120"
+      desc: "A3 follow-up: the initialized array is a real, independent, mutable copy of the literal's bytes - not the literal's own read-only storage"

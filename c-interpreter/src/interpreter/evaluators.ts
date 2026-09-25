@@ -42,6 +42,7 @@ import {
   TypedExpressionStatement,
   isTypedIntegerConstant,
   isTypedInitializerList,
+  isPrimaryExprString,
   TypedInitializer,
   isTypedArrayDesignator,
   TypedAssignmentExpressionNode,
@@ -1502,6 +1503,27 @@ const evaluateInitializer = (
   tt: ObjectTypeInfo,
   rt: Runtime,
 ): void => {
+  // (6.7.9p14) a string literal initializing a character array directly:
+  // copy its bytes (terminator included only if there's room), zero-fill
+  // any remaining elements - the type-checker (typeInitializer) is what
+  // restricts this pairing to character arrays, so it isn't re-checked
+  // here. Written synchronously, like a plain uninitialized declaration's
+  // zero-fill already is, rather than as N individual per-character
+  // steps the way an ordinary {...} initializer list is.
+  if (!isTypedInitializerList(t) && isPrimaryExprString(t) && isArray(tt)) {
+    const chars = t.value.flatMap((c) =>
+      BIGINT_TO_BYTES[Type.Char](BigInt(c.charCodeAt(0)), rt.config.endianness),
+    );
+    const hasRoomForTerminator = tt.length > t.value.length;
+    const content = hasRoomForTerminator
+      ? [...chars, ...BIGINT_TO_BYTES[Type.Char](BigInt(0), rt.config.endianness)]
+      : chars;
+    const bytes = [...content, ...new Array(tt.size - content.length).fill(0)];
+    rt.memory.setObjectBytes(address, bytes, tt);
+    rt.initTable.add(address, tt);
+    return;
+  }
+
   if (!isTypedInitializerList(t)) {
     rt.agenda.push(popInstruction());
     rt.agenda.push(assignInstruction());

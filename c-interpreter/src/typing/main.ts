@@ -141,6 +141,7 @@ import {
   int,
   isArithmeticType,
   isArray,
+  isCharacterType,
   isFunction,
   isIncompleteTypeInfo,
   isIntegerType,
@@ -380,6 +381,19 @@ const typeInitializer = (
     }
 
     if (isArray(targetType) || isStructure(targetType)) {
+      // (6.7.9p14) a string literal may initialize a character array
+      // directly, unbraced - the target's own length decides whether the
+      // terminator fits, not exact-length array compatibility like every
+      // other aggregate initializer below.
+      if (
+        isPrimaryExprString(t) &&
+        isArray(targetType) &&
+        isCharacterType(targetType.elementType)
+      ) {
+        if (t.value.length > targetType.length)
+          throw "string literal initializer too long for array";
+        return typePrimaryExprString(t);
+      }
       if (!isInitializerList(t)) {
         const res = typeAssignmentExpression(t, env);
         if (!res.typeInfo.isCompatible(targetType))
