@@ -1,4 +1,4 @@
-import { TypedExpression, isPrimaryExprString } from "../ast/types";
+import { TypedExpression } from "../ast/types";
 import {
   getNumericalLimitFromSpecifiers,
   typeInfoToSpecifier,
@@ -104,7 +104,7 @@ export const applyImplicitConversions = (
   t: TypedExpression,
 ): TypedExpression => {
   const t0 = t.typeInfo;
-  if (isArray(t0) && !isPrimaryExprString(t)) {
+  if (isArray(t0)) {
     return { ...t, typeInfo: pointer(t0.elementType), lvalue: false };
   }
   if (isFunction(t0)) {

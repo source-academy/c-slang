@@ -23,6 +23,7 @@ import {
   TypedDeclaration as TypedDeclarationAST,
   TypedBinaryExpressionNode,
   TypedPrimaryExprConstant,
+  TypedPrimaryExprString,
   TypedPostfixExpressionNode,
   TypedPrimaryExprParenthesis,
   TypedFunctionCallOp,
@@ -116,7 +117,6 @@ import { SHRT_SIZE } from "../constants";
 import { checkSimpleAssignmentConstraint, getMember } from "../typing/utils";
 import { NO_EFFECTIVE_TYPE } from "./effectiveTypeTable";
 import { AgendaItem } from "./agenda";
-import { NotImplementedError } from "./errors";
 
 export const ASTNodeEvaluator: {
   [NodeType in TypedASTNode["type"]]: (
@@ -521,8 +521,47 @@ export const ASTNodeEvaluator: {
     const t = new TemporaryObject(typeInfo, bytes);
     rt.stash.pushWithoutConversions(t);
   },
-  PrimaryExprString: () => {
-    throw new NotImplementedError("string literals");
+  PrimaryExprString: (
+    rt: Runtime,
+    node: TypedPrimaryExprString,
+    evaluateAsLvalue: boolean,
+  ) => {
+    const { value, typeInfo } = node;
+    if (!isArray(typeInfo))
+      throw new Error("expected array type for string literal");
+
+    let address = rt.getStringLiteralAddress(node);
+    if (address === undefined) {
+      address = rt.allocateAndZeroData(typeInfo);
+      rt.effectiveTypeTable.add(address, typeInfo);
+      const bytes = [
+        ...value.flatMap((c) =>
+          BIGINT_TO_BYTES[Type.Char](
+            BigInt(c.charCodeAt(0)),
+            rt.config.endianness,
+          ),
+        ),
+        ...BIGINT_TO_BYTES[Type.Char](BigInt(0), rt.config.endianness),
+      ];
+      // Modifying a string literal is UB (6.4.5p7) - readonly makes that a
+      // real WriteSegmentationFault instead of a silent, unmodeled write.
+      rt.memory.setObjectBytes(address, bytes, typeInfo, true);
+      rt.initTable.add(address, typeInfo);
+      rt.setStringLiteralAddress(node, address);
+    }
+
+    if (evaluateAsLvalue) {
+      rt.stash.pushWithoutConversions(
+        new TemporaryObject(
+          pointer(typeInfo),
+          BIGINT_TO_BYTES[Type.Pointer](BigInt(address), rt.config.endianness),
+        ),
+      );
+      return;
+    }
+
+    const bytes = rt.memory.getObjectBytes(address, typeInfo);
+    rt.stash.push(rt, new TemporaryObject(typeInfo, bytes, address), address);
   },
   PrimaryExprParenthesis: (
     rt: Runtime,

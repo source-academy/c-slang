@@ -254,3 +254,40 @@ pointer-init-from-array-incompatible:
       out: "1"
       desc: "bugfix regression guard: decaying the array must not loosen the compatibility check - char *p = arr; (int[3]) is still invalid, since char and int are not compatible referenced types"
       fail: true
+string-literal-basic:
+  file: "string-literal-basic.c"
+  cases:
+    - in: "42"
+      out: "209"
+      desc: "A3 (roadmap): a string literal decays to char* and reads back its actual character content ('h'=104, 'i'=105)"
+string-literal-escape:
+  file: "string-literal-escape.c"
+  cases:
+    - in: "42"
+      out: "10"
+      desc: "A3: escape sequences in a string literal ('\\n'=10) carry through to the actual runtime byte content, not just the literal's length"
+string-literal-null-terminator:
+  file: "string-literal-null-terminator.c"
+  cases:
+    - in: "42"
+      out: "2"
+      desc: "A3: a 2-character literal is allocated as exactly 3 bytes (the terminating null included), not 2 or 4 - walking past the characters lands on a real null byte at index 2"
+string-literal-same-occurrence-shares-storage:
+  file: "string-literal-same-occurrence-shares-storage.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A3 (design decision): the same string literal AST node, revisited across loop iterations, reuses the same storage every time"
+string-literal-distinct-occurrences-dont-share-storage:
+  file: "string-literal-distinct-occurrences-dont-share-storage.c"
+  cases:
+    - in: "42"
+      out: "0"
+      desc: "A3 (design decision): two textually-identical string literals at different source locations get independent storage (the C standard leaves sharing unspecified; this interpreter chooses not to)"
+string-literal-write-is-ub:
+  file: "string-literal-write-is-ub.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A3: modifying a string literal is UB (6.4.5p7) - this interpreter models it concretely as a write to read-only memory, not a silent write"
+      fail: true

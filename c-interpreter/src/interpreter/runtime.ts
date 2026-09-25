@@ -1,6 +1,7 @@
 import {
   Identifier,
   TypedCompoundStatement,
+  TypedPrimaryExprString,
   TypedTranslationUnit,
 } from "../ast/types";
 import { Memory } from "../memory/memory";
@@ -90,6 +91,15 @@ export class Runtime {
   private _stdout: string;
   private _dataPtr: number;
   private _textPtr: number;
+  // Keyed by AST node identity, not by text content: this is what makes
+  // string literals have static storage duration without pre-scanning the
+  // program. The same literal revisited (e.g. a loop body) reuses its
+  // address; two textually-identical literals at different source
+  // locations don't share one (the standard leaves that unspecified).
+  private readonly stringLiteralAddresses = new WeakMap<
+    TypedPrimaryExprString,
+    number
+  >();
 
   public constructor(program: TypedTranslationUnit, config: RuntimeConfig) {
     this.agenda = new Agenda(program);
@@ -209,5 +219,18 @@ export class Runtime {
     const address = this._textPtr;
     this._textPtr += t.size;
     return address;
+  }
+
+  public getStringLiteralAddress(
+    node: TypedPrimaryExprString,
+  ): number | undefined {
+    return this.stringLiteralAddresses.get(node);
+  }
+
+  public setStringLiteralAddress(
+    node: TypedPrimaryExprString,
+    address: number,
+  ): void {
+    this.stringLiteralAddresses.set(node, address);
   }
 }

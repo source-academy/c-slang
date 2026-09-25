@@ -1254,7 +1254,9 @@ const typePrimaryExprConstant = (
 const typePrimaryExprString = (t: PrimaryExprString): TypedPrimaryExprString =>
   typeCheck(t, () => ({
     ...t,
-    typeInfo: array(char(), t.value.length),
+    // +1: a string literal's array includes the terminating null character
+    // (6.4.5p5), not just the characters written between the quotes.
+    typeInfo: array(char(), t.value.length + 1),
     lvalue: true,
   }));
 
