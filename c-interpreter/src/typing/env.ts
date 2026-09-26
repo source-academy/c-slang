@@ -17,12 +17,16 @@ const TAG_PREFIX = "tag::";
 export class TypeEnv {
   private env: Record<Identifier, [TypeInfo, boolean, boolean]>[];
   public readonly aggTypes: AggregateType[];
-  private _inLoopBody: boolean;
+  // depth counters, not booleans - a boolean would incorrectly clear on
+  // exiting an inner loop/switch while still lexically inside an outer one
+  private _loopDepth: number;
+  private _switchDepth: number;
 
   constructor() {
     this.env = [{}];
     this.aggTypes = [];
-    this._inLoopBody = false;
+    this._loopDepth = 0;
+    this._switchDepth = 0;
     for (const [identifier, f] of Object.entries(BUILTIN_FUNCTIONS)) {
       this.addIdentifierTypeInfo(identifier, f.type);
     }
@@ -38,15 +42,27 @@ export class TypeEnv {
   }
 
   enterLoopBody(): void {
-    this._inLoopBody = true;
+    this._loopDepth++;
   }
 
   exitLoopBody(): void {
-    this._inLoopBody = false;
+    this._loopDepth--;
   }
 
   get inLoopBody(): boolean {
-    return this._inLoopBody;
+    return this._loopDepth > 0;
+  }
+
+  enterSwitchBody(): void {
+    this._switchDepth++;
+  }
+
+  exitSwitchBody(): void {
+    this._switchDepth--;
+  }
+
+  get inSwitchBody(): boolean {
+    return this._switchDepth > 0;
   }
 
   getIdentifierTypeInfo(id: Identifier, isTypedef: boolean = false): TypeInfo {

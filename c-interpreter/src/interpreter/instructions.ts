@@ -1,5 +1,6 @@
 import {
   BinaryOperator,
+  TypedBlockItem,
   TypedExpression,
   TypedStatement,
   UnaryOperator,
@@ -25,6 +26,7 @@ export enum InstructionType {
   EXIT_BLOCK = "ExitBlock",
   WHILE = "While",
   FOR = "For",
+  SWITCH = "Switch",
   BREAK_MARK = "BreakMark",
   CONTINUE_MARK = "ContinueMark",
   LOGICAL = "Logical",
@@ -300,6 +302,23 @@ export const forInstruction = (
   afterIter,
 });
 
+// carries the switch body's own flat block-item list (case/default labels
+// are only ever direct top-level items of it, not nested further in) so
+// the handler can find the matching start index once the controlling
+// value is on the stash, and slice from there - no separate "jump to
+// marker" mechanism needed
+export interface SwitchInstruction extends BaseInstruction {
+  type: InstructionType.SWITCH;
+  stmts: TypedBlockItem[];
+}
+
+export const switchInstruction = (
+  stmts: TypedBlockItem[],
+): SwitchInstruction => ({
+  type: InstructionType.SWITCH,
+  stmts,
+});
+
 export type Instruction =
   | UnaryOpInstruction
   | BinaryOpInstruction
@@ -317,6 +336,7 @@ export type Instruction =
   | ExitBlockInstruction
   | WhileInstruction
   | ForInstruction
+  | SwitchInstruction
   | BreakMarkInstruction
   | ContinueMarkInstruction
   | LogicalInstruction

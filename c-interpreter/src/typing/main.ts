@@ -6,8 +6,10 @@ import {
   IterationStatementDoWhile,
   IterationStatementFor,
   IterationStatementWhile,
+  LabeledStatement,
   SelectionStatement,
   SelectionStatementIf,
+  SelectionStatementSwitch,
   TypeSpecifier,
   TypedCastExpressionNode,
   TypedDesignator,
@@ -16,8 +18,10 @@ import {
   TypedIterationStatementDoWhile,
   TypedIterationStatementFor,
   TypedIterationStatementWhile,
+  TypedLabeledStatement,
   TypedSelectionStatement,
   TypedSelectionStatementIf,
+  TypedSelectionStatementSwitch,
   TypedUnaryExpressionDecr,
   TypedUnaryExpressionSizeof,
   Typedef,
@@ -31,8 +35,13 @@ import {
   isIterationStatement,
   isIterationStatementDoWhile,
   isIterationStatementWhile,
+  isJumpStatementBreak,
   isJumpStatementReturn,
+  isLabeledStatement,
+  isLabeledStatementCase,
+  isLabeledStatementDefault,
   isSelectionStatement,
+  isSelectionStatementSwitch,
   isStorageClassSpecifier,
   isTypeName,
   isTypeSpecifier,
@@ -491,7 +500,19 @@ const typeStatement = (t: Statement, env: TypeEnv): TypedStatement =>
     if (isJumpStatement(t)) return typeJumpStatement(t, env);
     if (isIterationStatement(t)) return typeIterationStatement(t, env);
     if (isSelectionStatement(t)) return typeSelectionStatement(t, env);
+    if (isLabeledStatement(t)) return typeLabeledStatement(t);
     return typeExpressionStatement(t, env);
+  });
+
+// only reached via typeStatement's generic dispatch - a properly placed
+// case/default (a direct top-level item of a switch's own body, however
+// deep a stack of labels shares that position) is intercepted and typed
+// explicitly by typeSelectionStatementSwitch before it ever gets here, so
+// reaching this function means the label is either outside any switch or
+// nested one level too deep (inside an if/loop/block within one)
+const typeLabeledStatement = (t: LabeledStatement): TypedLabeledStatement =>
+  typeCheck(t, () => {
+    throw "case/default label must be a direct top-level item of a switch statement's body";
   });
 
 const typeJumpStatement = (
@@ -500,7 +521,12 @@ const typeJumpStatement = (
 ): TypedJumpStatement =>
   typeCheck(t, () => {
     if (isJumpStatementReturn(t)) return typeJumpStatementReturn(t, env);
-    if (!env.inLoopBody) throw "break/continue outside of a loop body";
+    if (isJumpStatementBreak(t)) {
+      if (!env.inLoopBody && !env.inSwitchBody)
+        throw "break outside of a loop or switch body";
+      return t;
+    }
+    if (!env.inLoopBody) throw "continue outside of a loop body";
     return t;
   });
 
@@ -616,7 +642,78 @@ const typeSelectionStatement = (
   env: TypeEnv,
 ): TypedSelectionStatement =>
   typeCheck(t, () => {
+    if (isSelectionStatementSwitch(t))
+      return typeSelectionStatementSwitch(t, env);
     return typeSelectionStatementIf(t, env);
+  });
+
+// walks a switch's own top-level body items, explicitly recognizing
+// case/default here (rather than through typeStatement's generic
+// dispatch) so labels are only ever legal in this one position - peeling
+// through however many are stacked at one spot (e.g. "case 1: case 2:
+// foo();"), checking for duplicate values/multiple defaults along the
+// way. A label anywhere else (outside any switch, or nested one level
+// deeper inside an if/loop/block within this one) falls through to
+// ordinary typeBlockItem/typeStatement and hits typeLabeledStatement's
+// unconditional rejection instead.
+const typeSwitchBodyItem = (
+  t: BlockItem,
+  env: TypeEnv,
+  seenValues: Set<bigint>,
+  defaultState: { count: number },
+): TypedBlockItem => {
+  if (isLabeledStatementCase(t)) {
+    if (seenValues.has(t.value)) throw "duplicate case value " + t.value;
+    seenValues.add(t.value);
+    const body = typeSwitchBodyItem(
+      t.body,
+      env,
+      seenValues,
+      defaultState,
+    ) as TypedStatement;
+    return { ...t, body };
+  }
+  if (isLabeledStatementDefault(t)) {
+    defaultState.count++;
+    if (defaultState.count > 1)
+      throw "multiple default labels in one switch statement";
+    const body = typeSwitchBodyItem(
+      t.body,
+      env,
+      seenValues,
+      defaultState,
+    ) as TypedStatement;
+    return { ...t, body };
+  }
+  return typeBlockItem(t, env);
+};
+
+const typeSelectionStatementSwitch = (
+  t: SelectionStatementSwitch,
+  env: TypeEnv,
+): TypedSelectionStatementSwitch =>
+  typeCheck(t, () => {
+    const controlExpr = typeExpression(t.controlExpr, env);
+    if (!isIntegerType(controlExpr.typeInfo))
+      throw "controlling expression of switch statement should have integer type";
+
+    // case/default labels are only supported as direct top-level items of
+    // a braced switch body - not nested inside an if/loop/block within it
+    if (!isCompoundStatement(t.body))
+      throw "switch statement body must be a compound statement";
+
+    env.enterBlock();
+    env.enterSwitchBody();
+    const seenValues = new Set<bigint>();
+    const defaultState = { count: 0 };
+    const value = t.body.value.map((item) =>
+      typeSwitchBodyItem(item, env, seenValues, defaultState),
+    );
+    env.exitSwitchBody();
+    env.exitBlock();
+
+    const body: TypedCompoundStatement = { ...t.body, value };
+    return { ...t, controlExpr, body };
   });
 
 const typeSelectionStatementIf = (

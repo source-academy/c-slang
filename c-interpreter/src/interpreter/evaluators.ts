@@ -56,6 +56,10 @@ import {
   TypedUnaryExpressionSizeof,
   isEmptyExpressionStatement,
   TypedSelectionStatementIf,
+  TypedSelectionStatementSwitch,
+  TypedLabeledStatementCase,
+  TypedLabeledStatementDefault,
+  TypedBlockItem,
   TypedIterationStatementDoWhile,
   TypedIterationStatementWhile,
   TypedIterationStatementFor,
@@ -75,6 +79,7 @@ import {
   InstructionType,
   LogicalInstruction,
   PushInstruction,
+  SwitchInstruction,
   UnaryOpInstruction,
   WhileInstruction,
   arithmeticConversionInstruction,
@@ -99,6 +104,7 @@ import {
   popInstruction,
   pushInstruction,
   returnInstruction,
+  switchInstruction,
   unaryOpInstruction,
   whileInstruction,
 } from "./instructions";
@@ -579,6 +585,30 @@ export const ASTNodeEvaluator: {
     rt.agenda.push(branchInstruction(consequent, alternative));
     rt.agenda.push(cond);
   },
+  SelectionStatementSwitch: (
+    rt: Runtime,
+    { controlExpr, body }: TypedSelectionStatementSwitch,
+  ) => {
+    // the switch's own scope closes even on a break out of it, same
+    // reasoning as the for-loop's own scope in IterationStatementFor
+    rt.symbolTable.enterBlock();
+    rt.agenda.push(exitBlockInstruction());
+    rt.agenda.push(breakMarkInstruction());
+    rt.agenda.push(switchInstruction(body.value));
+    rt.agenda.push(controlExpr);
+  },
+  LabeledStatementCase: (
+    rt: Runtime,
+    { body }: TypedLabeledStatementCase,
+  ) => {
+    rt.agenda.push(body);
+  },
+  LabeledStatementDefault: (
+    rt: Runtime,
+    { body }: TypedLabeledStatementDefault,
+  ) => {
+    rt.agenda.push(body);
+  },
   IterationStatementDoWhile: (
     rt: Runtime,
     { cond, body }: TypedIterationStatementDoWhile,
@@ -1011,6 +1041,17 @@ export const instructionEvaluator: {
       }
       rt.agenda.push(continueMarkInstruction());
       rt.agenda.push(body);
+    }
+  },
+  [InstructionType.SWITCH]: (rt: Runtime, { stmts }: SwitchInstruction) => {
+    const o = rt.stash.pop();
+    if (!(isTemporaryObject(o) && isIntegerType(o.typeInfo)))
+      throw new Error("switch controlling value should be of integer type");
+    const n = bytesToBigint(o.bytes, isSigned(o.typeInfo), rt.config.endianness);
+
+    const startIdx = findSwitchStartIndex(stmts, n);
+    for (let i = stmts.length - 1; i >= startIdx; i--) {
+      rt.agenda.push(stmts[i]);
     }
   },
   [InstructionType.BREAK_MARK]: () => {},
@@ -1609,6 +1650,35 @@ const evaluateInitializer = (
     i++;
     evaluateInitializer(initializer, currAddress, currType, rt);
   });
+};
+
+// finds the top-level index to start executing from: the first case whose
+// value matches, or the first default if none match, peeling through
+// however many labels are stacked at each position (e.g. "case 1: case 2:
+// foo();" is one item wrapping another, not two sibling items). Returns
+// stmts.length (an out-of-range, no-op index) if neither is found.
+const findSwitchStartIndex = (
+  stmts: TypedBlockItem[],
+  value: bigint,
+): number => {
+  let defaultIndex = stmts.length;
+  for (let i = 0; i < stmts.length; i++) {
+    let cur: TypedBlockItem = stmts[i];
+    while (
+      cur.type === "LabeledStatementCase" ||
+      cur.type === "LabeledStatementDefault"
+    ) {
+      if (cur.type === "LabeledStatementCase" && cur.value === value)
+        return i;
+      if (
+        cur.type === "LabeledStatementDefault" &&
+        defaultIndex === stmts.length
+      )
+        defaultIndex = i;
+      cur = cur.body;
+    }
+  }
+  return defaultIndex;
 };
 
 const jumpTill = (rt: Runtime, pred: (i: AgendaItem) => boolean): void => {

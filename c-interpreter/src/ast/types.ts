@@ -74,6 +74,9 @@ export type TypedASTNode =
   | TypedIterationStatementDoWhile
   | TypedIterationStatementFor
   | TypedSelectionStatementIf
+  | TypedSelectionStatementSwitch
+  | TypedLabeledStatementCase
+  | TypedLabeledStatementDefault
   | EmptyExpressionStatement
   | TypedCommaOperator
   | TypedCastExpressionNode
@@ -372,14 +375,16 @@ export type Statement =
   | ExpressionStatement
   | JumpStatement
   | IterationStatement
-  | SelectionStatement;
+  | SelectionStatement
+  | LabeledStatement;
 
 export type TypedStatement =
   | TypedCompoundStatement
   | TypedExpressionStatement
   | TypedJumpStatement
   | TypedIterationStatement
-  | TypedSelectionStatement;
+  | TypedSelectionStatement
+  | TypedLabeledStatement;
 
 export type JumpStatement =
   | JumpStatementReturn
@@ -512,16 +517,19 @@ export const isTypedIterationStatementFor = (
   i: TypedStatement,
 ): i is TypedIterationStatementFor => i.type === "IterationStatementFor";
 
-export type SelectionStatement = SelectionStatementIf;
+export type SelectionStatement = SelectionStatementIf | SelectionStatementSwitch;
 
 export const isSelectionStatement = (i: BaseNode): i is SelectionStatement =>
-  isSelectionStatementIf(i);
+  isSelectionStatementIf(i) || isSelectionStatementSwitch(i);
 
-export type TypedSelectionStatement = TypedSelectionStatementIf;
+export type TypedSelectionStatement =
+  | TypedSelectionStatementIf
+  | TypedSelectionStatementSwitch;
 
 export const isTypedSelectionStatement = (
   i: TypedStatement,
-): i is TypedSelectionStatement => isTypedSelectionStatementIf(i);
+): i is TypedSelectionStatement =>
+  isTypedSelectionStatementIf(i) || isTypedSelectionStatementSwitch(i);
 
 export interface SelectionStatementIf extends BaseNode {
   type: "SelectionStatementIf";
@@ -544,6 +552,79 @@ export interface TypedSelectionStatementIf extends BaseNode {
 export const isTypedSelectionStatementIf = (
   i: TypedStatement,
 ): i is TypedSelectionStatementIf => i.type === "SelectionStatementIf";
+
+export interface SelectionStatementSwitch extends BaseNode {
+  type: "SelectionStatementSwitch";
+  controlExpr: Expression;
+  body: Statement;
+}
+
+export const isSelectionStatementSwitch = (
+  i: BaseNode,
+): i is SelectionStatementSwitch => i.type === "SelectionStatementSwitch";
+
+export interface TypedSelectionStatementSwitch extends BaseNode {
+  type: "SelectionStatementSwitch";
+  controlExpr: TypedExpression;
+  body: TypedCompoundStatement;
+}
+
+export const isTypedSelectionStatementSwitch = (
+  i: TypedStatement,
+): i is TypedSelectionStatementSwitch =>
+  i.type === "SelectionStatementSwitch";
+
+export type LabeledStatement = LabeledStatementCase | LabeledStatementDefault;
+
+export const isLabeledStatement = (i: BaseNode): i is LabeledStatement =>
+  isLabeledStatementCase(i) || isLabeledStatementDefault(i);
+
+export type TypedLabeledStatement =
+  | TypedLabeledStatementCase
+  | TypedLabeledStatementDefault;
+
+export const isTypedLabeledStatement = (
+  i: TypedBlockItem,
+): i is TypedLabeledStatement =>
+  isTypedLabeledStatementCase(i) || isTypedLabeledStatementDefault(i);
+
+export interface LabeledStatementCase extends BaseNode {
+  type: "LabeledStatementCase";
+  value: bigint;
+  body: Statement;
+}
+
+export const isLabeledStatementCase = (
+  i: BaseNode,
+): i is LabeledStatementCase => i.type === "LabeledStatementCase";
+
+export interface TypedLabeledStatementCase extends BaseNode {
+  type: "LabeledStatementCase";
+  value: bigint;
+  body: TypedStatement;
+}
+
+export const isTypedLabeledStatementCase = (
+  i: TypedBlockItem,
+): i is TypedLabeledStatementCase => i.type === "LabeledStatementCase";
+
+export interface LabeledStatementDefault extends BaseNode {
+  type: "LabeledStatementDefault";
+  body: Statement;
+}
+
+export const isLabeledStatementDefault = (
+  i: BaseNode,
+): i is LabeledStatementDefault => i.type === "LabeledStatementDefault";
+
+export interface TypedLabeledStatementDefault extends BaseNode {
+  type: "LabeledStatementDefault";
+  body: TypedStatement;
+}
+
+export const isTypedLabeledStatementDefault = (
+  i: TypedBlockItem,
+): i is TypedLabeledStatementDefault => i.type === "LabeledStatementDefault";
 
 export interface ExpressionStatement extends BaseNode {
   type: "ExpressionStatement";

@@ -1,12 +1,16 @@
 import {
   Identifier,
+  TypedBlockItem,
   TypedCompoundStatement,
   TypedInitDeclarator,
   isTypedCompoundStatement,
   isTypedDeclaration,
   isTypedIterationStatement,
   isTypedIterationStatementFor,
-  isTypedSelectionStatement,
+  isTypedLabeledStatementCase,
+  isTypedLabeledStatementDefault,
+  isTypedSelectionStatementIf,
+  isTypedSelectionStatementSwitch,
   isTypedefDeclaration,
 } from "../ast/types";
 import { ObjectTypeInfo, ParameterTypeAndIdentifier } from "../typing/types";
@@ -111,15 +115,25 @@ export class RuntimeStack extends Stack<StackFrame> {
         identifierPrefix.pop();
         blockNo++;
       };
-      stmts.value.forEach((i) => {
+      // a case/default label is transparent for scanning purposes - it
+      // wraps exactly one item, which gets scanned as if it were the
+      // label's own position (stacked labels just recurse one more level)
+      const scanItem = (i: TypedBlockItem): void => {
         if (isTypedDeclaration(i)) {
           scanDeclaratorList(i.declaratorList);
         } else if (!isTypedefDeclaration(i)) {
           if (isTypedCompoundStatement(i)) scanBlock(i);
-          else if (isTypedSelectionStatement(i)) {
+          else if (
+            isTypedLabeledStatementCase(i) ||
+            isTypedLabeledStatementDefault(i)
+          ) {
+            scanItem(i.body);
+          } else if (isTypedSelectionStatementIf(i)) {
             if (isTypedCompoundStatement(i.consequent)) scanBlock(i.consequent);
             if (i.alternative && isTypedCompoundStatement(i.alternative))
               scanBlock(i.alternative);
+          } else if (isTypedSelectionStatementSwitch(i)) {
+            scanBlock(i.body);
           } else if (isTypedIterationStatementFor(i)) {
             // the for-loop's own scope (6.8.5p5) claims one block slot,
             // covering init; body (if braced) nests one level deeper, same
@@ -136,7 +150,8 @@ export class RuntimeStack extends Stack<StackFrame> {
           )
             scanBlock(i.body);
         }
-      });
+      };
+      stmts.value.forEach(scanItem);
     };
     scan(body);
 

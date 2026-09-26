@@ -399,3 +399,98 @@ for-loop-void-init-expression:
     - in: "42"
       out: "3"
       desc: "A4.2 (regression guard): a void-returning function call as a for-loop's init expression no longer crashes - the post-init pop is now conditioned on the init expression not being void, same as ExpressionStatement already does"
+nested-loop-continue:
+  file: "nested-loop-continue.c"
+  cases:
+    - in: "42"
+      out: "3"
+      desc: "A4.3 (adjacent bug found and fixed alongside): TypeEnv's loop-body flag was a boolean, not a counter, so an inner loop's own exitLoopBody() incorrectly cleared it while still lexically inside the outer loop - a trailing continue after a nested inner loop was wrongly rejected before this fix"
+switch-basic-match:
+  file: "switch-basic-match.c"
+  cases:
+    - in: "42"
+      out: "20"
+      desc: "A4.3: a matching case runs its own statements up to its own break, and nothing else"
+switch-fallthrough:
+  file: "switch-fallthrough.c"
+  cases:
+    - in: "42"
+      out: "11"
+      desc: "A4.3: a case with no break falls through into the next case's statements"
+switch-stacked-labels:
+  file: "switch-stacked-labels.c"
+  cases:
+    - in: "42"
+      out: "5"
+      desc: "A4.3: stacked labels (case 1: case 2: ...) share one body - the inner label is nested inside the outer one's wrapped statement, not a sibling"
+switch-default-fallback:
+  file: "switch-default-fallback.c"
+  cases:
+    - in: "42"
+      out: "42"
+      desc: "A4.3: default runs when no case value matches"
+switch-default-before-cases:
+  file: "switch-default-before-cases.c"
+  cases:
+    - in: "42"
+      out: "42"
+      desc: "A4.3: default's position in the switch body is independent of ordering - it need not be last, or even after every case"
+switch-negative-case:
+  file: "switch-negative-case.c"
+  cases:
+    - in: "42"
+      out: "7"
+      desc: "A4.3: a negated integer literal case constant (case -1:) parses and dispatches correctly"
+switch-no-match-no-default:
+  file: "switch-no-match-no-default.c"
+  cases:
+    - in: "42"
+      out: "5"
+      desc: "A4.3: no case matches and there's no default - the whole switch body is skipped, control falls through to what follows it"
+switch-break-nested-in-loop:
+  file: "switch-break-nested-in-loop.c"
+  cases:
+    - in: "42"
+      out: "2"
+      desc: "A4.3: break inside a switch nested in a loop only exits the switch, not the enclosing loop"
+switch-continue-nested-in-switch:
+  file: "switch-continue-nested-in-switch.c"
+  cases:
+    - in: "42"
+      out: "2"
+      desc: "A4.3 (regression guard): continue inside a loop nested in a switch's case still correctly continues the loop, unaffected by the enclosing switch - and the loop/switch nesting counter fix doesn't break this"
+switch-duplicate-case:
+  file: "switch-duplicate-case.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.3: two case labels with the same value in one switch are rejected at type-check time (6.8.4.2p3)"
+      fail: true
+switch-multiple-default:
+  file: "switch-multiple-default.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.3: more than one default label in one switch is rejected at type-check time (6.8.4.2p2)"
+      fail: true
+switch-case-outside-switch:
+  file: "switch-case-outside-switch.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.3: a case label outside any switch statement is rejected at type-check time"
+      fail: true
+switch-non-compound-body:
+  file: "switch-non-compound-body.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.3 (scope decision): a switch whose body isn't a brace-enclosed compound statement is rejected"
+      fail: true
+switch-nested-block-case:
+  file: "switch-nested-block-case.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.3 (scope decision): a case label nested inside an if within the switch, rather than a direct top-level item of the switch's own body, is rejected - no Duff's-device-style tricks"
+      fail: true

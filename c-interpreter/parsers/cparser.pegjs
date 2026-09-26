@@ -1250,7 +1250,6 @@ StaticAssertDeclaration
 // (6.8) statement
 Statement
   = LabeledStatement
-    { throwNotImplemented("goto and switch"); }
   / CompoundStatement
   / ExpressionStatement
   / SelectionStatement
@@ -1258,10 +1257,22 @@ Statement
   / JumpStatement
 
 // (6.8.1) labeled-statement
+// case/default's constant is a bare (optionally negated) integer literal,
+// not a full constant-expression - ConstantExpression itself is entirely
+// unimplemented (see below), and this mirrors the same narrowing already
+// used for array declarator sizes a few hundred lines up
 LabeledStatement
   = Identifier COLON Statement
-  / CASE ConstantExpression COLON Statement
-  / DEFAULT COLON Statement
+    { throwNotImplemented("goto"); }
+  / CASE a:MINUS? b:IntegerConstant COLON c:Statement
+    {
+      return makeNode("LabeledStatementCase", {
+        value: a ? -b.value : b.value,
+        body: c
+      });
+    }
+  / DEFAULT COLON a:Statement
+    { return makeNode("LabeledStatementDefault", { body: a }); }
 
 // (6.8.2) compound-statement
 CompoundStatement
@@ -1304,7 +1315,10 @@ SelectionStatement
     }
   / SWITCH LPAR a:Expression RPAR b:Statement
     {
-      throwNotImplemented("switch statements");
+      return makeNode("SelectionStatementSwitch", {
+        controlExpr: a,
+        body: b
+      });
     }
 
 // (6.8.5) iteration-statement
