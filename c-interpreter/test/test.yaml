@@ -361,3 +361,41 @@ prototype-block-scope:
     - in: "42"
       out: "12"
       desc: "A4.1: a function prototype declared inside another function's body (block scope) works the same way, falling out of the same scoping mechanism for free"
+for-loop-declaration-basic:
+  file: "for-loop-declaration-basic.c"
+  cases:
+    - in: "42"
+      out: "10"
+      desc: "A4.2: for (int i = 0; i < 5; i = i + 1) sums 0..4 - the basic C99 for-scoped declaration happy path"
+for-loop-declaration-multiple-declarators:
+  file: "for-loop-declaration-multiple-declarators.c"
+  cases:
+    - in: "42"
+      out: "5"
+      desc: "A4.2: for (int i = 0, j = 10; i < j; i = i+1, j = j-1) - multiple declarators in one for-init fall out for free from Declaration's existing multi-declarator support"
+for-loop-declaration-scope-leak:
+  file: "for-loop-declaration-scope-leak.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.2: a for-loop's declared variable is not visible after the loop ends in the same block (6.8.5p5) - referencing it there is a type-check error"
+      fail: true
+for-loop-declaration-sibling-loops:
+  file: "for-loop-declaration-sibling-loops.c"
+  cases:
+    - in: "42"
+      out: "9"
+      desc: "A4.2: two consecutive for-loops in the same block, both declaring their own int i, do not throw a redeclaration error - each for-loop gets its own scope"
+for-loop-declaration-typedef-rejected:
+  file: "for-loop-declaration-typedef-rejected.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.2: a typedef in a for-loop's declaration part is rejected at type-check time"
+      fail: true
+for-loop-void-init-expression:
+  file: "for-loop-void-init-expression.c"
+  cases:
+    - in: "42"
+      out: "3"
+      desc: "A4.2 (regression guard): a void-returning function call as a for-loop's init expression no longer crashes - the post-init pop is now conditioned on the init expression not being void, same as ExpressionStatement already does"

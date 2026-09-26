@@ -105,6 +105,7 @@ import {
   isJumpStatement,
   isPostfixExpressionNode,
   isPrimaryExprIdentifier,
+  isTypedefDeclaration,
   isUnaryExpressionDecr,
   isUnaryExpressionIncr,
   isUnaryExpressionNode,
@@ -579,13 +580,16 @@ const typeIterationStatementFor = (
   env: TypeEnv,
 ): TypedIterationStatementFor =>
   typeCheck(t, () => {
+    // the for-scope (6.8.5p5) spans init, controlExpr, afterIterExpr, and
+    // body - even when body isn't itself a braced compound statement
+    env.enterBlock();
+
     let init;
     if (t.init === null) init = null;
     else if (isDeclaration(t.init)) {
-      throw "declaration in for statement not supported, consider moving it outside instead";
-      // init = typeDeclaration(t.init, env);
-      // if (isTypedefDeclaration(init))
-      //   throw "typedef in declaration part of for statement";
+      init = typeDeclaration(t.init, env);
+      if (isTypedefDeclaration(init))
+        throw "typedef in declaration part of for statement";
     } else init = typeExpression(t.init, env);
 
     let controlExpr = null;
@@ -601,6 +605,8 @@ const typeIterationStatementFor = (
     env.enterLoopBody();
     const body = typeStatement(t.body, env);
     env.exitLoopBody();
+
+    env.exitBlock();
 
     return { ...t, init, controlExpr, afterIterExpr, body };
   });

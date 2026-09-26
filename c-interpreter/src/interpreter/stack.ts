@@ -1,9 +1,11 @@
 import {
   Identifier,
   TypedCompoundStatement,
+  TypedInitDeclarator,
   isTypedCompoundStatement,
   isTypedDeclaration,
   isTypedIterationStatement,
+  isTypedIterationStatementFor,
   isTypedSelectionStatement,
   isTypedefDeclaration,
 } from "../ast/types";
@@ -88,6 +90,19 @@ export class RuntimeStack extends Stack<StackFrame> {
     }
 
     const identifierPrefix: string[] = [];
+    const scanDeclaratorList = (dl: TypedInitDeclarator[]) => {
+      dl.forEach((j) => {
+        const typeInfo = j.typeInfo;
+        const qid =
+          identifierPrefix.join("::") +
+          (identifierPrefix.length ? "::" : "") +
+          j.identifier;
+        j.qualifiedIdentifier = qid;
+        ptr = roundUpM(ptr, typeInfo.alignment);
+        res[qid] = { address: ptr, typeInfo };
+        ptr += typeInfo.size;
+      });
+    };
     const scan = (stmts: TypedCompoundStatement): void => {
       let blockNo = 0;
       const scanBlock = (b: TypedCompoundStatement) => {
@@ -98,23 +113,23 @@ export class RuntimeStack extends Stack<StackFrame> {
       };
       stmts.value.forEach((i) => {
         if (isTypedDeclaration(i)) {
-          i.declaratorList.forEach((j) => {
-            const typeInfo = j.typeInfo;
-            const qid =
-              identifierPrefix.join("::") +
-              (identifierPrefix.length ? "::" : "") +
-              j.identifier;
-            j.qualifiedIdentifier = qid;
-            ptr = roundUpM(ptr, typeInfo.alignment);
-            res[qid] = { address: ptr, typeInfo };
-            ptr += typeInfo.size;
-          });
+          scanDeclaratorList(i.declaratorList);
         } else if (!isTypedefDeclaration(i)) {
           if (isTypedCompoundStatement(i)) scanBlock(i);
           else if (isTypedSelectionStatement(i)) {
             if (isTypedCompoundStatement(i.consequent)) scanBlock(i.consequent);
             if (i.alternative && isTypedCompoundStatement(i.alternative))
               scanBlock(i.alternative);
+          } else if (isTypedIterationStatementFor(i)) {
+            // the for-loop's own scope (6.8.5p5) claims one block slot,
+            // covering init; body (if braced) nests one level deeper, same
+            // as any other nested compound statement
+            identifierPrefix.push("block" + blockNo);
+            if (i.init !== null && i.init.type === "Declaration")
+              scanDeclaratorList(i.init.declaratorList);
+            if (isTypedCompoundStatement(i.body)) scanBlock(i.body);
+            identifierPrefix.pop();
+            blockNo++;
           } else if (
             isTypedIterationStatement(i) &&
             isTypedCompoundStatement(i.body)

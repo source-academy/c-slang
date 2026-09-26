@@ -601,12 +601,17 @@ export const ASTNodeEvaluator: {
     rt: Runtime,
     { init, controlExpr, afterIterExpr, body }: TypedIterationStatementFor,
   ) => {
+    // the for-scope (6.8.5p5) closes even on a break out of the loop, so
+    // exitBlockInstruction sits below breakMarkInstruction on the agenda
+    rt.symbolTable.enterBlock();
+    rt.agenda.push(exitBlockInstruction());
     rt.agenda.push(breakMarkInstruction());
     controlExpr = controlExpr === null ? TYPED_CONSTANT_ONE : controlExpr;
     rt.agenda.push(forInstruction(controlExpr, body, afterIterExpr));
     rt.agenda.push(controlExpr);
     if (init !== null) {
-      rt.agenda.push(popInstruction());
+      if (init.type !== "Declaration" && !isVoid(init.typeInfo))
+        rt.agenda.push(popInstruction());
       rt.agenda.push(init);
     }
   },

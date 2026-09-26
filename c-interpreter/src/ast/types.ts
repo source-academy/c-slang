@@ -502,7 +502,7 @@ export const isIterationStatementFor = (
 
 export interface TypedIterationStatementFor extends BaseNode {
   type: "IterationStatementFor";
-  init: TypedExpression | null;
+  init: TypedExpression | TypedDeclaration | null;
   controlExpr: TypedExpression | null;
   afterIterExpr: TypedExpression | null;
   body: TypedStatement;
