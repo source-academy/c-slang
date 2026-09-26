@@ -40,6 +40,12 @@ const run = (source: string): number => {
   return rt.exitCode;
 }
 
+const runForStdout = (source: string): string => {
+  const rt = cviz.run(source);
+  while (rt.exitCode === undefined) rt.next();
+  return rt.stdout;
+}
+
 for (const [testName, testSuite] of Object.entries(tests)) {
   describe(testName, () => {
     const source = readFileSync(TEST_FOLDER_PATH + testSuite.file, "utf-8");
@@ -94,5 +100,42 @@ describe("postfix expression position tracking", () => {
     assert.equal(inner.src.trim(), "arr[1]");
     assert.isBelow(inner.end.offset, outer.end.offset);
     assert.equal(inner.start.offset, outer.start.offset);
+  });
+});
+
+describe("print renders a char* as its string content, not its address", () => {
+  it("a string literal argument", () => {
+    assert.equal(
+      runForStdout(`int main() { print("hi"); return 0; }`),
+      '"hi"\n',
+    );
+  });
+
+  it("a char* variable holding the same literal", () => {
+    assert.equal(
+      runForStdout(`int main() { char *p = "hi"; print(p); return 0; }`),
+      '"hi"\n',
+    );
+  });
+
+  it("a NULL char* still prints NULL, not an empty string or a crash", () => {
+    assert.equal(
+      runForStdout(`int main() { char *p = 0; print(p); return 0; }`),
+      "NULL\n",
+    );
+  });
+
+  it("a non-char pointer still prints its address, unaffected by this fix", () => {
+    const out = runForStdout(
+      `int main() { int x = 5; int *p = &x; print(p); return 0; }`,
+    );
+    assert.match(out, /^0x[0-9A-F]+\n$/);
+  });
+
+  it("byte content, not source text, is what gets walked - an escape sequence renders as its actual character", () => {
+    assert.equal(
+      runForStdout(`int main() { print("a\\nb"); return 0; }`),
+      '"a\\nb"\n',
+    );
   });
 });

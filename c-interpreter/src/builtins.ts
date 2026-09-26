@@ -81,7 +81,7 @@ export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
       const o = args[0];
       if (!isTemporaryObject(o)) throw "expected object for print";
       rt.appendToStdout(
-        stringify(o.bytes, o.typeInfo, rt.config.endianness) + "\n",
+        stringify(o.bytes, o.typeInfo, rt.config.endianness, rt.memory) + "\n",
       );
     },
   },

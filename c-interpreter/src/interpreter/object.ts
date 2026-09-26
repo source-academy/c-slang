@@ -1,7 +1,9 @@
 import {
   FunctionType,
+  char,
   isArray,
   isChar,
+  isCharacterType,
   isPointer,
   isScalarType,
   isSigned,
@@ -124,10 +126,25 @@ export class RuntimeObject
   }
 }
 
+// Walks memory from a char*'s address until a null terminator, the same
+// way a real strlen/printf("%s", ...) would - so it throws naturally,
+// like any other out-of-bounds access in this interpreter, if the
+// pointer was never actually null-terminated.
+const stringifyCString = (address: number, memory: Memory): string => {
+  let s = "";
+  for (;;) {
+    const [byte] = memory.getObjectBytes(address + s.length, char());
+    if (byte === 0) break;
+    s += String.fromCharCode(byte);
+  }
+  return JSON.stringify(s);
+};
+
 export const stringify = (
   bytes: number[],
   t: ObjectTypeInfo,
   endianness: Endianness,
+  memory: Memory,
 ): string => {
   if (bytes.length !== t.size)
     throw new Error("number of bytes do not match type given");
@@ -136,6 +153,8 @@ export const stringify = (
     if (isChar(t)) return "'" + encodeURI(String.fromCharCode(Number(n))) + "'";
     if (isPointer(t)) {
       if (n === BigInt(0)) return "NULL";
+      if (isCharacterType(t.referencedType))
+        return stringifyCString(Number(n), memory);
       return decimalAddressToHex(Number(n));
     }
     return n.toString();
@@ -144,7 +163,7 @@ export const stringify = (
     const et = t.elementType;
     const res = [];
     for (let i = 0; i < t.size; i += et.size) {
-      res.push(stringify(bytes.slice(i, i + et.size), et, endianness));
+      res.push(stringify(bytes.slice(i, i + et.size), et, endianness, memory));
     }
     return "[" + res.join(", ") + "]";
   }
@@ -152,7 +171,7 @@ export const stringify = (
     const res = [];
     for (const i of t.members) {
       const b = bytes.slice(i.relativeAddress, i.relativeAddress + i.type.size);
-      res.push(stringify(b, i.type, endianness));
+      res.push(stringify(b, i.type, endianness, memory));
     }
     return (t.tag || "") + "{" + res.join(", ") + "}";
   }
