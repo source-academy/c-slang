@@ -2,16 +2,20 @@ import { Identifier } from "../ast/types";
 import { BUILTIN_FUNCTIONS } from "../builtins";
 import {
   AggregateType,
+  FunctionType,
   Structure,
   TypeInfo,
   isAggregateType,
+  isFunction,
   isStructure,
 } from "./types";
 
 const TAG_PREFIX = "tag::";
 
+// third tuple element is only meaningful for function-typed entries:
+// tracks whether a matching definition (not just a prototype) has been seen
 export class TypeEnv {
-  private env: Record<Identifier, [TypeInfo, boolean]>[];
+  private env: Record<Identifier, [TypeInfo, boolean, boolean]>[];
   public readonly aggTypes: AggregateType[];
   private _inLoopBody: boolean;
 
@@ -94,7 +98,7 @@ export class TypeEnv {
     const currBlock = this.env[this.env.length - 1];
     if (id in currBlock) throw "redeclaration of identifier " + id;
     if (isAggregateType(t)) this.aggTypes.push(t);
-    currBlock[id] = [t, isTypedef];
+    currBlock[id] = [t, isTypedef, true];
   }
 
   addTagTypeInfo(tag: Identifier, t: Structure): void {
@@ -102,6 +106,37 @@ export class TypeEnv {
     const id = TAG_PREFIX + tag;
     if (id in currBlock) throw "redeclaration of tag " + tag;
     if (isAggregateType(t)) this.aggTypes.push(t);
-    currBlock[id] = [t, false];
+    currBlock[id] = [t, false, true];
+  }
+
+  // handles both prototypes (isDefinition: false) and definitions (true);
+  // a prototype can repeat/precede a compatible definition, but two
+  // definitions or two incompatible signatures for the same identifier
+  // in one scope are errors
+  declareFunction(
+    id: Identifier,
+    t: FunctionType,
+    isDefinition: boolean,
+  ): void {
+    const currBlock = this.env[this.env.length - 1];
+    if (id in currBlock) {
+      const [existing, isTypedef, isDefined] = currBlock[id];
+      if (isTypedef || !isFunction(existing))
+        throw "redeclaration of identifier " + id;
+      if (!existing.isCompatible(t)) throw "conflicting types for '" + id + "'";
+      if (isDefined && isDefinition) throw "redefinition of '" + id + "'";
+      currBlock[id] = [existing, false, isDefined || isDefinition];
+      return;
+    }
+    currBlock[id] = [t, false, isDefinition];
+  }
+
+  // called once, at the end of a translation unit, to catch prototypes
+  // that were never matched by a definition anywhere in the file
+  getUndefinedFunctionDeclarations(): Identifier[] {
+    const currBlock = this.env[this.env.length - 1];
+    return Object.entries(currBlock)
+      .filter(([, [t, , isDefined]]) => isFunction(t) && !isDefined)
+      .map(([id]) => id);
   }
 }

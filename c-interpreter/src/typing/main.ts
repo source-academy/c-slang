@@ -203,6 +203,10 @@ export const typeTranslationUnit = (t: TranslationUnit): TypedTranslationUnit =>
     // post typechecking
     env.aggTypes.forEach((i) => i.recalculateSizeAndAlignment());
 
+    const undefinedFns = env.getUndefinedFunctionDeclarations();
+    if (undefinedFns.length > 0)
+      throw "function '" + undefinedFns[0] + "' declared but never defined";
+
     try {
       env.getIdentifierTypeInfo("main");
     } catch (err) {
@@ -240,7 +244,7 @@ const typeFunctionDefinition = (
 
     if (!identifier) throw "function definition must contain an identifier";
     if (!isFunction(typeInfo)) throw "declarator does not have function type";
-    env.addIdentifierTypeInfo(identifier, typeInfo);
+    env.declareFunction(identifier, typeInfo, true);
 
     if (identifier === "main") {
       if (typeInfo.arity !== 0)
@@ -285,9 +289,9 @@ const typeDeclaration = (
     }
     return {
       ...t,
-      declaratorList: t.declaratorList.map((i) =>
-        typeInitDeclarator(i, env, typeSpecifiers),
-      ),
+      declaratorList: t.declaratorList
+        .map((i) => typeInitDeclarator(i, env, typeSpecifiers))
+        .filter((i): i is TypedInitDeclarator => i !== null),
     };
   });
 
@@ -317,7 +321,7 @@ const typeInitDeclarator = (
   t: InitDeclarator,
   env: TypeEnv,
   specifiers: TypeSpecifier[],
-): TypedInitDeclarator =>
+): TypedInitDeclarator | null =>
   typeCheck(t, () => {
     const { identifier, type: typeInfo } = constructType(
       specifiers,
@@ -325,8 +329,11 @@ const typeInitDeclarator = (
       env,
     );
     if (!identifier) throw "declarator must declare one identifier";
-    if (isFunction(typeInfo))
-      throw "cannot declare function (forward declarations are not supported)";
+    if (isFunction(typeInfo)) {
+      if (t.initializer) throw "cannot initialize a function";
+      env.declareFunction(identifier, typeInfo, false);
+      return null;
+    }
     if (isVoid(typeInfo)) throw "cannot declare a variable of type void";
 
     let initializer: TypedInitializer | null = null;

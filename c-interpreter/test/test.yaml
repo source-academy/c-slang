@@ -322,3 +322,42 @@ string-array-init-mutable:
     - in: "42"
       out: "120"
       desc: "A3 follow-up: the initialized array is a real, independent, mutable copy of the literal's bytes - not the literal's own read-only storage"
+prototype-forward-declare:
+  file: "prototype-forward-declare.c"
+  cases:
+    - in: "42"
+      out: "25"
+      desc: "A4.1: a plain forward declaration (int square(int);) ahead of main, defined after main, now type-checks and calls correctly"
+prototype-mutual-recursion:
+  file: "prototype-mutual-recursion.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.1: mutual recursion (isEven/isOdd calling each other) via one forward declaration - the actual point of this feature"
+prototype-never-defined:
+  file: "prototype-never-defined.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.1: a function declared only as a prototype, never defined anywhere in the file, is now rejected at the end of type-checking (mirrors a linker's undefined-reference error)"
+      fail: true
+prototype-conflicting-types:
+  file: "prototype-conflicting-types.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.1: a prototype and its later definition disagree on parameter count - rejected as conflicting types"
+      fail: true
+prototype-redefinition:
+  file: "prototype-redefinition.c"
+  cases:
+    - in: "42"
+      out: "1"
+      desc: "A4.1 (regression guard): two full definitions of the same function, no prototype involved, is still rejected as a redefinition"
+      fail: true
+prototype-block-scope:
+  file: "prototype-block-scope.c"
+  cases:
+    - in: "42"
+      out: "12"
+      desc: "A4.1: a function prototype declared inside another function's body (block scope) works the same way, falling out of the same scoping mechanism for free"
