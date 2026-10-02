@@ -872,20 +872,29 @@ export const instructionEvaluator: {
   },
   [InstructionType.MARK]: (rt: Runtime) => {
     const idx = rt.functionCalls.peek();
-    if (rt.getFunctions()[idx][0] !== "main") {
+    const [name, , fnType] = rt.getFunctions()[idx];
+    const isMain = name === "main";
+    // (6.9.1p12) falling off the end of a void function is an implicit `return;`
+    if (!isMain && !isVoid(fnType.returnType)) {
       throw new Error(
         "mark encountered without return (are you missing a return statement?)",
       );
     }
-    // main implicitly returns 0 if no return statement
-    rt.stash.pushWithoutConversions(
-      new TemporaryObject(
-        int(),
-        BIGINT_TO_BYTES[Type.Int](BigInt(0), rt.config.endianness),
-      ),
-    );
+    if (isMain) {
+      // main implicitly returns 0 if no return statement
+      rt.stash.pushWithoutConversions(
+        new TemporaryObject(
+          int(),
+          BIGINT_TO_BYTES[Type.Int](BigInt(0), rt.config.endianness),
+        ),
+      );
+    }
     const block = rt.symbolTable.exitBlock();
-    Object.values(block).forEach((addr) => rt.effectiveTypeTable.remove(addr));
+    Object.values(block).forEach((addr) => {
+      const t = rt.effectiveTypeTable.get(addr);
+      if (t !== NO_EFFECTIVE_TYPE) rt.initTable.remove(addr, t.size);
+      rt.effectiveTypeTable.remove(addr);
+    });
     rt.stack.pop();
     rt.functionCalls.pop();
   },

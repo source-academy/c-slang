@@ -494,3 +494,40 @@ switch-nested-block-case:
       out: "1"
       desc: "A4.3 (scope decision): a case label nested inside an if within the switch, rather than a direct top-level item of the switch's own body, is rejected - no Duff's-device-style tricks"
       fail: true
+void-return-basic:
+  file: "void-return-basic.c"
+  cases:
+    - in: "42"
+      out: "3"
+      desc: "void function falls off the end of its body with no explicit return statement (6.9.1p12 implicit return)"
+void-return-mutual-recursion:
+  file: "void-return-mutual-recursion.c"
+  cases:
+    - in: "42"
+      out: "6"
+      desc: "mutually recursive void functions where every frame but the innermost relies on falling off the end - reproduces the sus.c demo bug"
+void-return-mixed:
+  file: "void-return-mixed.c"
+  cases:
+    - in: "42"
+      out: "9"
+      desc: "same void function called once via an explicit return and once via falling off the end"
+void-return-empty-body:
+  file: "void-return-empty-body.c"
+  cases:
+    - in: "42"
+      out: "5"
+      desc: "void function with an entirely empty body"
+void-return-nested-recursion:
+  file: "void-return-nested-recursion.c"
+  cases:
+    - in: "42"
+      out: "11"
+      desc: "recursive void function with a local variable, never an explicit return, reused stack address across calls"
+missing-return-non-void:
+  file: "missing-return-non-void.c"
+  cases:
+    - in: "42"
+      out: "1"
+      fail: true
+      desc: "a non-void, non-main function falling off the end without returning a value is still rejected"
