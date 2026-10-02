@@ -1352,8 +1352,25 @@ const typePrimaryExpression = (
 const typePrimaryExprIdentifier = (
   t: PrimaryExprIdentifier,
   env: TypeEnv,
-): TypedPrimaryExprIdentifier =>
+): TypedPrimaryExprIdentifier | TypedPrimaryExprConstant =>
   typeCheck(t, () => {
+    const enumValue = env.getEnumeratorValue(t.value);
+    if (enumValue !== undefined) {
+      const typeInfo = int();
+      return {
+        ...t,
+        type: "PrimaryExprConstant" as const,
+        typeInfo,
+        lvalue: false,
+        value: {
+          ...t,
+          type: "IntegerConstant" as const,
+          typeInfo,
+          lvalue: false,
+          value: enumValue,
+        },
+      };
+    }
     const typeInfo = env.getIdentifierTypeInfo(t.value);
     return {
       ...t,

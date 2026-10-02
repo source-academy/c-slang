@@ -1,6 +1,8 @@
 import {
+  EnumSpecifier,
   StructSpecifier,
   TypeSpecifier,
+  isEnumSpecifier,
   isStorageClassSpecifier,
   isStructSpecifier,
   isTypeSpecifier,
@@ -142,7 +144,7 @@ const unorderedCompare = (s1: string, s2: string): boolean =>
 export const getTypeInfoFromSpecifiers = (
   ls: TypeSpecifier[],
   env: TypeEnv | null = null,
-  allowEmptyStructSpecifier: boolean = false,
+  inForwardDeclarationScan: boolean = false,
 ): TypeInfo => {
   if (ls.length === 0) throw "at least one type specifier must be given";
 
@@ -153,7 +155,20 @@ export const getTypeInfoFromSpecifiers = (
     return constructStructFromSpecifier(
       ls[0] as StructSpecifier,
       env,
-      allowEmptyStructSpecifier,
+      inForwardDeclarationScan,
+    );
+  }
+
+  const enumCount = ls.reduce(
+    (count, i) => (isEnumSpecifier(i) ? count + 1 : count),
+    0,
+  );
+  if (enumCount > 0) {
+    if (ls.length !== 1) throw "enum specifier should be the only specifier";
+    return constructEnumFromSpecifier(
+      ls[0] as EnumSpecifier,
+      env,
+      inForwardDeclarationScan,
     );
   }
 
@@ -168,14 +183,39 @@ export const getTypeInfoFromSpecifiers = (
   if (ls.length > 1)
     throw "more than 1 typedef specified or unknown type specifiers";
   // pre typecheck, don't care about typedefs
-  if (allowEmptyStructSpecifier) return int();
+  if (inForwardDeclarationScan) return int();
   return env.getIdentifierTypeInfo(ls[0] as string, true);
+};
+
+export const constructEnumFromSpecifier = (
+  s: EnumSpecifier,
+  env: TypeEnv | null,
+  inForwardDeclarationScan: boolean,
+): TypeInfo => {
+  if (inForwardDeclarationScan) return int();
+  if (!env) throw "enum specifier requires a type environment";
+  if (s.enumeratorList === null) {
+    if (s.identifier === null) throw "enum tag missing";
+    return env.getEnumTagTypeInfo(s.identifier);
+  }
+  if (env.hasProcessedEnum(s)) return int();
+
+  let value = BigInt(-1);
+  for (const enumerator of s.enumeratorList) {
+    value = enumerator.value ?? value + BigInt(1);
+    if (value < INT_MIN || value > INT_MAX)
+      throw "enumerator " + enumerator.name + " out of int range";
+    env.addEnumerator(enumerator.name, value);
+  }
+  if (s.identifier !== null) env.addTagTypeInfo(s.identifier, int());
+  env.markProcessedEnum(s);
+  return int();
 };
 
 export const constructStructFromSpecifier = (
   s: StructSpecifier,
   env: TypeEnv | null,
-  allowEmptyStructSpecifier: boolean,
+  inForwardDeclarationScan: boolean,
 ): Structure => {
   const tag = s.identifier || undefined;
   const members = [];
@@ -192,7 +232,7 @@ export const constructStructFromSpecifier = (
         typeSpecifiers,
         id.declarator,
         env,
-        allowEmptyStructSpecifier,
+        inForwardDeclarationScan,
       );
       if (!isObjectTypeInfo(type)) throw "non object type declared in struct";
       if (name) members.push({ name, type });
@@ -210,14 +250,14 @@ export const constructStructFromSpecifier = (
     }
     if (s.declarationList.length === 0) {
       if (!other) {
-        if (allowEmptyStructSpecifier) return res;
+        if (inForwardDeclarationScan) return res;
         throw "empty struct specifier";
       }
       return other;
     }
     if (other) {
       if (!res.isCompatible(other)) {
-        if (allowEmptyStructSpecifier) {
+        if (inForwardDeclarationScan) {
           // first scan
           throw "redefinition of struct " + tag;
         } else {
@@ -233,7 +273,7 @@ export const constructStructFromSpecifier = (
     }
   } else {
     if (s.declarationList.length === 0) {
-      if (allowEmptyStructSpecifier) return res;
+      if (inForwardDeclarationScan) return res;
       throw "empty struct specifier";
     }
   }

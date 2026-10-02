@@ -174,6 +174,7 @@ export type TypeSpecifier =
   | "unsigned"
   | "_Bool"
   | StructSpecifier
+  | EnumSpecifier
   | TypedefName;
 
 export const isTypeSpecifier = (i: DeclarationSpecifier): i is TypeSpecifier =>
@@ -194,7 +195,16 @@ export interface StructSpecifier extends BaseNode {
 }
 
 export const isStructSpecifier = (i: TypeSpecifier): i is StructSpecifier =>
-  typeof i === "object";
+  typeof i === "object" && i.type === "StructSpecifier";
+
+export interface EnumSpecifier extends BaseNode {
+  type: "EnumSpecifier";
+  identifier: Identifier | null;
+  enumeratorList: { name: Identifier; value: bigint | null }[] | null;
+}
+
+export const isEnumSpecifier = (i: TypeSpecifier): i is EnumSpecifier =>
+  typeof i === "object" && i.type === "EnumSpecifier";
 
 export interface InitDeclarator extends BaseNode {
   type: "InitDeclarator";

@@ -63,7 +63,7 @@ export const constructDerivedTypes = (
   ls: DeclaratorWithoutIdentifier,
   baseType: TypeInfo,
   env: TypeEnv | null,
-  allowEmptyStructSpecifier: boolean = false,
+  inForwardDeclarationScan: boolean = false,
 ): TypeInfo => {
   const p = ls.pop();
   if (!p) return baseType;
@@ -96,7 +96,7 @@ export const constructDerivedTypes = (
           typeSpecifiers,
           i.declarator,
           env,
-          allowEmptyStructSpecifier,
+          inForwardDeclarationScan,
         );
       });
       t = functionType(baseType, paramTypeInfo);
@@ -108,19 +108,19 @@ export const constructDerivedTypes = (
     }
   }
 
-  return constructDerivedTypes(ls, t, env, allowEmptyStructSpecifier);
+  return constructDerivedTypes(ls, t, env, inForwardDeclarationScan);
 };
 
 export const constructType = (
   specifiers: TypeSpecifier[],
   declarator: Declarator,
   env: TypeEnv | null,
-  allowEmptyStructSpecifier: boolean = false,
+  inForwardDeclarationScan: boolean = false,
 ): { identifier: Identifier | null; type: TypeInfo } => {
   const specifiedType = getTypeInfoFromSpecifiers(
     specifiers,
     env,
-    allowEmptyStructSpecifier,
+    inForwardDeclarationScan,
   );
   const identifier = getIdentifierFromDeclarator(declarator);
   const type = constructDerivedTypes(
@@ -129,7 +129,7 @@ export const constructType = (
     ) as DeclaratorWithoutIdentifier,
     specifiedType,
     env,
-    allowEmptyStructSpecifier,
+    inForwardDeclarationScan,
   );
   return { identifier, type };
 };

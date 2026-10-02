@@ -1,4 +1,4 @@
-import { Identifier } from "../ast/types";
+import { EnumSpecifier, Identifier } from "../ast/types";
 import { BUILTIN_FUNCTIONS } from "../builtins";
 import {
   AggregateType,
@@ -7,7 +7,9 @@ import {
   TypeInfo,
   isAggregateType,
   isFunction,
+  isInt,
   isStructure,
+  int,
 } from "./types";
 
 const TAG_PREFIX = "tag::";
@@ -16,6 +18,8 @@ const TAG_PREFIX = "tag::";
 // tracks whether a matching definition (not just a prototype) has been seen
 export class TypeEnv {
   private env: Record<Identifier, [TypeInfo, boolean, boolean]>[];
+  private enumerators: Record<Identifier, bigint>[];
+  private processedEnums: WeakSet<EnumSpecifier>;
   public readonly aggTypes: AggregateType[];
   // depth counters, not booleans - a boolean would incorrectly clear on
   // exiting an inner loop/switch while still lexically inside an outer one
@@ -24,6 +28,8 @@ export class TypeEnv {
 
   constructor() {
     this.env = [{}];
+    this.enumerators = [{}];
+    this.processedEnums = new WeakSet();
     this.aggTypes = [];
     this._loopDepth = 0;
     this._switchDepth = 0;
@@ -34,11 +40,13 @@ export class TypeEnv {
 
   enterBlock(): void {
     this.env.push({});
+    this.enumerators.push({});
   }
 
   exitBlock(): void {
     if (this.env.length === 1) throw new RangeError("no block to exit");
     this.env.pop();
+    this.enumerators.pop();
   }
 
   enterLoopBody(): void {
@@ -77,6 +85,26 @@ export class TypeEnv {
     throw "identifier " + id + " not declared";
   }
 
+  getEnumeratorValue(id: Identifier): bigint | undefined {
+    for (let i = this.env.length - 1; i >= 0; i--) {
+      if (id in this.env[i]) return this.enumerators[i][id];
+    }
+    return undefined;
+  }
+
+  addEnumerator(id: Identifier, value: bigint): void {
+    this.addIdentifierTypeInfo(id, int());
+    this.enumerators[this.enumerators.length - 1][id] = value;
+  }
+
+  hasProcessedEnum(s: EnumSpecifier): boolean {
+    return this.processedEnums.has(s);
+  }
+
+  markProcessedEnum(s: EnumSpecifier): void {
+    this.processedEnums.add(s);
+  }
+
   // see (6.2.3) Name spaces of identifiers
   getTagTypeInfo(tag: Identifier): Structure {
     const id = TAG_PREFIX + tag;
@@ -92,15 +120,25 @@ export class TypeEnv {
     throw "tag " + tag + " not declared";
   }
 
-  getAllTagsInCurrentScope() {
+  getEnumTagTypeInfo(tag: Identifier): TypeInfo {
+    const id = TAG_PREFIX + tag;
+    for (let i = this.env.length - 1; i >= 0; i--) {
+      if (id in this.env[i]) {
+        const t = this.env[i][id][0];
+        if (!isInt(t)) throw "tag " + tag + " does not refer to an enum";
+        return t;
+      }
+    }
+    throw "tag " + tag + " not declared";
+  }
+
+  getStructureTagsInCurrentScope() {
     const currScope = this.env[this.env.length - 1];
     const res: { tag: Identifier; struct: Structure }[] = [];
     Object.entries(currScope).forEach(([k, v]) => {
       if (k.startsWith(TAG_PREFIX)) {
         const tag = k.replace(TAG_PREFIX, "");
-        if (!isStructure(v[0]))
-          throw "tag " + tag + " does not refer to a structure";
-        res.push({ tag, struct: v[0] });
+        if (isStructure(v[0])) res.push({ tag, struct: v[0] });
       }
     });
     return res;
@@ -117,7 +155,7 @@ export class TypeEnv {
     currBlock[id] = [t, isTypedef, true];
   }
 
-  addTagTypeInfo(tag: Identifier, t: Structure): void {
+  addTagTypeInfo(tag: Identifier, t: TypeInfo): void {
     const currBlock = this.env[this.env.length - 1];
     const id = TAG_PREFIX + tag;
     if (id in currBlock) throw "redeclaration of tag " + tag;

@@ -1,4 +1,24 @@
 ---
+enum-basic:
+  file: "enum-basic.c"
+  cases:
+    - out: "4"
+      desc: tagged enum with multiple declarators, tag reuse, and enumerator lookup
+enum-values:
+  file: "enum-values.c"
+  cases:
+    - out: "41"
+      desc: explicit, negative, hexadecimal, implicit successor, and trailing comma
+enum-scope:
+  file: "enum-scope.c"
+  cases:
+    - out: "9"
+      desc: inner ordinary identifier shadows enum constant
+enum-namespaces:
+  file: "enum-namespaces.c"
+  cases:
+    - out: "8"
+      desc: tags and ordinary identifiers have separate namespaces; enumerators may share values
 assign:
   file: "assign.c"
   cases:

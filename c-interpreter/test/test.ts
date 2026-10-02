@@ -73,6 +73,20 @@ for (const [testName, testSuite] of Object.entries(tests)) {
   });
 }
 
+describe("enum rejection reasons", () => {
+  for (const [file, reason] of [
+    ["enum-duplicate.c", /redeclaration of identifier FIRST/],
+    ["enum-tag-collision.c", /tag Shared/],
+    ["enum-out-of-range.c", /enumerator .*out of int range/],
+    ["enum-not-modifiable.c", /require a modifiable lvalue/],
+  ] as const) {
+    it(file, () => {
+      const source = readFileSync(TEST_FOLDER_PATH + file, "utf-8");
+      assert.throws(() => run(source), reason);
+    });
+  }
+});
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const findNode = (obj: any, pred: (n: any) => boolean): any => {
   if (obj === null || typeof obj !== "object") return undefined;

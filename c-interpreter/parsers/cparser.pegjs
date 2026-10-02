@@ -400,10 +400,7 @@ FloatingSuffix
 // (6.4.4.3) enumeration-constant
 EnumerationConstant
   = a:Identifier
-    {
-      throwNotImplemented("enums");
-      return makeNode("EnumerationConstant", a);
-    }
+    { return makeNode("EnumerationConstant", a); }
 
 // (6.4.4.4) character-constant
 CharacterConstant
@@ -943,7 +940,6 @@ TypeSpecifier
     { throwNotImplemented("atomic type"); }
   / StructOrUnionSpecifier
   / EnumSpecifier
-    { throwNotImplemented("enum type"); }
 
 // (6.7.2.1) struct-or-union-specifier
 StructOrUnionSpecifier
@@ -1016,17 +1012,21 @@ StructDeclarator
 
 // (6.7.2.2) enum-specifier
 EnumSpecifier
-  = ENUM Identifier? LCUR EnumeratorList RCUR
-  / ENUM Identifier? LCUR EnumeratorList COMMA RCUR
-  / ENUM Identifier
+  = ENUM a:Identifier? LCUR b:EnumeratorList COMMA? RCUR
+    { return makeNode("EnumSpecifier", { identifier: a, enumeratorList: b }); }
+  / ENUM a:Identifier
+    { return makeNode("EnumSpecifier", { identifier: a, enumeratorList: null }); }
 
 // (6.7.2.2) enumerator-list
 EnumeratorList
-  = Enumerator (COMMA Enumerator)*
+  = a:Enumerator b:(COMMA x:Enumerator { return x; })*
+    { return [a].concat(b); }
 
 // (6.7.2.2) enumerator
 Enumerator
-  = EnumerationConstant (EQ ConstantExpression)?
+  = a:EnumerationConstant b:(EQ sign:MINUS? value:IntegerConstant _
+      { return (sign ? -1n : 1n) * value.value; })?
+    { return { name: a.value, value: b }; }
 
 // (6.7.2.4) atomic-type-specifier
 AtomicTypeSpecifier
