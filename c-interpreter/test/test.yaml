@@ -1,4 +1,39 @@
 ---
+array-designated-nested:
+  file: "array-designated-nested.c"
+  cases:
+    - out: "1"
+      desc: nested designators use each index in matrices, cubes, and struct array members
+array-parameter-conversion:
+  file: "array-parameter-conversion.c"
+  cases:
+    - out: "1"
+      desc: scalar arrays, multidimensional arrays, and string arguments decay for function calls
+array-inferred-string:
+  file: "array-inferred-string.c"
+  cases:
+    - out: "1"
+      desc: global and local strings infer their terminator, including empty and braced strings
+array-inferred-list:
+  file: "array-inferred-list.c"
+  cases:
+    - out: "1"
+      desc: positional lists complete global, recursive local, and multidimensional arrays
+array-inferred-designated:
+  file: "array-inferred-designated.c"
+  cases:
+    - out: "1"
+      desc: sparse, mixed, and nested designators infer the highest outer index and zero-fill holes
+array-inferred-typedef-parameter:
+  file: "array-inferred-typedef-parameter.c"
+  cases:
+    - out: "1"
+      desc: typedef uses infer independent sizes and unsized parameters adjust to pointers
+array-explicit-size-regression:
+  file: "array-explicit-size-regression.c"
+  cases:
+    - out: "1"
+      desc: explicit array sizes and zero padding still work
 enum-basic:
   file: "enum-basic.c"
   cases:

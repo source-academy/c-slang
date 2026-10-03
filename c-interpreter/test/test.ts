@@ -73,6 +73,26 @@ for (const [testName, testSuite] of Object.entries(tests)) {
   });
 }
 
+describe("incomplete array rejection reasons", () => {
+  for (const [source, reason] of [
+    ["int main() { int a[]; return 0; }", /array size missing/],
+    [
+      "int main() { int a[2][] = {{1}, {2}}; return 0; }",
+      /cannot construct array from incomplete type/,
+    ],
+    [
+      "int main() { return sizeof(int []); }",
+      /sizeof operator requires object type/,
+    ],
+    [
+      "int main() { int a[] = 7; return 0; }",
+      /array initializer requires a brace-enclosed list or string literal/,
+    ],
+  ] as const) {
+    it(source, () => assert.throws(() => run(source), reason));
+  }
+});
+
 describe("enum rejection reasons", () => {
   for (const [file, reason] of [
     ["enum-duplicate.c", /redeclaration of identifier FIRST/],

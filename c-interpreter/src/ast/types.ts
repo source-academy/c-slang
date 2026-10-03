@@ -320,7 +320,7 @@ export const isIdentifierDeclaratorPart = (
 
 export interface ArrayDeclaratorPart {
   partType: "array";
-  length: IntegerConstant;
+  length: IntegerConstant | null;
 }
 
 export const isArrayDeclaratorPart = (

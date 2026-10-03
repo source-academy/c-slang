@@ -333,11 +333,12 @@ const typeInitDeclarator = (
   specifiers: TypeSpecifier[],
 ): TypedInitDeclarator | null =>
   typeCheck(t, () => {
-    const { identifier, type: typeInfo } = constructType(
+    const { identifier, type: declaredType } = constructType(
       specifiers,
       t.declarator,
       env,
     );
+    let typeInfo = declaredType;
     if (!identifier) throw "declarator must declare one identifier";
     if (isFunction(typeInfo)) {
       if (t.initializer) throw "cannot initialize a function";
@@ -346,10 +347,17 @@ const typeInitDeclarator = (
     }
     if (isVoid(typeInfo)) throw "cannot declare a variable of type void";
 
+    if (isArray(typeInfo) && typeInfo.length === null) {
+      if (!t.initializer) throw "array size missing: initializer required";
+      typeInfo = array(
+        typeInfo.elementType,
+        inferArrayLength(t.initializer, typeInfo.elementType),
+      );
+    }
+    if (!isObjectTypeInfo(typeInfo)) throw "cannot declare non object type";
+
     let initializer: TypedInitializer | null = null;
     if (t.initializer) {
-      if (!isObjectTypeInfo(typeInfo))
-        throw "cannot initialize non object type";
       // TODO: if we are in file scope, need check that initializer is a constant expression
       // see (6.6) Constant expressions and (6.7.8) Initialization
       initializer = typeInitializer(t.initializer, env, typeInfo);
@@ -358,12 +366,45 @@ const typeInitDeclarator = (
     const res = {
       ...t,
       identifier,
-      typeInfo: typeInfo as ObjectTypeInfo,
+      typeInfo,
       initializer,
     };
     env.addIdentifierTypeInfo(identifier, typeInfo);
     return res;
   });
+
+const getStringInitializer = (t: Initializer): PrimaryExprString | null => {
+  if (isPrimaryExprString(t)) return t;
+  if (isInitializerList(t) && t.value.length === 1) {
+    const { designation, initializer } = t.value[0];
+    if (designation.length === 0 && isPrimaryExprString(initializer))
+      return initializer;
+  }
+  return null;
+};
+
+const inferArrayLength = (
+  t: Initializer,
+  elementType: ObjectTypeInfo,
+): number => {
+  const string = getStringInitializer(t);
+  if (string && isCharacterType(elementType)) return string.value.length + 1;
+  if (!isInitializerList(t))
+    throw "array initializer requires a brace-enclosed list or string literal";
+
+  let nextIndex = 0;
+  let length = 0;
+  for (const { designation } of t.value) {
+    if (designation.length > 0) {
+      const first = designation[0];
+      if (!isArrayDesignator(first))
+        throw "struct designator when current object is not struct";
+      nextIndex = Number(first.idx.value);
+    }
+    length = Math.max(length, ++nextIndex);
+  }
+  return length;
+};
 
 const typeInitializer = (
   t: Initializer,
@@ -398,18 +439,16 @@ const typeInitializer = (
     }
 
     if (isArray(targetType) || isStructure(targetType)) {
-      // (6.7.9p14) a string literal may initialize a character array
-      // directly, unbraced - the target's own length decides whether the
-      // terminator fits, not exact-length array compatibility like every
-      // other aggregate initializer below.
+      // (6.7.9p14) Character arrays accept a string, optionally in braces.
+      const string = getStringInitializer(t);
       if (
-        isPrimaryExprString(t) &&
+        string &&
         isArray(targetType) &&
         isCharacterType(targetType.elementType)
       ) {
-        if (t.value.length > targetType.length)
+        if (string.value.length > targetType.length)
           throw "string literal initializer too long for array";
-        return typePrimaryExprString(t);
+        return typePrimaryExprString(string);
       }
       if (!isInitializerList(t)) {
         const res = typeAssignmentExpression(t, env);
@@ -1274,7 +1313,7 @@ const typePostfixExpressionNode = (
           if (
             !checkSimpleAssignmentConstraint(
               p.type,
-              value[i].typeInfo,
+              applyImplicitConversions(value[i]).typeInfo,
               isNullPtrConst(value[i]),
             )
           )

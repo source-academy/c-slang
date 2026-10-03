@@ -78,7 +78,7 @@ export type ObjectType =
   | Type.Pointer
   | Type._Any;
 
-export type IncompleteType = Type.Void;
+export type IncompleteType = Type.Void | Type.Array;
 
 export type SignedIntegerType =
   | SignedChar
@@ -158,9 +158,13 @@ export const isSigned = (t: ScalarType): boolean =>
 export type AggregateType = Array | Structure;
 
 export const isAggregateType = (t: TypeInfo): t is AggregateType =>
-  isArray(t) || isStructure(t);
+  (isArray(t) && t.length !== null) || isStructure(t);
 
-export type DerviedDeclaratorType = Array | FunctionType | Pointer;
+export type DerviedDeclaratorType =
+  | Array
+  | IncompleteArray
+  | FunctionType
+  | Pointer;
 
 // maximum recursion depth for isCompatible checks to deal with cyclic types
 export const COMPATIBLE_CHECK_MAX_DEPTH = 32;
@@ -413,29 +417,57 @@ export interface Array extends ObjectTypeInfo {
   recalculateSizeAndAlignment: (depth?: number) => void;
 }
 
-export const array = (elementType: ObjectTypeInfo, length: number): Array => ({
-  type: Type.Array,
-  size: elementType.size * length,
-  alignment: elementType.alignment,
-  elementType,
-  length,
-  isCompatible(other: TypeInfo, depth: number = 0) {
+export interface IncompleteArray extends BaseTypeInfo {
+  type: Type.Array;
+  elementType: ObjectTypeInfo;
+  length: null;
+}
+
+export function array(elementType: ObjectTypeInfo, length: number): Array;
+export function array(
+  elementType: ObjectTypeInfo,
+  length: null,
+): IncompleteArray;
+export function array(
+  elementType: ObjectTypeInfo,
+  length: number | null,
+): Array | IncompleteArray;
+export function array(
+  elementType: ObjectTypeInfo,
+  length: number | null,
+): Array | IncompleteArray {
+  const isCompatible = (other: TypeInfo, depth: number = 0): boolean => {
     if (depth > COMPATIBLE_CHECK_MAX_DEPTH) return true;
     return (
       isArray(other) &&
-      this.length === other.length &&
-      this.elementType.isCompatible(other.elementType, depth + 1)
+      (length === null || other.length === null || length === other.length) &&
+      elementType.isCompatible(other.elementType, depth + 1)
     );
-  },
-  recalculateSizeAndAlignment(depth: number = 0) {
-    if (!isAggregateType(this.elementType)) return;
-    this.elementType.recalculateSizeAndAlignment(depth + 1);
-    this.size = this.elementType.size * length;
-    this.alignment = this.elementType.alignment;
-  },
-});
+  };
+  if (length === null)
+    return { type: Type.Array, elementType, length, isCompatible };
 
-export const isArray = (t: TypeInfo): t is Array => t.type === Type.Array;
+  return {
+    type: Type.Array,
+    size: elementType.size * length,
+    alignment: elementType.alignment,
+    elementType,
+    length,
+    isCompatible,
+    recalculateSizeAndAlignment(depth: number = 0) {
+      if (isAggregateType(this.elementType))
+        this.elementType.recalculateSizeAndAlignment(depth + 1);
+      this.size = this.elementType.size * this.length;
+      this.alignment = this.elementType.alignment;
+    },
+  };
+}
+
+export function isArray(t: ObjectTypeInfo): t is Array;
+export function isArray(t: BaseTypeInfo): t is Array | IncompleteArray;
+export function isArray(t: BaseTypeInfo): t is Array | IncompleteArray {
+  return t.type === Type.Array;
+}
 
 export interface StructureMember {
   name?: string;
@@ -548,15 +580,14 @@ export const pointer = (referencedType: TypeInfo): Pointer => ({
 
 export const isPointer = (t: TypeInfo): t is Pointer => t.type === Type.Pointer;
 
-export interface IncompleteTypeInfo extends BaseTypeInfo {
-  type: IncompleteType;
-}
+export type IncompleteTypeInfo = Void | IncompleteArray;
 
 export const isIncompleteTypeInfo = (
   i: BaseTypeInfo,
-): i is IncompleteTypeInfo => i.type === Type.Void;
+): i is IncompleteTypeInfo =>
+  i.type === Type.Void || (isArray(i) && i.length === null);
 
-export interface Void extends IncompleteTypeInfo {
+export interface Void extends BaseTypeInfo {
   type: Type.Void;
 }
 

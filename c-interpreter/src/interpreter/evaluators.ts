@@ -534,7 +534,7 @@ export const ASTNodeEvaluator: {
     evaluateAsLvalue: boolean,
   ) => {
     const { value, typeInfo } = node;
-    if (!isArray(typeInfo))
+    if (!isArray(typeInfo) || typeInfo.length === null)
       throw new Error("expected array type for string literal");
 
     let address = rt.getStringLiteralAddress(node);
@@ -1631,7 +1631,7 @@ const evaluateInitializer = (
             i = idxVal;
             updateCurrAddr();
           } else {
-            currAddress += i * currType.elementType.size;
+            currAddress += idxVal * currType.elementType.size;
           }
           currType = currType.elementType;
         } else {

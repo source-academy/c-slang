@@ -1072,7 +1072,6 @@ DirectDeclarator
     b:(
         LBRC c:IntegerConstant? RBRC
         {
-          if (c === null) throwNotImplemented("unknown size array");
           return { partType: "array", length: c };
         }
       / LBRC c:ConstantExpression RBRC
