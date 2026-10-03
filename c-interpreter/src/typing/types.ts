@@ -171,10 +171,31 @@ export const COMPATIBLE_CHECK_MAX_DEPTH = 32;
 
 export interface BaseTypeInfo {
   type: Type;
+  const?: boolean;
   isCompatible: (other: TypeInfo, depth?: number) => boolean;
 }
 
 export type TypeInfo = ObjectTypeInfo | IncompleteTypeInfo | FunctionTypeInfo;
+
+const sameQualifiers = (a: BaseTypeInfo, b: BaseTypeInfo): boolean =>
+  !!a.const === !!b.const;
+
+export const unqualified = <T extends TypeInfo>(t: T): T =>
+  t.const ? { ...t, const: false } : t;
+
+export const constQualified = <T extends TypeInfo>(t: T): T => {
+  if (isFunction(t)) throw "cannot qualify function type";
+  // In C11, qualifying an array qualifies its element type.
+  if (isArray(t)) return array(constQualified(t.elementType), t.length) as T;
+  return { ...t, const: true };
+};
+
+export const containsConst = (t: TypeInfo): boolean => {
+  if (t.const) return true;
+  if (isArray(t)) return containsConst(t.elementType);
+  if (isStructure(t)) return t.members.some((m) => containsConst(m.type));
+  return false;
+};
 
 export interface ObjectTypeInfo extends BaseTypeInfo {
   type: ObjectType;
@@ -208,8 +229,8 @@ export const _bool = (): _Bool => ({
   type: Type._Bool,
   size: CHAR_SIZE,
   alignment: CHAR_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isBool(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isBool(other);
   },
 });
 
@@ -225,8 +246,8 @@ export const char = (): Char => ({
   type: Type.Char,
   size: CHAR_SIZE,
   alignment: CHAR_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isChar(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isChar(other);
   },
 });
 
@@ -242,8 +263,8 @@ export const signedChar = (): SignedChar => ({
   type: Type.SignedChar,
   size: SCHAR_SIZE,
   alignment: SCHAR_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isSignedChar(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isSignedChar(other);
   },
 });
 
@@ -260,8 +281,8 @@ export const unsignedChar = (): UnsignedChar => ({
   type: Type.UnsignedChar,
   size: UCHAR_SIZE,
   alignment: UCHAR_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isUnsignedChar(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isUnsignedChar(other);
   },
 });
 
@@ -278,8 +299,8 @@ export const shortInt = (): ShortInt => ({
   type: Type.ShortInt,
   size: SHRT_SIZE,
   alignment: SHRT_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isShortInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isShortInt(other);
   },
 });
 
@@ -296,8 +317,8 @@ export const unsignedShortInt = (): UnsignedShortInt => ({
   type: Type.UnsignedShortInt,
   size: USHRT_SIZE,
   alignment: USHRT_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isUnsignedShortInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isUnsignedShortInt(other);
   },
 });
 
@@ -314,8 +335,8 @@ export const int = (): Int => ({
   type: Type.Int,
   size: INT_SIZE,
   alignment: INT_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isInt(other);
   },
 });
 
@@ -331,8 +352,8 @@ export const unsignedInt = (): UnsignedInt => ({
   type: Type.UnsignedInt,
   size: UINT_SIZE,
   alignment: UINT_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isUnsignedInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isUnsignedInt(other);
   },
 });
 
@@ -349,8 +370,8 @@ export const longInt = (): LongInt => ({
   type: Type.LongInt,
   size: LONG_SIZE,
   alignment: LONG_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isLongInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isLongInt(other);
   },
 });
 
@@ -366,8 +387,8 @@ export const unsignedLongInt = (): UnsignedLongInt => ({
   type: Type.UnsignedLongInt,
   size: ULONG_SIZE,
   alignment: ULONG_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isUnsignedLongInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isUnsignedLongInt(other);
   },
 });
 
@@ -384,8 +405,8 @@ export const longLongInt = (): LongLongInt => ({
   type: Type.LongLongInt,
   size: LLONG_SIZE,
   alignment: LLONG_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isLongLongInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isLongLongInt(other);
   },
 });
 
@@ -402,8 +423,8 @@ export const unsignedLongLongInt = (): UnsignedLongLongInt => ({
   type: Type.UnsignedLongLongInt,
   size: ULLONG_SIZE,
   alignment: ULLONG_ALIGN,
-  isCompatible: (other: TypeInfo) => {
-    return isUnsignedLongLongInt(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isUnsignedLongLongInt(other);
   },
 });
 
@@ -537,6 +558,7 @@ export const structure = (
       if (depth > COMPATIBLE_CHECK_MAX_DEPTH) return true;
       return (
         isStructure(other) &&
+        sameQualifiers(this, other) &&
         other.tag === this.tag &&
         other.members.length === this.members.length &&
         other.members.reduce(
@@ -573,6 +595,7 @@ export const pointer = (referencedType: TypeInfo): Pointer => ({
     if (depth > COMPATIBLE_CHECK_MAX_DEPTH) return true;
     return (
       isPointer(other) &&
+      sameQualifiers(this, other) &&
       other.referencedType.isCompatible(this.referencedType, depth + 1)
     );
   },
@@ -593,8 +616,8 @@ export interface Void extends BaseTypeInfo {
 
 export const voidType = (): Void => ({
   type: Type.Void,
-  isCompatible: (other: TypeInfo) => {
-    return isVoid(other);
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isVoid(other);
   },
 });
 
@@ -676,7 +699,11 @@ export const functionType = (
         other.arity === this.arity &&
         other.parameterTypes.reduce(
           (A, p, i) =>
-            A && p.type.isCompatible(this.parameterTypes[i].type, depth + 1),
+            A &&
+            unqualified(p.type).isCompatible(
+              unqualified(this.parameterTypes[i].type),
+              depth + 1,
+            ),
           true,
         )
       );

@@ -18,6 +18,8 @@ import {
   isArray,
   isStructure,
   getTypeName,
+  unqualified,
+  containsConst,
 } from "../typing/types";
 import { decimalAddressToHex } from "../utils";
 import {
@@ -121,9 +123,10 @@ export class Memory {
     byte: number,
     readonly: boolean = false,
     executable: boolean = false,
+    initializing: boolean = false,
   ): void {
     const region = this.getMemoryRegion(address);
-    if (this.readonlyAddresses.has(address))
+    if (!initializing && this.readonlyAddresses.has(address))
       throw new WriteSegmentationFault(address);
     region.setByte(address - region.baseAddress, byte);
     if (readonly) this.readonlyAddresses.add(address);
@@ -135,9 +138,10 @@ export class Memory {
     bytes: number[],
     readonly: boolean = false,
     executable: boolean = false,
+    initializing: boolean = false,
   ): void {
     for (let i = 0; i < bytes.length; i++)
-      this.setByte(address + i, bytes[i], readonly, executable);
+      this.setByte(address + i, bytes[i], readonly, executable, initializing);
   }
 
   public setObjectBytes(
@@ -146,6 +150,7 @@ export class Memory {
     t: ObjectTypeInfo,
     readonly: boolean = false,
     executable: boolean = false,
+    initializing: boolean = false,
   ): void {
     if (bytes.length !== t.size)
       throw new Error("object size and bytes provided don't match");
@@ -160,7 +165,27 @@ export class Memory {
       }
     }
 
-    this.setBytes(address, bytes, readonly, executable);
+    this.setBytes(address, bytes, readonly, executable, initializing);
+  }
+
+  public protectConstObject(address: number, t: ObjectTypeInfo): void {
+    if (!containsConst(t)) return;
+    if (t.const) {
+      for (let i = 0; i < t.size; i++) this.readonlyAddresses.add(address + i);
+    } else if (isArray(t)) {
+      for (let i = 0; i < t.length; i++)
+        this.protectConstObject(
+          address + i * t.elementType.size,
+          t.elementType,
+        );
+    } else if (isStructure(t)) {
+      for (const m of t.members)
+        this.protectConstObject(address + m.relativeAddress, m.type);
+    }
+  }
+
+  public clearReadonly(address: number, size: number): void {
+    for (let i = 0; i < size; i++) this.readonlyAddresses.delete(address + i);
   }
 
   public setRepeatedByte(address: number, size: number, byte: number): void {
@@ -174,9 +199,10 @@ export class Memory {
     e: Endianness = "little",
     readonly: boolean = false,
     executable: boolean = false,
+    initializing: boolean = false,
   ): void {
     const bytes = BIGINT_TO_BYTES[t.type](i, e);
-    this.setObjectBytes(address, bytes, t, readonly, executable);
+    this.setObjectBytes(address, bytes, t, readonly, executable, initializing);
   }
 
   private checkStrictAliasing(address: number, t: ObjectTypeInfo): boolean {
@@ -193,10 +219,16 @@ export class Memory {
 
     const ot = et;
     for (;;) {
-      if (t.isCompatible(et)) return true;
-      if (isSignedIntegerType(t) && getUnsignedVersion(t).isCompatible(et))
+      if (unqualified(t).isCompatible(unqualified(et))) return true;
+      if (
+        isSignedIntegerType(t) &&
+        getUnsignedVersion(t).isCompatible(unqualified(et))
+      )
         return true;
-      if (isUnsignedIntegerType(t) && getSignedVersion(t).isCompatible(et))
+      if (
+        isUnsignedIntegerType(t) &&
+        getSignedVersion(t).isCompatible(unqualified(et))
+      )
         return true;
 
       if (isArray(et)) et = et.elementType;

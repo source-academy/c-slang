@@ -11,6 +11,7 @@ import {
   SelectionStatementIf,
   SelectionStatementSwitch,
   TypeSpecifier,
+  DeclarationSpecifier,
   TypedCastExpressionNode,
   TypedDesignator,
   TypedInitializerList,
@@ -167,6 +168,8 @@ import {
   FunctionType,
   ObjectTypeInfo,
   Array,
+  constQualified,
+  unqualified,
   Structure,
   unsignedInt,
   Type,
@@ -174,6 +177,7 @@ import {
 import {
   checkSimpleAssignmentConstraint,
   constructType,
+  discardsPointedToConst,
   getMemberTypeInfo,
   getMember,
   isLvalue,
@@ -245,9 +249,8 @@ const typeFunctionDefinition = (
     if (storageClassSpecifiers.length > 0)
       throw "function definition cannot include storage class specifiers";
 
-    const typeSpecifiers = t.specifiers.filter(isTypeSpecifier);
     const { identifier, type: typeInfo } = constructType(
-      typeSpecifiers,
+      t.specifiers,
       t.declarator,
       env,
     );
@@ -293,14 +296,14 @@ const typeDeclaration = (
         ...t,
         type: "TypedefDeclaration",
         declaratorList: t.declaratorList.map((i) =>
-          typeTypedef(i, env, typeSpecifiers),
+          typeTypedef(i, env, t.specifiers),
         ),
       };
     }
     return {
       ...t,
       declaratorList: t.declaratorList
-        .map((i) => typeInitDeclarator(i, env, typeSpecifiers))
+        .map((i) => typeInitDeclarator(i, env, t.specifiers))
         .filter((i): i is TypedInitDeclarator => i !== null),
     };
   });
@@ -308,7 +311,7 @@ const typeDeclaration = (
 const typeTypedef = (
   t: InitDeclarator,
   env: TypeEnv,
-  specifiers: TypeSpecifier[],
+  specifiers: DeclarationSpecifier[],
 ): Typedef =>
   typeCheck(t, () => {
     if (t.initializer) throw "cannot initialize typedef";
@@ -330,7 +333,7 @@ const typeTypedef = (
 const typeInitDeclarator = (
   t: InitDeclarator,
   env: TypeEnv,
-  specifiers: TypeSpecifier[],
+  specifiers: DeclarationSpecifier[],
 ): TypedInitDeclarator | null =>
   typeCheck(t, () => {
     const { identifier, type: declaredType } = constructType(
@@ -433,8 +436,11 @@ const typeInitializer = (
           rightType,
           isNullPtrConst(res),
         )
-      )
+      ) {
+        if (discardsPointedToConst(targetType, rightType))
+          throw "pointer initializer discards const qualifier from pointed-to type";
         throw "invalid initializer type for scalar";
+      }
       return res;
     }
 
@@ -452,7 +458,7 @@ const typeInitializer = (
       }
       if (!isInitializerList(t)) {
         const res = typeAssignmentExpression(t, env);
-        if (!res.typeInfo.isCompatible(targetType))
+        if (!unqualified(res.typeInfo).isCompatible(unqualified(targetType)))
           throw "invalid initializer type for aggregate type";
         return res;
       }
@@ -591,7 +597,7 @@ const typeJumpStatementReturn = (
     if (
       !checkSimpleAssignmentConstraint(
         expectedReturnType,
-        expr.typeInfo,
+        applyImplicitConversions(expr).typeInfo,
         isNullPtrConst(expr),
       )
     )
@@ -885,38 +891,32 @@ const typeConditionalExpression = (
 
     const exprIfTrue = typeExpression(t.exprIfTrue, env);
     const exprIfFalse = typeConditionalExpression(t.exprIfFalse, env);
-    const t1 = exprIfTrue.typeInfo;
-    const t2 = exprIfFalse.typeInfo;
+    const t1 = applyImplicitConversions(exprIfTrue).typeInfo;
+    const t2 = applyImplicitConversions(exprIfFalse).typeInfo;
 
     let resType: TypeInfo | undefined;
     if (isArithmeticType(t1) && isArithmeticType(t2))
       resType = applyUsualArithmeticConversions(t1, t2);
     if (isStructure(t1) && isStructure(t2) && t1.isCompatible(t2)) resType = t1;
     if (isVoid(t1) && isVoid(t2)) resType = voidType();
-    if (
-      isPointer(t1) &&
-      isPointer(t2) &&
-      t1.referencedType.isCompatible(t2.referencedType)
-    )
-      resType = t1;
+    if (isPointer(t1) && isPointer(t2)) {
+      const r1 = unqualified(t1.referencedType);
+      const r2 = unqualified(t2.referencedType);
+      let referencedType: TypeInfo | undefined;
+      if (r1.isCompatible(r2)) referencedType = r1;
+      else if (
+        (isVoid(r1) && !isFunction(r2)) ||
+        (isVoid(r2) && !isFunction(r1))
+      )
+        referencedType = voidType();
+      if (referencedType) {
+        if (t1.referencedType.const || t2.referencedType.const)
+          referencedType = constQualified(referencedType);
+        resType = pointer(referencedType);
+      }
+    }
     if (isPointer(t1) && isNullPtrConst(exprIfFalse)) resType = t1;
     if (isPointer(t2) && isNullPtrConst(exprIfTrue)) resType = t2;
-    if (
-      isPointer(t1) &&
-      (isObjectTypeInfo(t1.referencedType) ||
-        isIncompleteTypeInfo(t1.referencedType)) &&
-      isPointer(t2) &&
-      isVoid(t2.referencedType)
-    )
-      resType = t1;
-    if (
-      isPointer(t2) &&
-      (isObjectTypeInfo(t2.referencedType) ||
-        isIncompleteTypeInfo(t2.referencedType)) &&
-      isPointer(t1) &&
-      isVoid(t1.referencedType)
-    )
-      resType = t2;
 
     if (!resType) throw "invalid operand types in conditional expression";
     return {
@@ -963,8 +963,8 @@ const typeBinaryExpression = (
         let ok = false;
         if (isArithmeticType(t0) && isArithmeticType(t1)) ok = true;
         if (isPointer(t0) && isPointer(t1)) {
-          const rt0 = t0.referencedType;
-          const rt1 = t1.referencedType;
+          const rt0 = unqualified(t0.referencedType);
+          const rt1 = unqualified(t1.referencedType);
           if (rt0.isCompatible(rt1)) ok = true;
           if (
             (isObjectTypeInfo(rt0) || isIncompleteTypeInfo(rt0)) &&
@@ -991,8 +991,8 @@ const typeBinaryExpression = (
         let ok = false;
         if (isArithmeticType(t0) && isArithmeticType(t1)) ok = true;
         if (isPointer(t0) && isPointer(t1)) {
-          const rt0 = t0.referencedType;
-          const rt1 = t1.referencedType;
+          const rt0 = unqualified(t0.referencedType);
+          const rt1 = unqualified(t1.referencedType);
           if (
             isObjectTypeInfo(rt0) &&
             isObjectTypeInfo(rt1) &&
@@ -1048,7 +1048,9 @@ const typeBinaryExpression = (
         if (
           isPointer(t0) &&
           isPointer(t1) &&
-          t0.referencedType.isCompatible(t1.referencedType)
+          unqualified(t0.referencedType).isCompatible(
+            unqualified(t1.referencedType),
+          )
         )
           // ptr - ptr yields a count of elements (ptrdiff_t), not a
           // pointer - this codebase has no distinct ptrdiff_t type, so
@@ -1109,7 +1111,8 @@ const typeCastExpressionNode = (
     if (
       !(
         isVoid(targetType) ||
-        (isScalarType(targetType) && isScalarType(expr.typeInfo))
+        (isScalarType(targetType) &&
+          isScalarType(applyImplicitConversions(expr).typeInfo))
       )
     ) {
       throw "only cast to void or scalar type cast to scalar type allowed";

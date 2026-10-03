@@ -1,4 +1,64 @@
 ---
+const-basic:
+  file: "const-basic.c"
+  cases:
+    - out: "1"
+      desc: "scalar initialization, duplicate qualifiers, and uninitialized declarations"
+const-aggregates:
+  file: "const-aggregates.c"
+  cases:
+    - out: "1"
+      desc: "const aggregates, inferred arrays, and writable copies and pointees"
+const-typedef:
+  file: "const-typedef.c"
+  cases:
+    - out: "1"
+      desc: "typedef qualification leaves the original pointer and array types mutable"
+const-parameters:
+  file: "const-parameters.c"
+  cases:
+    - out: "1"
+      desc: "parameter qualifiers, prototypes, and recursive stack reuse"
+const-pointer-conversions:
+  file: "const-pointer-conversions.c"
+  cases:
+    - out: "1"
+      desc: "pointer qualification, void pointers, conditionals, comparisons, and mutable aliases"
+const-members:
+  file: "const-members.c"
+  cases:
+    - out: "1"
+      desc: "const members protect only their own storage"
+const-block-lifetime:
+  file: "const-block-lifetime.c"
+  cases:
+    - out: "1"
+      desc: "break and continue release const storage before block re-entry"
+const-pointer-parameters:
+  file: "const-pointer-parameters.c"
+  cases:
+    - out: "1"
+      desc: "const pointer parameters, shallow pointer qualification, and explicit void casts"
+pointer-less-than:
+  file: "pointer-less-than.c"
+  cases:
+    - out: "1"
+      desc: "relational pointer comparison: a < a + 2"
+pointer-greater-than:
+  file: "pointer-greater-than.c"
+  cases:
+    - out: "1"
+      desc: "relational pointer comparison: a + 2 > a"
+pointer-less-or-equal:
+  file: "pointer-less-or-equal.c"
+  cases:
+    - out: "1"
+      desc: "relational pointer comparison: a <= a"
+pointer-greater-or-equal:
+  file: "pointer-greater-or-equal.c"
+  cases:
+    - out: "1"
+      desc: "relational pointer comparison: a + 2 >= a + 1"
 array-designated-nested:
   file: "array-designated-nested.c"
   cases:

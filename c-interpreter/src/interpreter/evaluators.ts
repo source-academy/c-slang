@@ -6,6 +6,7 @@ import {
   isArray,
   isIntegerType,
   isObjectTypeInfo,
+  isIncompleteTypeInfo,
   isPointer,
   isScalarType,
   isSigned,
@@ -15,6 +16,7 @@ import {
   pointer,
   shortInt,
   unsignedInt,
+  unqualified,
 } from "./../typing/types";
 import {
   AssignmentOperator,
@@ -67,6 +69,7 @@ import {
 } from "../ast/types";
 import {
   ArithmeticConversionInstruction,
+  AssignInstruction,
   ArraySubscriptInstruction,
   BinaryOpInstruction,
   BranchInstruction,
@@ -192,6 +195,7 @@ export const ASTNodeEvaluator: {
 
     rt.symbolTable.addAddress(identifier, address);
     rt.effectiveTypeTable.add(address, typeInfo);
+    rt.memory.protectConstObject(address, typeInfo);
     if (initializer) evaluateInitializer(initializer, address, typeInfo, rt);
   },
   InitializerList: () => {
@@ -213,12 +217,10 @@ export const ASTNodeEvaluator: {
   ) => {
     rt.agenda.push(returnInstruction());
     if (expr) {
-		if (!expr.typeInfo.isCompatible(expectedReturnType))
-			// not possible to be void as expr is not null
-			// not possible to be a struct that is not compatible as type check would fail
-			rt.agenda.push(castInstruction(expectedReturnType as ScalarType));
-		rt.agenda.push(expr);
-	}
+      if (!unqualified(expr.typeInfo).isCompatible(unqualified(expectedReturnType)))
+        rt.agenda.push(castInstruction(expectedReturnType as ScalarType));
+      rt.agenda.push(expr);
+    }
   },
   JumpStatementBreak: (rt: Runtime) => {
     jumpTill(rt, isBreakMarkInstruction);
@@ -816,7 +818,10 @@ export const instructionEvaluator: {
   [InstructionType.PUSH]: (rt: Runtime, { item }: PushInstruction) => {
     rt.stash.pushWithoutConversions(item);
   },
-  [InstructionType.ASSIGN]: (rt: Runtime) => {
+  [InstructionType.ASSIGN]: (
+    rt: Runtime,
+    { initializing }: AssignInstruction,
+  ) => {
     const o = rt.stash.pop();
     if (!isTemporaryObject(o)) throw new Error("expected object for assign");
 
@@ -850,7 +855,9 @@ export const instructionEvaluator: {
           isSigned(o.typeInfo),
           rt.config.endianness,
         );
-        rt.memory.setScalar(address, n, typeInfo, rt.config.endianness);
+        rt.memory.setScalar(
+          address, n, typeInfo, rt.config.endianness, false, false, initializing,
+        );
         rt.initTable.add(address, typeInfo);
         rt.stash.pushWithoutConversions(
           new TemporaryObject(
@@ -861,7 +868,9 @@ export const instructionEvaluator: {
         return;
       }
       if (isStructure(typeInfo) && isStructure(o.typeInfo)) {
-        rt.memory.setObjectBytes(address, o.bytes, typeInfo);
+        rt.memory.setObjectBytes(
+          address, o.bytes, typeInfo, false, false, initializing,
+        );
         rt.initTable.add(address, typeInfo);
         rt.stash.pushWithoutConversions(o);
         return;
@@ -892,7 +901,10 @@ export const instructionEvaluator: {
     const block = rt.symbolTable.exitBlock();
     Object.values(block).forEach((addr) => {
       const t = rt.effectiveTypeTable.get(addr);
-      if (t !== NO_EFFECTIVE_TYPE) rt.initTable.remove(addr, t.size);
+      if (t !== NO_EFFECTIVE_TYPE) {
+        rt.initTable.remove(addr, t.size);
+        rt.memory.clearReadonly(addr, t.size);
+      }
       rt.effectiveTypeTable.remove(addr);
     });
     rt.stack.pop();
@@ -967,9 +979,10 @@ export const instructionEvaluator: {
       const address = rt.stack.rbp + frame[identifier].address;
       rt.symbolTable.addAddress(identifier, address);
       rt.effectiveTypeTable.add(address, typeInfo);
+      rt.memory.protectConstObject(address, typeInfo);
 
       rt.agenda.push(popInstruction());
-      rt.agenda.push(assignInstruction());
+      rt.agenda.push(assignInstruction(true));
       rt.agenda.push(pushInstruction(args[i]));
       rt.agenda.push(
         pushInstruction(
@@ -989,7 +1002,10 @@ export const instructionEvaluator: {
     const block = rt.symbolTable.exitBlock();
     Object.values(block).forEach((addr) => {
       const t = rt.effectiveTypeTable.get(addr);
-      if (t !== NO_EFFECTIVE_TYPE) rt.initTable.remove(addr, t.size);
+      if (t !== NO_EFFECTIVE_TYPE) {
+        rt.initTable.remove(addr, t.size);
+        rt.memory.clearReadonly(addr, t.size);
+      }
       rt.effectiveTypeTable.remove(addr);
     });
     rt.stack.pop();
@@ -1086,7 +1102,10 @@ export const instructionEvaluator: {
     if (isVoid(targetType)) return;
     if (!(isTemporaryObject(o) && isScalarType(o.typeInfo)))
       throw new Error("expected scalar type");
-    if (o.typeInfo.isCompatible(targetType)) return;
+    if (o.typeInfo.isCompatible(targetType)) {
+      rt.stash.pushWithoutConversions(o);
+      return;
+    }
     const val = bytesToBigint(
       o.bytes,
       isSigned(o.typeInfo),
@@ -1106,9 +1125,11 @@ export const instructionEvaluator: {
     if (isPointer(o.typeInfo) && isIntegerType(targetType)) res = val;
     if (
       isPointer(o.typeInfo) &&
-      isObjectTypeInfo(o.typeInfo.referencedType) &&
+      (isObjectTypeInfo(o.typeInfo.referencedType) ||
+        isIncompleteTypeInfo(o.typeInfo.referencedType)) &&
       isPointer(targetType) &&
-      isObjectTypeInfo(targetType.referencedType)
+      (isObjectTypeInfo(targetType.referencedType) ||
+        isIncompleteTypeInfo(targetType.referencedType))
     )
       res = val;
     if (
@@ -1174,7 +1195,10 @@ export const instructionEvaluator: {
     const block = rt.symbolTable.exitBlock();
     Object.values(block).forEach((addr) => {
       const t = rt.effectiveTypeTable.get(addr);
-      if (t !== NO_EFFECTIVE_TYPE) rt.initTable.remove(addr, t.size);
+      if (t !== NO_EFFECTIVE_TYPE) {
+        rt.initTable.remove(addr, t.size);
+        rt.memory.clearReadonly(addr, t.size);
+      }
       rt.effectiveTypeTable.remove(addr);
     });
   },
@@ -1316,7 +1340,9 @@ const applyBinaryOp = (
         isPointer(t0) &&
         isPointer(t1) &&
         isObjectTypeInfo(t0.referencedType) &&
-        t0.referencedType.isCompatible(t1.referencedType)
+        unqualified(t0.referencedType).isCompatible(
+          unqualified(t1.referencedType),
+        )
       ) {
         const a0 = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         const a1 = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
@@ -1409,12 +1435,17 @@ const applyBinaryOp = (
     case ">=": {
       let isTruthy: boolean | undefined = undefined;
 
-      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+      if (
+        (isArithmeticType(t0) && isArithmeticType(t1)) ||
+        (isPointer(t0) && isPointer(t1))
+      ) {
         let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-        const ct = applyUsualArithmeticConversions(t0, t1);
-        l = convertValue(l, ct, rt.config.endianness);
-        r = convertValue(r, ct, rt.config.endianness);
+        if (isArithmeticType(t0) && isArithmeticType(t1)) {
+          const ct = applyUsualArithmeticConversions(t0, t1);
+          l = convertValue(l, ct, rt.config.endianness);
+          r = convertValue(r, ct, rt.config.endianness);
+        }
         switch (op) {
           case "<": {
             isTruthy = l < r;
@@ -1574,14 +1605,14 @@ const evaluateInitializer = (
       ? [...chars, ...BIGINT_TO_BYTES[Type.Char](BigInt(0), rt.config.endianness)]
       : chars;
     const bytes = [...content, ...new Array(tt.size - content.length).fill(0)];
-    rt.memory.setObjectBytes(address, bytes, tt);
+    rt.memory.setObjectBytes(address, bytes, tt, false, false, true);
     rt.initTable.add(address, tt);
     return;
   }
 
   if (!isTypedInitializerList(t)) {
     rt.agenda.push(popInstruction());
-    rt.agenda.push(assignInstruction());
+    rt.agenda.push(assignInstruction(true));
     rt.agenda.push(t);
     rt.agenda.push(
       pushInstruction(
@@ -1595,7 +1626,7 @@ const evaluateInitializer = (
   }
   if (isScalarType(tt)) {
     rt.agenda.push(popInstruction());
-    rt.agenda.push(assignInstruction());
+    rt.agenda.push(assignInstruction(true));
     rt.agenda.push(t.value[0].initializer);
     rt.agenda.push(
       pushInstruction(

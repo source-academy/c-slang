@@ -162,7 +162,15 @@ export const isTypedefDeclaration = (i: BaseNode): i is TypedefDeclaration =>
 
 export type DeclarationSpecifiers = DeclarationSpecifier[];
 
-export type DeclarationSpecifier = TypeSpecifier | StorageClassSpecifier;
+export type DeclarationSpecifier =
+  | TypeSpecifier
+  | StorageClassSpecifier
+  | TypeQualifier;
+
+export type TypeQualifier = "const";
+
+export const isTypeQualifier = (i: DeclarationSpecifier): i is TypeQualifier =>
+  i === "const";
 
 export type TypeSpecifier =
   | "void"
@@ -178,7 +186,7 @@ export type TypeSpecifier =
   | TypedefName;
 
 export const isTypeSpecifier = (i: DeclarationSpecifier): i is TypeSpecifier =>
-  !isStorageClassSpecifier(i);
+  !isStorageClassSpecifier(i) && !isTypeQualifier(i);
 
 export type TypedefName = string;
 
@@ -338,6 +346,7 @@ export const isFunctionDeclaratorPart = (
 
 export interface PtrDeclaratorPart {
   partType: "ptr";
+  qualifiers: TypeQualifier[];
 }
 
 export const isPtrDeclaratorPart = (
@@ -811,7 +820,7 @@ export interface TypedCastExpressionNode extends TypedExpressionBaseNode {
 }
 
 export interface TypeName {
-  specifierQualifierList: TypeSpecifier[];
+  specifierQualifierList: (TypeSpecifier | TypeQualifier)[];
   abstractDeclarator: AbstractDeclarator;
 }
 

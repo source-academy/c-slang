@@ -18,6 +18,7 @@ import {
   unsignedLongInt,
   unsignedLongLongInt,
   UnsignedInt,
+  unqualified,
 } from "./types";
 
 export const INTEGRAL_TYPE_TO_CONVERSION_RANK: Record<
@@ -110,5 +111,7 @@ export const applyImplicitConversions = (
   if (isFunction(t0)) {
     return { ...t, typeInfo: pointer(t0) };
   }
-  return t;
+  const value = { ...t, lvalue: false };
+  value.typeInfo = unqualified(value.typeInfo);
+  return value;
 };

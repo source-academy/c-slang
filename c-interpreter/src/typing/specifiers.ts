@@ -5,7 +5,6 @@ import {
   isEnumSpecifier,
   isStorageClassSpecifier,
   isStructSpecifier,
-  isTypeSpecifier,
 } from "../ast/types";
 import {
   CHAR_MAX,
@@ -227,9 +226,8 @@ export const constructStructFromSpecifier = (
       );
       if (storageClassSpecifiers.length > 0)
         throw "typedef in struct definition";
-      const typeSpecifiers = d.specifiers.filter(isTypeSpecifier);
       const { identifier: name, type } = constructType(
-        typeSpecifiers,
+        d.specifiers,
         id.declarator,
         env,
         inForwardDeclarationScan,

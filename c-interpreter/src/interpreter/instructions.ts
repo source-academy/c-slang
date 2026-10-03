@@ -80,10 +80,13 @@ export const pushInstruction = (item: StashItem): PushInstruction => ({
 
 export interface AssignInstruction extends BaseInstruction {
   type: InstructionType.ASSIGN;
+  // Initialization may write to a newly created const object.
+  initializing: boolean;
 }
 
-export const assignInstruction = (): AssignInstruction => ({
+export const assignInstruction = (initializing = false): AssignInstruction => ({
   type: InstructionType.ASSIGN,
+  initializing,
 });
 
 export interface MarkInstruction extends BaseInstruction {

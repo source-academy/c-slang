@@ -1,5 +1,5 @@
 import { BIGINT_TO_BYTES } from "../typing/representation";
-import { Type, isArray, pointer } from "../typing/types";
+import { Type, isArray, pointer, unqualified } from "../typing/types";
 import { Stack } from "../utils";
 import { FunctionDesignator, TemporaryObject } from "./object";
 import { Runtime } from "./runtime";
@@ -40,7 +40,10 @@ export class Stash {
         pointer(x.typeInfo.elementType),
         BIGINT_TO_BYTES[Type.Pointer](BigInt(addr), rt.config.endianness),
       );
-    } else res = x;
+    } else
+      res = x.typeInfo.const
+        ? new TemporaryObject(unqualified(x.typeInfo), x.bytes, x.address)
+        : x;
     this.st.push(res);
   }
 

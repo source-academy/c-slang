@@ -1035,7 +1035,6 @@ AtomicTypeSpecifier
 // (6.7.3) type-qualifier
 TypeQualifier
   = CONST
-    { throwNotImplemented("const type qualifier"); }
   / RESTRICT
     { throwNotImplemented("restrict type qualifier"); }
   / VOLATILE
@@ -1109,7 +1108,7 @@ DirectDeclarator
 Pointer
   = (
       STAR a:TypeQualifierList?
-      { return { partType: "ptr" }; }
+      { return { partType: "ptr", qualifiers: a || [] }; }
     )+
 
 // (6.7.6) type-qualifier-list

@@ -1,10 +1,11 @@
 import {
   ExpressionTypeInfo,
   TranslationUnit,
-  TypeSpecifier,
+  DeclarationSpecifier,
   isStorageClassSpecifier,
   isStructSpecifier,
   isTypeSpecifier,
+  isTypeQualifier,
   isTypedIntegerConstant,
 } from "./../ast/types";
 import {
@@ -24,6 +25,9 @@ import {
   ObjectTypeInfo,
   Structure,
   TypeInfo,
+  constQualified,
+  containsConst,
+  unqualified,
   array,
   functionType,
   isArithmeticType,
@@ -91,9 +95,8 @@ export const constructDerivedTypes = (
         );
         if (storageClassSpecifiers.length > 0)
           throw "typedef in parameter declaration";
-        const typeSpecifiers = i.specifiers.filter(isTypeSpecifier);
         return constructType(
-          typeSpecifiers,
+          i.specifiers,
           i.declarator,
           env,
           inForwardDeclarationScan,
@@ -104,6 +107,7 @@ export const constructDerivedTypes = (
     }
     case "ptr": {
       t = pointer(baseType);
+      if (p.qualifiers.includes("const")) t = constQualified(t);
       break;
     }
   }
@@ -112,16 +116,18 @@ export const constructDerivedTypes = (
 };
 
 export const constructType = (
-  specifiers: TypeSpecifier[],
+  specifiers: DeclarationSpecifier[],
   declarator: Declarator,
   env: TypeEnv | null,
   inForwardDeclarationScan: boolean = false,
 ): { identifier: Identifier | null; type: TypeInfo } => {
-  const specifiedType = getTypeInfoFromSpecifiers(
-    specifiers,
+  let specifiedType = getTypeInfoFromSpecifiers(
+    specifiers.filter(isTypeSpecifier),
     env,
     inForwardDeclarationScan,
   );
+  if (specifiers.some(isTypeQualifier))
+    specifiedType = constQualified(specifiedType);
   const identifier = getIdentifierFromDeclarator(declarator);
   const type = constructDerivedTypes(
     declarator.filter(
@@ -146,7 +152,10 @@ export const isLvalue = (t: ExpressionTypeInfo): boolean => {
 // (6.3.2.1) A modifiable lvalue is an lvalue that does not have array type, does not have an incomplete type, ...
 export const isModifiableLvalue = (t: ExpressionTypeInfo): boolean => {
   return (
-    isLvalue(t) && !isArray(t.typeInfo) && !isIncompleteTypeInfo(t.typeInfo)
+    isLvalue(t) &&
+    !isArray(t.typeInfo) &&
+    !isIncompleteTypeInfo(t.typeInfo) &&
+    !containsConst(t.typeInfo)
   );
 };
 
@@ -158,17 +167,33 @@ export const isNullPtrConst = (expr: TypedExpression): boolean => {
   );
 };
 
+export const discardsPointedToConst = (
+  targetType: TypeInfo,
+  sourceType: TypeInfo,
+): boolean =>
+  isPointer(targetType) &&
+  isPointer(sourceType) &&
+  sourceType.referencedType.const === true &&
+  !targetType.referencedType.const;
+
 export const checkSimpleAssignmentConstraint = (
   leftType: TypeInfo,
   rightType: TypeInfo,
   rightIsNullPtrConstant: boolean,
 ): boolean => {
   if (isArithmeticType(leftType) && isArithmeticType(rightType)) return true;
-  if (isStructure(leftType) && leftType.isCompatible(rightType)) return true;
+  if (
+    isStructure(leftType) &&
+    unqualified(leftType).isCompatible(unqualified(rightType))
+  )
+    return true;
+  if (discardsPointedToConst(leftType, rightType)) return false;
   if (
     isPointer(leftType) &&
     isPointer(rightType) &&
-    leftType.referencedType.isCompatible(rightType.referencedType)
+    unqualified(leftType.referencedType).isCompatible(
+      unqualified(rightType.referencedType),
+    )
   )
     return true;
   if (isPointer(leftType) && rightIsNullPtrConstant) return true;
@@ -198,7 +223,7 @@ export const getMemberTypeInfo = (
 ): ObjectTypeInfo => {
   for (const m of t.members) {
     if (m.name === identifier) {
-      return m.type;
+      return t.const ? constQualified(m.type) : m.type;
     }
   }
   throw (
@@ -216,7 +241,7 @@ export const getMember = (
   let i = 0;
   for (const m of t.members) {
     if (m.name === identifier) {
-      return [i, m.relativeAddress, m.type];
+      return [i, m.relativeAddress, t.const ? constQualified(m.type) : m.type];
     }
     i++;
   }
