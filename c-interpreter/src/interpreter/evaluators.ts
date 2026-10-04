@@ -1,6 +1,7 @@
 import {
   ObjectTypeInfo,
   IntegerType,
+  FloatingType,
   Pointer,
   ScalarType,
   int,
@@ -119,10 +120,17 @@ import {
 import { Type, isFunction } from "../typing/types";
 import { Runtime } from "./runtime";
 import { FunctionDesignator, RuntimeObject, TemporaryObject } from "./object";
-import { BIGINT_TO_BYTES, FLOAT_TO_BYTES, bytesToBigint } from "../typing/representation";
+import {
+  BIGINT_TO_BYTES,
+  FLOAT_TO_BYTES,
+  bytesToBigint,
+  bytesToFloat,
+  bigintToFloat,
+} from "../typing/representation";
 import { isTemporaryObject } from "./stash";
 import {
   applyIntegerPromotions,
+  applyIntegerUsualArithmeticConversions,
   applyUsualArithmeticConversions,
   applyImplicitConversions as applyImplicitConversionsToExpression,
 } from "../typing/conversions";
@@ -1242,6 +1250,75 @@ const COMPOUND_ASSIGN_OP: Record<Exclude<AssignmentOperator, "=">, BinaryOperato
   "|=": "|",
 };
 
+const floatingOperandValue = (
+  operand: TemporaryObject,
+  commonType: FloatingType,
+  endianness: Endianness,
+): number => {
+  const type = operand.typeInfo;
+  if (isFloatingType(type))
+    return bytesToFloat(operand.bytes, type.type, endianness);
+  if (!isIntegerType(type)) throw new Error("expected arithmetic operand");
+  const value = bytesToBigint(operand.bytes, isSigned(type), endianness);
+  return commonType.type === Type.Float ? bigintToFloat(value) : Number(value);
+};
+
+const applyFloatingBinaryOp = (
+  op: BinaryOperator,
+  lo: TemporaryObject,
+  ro: TemporaryObject,
+  commonType: FloatingType,
+  endianness: Endianness,
+): TemporaryObject => {
+  const l = floatingOperandValue(lo, commonType, endianness);
+  const r = floatingOperandValue(ro, commonType, endianness);
+  let result: number | boolean;
+  // IEEE results are retained; floating exception flags are not modeled.
+  switch (op) {
+    case "+":
+      result = l + r;
+      break;
+    case "-":
+      result = l - r;
+      break;
+    case "*":
+      result = l * r;
+      break;
+    case "/":
+      result = l / r;
+      break;
+    case "==":
+      result = l === r;
+      break;
+    case "!=":
+      result = l !== r;
+      break;
+    case "<":
+      result = l < r;
+      break;
+    case ">":
+      result = l > r;
+      break;
+    case "<=":
+      result = l <= r;
+      break;
+    case ">=":
+      result = l >= r;
+      break;
+    default:
+      throw new Error(op + " does not support floating point operands");
+  }
+  if (typeof result === "boolean")
+    return new TemporaryObject(
+      int(),
+      BIGINT_TO_BYTES[Type.Int](BigInt(result ? 1 : 0), endianness),
+    );
+  return new TemporaryObject(
+    commonType,
+    FLOAT_TO_BYTES[commonType.type](result, endianness),
+  );
+};
+
 const applyBinaryOp = (
   op: BinaryOperator,
   lo: TemporaryObject,
@@ -1251,14 +1328,20 @@ const applyBinaryOp = (
   const t1 = ro.typeInfo;
   const t0 = lo.typeInfo;
 
+  if (isArithmeticType(t0) && isArithmeticType(t1)) {
+    const ct = applyUsualArithmeticConversions(t0, t1);
+    if (isFloatingType(ct) && op !== "&&" && op !== "||")
+      return applyFloatingBinaryOp(op, lo, ro, ct, rt.config.endianness);
+  }
+
   switch (op) {
     case "+": {
       let res: TemporaryObject | undefined = undefined;
 
-      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+      if (isIntegerType(t0) && isIntegerType(t1)) {
         let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-        const ct = applyUsualArithmeticConversions(t0, t1);
+        const ct = applyIntegerUsualArithmeticConversions(t0, t1);
         l = convertValue(l, ct, rt.config.endianness);
         r = convertValue(r, ct, rt.config.endianness);
         res = new TemporaryObject(
@@ -1311,10 +1394,10 @@ const applyBinaryOp = (
     case "-": {
       let res: TemporaryObject | undefined = undefined;
 
-      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+      if (isIntegerType(t0) && isIntegerType(t1)) {
         let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-        const ct = applyUsualArithmeticConversions(t0, t1);
+        const ct = applyIntegerUsualArithmeticConversions(t0, t1);
         l = convertValue(l, ct, rt.config.endianness);
         r = convertValue(r, ct, rt.config.endianness);
         res = new TemporaryObject(
@@ -1385,11 +1468,11 @@ const applyBinaryOp = (
     case "*":
     case "/":
     case "%": {
-      if (!(isArithmeticType(t0) && isArithmeticType(t1)))
-        throw new Error("expected arithmetic types for *, / or %");
+      if (!(isIntegerType(t0) && isIntegerType(t1)))
+        throw new Error("expected integer types for *, / or %");
       let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
       let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-      const ct = applyUsualArithmeticConversions(t0, t1);
+      const ct = applyIntegerUsualArithmeticConversions(t0, t1);
       l = convertValue(l, ct, rt.config.endianness);
       r = convertValue(r, ct, rt.config.endianness);
       let res: bigint;
@@ -1414,10 +1497,10 @@ const applyBinaryOp = (
     case "!=": {
       let isTruthy: boolean | undefined = undefined;
 
-      if (isArithmeticType(t0) && isArithmeticType(t1)) {
+      if (isIntegerType(t0) && isIntegerType(t1)) {
         let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-        const ct = applyUsualArithmeticConversions(t0, t1);
+        const ct = applyIntegerUsualArithmeticConversions(t0, t1);
         l = convertValue(l, ct, rt.config.endianness);
         r = convertValue(r, ct, rt.config.endianness);
         switch (op) {
@@ -1430,9 +1513,10 @@ const applyBinaryOp = (
             break;
           }
         }
-      }
-
-      if (isScalarType(t0) && isScalarType(t1)) { // TODO: improve type checking here for this (supposed to be ptrs)
+      } else if (
+        (isPointer(t0) && (isPointer(t1) || isIntegerType(t1))) ||
+        (isIntegerType(t0) && isPointer(t1))
+      ) {
         const l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
         switch (op) {
@@ -1461,13 +1545,13 @@ const applyBinaryOp = (
       let isTruthy: boolean | undefined = undefined;
 
       if (
-        (isArithmeticType(t0) && isArithmeticType(t1)) ||
+        (isIntegerType(t0) && isIntegerType(t1)) ||
         (isPointer(t0) && isPointer(t1))
       ) {
         let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
         let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-        if (isArithmeticType(t0) && isArithmeticType(t1)) {
-          const ct = applyUsualArithmeticConversions(t0, t1);
+        if (isIntegerType(t0) && isIntegerType(t1)) {
+          const ct = applyIntegerUsualArithmeticConversions(t0, t1);
           l = convertValue(l, ct, rt.config.endianness);
           r = convertValue(r, ct, rt.config.endianness);
         }
@@ -1506,7 +1590,7 @@ const applyBinaryOp = (
         throw new Error("expected integer types for &, | or ^");
       let l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
       let r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
-      const ct = applyUsualArithmeticConversions(t0, t1);
+      const ct = applyIntegerUsualArithmeticConversions(t0, t1);
       l = convertValue(l, ct, rt.config.endianness);
       r = convertValue(r, ct, rt.config.endianness);
       let res: bigint;

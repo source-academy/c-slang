@@ -121,6 +121,24 @@ export const BIGINT_TO_BYTES: Record<
   },
 };
 
+// Round integers directly to float32 to avoid double rounding through Number.
+export const bigintToFloat = (value: bigint): number => {
+  const magnitude = value < BigInt(0) ? -value : value;
+  const shift = magnitude.toString(2).length - 24;
+  if (shift <= 0) return Number(value);
+  const discardedBits = BigInt(shift);
+  let significand = magnitude >> discardedBits;
+  const remainder = magnitude - (significand << discardedBits);
+  const halfway = BigInt(1) << BigInt(shift - 1);
+  if (
+    remainder > halfway ||
+    (remainder === halfway && (significand & BigInt(1)) !== BigInt(0))
+  )
+    significand += BigInt(1);
+  const rounded = Math.fround(Number(significand) * 2 ** shift);
+  return value < BigInt(0) ? -rounded : rounded;
+};
+
 export const FLOAT_TO_BYTES: Record<
   FloatingType["type"],
   (value: number, e?: Endianness) => number[]

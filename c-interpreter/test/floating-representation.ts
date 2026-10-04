@@ -87,15 +87,15 @@ describe("floating type metadata", () => {
     assert.isTrue(types.isInt(applyIntegerPromotions(types.unsignedChar())));
   });
 
-  it("keeps floating operands out of the integer conversion ladder", () => {
+  it("selects floating common types before the integer conversion ladder", () => {
     for (const t of [types.floatType(), types.doubleType()]) {
-      assert.throws(
-        () => applyUsualArithmeticConversions(t, types.int()),
-        /floating-point arithmetic conversions not implemented/,
+      assert.equal(
+        applyUsualArithmeticConversions(t, types.int()).type,
+        t.type,
       );
-      assert.throws(
-        () => applyUsualArithmeticConversions(types.int(), t),
-        /floating-point arithmetic conversions not implemented/,
+      assert.equal(
+        applyUsualArithmeticConversions(types.int(), t).type,
+        t.type,
       );
     }
     assert.isTrue(

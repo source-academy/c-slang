@@ -1,4 +1,59 @@
 ---
+floating-addition:
+  file: "floating-addition.c"
+  cases:
+    - out: "1"
+      stdout: "3.75\n"
+      desc: "float/double addition and mixed operands in both orders"
+floating-subtraction:
+  file: "floating-subtraction.c"
+  cases:
+    - out: "1"
+      stdout: "-1.5\n"
+      desc: "float/double subtraction and mixed operands in both orders"
+floating-multiplication:
+  file: "floating-multiplication.c"
+  cases:
+    - out: "1"
+      stdout: "3.75\n"
+      desc: "float/double multiplication and mixed operands in both orders"
+floating-division:
+  file: "floating-division.c"
+  cases:
+    - out: "1"
+      stdout: "0.10000000149011612\n"
+      desc: "float/double division, integer operands, and rounded fractional results"
+floating-common-types:
+  file: "floating-common-types.c"
+  cases:
+    - out: "1"
+      desc: "result sizes, double precedence, integer ranks, bool, and enum operands"
+floating-rounding:
+  file: "floating-rounding.c"
+  cases:
+    - out: "1"
+      desc: "round operands before arithmetic/comparisons and float results after each operation"
+floating-large-integers:
+  file: "floating-large-integers.c"
+  cases:
+    - out: "1"
+      desc: "64-bit integer conversion, halfway cases, signs, and unsigned maximum"
+floating-comparisons:
+  file: "floating-comparisons.c"
+  cases:
+    - out: "1"
+      desc: "all six comparisons with mixed types and signed zero"
+floating-exceptional:
+  file: "floating-exceptional.c"
+  cases:
+    - out: "1"
+      stdout: "Infinity\n-Infinity\nNaN\nInfinity\nInfinity\n-Infinity\n"
+      desc: "IEEE zero division/overflow policy, signed zero, and unordered NaN comparisons"
+arithmetic-integer-regression:
+  file: "arithmetic-integer-regression.c"
+  cases:
+    - out: "1"
+      desc: "signed/unsigned equality keeps common conversions; integer and pointer operators unchanged"
 floating-literal-decimals:
   file: "floating-literal-decimals.c"
   cases:

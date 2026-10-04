@@ -13,6 +13,10 @@ import {
   isArray,
   isFunction,
   isIntegerType,
+  isDoubleType,
+  isFloatType,
+  doubleType,
+  floatType,
   isSigned,
   pointer,
   unsignedChar,
@@ -82,10 +86,16 @@ export const applyIntegerPromotions = <T extends ArithmeticType>(
 export const applyUsualArithmeticConversions = (
   t: ArithmeticType,
   u: ArithmeticType,
+): ArithmeticType => {
+  if (isDoubleType(t) || isDoubleType(u)) return doubleType();
+  if (isFloatType(t) || isFloatType(u)) return floatType();
+  return applyIntegerUsualArithmeticConversions(t, u);
+};
+
+export const applyIntegerUsualArithmeticConversions = (
+  t: IntegerType,
+  u: IntegerType,
 ): IntegerType => {
-  // Floating common-type selection is added in A6.3.
-  if (!isIntegerType(t) || !isIntegerType(u))
-    throw new Error("floating-point arithmetic conversions not implemented");
   t = applyIntegerPromotions(t);
   u = applyIntegerPromotions(u);
   if (t.type === u.type) return t;
