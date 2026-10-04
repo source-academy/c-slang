@@ -108,8 +108,8 @@ Keyword
       / "const"
       / "continue"
       / "default"
-      / "do"
       / "double"
+      / "do"
       / "else"
       / "enum"
       / "extern"
@@ -333,16 +333,21 @@ LongLongSuffix
 // (6.4.4.2) floating-constant
 FloatingConstant
   = DecimalFloatingConstant
-    { throwNotImplemented("decimal floating constant"); }
   / HexadecimalFloatingConstant
     { throwNotImplemented("hex floating constant"); }
 
 // (6.4.4.2) decimal-floating-constant
 DecimalFloatingConstant
-  = a:FractionalConstant b:ExponentPart? FloatingSuffix?
-    { return Number(a + (b || '')); }
-  / a:DigitSequence b:ExponentPart FloatingSuffix?
-    { return Number(a.join('') + b); }
+  = a:FractionalConstant b:ExponentPart? s:FloatingSuffix?
+    { return makeNode("FloatingConstant", {
+        value: Number(a + (b || '')),
+        isFloat: s === "f" || s === "F"
+      }); }
+  / a:DigitSequence b:ExponentPart s:FloatingSuffix?
+    { return makeNode("FloatingConstant", {
+        value: Number(a.join('') + b),
+        isFloat: s === "f" || s === "F"
+      }); }
 
 // (6.4.4.2) hexadecimal-floating-constant
 HexadecimalFloatingConstant
@@ -360,9 +365,9 @@ HexadecimalFloatingConstant
 // (6.4.4.2) fractional-constant
 FractionalConstant
   = a:DigitSequence? "." b:DigitSequence
-    { return a.join('') + '.' + b.join(''); }
+    { return (a || []).join('') + '.' + b.join(''); }
   / a:DigitSequence "."
-    { return a.join(''); }
+    { return a.join('') + '.'; }
 
 // (6.4.4.2) exponent-part
 ExponentPart
@@ -380,7 +385,7 @@ DigitSequence
 // (6.4.4.2) hexadecimal-fractional-constant
 HexadecimalFractionalConstant
   = a:HexadecimalDigitSequence? "." b:HexadecimalDigitSequence
-    { return a.join("") + "." + b.join(""); }
+    { return (a || []).join("") + "." + b.join(""); }
   / a:HexadecimalDigitSequence "."
     { return a.join(""); }
 
@@ -928,9 +933,7 @@ TypeSpecifier
   / INT
   / LONG
   / FLOAT
-    { throwNotImplemented("floating type"); }
   / DOUBLE
-    { throwNotImplemented("floating type"); }
   / SIGNED
   / UNSIGNED
   / BOOL

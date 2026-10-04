@@ -33,6 +33,7 @@ import {
   isCastExpressionNode,
   isInitializerList,
   isIntegerConstant,
+  isFloatingConstant,
   isIterationStatement,
   isIterationStatementDoWhile,
   isIterationStatementWhile,
@@ -47,7 +48,6 @@ import {
   isTypeName,
   isTypeSpecifier,
   isTypedArraySubscriptingOp,
-  isTypedIntegerConstant,
   isUnaryExpressionSizeof,
 } from "./../ast/types";
 import {
@@ -124,6 +124,8 @@ import {
   TypedConstant,
   IntegerConstant,
   TypedIntegerConstant,
+  FloatingConstant,
+  TypedFloatingConstant,
   Constant,
   TypedPrimaryExprString,
   ExpressionTypeInfo,
@@ -150,6 +152,8 @@ import {
   array,
   char,
   int,
+  floatType,
+  doubleType,
   isArithmeticType,
   isArray,
   isCharacterType,
@@ -1435,8 +1439,8 @@ const typePrimaryExprConstant = (
     return {
       ...t,
       value,
-      typeInfo: isTypedIntegerConstant(value) ? value.typeInfo : int(),
-      lvalue: isTypedIntegerConstant(value) ? value.lvalue : false,
+      typeInfo: typeof value === "string" ? int() : value.typeInfo,
+      lvalue: false,
     };
   });
 
@@ -1465,8 +1469,18 @@ const typePrimaryExprParenthesis = (
 
 const typeConstant = (t: Constant): TypedConstant => {
   if (isIntegerConstant(t)) return typeIntegerConstant(t);
+  if (isFloatingConstant(t)) return typeFloatingConstant(t);
   return t;
 };
+
+const typeFloatingConstant = (t: FloatingConstant): TypedFloatingConstant =>
+  typeCheck(t, () => {
+    const typeInfo = t.isFloat ? floatType() : doubleType();
+    const value = t.isFloat ? Math.fround(t.value) : t.value;
+    if (!Number.isFinite(value))
+      throw "floating constant " + t.src + " outside finite range of " + typeInfo.type;
+    return { ...t, value, typeInfo, lvalue: false };
+  });
 
 const typeIntegerConstant = (t: IntegerConstant): TypedIntegerConstant =>
   typeCheck(t, () => {

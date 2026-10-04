@@ -3,6 +3,7 @@ import {
   char,
   isArray,
   isChar,
+  isFloatingType,
   isCharacterType,
   isPointer,
   isScalarType,
@@ -14,7 +15,7 @@ import { ObjectTypeInfo } from "../typing/types";
 import { checkValidByte, decimalAddressToHex } from "../utils";
 import { Memory } from "../memory/memory";
 import { Endianness } from "../config";
-import { bytesToBigint } from "../typing/representation";
+import { bytesToBigint, bytesToFloat } from "../typing/representation";
 
 interface Identifiable {
   identifier: Identifier;
@@ -148,6 +149,8 @@ export const stringify = (
 ): string => {
   if (bytes.length !== t.size)
     throw new Error("number of bytes do not match type given");
+  if (isFloatingType(t))
+    return bytesToFloat(bytes, t.type, endianness).toString();
   if (isScalarType(t)) {
     const n = bytesToBigint(bytes, isSigned(t), endianness);
     if (isChar(t)) return "'" + encodeURI(String.fromCharCode(Number(n))) + "'";

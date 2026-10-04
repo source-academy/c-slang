@@ -1,7 +1,8 @@
-import { has, isObject } from "lodash";
+import { has } from "lodash";
 import {
   FunctionType,
   IntegerType,
+  FloatingType,
   ObjectTypeInfo,
   ScalarType,
   TypeInfo,
@@ -59,7 +60,8 @@ export type ASTNode =
   | PrimaryExprConstant
   | PrimaryExprString
   | PrimaryExprParenthesis
-  | IntegerConstant;
+  | IntegerConstant
+  | FloatingConstant;
 
 export type TypedASTNode =
   | TypedTranslationUnit
@@ -1105,9 +1107,9 @@ export interface TypedPrimaryExprParenthesis extends TypedExpressionBaseNode {
 
 export type Identifier = string;
 
-export type Constant = IntegerConstant | CharacterConstant;
+export type Constant = IntegerConstant | FloatingConstant | CharacterConstant;
 
-export type TypedConstant = TypedIntegerConstant | CharacterConstant;
+export type TypedConstant = TypedIntegerConstant | TypedFloatingConstant | CharacterConstant;
 
 export interface IntegerConstant extends BaseNode {
   type: "IntegerConstant";
@@ -1117,7 +1119,7 @@ export interface IntegerConstant extends BaseNode {
 }
 
 export const isIntegerConstant = (i: Constant): i is IntegerConstant =>
-  isObject(i);
+  typeof i !== "string" && i.type === "IntegerConstant";
 
 export interface TypedIntegerConstant extends TypedExpressionBaseNode {
   type: "IntegerConstant";
@@ -1127,7 +1129,28 @@ export interface TypedIntegerConstant extends TypedExpressionBaseNode {
 
 export const isTypedIntegerConstant = (
   expr: TypedConstant,
-): expr is TypedIntegerConstant => isObject(expr);
+): expr is TypedIntegerConstant =>
+  typeof expr !== "string" && expr.type === "IntegerConstant";
+
+export interface FloatingConstant extends BaseNode {
+  type: "FloatingConstant";
+  value: number;
+  isFloat: boolean;
+}
+
+export const isFloatingConstant = (i: Constant): i is FloatingConstant =>
+  typeof i !== "string" && i.type === "FloatingConstant";
+
+export interface TypedFloatingConstant extends TypedExpressionBaseNode {
+  type: "FloatingConstant";
+  value: number;
+  typeInfo: FloatingType;
+}
+
+export const isTypedFloatingConstant = (
+  expr: TypedConstant,
+): expr is TypedFloatingConstant =>
+  typeof expr !== "string" && expr.type === "FloatingConstant";
 
 export interface IntegerConstantSuffix {
   unsigned?: true;

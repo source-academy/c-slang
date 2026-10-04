@@ -7,6 +7,7 @@ import "../src/types";
 import "./const";
 import "./union";
 import "./floating-representation";
+import "./floating-literals";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";
@@ -14,6 +15,7 @@ const TEST_FOLDER_PATH = "./test/";
 interface TestCase {
   in?: string;
   out?: string;
+  stdout?: string;
   desc?: string;
   fail?: boolean;
 }
@@ -37,17 +39,15 @@ const tests = load(
   readFileSync(TEST_FOLDER_PATH + "test.yaml", "utf-8"),
 ) as TestList;
 
-const run = (source: string): number => {
+const execute = (source: string): { exitCode: number; stdout: string } => {
   const rt = cviz.run(source)
   while (rt.exitCode === undefined) rt.next();
-  return rt.exitCode;
+  return { exitCode: rt.exitCode, stdout: rt.stdout };
 }
 
-const runForStdout = (source: string): string => {
-  const rt = cviz.run(source);
-  while (rt.exitCode === undefined) rt.next();
-  return rt.stdout;
-}
+const run = (source: string): number => execute(source).exitCode;
+
+const runForStdout = (source: string): string => execute(source).stdout;
 
 for (const [testName, testSuite] of Object.entries(tests)) {
   describe(testName, () => {
@@ -64,12 +64,14 @@ for (const [testName, testSuite] of Object.entries(tests)) {
         if (toFail) {
           assert.throws(() => run(source), Error)
         } else {
-          const out = run(source);
+          const result = execute(source);
           // writeFileSync(
           //   TEST_OUTPUT_PATH + testName + i + ".json",
           //   JSON.stringify(out),
           // );
-          assert.equal(out.toString(), expectedOutput);
+          assert.equal(result.exitCode.toString(), expectedOutput);
+          if (testCase.stdout !== undefined)
+            assert.equal(result.stdout, testCase.stdout);
         }
       });
     }

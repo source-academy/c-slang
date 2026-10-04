@@ -47,6 +47,7 @@ import {
   TypedCastExpressionNode,
   TypedExpressionStatement,
   isTypedIntegerConstant,
+  isTypedFloatingConstant,
   isTypedInitializerList,
   isPrimaryExprString,
   TypedInitializer,
@@ -118,7 +119,7 @@ import {
 import { Type, isFunction } from "../typing/types";
 import { Runtime } from "./runtime";
 import { FunctionDesignator, RuntimeObject, TemporaryObject } from "./object";
-import { BIGINT_TO_BYTES, bytesToBigint } from "../typing/representation";
+import { BIGINT_TO_BYTES, FLOAT_TO_BYTES, bytesToBigint } from "../typing/representation";
 import { isTemporaryObject } from "./stash";
 import {
   applyIntegerPromotions,
@@ -520,6 +521,11 @@ export const ASTNodeEvaluator: {
     rt: Runtime,
     { value: v }: TypedPrimaryExprConstant,
   ) => {
+    if (isTypedFloatingConstant(v)) {
+      const bytes = FLOAT_TO_BYTES[v.typeInfo.type](v.value, rt.config.endianness);
+      rt.stash.pushWithoutConversions(new TemporaryObject(v.typeInfo, bytes));
+      return;
+    }
     if (!isTypedIntegerConstant(v)) {
       const bytes = BIGINT_TO_BYTES[Type.Int](
         BigInt(v.charCodeAt(0)),

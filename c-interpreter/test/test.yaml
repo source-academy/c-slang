@@ -1,4 +1,38 @@
 ---
+floating-literal-decimals:
+  file: "floating-literal-decimals.c"
+  cases:
+    - out: "1"
+      stdout: "3.14\n0.5\n5\n0.125\n"
+      desc: "decimal fractions, omitted leading or trailing digits, and discarded values"
+floating-literal-exponents:
+  file: "floating-literal-exponents.c"
+  cases:
+    - out: "1"
+      stdout: "10000000000\n1e-10\n2500\n5\n0.5\n1\n"
+      desc: "exponent case, signs, and fractional exponent forms"
+floating-literal-suffixes:
+  file: "floating-literal-suffixes.c"
+  cases:
+    - out: "1"
+      stdout: "1.5\n0.5\n100\n5\n1.5\n1.5\n"
+      desc: "f/F select float; l/L select the long double alias"
+floating-literal-precision:
+  file: "floating-literal-precision.c"
+  cases:
+    - out: "1"
+      stdout: "0.10000000149011612\n0.1\n16777216\n16777217\n1.401298464324817e-45\n5e-324\n0\n"
+      desc: "float32 rounding, float64 precision, subnormals, and zero"
+floating-keyword-boundaries:
+  file: "floating-keyword-boundaries.c"
+  cases:
+    - out: "1"
+      desc: "double pointer declarations, do loops, and identifiers beginning with keywords"
+floating-type-keywords:
+  file: "floating-type-keywords.c"
+  cases:
+    - out: "1"
+      desc: "floating keywords, typedefs, const arrays, and unevaluated pointer dereference"
 union-layout:
   file: "union-layout.c"
   cases:
