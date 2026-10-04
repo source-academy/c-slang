@@ -1,10 +1,13 @@
 import {
   ObjectTypeInfo,
+  IntegerType,
+  Pointer,
   ScalarType,
   int,
   isArithmeticType,
   isArray,
   isIntegerType,
+  isFloatingType,
   isObjectTypeInfo,
   isIncompleteTypeInfo,
   isPointer,
@@ -684,6 +687,8 @@ export const instructionEvaluator: {
       case "!": {
         if (!(isTemporaryObject(v) && isScalarType(v.typeInfo)))
           throw new Error("operand of ! should be of scalar type");
+        if (isFloatingType(v.typeInfo))
+          throw new Error("floating-point logical operations not implemented");
         let n = bytesToBigint(
           v.bytes,
           isSigned(v.typeInfo),
@@ -855,6 +860,8 @@ export const instructionEvaluator: {
       )
     ) {
       if (isScalarType(typeInfo) && isScalarType(o.typeInfo)) {
+        if (isFloatingType(typeInfo) || isFloatingType(o.typeInfo))
+          throw new Error("floating-point assignment not implemented");
         const n = bytesToBigint(
           o.bytes,
           isSigned(o.typeInfo),
@@ -1096,6 +1103,8 @@ export const instructionEvaluator: {
     const o = rt.stash.pop();
     if (!(isTemporaryObject(o) && isArithmeticType(o.typeInfo)))
       throw "expected object of arithmetic type for conversion";
+    if (isFloatingType(typeInfo) || isFloatingType(o.typeInfo))
+      throw new Error("floating-point arithmetic conversions not implemented");
     const n = bytesToBigint(
       o.bytes,
       isSigned(o.typeInfo),
@@ -1114,6 +1123,8 @@ export const instructionEvaluator: {
       rt.stash.pushWithoutConversions(o);
       return;
     }
+    if (isFloatingType(targetType) || isFloatingType(o.typeInfo))
+      throw new Error("floating-point casts not implemented");
     const val = bytesToBigint(
       o.bytes,
       isSigned(o.typeInfo),
@@ -1567,9 +1578,11 @@ const combineAndStore = (
   rhs: TemporaryObject,
   rt: Runtime,
 ): { oldValue: TemporaryObject; newValue: TemporaryObject } => {
+  if (isFloatingType(t))
+    throw new Error("floating-point updates not implemented");
   const oldValue = new TemporaryObject(t, rt.memory.getObjectBytes(address, t));
   const combined = applyBinaryOp(op, oldValue, rhs, rt);
-  if (!isScalarType(combined.typeInfo))
+  if (!(isIntegerType(combined.typeInfo) || isPointer(combined.typeInfo)))
     throw new Error("expected scalar result for ++/--/compound assignment");
   const n = bytesToBigint(
     combined.bytes,
@@ -1584,7 +1597,7 @@ const combineAndStore = (
 
 const convertValue = (
   i: bigint,
-  t: ScalarType,
+  t: IntegerType | Pointer,
   e: Endianness = "little",
 ): bigint => {
   const bytes = BIGINT_TO_BYTES[t.type](i, e);

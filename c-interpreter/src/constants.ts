@@ -21,6 +21,14 @@ export const LLONG_MIN = -((BigInt(1) << BigInt(63)) - BigInt(1));
 export const LLONG_MAX = (BigInt(1) << BigInt(63)) - BigInt(1);
 export const ULLONG_MAX = (BigInt(1) << BigInt(64)) - BigInt(1);
 
+// IEEE-754 normal minima, finite maxima, and spacing above 1.
+export const FLT_MIN = 2 ** -126;
+export const FLT_MAX = (2 - 2 ** -23) * 2 ** 127;
+export const FLT_EPSILON = 2 ** -23;
+export const DBL_MIN = 2 ** -1022;
+export const DBL_MAX = Number.MAX_VALUE;
+export const DBL_EPSILON = Number.EPSILON;
+
 // Size in bytes
 // =====================================
 export const CHAR_SIZE = 1;
@@ -34,6 +42,8 @@ export const LONG_SIZE = 4;
 export const ULONG_SIZE = LONG_SIZE;
 export const LLONG_SIZE = 8;
 export const ULLONG_SIZE = LLONG_SIZE;
+export const FLT_SIZE = 4;
+export const DBL_SIZE = 8;
 
 // Alignment requirements
 // https://en.cppreference.com/w/cpp/language/object#Alignment
@@ -50,4 +60,6 @@ export const LONG_ALIGN = 1 << 2;
 export const ULONG_ALIGN = LONG_ALIGN;
 export const LLONG_ALIGN = 1 << 3; // windows and linux differs
 export const ULLONG_ALIGN = LLONG_ALIGN;
+export const FLT_ALIGN = 1 << 2;
+export const DBL_ALIGN = 1 << 3;
 export const MAX_ALIGN = LLONG_ALIGN;

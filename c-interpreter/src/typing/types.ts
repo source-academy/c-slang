@@ -3,6 +3,10 @@ import { roundUpM } from "../utils";
 import {
   CHAR_ALIGN,
   CHAR_SIZE,
+  DBL_ALIGN,
+  DBL_SIZE,
+  FLT_ALIGN,
+  FLT_SIZE,
   INT_ALIGN,
   INT_SIZE,
   LLONG_ALIGN,
@@ -38,6 +42,8 @@ export enum Type {
   UnsignedLongInt = "unsigned long",
   LongLongInt = "long long",
   UnsignedLongLongInt = "unsigned long long",
+  Float = "float",
+  Double = "double",
 
   Void = "void",
 
@@ -74,6 +80,8 @@ export type ObjectType =
   | Type.UnsignedLongInt
   | Type.LongLongInt
   | Type.UnsignedLongLongInt
+  | Type.Float
+  | Type.Double
   | Type.Array
   | Type.Structure
   | Type.Pointer
@@ -131,7 +139,7 @@ export const getSignedVersion = (t: UnsignedIntegerType): SignedIntegerType => {
   throw new Error("unrecognized unsigned integer type");
 };
 
-export type BasicType = Char | SignedIntegerType | UnsignedIntegerType;
+export type BasicType = IntegerType | FloatingType;
 
 export type CharacterType = Char | SignedChar | UnsignedChar;
 
@@ -143,10 +151,15 @@ export type IntegerType = Char | SignedIntegerType | UnsignedIntegerType;
 export const isIntegerType = (t: TypeInfo): t is IntegerType =>
   isChar(t) || isSignedIntegerType(t) || isUnsignedIntegerType(t);
 
-export type ArithmeticType = IntegerType;
+export type FloatingType = FloatType | DoubleType;
+
+export const isFloatingType = (t: TypeInfo): t is FloatingType =>
+  isFloatType(t) || isDoubleType(t);
+
+export type ArithmeticType = IntegerType | FloatingType;
 
 export const isArithmeticType = (t: TypeInfo): t is ArithmeticType =>
-  isIntegerType(t);
+  isIntegerType(t) || isFloatingType(t);
 
 export type ScalarType = ArithmeticType | Pointer;
 
@@ -431,6 +444,40 @@ export const unsignedLongLongInt = (): UnsignedLongLongInt => ({
 
 export const isUnsignedLongLongInt = (t: TypeInfo): t is UnsignedLongLongInt =>
   t.type === Type.UnsignedLongLongInt;
+
+export interface FloatType extends ObjectTypeInfo {
+  type: Type.Float;
+  size: typeof FLT_SIZE;
+  alignment: typeof FLT_ALIGN;
+}
+
+export const floatType = (): FloatType => ({
+  type: Type.Float,
+  size: FLT_SIZE,
+  alignment: FLT_ALIGN,
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isFloatType(other);
+  },
+});
+
+export const isFloatType = (t: TypeInfo): t is FloatType => t.type === Type.Float;
+
+export interface DoubleType extends ObjectTypeInfo {
+  type: Type.Double;
+  size: typeof DBL_SIZE;
+  alignment: typeof DBL_ALIGN;
+}
+
+export const doubleType = (): DoubleType => ({
+  type: Type.Double,
+  size: DBL_SIZE,
+  alignment: DBL_ALIGN,
+  isCompatible(other: TypeInfo) {
+    return sameQualifiers(this, other) && isDoubleType(other);
+  },
+});
+
+export const isDoubleType = (t: TypeInfo): t is DoubleType => t.type === Type.Double;
 
 export interface Array extends ObjectTypeInfo {
   type: Type.Array;

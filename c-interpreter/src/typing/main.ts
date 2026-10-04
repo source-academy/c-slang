@@ -164,7 +164,6 @@ import {
   longInt,
   pointer,
   voidType,
-  ScalarType,
   FunctionType,
   ObjectTypeInfo,
   Array,
@@ -1552,7 +1551,7 @@ const typeIntegerConstant = (t: IntegerConstant): TypedIntegerConstant =>
       }
     }
 
-    if (!typeInfo)
+    if (!typeInfo || !isIntegerType(typeInfo))
       throw (
         "integer constant " +
         t.src +
@@ -1562,7 +1561,7 @@ const typeIntegerConstant = (t: IntegerConstant): TypedIntegerConstant =>
 
     return {
       ...t,
-      typeInfo: typeInfo as ScalarType,
+      typeInfo,
       lvalue: false,
     };
   });

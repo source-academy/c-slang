@@ -6,6 +6,7 @@ import { describe, it } from "mocha";
 import "../src/types";
 import "./const";
 import "./union";
+import "./floating-representation";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";

@@ -1,6 +1,8 @@
 import { Endianness } from "../config";
 import {
   CHAR_SIZE,
+  DBL_SIZE,
+  FLT_SIZE,
   INT_SIZE,
   LLONG_SIZE,
   LONG_SIZE,
@@ -14,7 +16,7 @@ import {
 } from "../constants";
 import { checkValidByte, mod } from "../utils";
 import { getNumericalLimitFromSpecifiers } from "./specifiers";
-import { ScalarType, Type } from "./types";
+import { FloatingType, IntegerType, Pointer, Type } from "./types";
 
 const checkInputInRange = (i: bigint, s: string): void => {
   const [min, max] = getNumericalLimitFromSpecifiers(s);
@@ -63,7 +65,7 @@ export const bytesToBigint = (
 };
 
 export const BIGINT_TO_BYTES: Record<
-  ScalarType["type"],
+  (IntegerType | Pointer)["type"],
   (i: bigint, e: Endianness) => number[]
 > = {
   [Type._Bool]: (i: bigint, e: Endianness = "little") => {
@@ -117,4 +119,35 @@ export const BIGINT_TO_BYTES: Record<
     const n = clamp(i, "unsigned int");
     return bigintToBytes(n, INT_SIZE, e);
   },
+};
+
+export const FLOAT_TO_BYTES: Record<
+  FloatingType["type"],
+  (value: number, e?: Endianness) => number[]
+> = {
+  [Type.Float]: (value, e = "little") => {
+    const buffer = new ArrayBuffer(FLT_SIZE);
+    new DataView(buffer).setFloat32(0, Math.fround(value), e === "little");
+    return Array.from(new Uint8Array(buffer));
+  },
+  [Type.Double]: (value, e = "little") => {
+    const buffer = new ArrayBuffer(DBL_SIZE);
+    new DataView(buffer).setFloat64(0, value, e === "little");
+    return Array.from(new Uint8Array(buffer));
+  },
+};
+
+export const bytesToFloat = (
+  bytes: number[],
+  type: FloatingType["type"],
+  e: Endianness = "little",
+): number => {
+  const size = type === Type.Float ? FLT_SIZE : DBL_SIZE;
+  if (bytes.length !== size)
+    throw new RangeError("invalid byte length for " + type + ": expected " + size);
+  bytes.forEach(checkValidByte);
+  const view = new DataView(Uint8Array.from(bytes).buffer);
+  return type === Type.Float
+    ? view.getFloat32(0, e === "little")
+    : view.getFloat64(0, e === "little");
 };

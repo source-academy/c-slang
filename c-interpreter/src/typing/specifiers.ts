@@ -28,6 +28,9 @@ import {
 import { TypeEnv } from "./env";
 import {
   IntegerType,
+  ArithmeticType,
+  doubleType,
+  floatType,
   Structure,
   TypeInfo,
   unsignedInt,
@@ -51,8 +54,12 @@ import {
 } from "./types";
 import { constructType } from "./utils";
 
-export const TYPE_SPECIFIER_TO_TYPE_INFO: Record<string, IntegerType | Void> = {
+export const TYPE_SPECIFIER_TO_TYPE_INFO: Record<string, ArithmeticType | Void> = {
   void: voidType(),
+
+  float: floatType(),
+  double: doubleType(),
+  "long double": doubleType(),
 
   char: char(),
 
@@ -94,10 +101,7 @@ export const TYPE_SPECIFIER_TO_TYPE_INFO: Record<string, IntegerType | Void> = {
   _Bool: _bool(),
 };
 
-export const TYPE_SPECIFIER_TO_NUMERICAL_LIMIT: Record<
-  keyof typeof TYPE_SPECIFIER_TO_TYPE_INFO,
-  [bigint, bigint]
-> = {
+export const TYPE_SPECIFIER_TO_NUMERICAL_LIMIT: Record<string, [bigint, bigint]> = {
   char: [CHAR_MIN, CHAR_MAX],
 
   "signed char": [SCHAR_MIN, SCHAR_MAX],

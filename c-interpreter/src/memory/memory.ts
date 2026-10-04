@@ -7,7 +7,8 @@ import {
 import { BIGINT_TO_BYTES } from "../typing/representation";
 import {
   ObjectTypeInfo,
-  ScalarType,
+  IntegerType,
+  Pointer,
   getSignedVersion,
   getUnsignedVersion,
   isChar,
@@ -196,7 +197,7 @@ export class Memory {
   public setScalar(
     address: number,
     i: bigint,
-    t: ScalarType,
+    t: IntegerType | Pointer,
     e: Endianness = "little",
     readonly: boolean = false,
     executable: boolean = false,

@@ -1,6 +1,7 @@
 import { has, isObject } from "lodash";
 import {
   FunctionType,
+  IntegerType,
   ObjectTypeInfo,
   ScalarType,
   TypeInfo,
@@ -1121,7 +1122,7 @@ export const isIntegerConstant = (i: Constant): i is IntegerConstant =>
 export interface TypedIntegerConstant extends TypedExpressionBaseNode {
   type: "IntegerConstant";
   value: bigint;
-  typeInfo: ScalarType;
+  typeInfo: IntegerType;
 }
 
 export const isTypedIntegerConstant = (

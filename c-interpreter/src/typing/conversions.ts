@@ -5,12 +5,14 @@ import {
 } from "./specifiers";
 import {
   Int,
+  ArithmeticType,
   IntegerType,
   Type,
   unsignedInt,
   int,
   isArray,
   isFunction,
+  isIntegerType,
   isSigned,
   pointer,
   unsignedChar,
@@ -68,18 +70,22 @@ export const rankOf = (t: IntegerType): number =>
   INTEGRAL_TYPE_TO_CONVERSION_RANK[t.type];
 
 // https://en.cppreference.com/w/c/language/conversion
-export const applyIntegerPromotions = <T extends IntegerType>(
+export const applyIntegerPromotions = <T extends ArithmeticType>(
   t: T,
 ): Int | UnsignedInt | T => {
+  if (!isIntegerType(t)) return t;
   if (rankOf(t) > rankOf(int())) return t;
   if (aCanRepresentB(int(), t)) return int();
   return unsignedInt();
 };
 
 export const applyUsualArithmeticConversions = (
-  t: IntegerType,
-  u: IntegerType,
+  t: ArithmeticType,
+  u: ArithmeticType,
 ): IntegerType => {
+  // Floating common-type selection is added in A6.3.
+  if (!isIntegerType(t) || !isIntegerType(u))
+    throw new Error("floating-point arithmetic conversions not implemented");
   t = applyIntegerPromotions(t);
   u = applyIntegerPromotions(u);
   if (t.type === u.type) return t;
