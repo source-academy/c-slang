@@ -53,7 +53,8 @@ export const getTypeName = (i: TypeInfo): string => {
   if (isArray(i)) return i.type + " of " + getTypeName(i.elementType);
   if (isFunction(i)) return i.type + " returning " + getTypeName(i.returnType);
   if (isPointer(i)) return i.type + " to " + getTypeName(i.referencedType);
-  if (isStructure(i)) return i.type + (i.tag ? " " + i.tag : "");
+  if (isStructure(i))
+    return (i.isUnion ? "union" : "struct") + (i.tag ? " " + i.tag : "");
   return i.type;
 };
 
@@ -498,6 +499,7 @@ export interface StructureMember {
 
 export interface Structure extends ObjectTypeInfo {
   type: Type.Structure;
+  isUnion: boolean;
   tag?: string;
   members: StructureMember[];
   recalculateSizeAndAlignment: (depth?: number) => void;
@@ -509,6 +511,7 @@ export const structure = (
     type: ObjectTypeInfo;
   }[],
   tag?: string,
+  isUnion = false,
 ): Structure => {
   // the alignment of a structure must be at least as strict as the alignment of its strictest member
   const strictestAlignment = Math.max(1, ...m.map((i) => i.type.alignment));
@@ -516,15 +519,16 @@ export const structure = (
 
   let currAddr = 0; // next free addr
   for (const i of m) {
-    currAddr = roundUpM(currAddr, i.type.alignment);
-    members.push({ ...i, relativeAddress: currAddr });
-    currAddr += i.type.size;
+    const relativeAddress = isUnion ? 0 : roundUpM(currAddr, i.type.alignment);
+    members.push({ ...i, relativeAddress });
+    currAddr = Math.max(currAddr, relativeAddress + i.type.size);
   }
   // add padding at end for array of struct
   currAddr = roundUpM(currAddr, strictestAlignment);
 
   const res: Structure = {
     type: Type.Structure,
+    isUnion,
     size: Math.max(1, currAddr),
     alignment: strictestAlignment,
     members,
@@ -532,7 +536,7 @@ export const structure = (
     recalculateSizeAndAlignment(depth: number = 0) {
       if (depth > COMPATIBLE_CHECK_MAX_DEPTH)
         throw new Error(
-          "struct " +
+          (this.isUnion ? "union " : "struct ") +
             this.tag +
             " cannot contain itself (do you mean to use a pointer instead?)",
         );
@@ -546,8 +550,8 @@ export const structure = (
       );
       let currAddr = 0;
       for (const i of this.members) {
-        currAddr = roundUpM(currAddr, i.type.alignment);
-        currAddr += i.type.size;
+        i.relativeAddress = this.isUnion ? 0 : roundUpM(currAddr, i.type.alignment);
+        currAddr = Math.max(currAddr, i.relativeAddress + i.type.size);
       }
       currAddr = roundUpM(currAddr, strictestAlignment);
 
@@ -558,6 +562,7 @@ export const structure = (
       if (depth > COMPATIBLE_CHECK_MAX_DEPTH) return true;
       return (
         isStructure(other) &&
+        other.isUnion === this.isUnion &&
         sameQualifiers(this, other) &&
         other.tag === this.tag &&
         other.members.length === this.members.length &&

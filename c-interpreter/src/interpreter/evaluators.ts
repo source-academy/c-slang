@@ -17,6 +17,7 @@ import {
   shortInt,
   unsignedInt,
   unqualified,
+  constQualified,
 } from "./../typing/types";
 import {
   AssignmentOperator,
@@ -841,6 +842,10 @@ export const instructionEvaluator: {
     const typeInfo = ptr.typeInfo.referencedType;
 
     if (
+      (initializing &&
+        isArray(typeInfo) &&
+        isArray(o.typeInfo) &&
+        typeInfo.isCompatible(o.typeInfo)) ||
       checkSimpleAssignmentConstraint(
         typeInfo,
         o.typeInfo,
@@ -867,7 +872,10 @@ export const instructionEvaluator: {
         );
         return;
       }
-      if (isStructure(typeInfo) && isStructure(o.typeInfo)) {
+      if (
+        (isStructure(typeInfo) && isStructure(o.typeInfo)) ||
+        (initializing && isArray(typeInfo) && isArray(o.typeInfo))
+      ) {
         rt.memory.setObjectBytes(
           address, o.bytes, typeInfo, false, false, initializing,
         );
@@ -1583,113 +1591,121 @@ const convertValue = (
   return bytesToBigint(bytes, isSigned(t), e);
 };
 
+const scheduleInitializerAssignment = (
+  source: TypedInitializer | TemporaryObject,
+  address: number,
+  type: ObjectTypeInfo,
+  rt: Runtime,
+): void => {
+  rt.agenda.push(popInstruction());
+  rt.agenda.push(assignInstruction(true));
+  rt.agenda.push(
+    source instanceof TemporaryObject ? pushInstruction(source) : source,
+  );
+  rt.agenda.push(pushInstruction(new TemporaryObject(
+    pointer(type),
+    BIGINT_TO_BYTES[Type.Pointer](BigInt(address), rt.config.endianness),
+  )));
+};
+
 const evaluateInitializer = (
   t: TypedInitializer,
   address: number,
   tt: ObjectTypeInfo,
   rt: Runtime,
 ): void => {
-  // (6.7.9p14) a string literal initializing a character array directly:
-  // copy its bytes (terminator included only if there's room), zero-fill
-  // any remaining elements - the type-checker (typeInitializer) is what
-  // restricts this pairing to character arrays, so it isn't re-checked
-  // here. Written synchronously, like a plain uninitialized declaration's
-  // zero-fill already is, rather than as N individual per-character
-  // steps the way an ordinary {...} initializer list is.
-  if (!isTypedInitializerList(t) && isPrimaryExprString(t) && isArray(tt)) {
-    const chars = t.value.flatMap((c) =>
-      BIGINT_TO_BYTES[Type.Char](BigInt(c.charCodeAt(0)), rt.config.endianness),
-    );
-    const hasRoomForTerminator = tt.length > t.value.length;
-    const content = hasRoomForTerminator
-      ? [...chars, ...BIGINT_TO_BYTES[Type.Char](BigInt(0), rt.config.endianness)]
-      : chars;
-    const bytes = [...content, ...new Array(tt.size - content.length).fill(0)];
-    rt.memory.setObjectBytes(address, bytes, tt, false, false, true);
-    rt.initTable.add(address, tt);
-    return;
-  }
-
-  if (!isTypedInitializerList(t)) {
-    rt.agenda.push(popInstruction());
-    rt.agenda.push(assignInstruction(true));
-    rt.agenda.push(t);
-    rt.agenda.push(
-      pushInstruction(
-        new TemporaryObject(
-          pointer(tt),
-          BIGINT_TO_BYTES[Type.Pointer](BigInt(address), rt.config.endianness),
-        ),
-      ),
-    );
-    return;
-  }
-  if (isScalarType(tt)) {
-    rt.agenda.push(popInstruction());
-    rt.agenda.push(assignInstruction(true));
-    rt.agenda.push(t.value[0].initializer);
-    rt.agenda.push(
-      pushInstruction(
-        new TemporaryObject(
-          pointer(tt),
-          BIGINT_TO_BYTES[Type.Pointer](BigInt(address), rt.config.endianness),
-        ),
-      ),
-    );
-    return;
-  }
-  if (!(isStructure(tt) || isArray(tt)))
-    throw new Error("invalid initialization");
-
-  let i = 0;
-  let currAddress = address;
-  const updateCurrAddr = () => {
-    currAddress = isArray(tt)
-      ? address + i * tt.elementType.size
-      : address + tt.members[i].relativeAddress;
+  const writes: {
+    source: TypedInitializer | TemporaryObject;
+    address: number;
+    type: ObjectTypeInfo;
+  }[] = [];
+  const unionMembers = new Map<string, number>();
+  const clearSelections = (path: string) => {
+    for (const key of unionMembers.keys())
+      if (key === path || key.startsWith(path + "/")) unionMembers.delete(key);
   };
-  t.value.forEach(({ designation, initializer }) => {
-    let currType: ObjectTypeInfo = tt;
-
-    if (designation.length) {
-      let first = true;
-      for (const d of designation) {
-        if (isTypedArrayDesignator(d)) {
-          if (!isArray(currType))
-            throw "array designator when current object is not array";
-          const idxVal = Number(d.idx.value);
-          if (first) {
-            i = idxVal;
-            updateCurrAddr();
-          } else {
-            currAddress += idxVal * currType.elementType.size;
-          }
-          currType = currType.elementType;
-        } else {
-          if (!isStructure(currType))
-            throw "struct designator when current object is not struct";
-          const [idx, relativeAddress, typeInfo] = getMember(
-            currType,
-            d.identifier,
-          );
-          if (first) {
-            i = idx;
-            updateCurrAddr();
-          } else {
-            currAddress += relativeAddress;
-          }
-          currType = typeInfo;
-        }
-        first = false;
+  const zero = (address: number, type: ObjectTypeInfo, path: string) => {
+    writes.push({
+      source: new TemporaryObject(type, new Array(type.size).fill(0)),
+      address,
+      type,
+    });
+    clearSelections(path);
+  };
+  const visit = (
+    initializer: TypedInitializer,
+    address: number,
+    type: ObjectTypeInfo,
+    path: string,
+  ): void => {
+    // String initialization copies bytes without array-to-pointer conversion.
+    if (!isTypedInitializerList(initializer)) {
+      let source: TypedInitializer | TemporaryObject = initializer;
+      if (isPrimaryExprString(initializer) && isArray(type)) {
+        const chars = initializer.value.flatMap((c) =>
+          BIGINT_TO_BYTES[Type.Char](BigInt(c.charCodeAt(0)), rt.config.endianness),
+        );
+        source = new TemporaryObject(type, [
+          ...chars,
+          ...new Array(type.size - chars.length).fill(0),
+        ]);
       }
-    } else {
-      updateCurrAddr();
-      currType = isArray(tt) ? tt.elementType : tt.members[i].type;
+      clearSelections(path);
+      writes.push({ source, address, type });
+      return;
     }
+    if (isScalarType(type)) {
+      visit(initializer.value[0].initializer, address, type, path);
+      return;
+    }
+    if (!(isStructure(type) || isArray(type)))
+      throw new Error("invalid initialization");
 
-    i++;
-    evaluateInitializer(initializer, currAddress, currType, rt);
-  });
+    zero(address, type, path);
+    let nextIndex = 0;
+    for (const entry of initializer.value) {
+      let currentType: ObjectTypeInfo = type;
+      let currentAddress = address;
+      let currentPath = path;
+      const select = (index: number) => {
+        if (isArray(currentType)) {
+          currentAddress += index * currentType.elementType.size;
+          currentType = currentType.elementType;
+        } else if (isStructure(currentType)) {
+          if (currentType.isUnion && unionMembers.get(currentPath) !== index) {
+            zero(currentAddress, currentType, currentPath);
+            unionMembers.set(currentPath, index);
+          }
+          const member = currentType.members[index];
+          currentAddress += member.relativeAddress;
+          currentType = currentType.const
+            ? constQualified(member.type)
+            : member.type;
+        } else throw new Error("initializer designates a scalar subobject");
+        currentPath += "/" + index;
+      };
+      if (entry.designation.length) {
+        entry.designation.forEach((d, index) => {
+          let memberIndex: number;
+          if (isTypedArrayDesignator(d)) memberIndex = Number(d.idx.value);
+          else {
+            if (!isStructure(currentType))
+              throw new Error("member designator requires a struct or union");
+            [memberIndex] = getMember(currentType, d.identifier);
+          }
+          if (index === 0) nextIndex = memberIndex;
+          select(memberIndex);
+        });
+      } else select(nextIndex);
+      nextIndex++;
+      visit(entry.initializer, currentAddress, currentType, currentPath);
+    }
+  };
+  visit(t, address, tt, "");
+  // The agenda is a stack; stores must execute in initializer-list order.
+  writes.reverse().forEach(({ source, address, type }) =>
+    scheduleInitializerAssignment(source, address, type, rt),
+  );
 };
 
 // finds the top-level index to start executing from: the first case whose

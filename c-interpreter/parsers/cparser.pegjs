@@ -943,16 +943,18 @@ TypeSpecifier
 
 // (6.7.2.1) struct-or-union-specifier
 StructOrUnionSpecifier
-  = StructOrUnion a:Identifier? LCUR b:StructDeclarationList RCUR
+  = kind:StructOrUnion a:Identifier? LCUR b:StructDeclarationList RCUR
     {
       return makeNode("StructSpecifier", {
+        isUnion: kind === "union",
         identifier: a,
         declarationList: b
       });
     }
-  / StructOrUnion a:Identifier
+  / kind:StructOrUnion a:Identifier
     {
       return makeNode("StructSpecifier", {
+        isUnion: kind === "union",
         identifier: a,
         declarationList: []
       });
@@ -962,7 +964,6 @@ StructOrUnionSpecifier
 StructOrUnion
   = STRUCT
   / UNION
-    { throwNotImplemented("union"); }
 
 // (6.7.2.1) struct-declaration-list
 StructDeclarationList

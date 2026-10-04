@@ -37,6 +37,7 @@ import {
   getTypeName,
   int,
   isObjectTypeInfo,
+  isStructure,
   longInt,
   longLongInt,
   shortInt,
@@ -217,6 +218,25 @@ export const constructStructFromSpecifier = (
   inForwardDeclarationScan: boolean,
 ): Structure => {
   const tag = s.identifier || undefined;
+  const kind = s.isUnion ? "union" : "struct";
+  const previous = env?.getStructureSpecifier(s);
+  if (previous && (previous.checked || inForwardDeclarationScan))
+    return previous.type;
+
+  const definition = s.declarationList.length > 0;
+  const other = tag ? env?.findTagTypeInfo(tag, definition) : undefined;
+  if (other && (!isStructure(other) || other.isUnion !== s.isUnion))
+    throw "tag " + tag + " does not refer to a " + kind;
+  if (definition && other && other.members.length && previous?.type !== other)
+    throw "redefinition of " + kind + " " + tag;
+
+  const res = other || structure([], tag, s.isUnion);
+  if (tag && !other) env?.addTagTypeInfo(tag, res);
+  if (!definition) {
+    if (!tag) throw "empty " + kind + " specifier";
+    return res;
+  }
+  env?.setStructureSpecifier(s, res, false);
   const members = [];
 
   for (const d of s.declarationList) {
@@ -232,49 +252,21 @@ export const constructStructFromSpecifier = (
         env,
         inForwardDeclarationScan,
       );
-      if (!isObjectTypeInfo(type)) throw "non object type declared in struct";
+      if (
+        !isObjectTypeInfo(type) ||
+        (!inForwardDeclarationScan && isStructure(type) && !type.members.length)
+      )
+        throw "incomplete or non object type declared in " + kind;
       if (name) members.push({ name, type });
       else members.push({ type });
     }
   }
 
-  const res = structure(members, tag);
-  if (tag) {
-    let other: Structure | undefined;
-    try {
-      other = env?.getTagTypeInfo(tag);
-    } catch (e) {
-      other = undefined;
-    }
-    if (s.declarationList.length === 0) {
-      if (!other) {
-        if (inForwardDeclarationScan) return res;
-        throw "empty struct specifier";
-      }
-      return other;
-    }
-    if (other) {
-      if (!res.isCompatible(other)) {
-        if (inForwardDeclarationScan) {
-          // first scan
-          throw "redefinition of struct " + tag;
-        } else {
-          // second scan: other must be forward declaration
-          for (let i = 0; i < members.length; i++) {
-            other.members[i] = res.members[i];
-          }
-          return other;
-        }
-      }
-    } else {
-      env?.addTagTypeInfo(tag, res);
-    }
-  } else {
-    if (s.declarationList.length === 0) {
-      if (inForwardDeclarationScan) return res;
-      throw "empty struct specifier";
-    }
-  }
+  const layout = structure(members, tag, s.isUnion);
+  res.members.splice(0, res.members.length, ...layout.members);
+  res.size = layout.size;
+  res.alignment = layout.alignment;
+  env?.setStructureSpecifier(s, res, !inForwardDeclarationScan);
   return res;
 };
 

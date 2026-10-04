@@ -198,6 +198,7 @@ export const isStorageClassSpecifier = (
 
 export interface StructSpecifier extends BaseNode {
   type: "StructSpecifier";
+  isUnion: boolean;
   identifier: Identifier | null;
   declarationList: Declaration[];
 }

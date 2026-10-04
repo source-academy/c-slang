@@ -75,7 +75,11 @@ export const constructDerivedTypes = (
 
   switch (p.partType) {
     case "array": {
-      if (isIncompleteTypeInfo(baseType))
+      if (
+        isIncompleteTypeInfo(baseType) ||
+        (!inForwardDeclarationScan && isStructure(baseType) &&
+          !baseType.members.length)
+      )
         throw "cannot construct array from incomplete type";
       if (isFunctionTypeInfo(baseType))
         throw "cannot construct array from function type";
@@ -229,7 +233,8 @@ export const getMemberTypeInfo = (
   throw (
     "member " +
     identifier +
-    " does not exist on struct" +
+    " does not exist on " +
+    (t.isUnion ? "union" : "struct") +
     (t.tag ? " " + t.tag : "")
   );
 };
@@ -248,7 +253,8 @@ export const getMember = (
   throw (
     "member " +
     identifier +
-    " does not exist on struct" +
+    " does not exist on " +
+    (t.isUnion ? "union" : "struct") +
     (t.tag ? " " + t.tag : "")
   );
 };

@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import {
   ObjectTypeInfo,
+  constQualified,
   isArray,
   isScalarType,
   isStructure,
@@ -12,35 +13,35 @@ export const NO_EFFECTIVE_TYPE = "NO_EFFECTIVE_TYPE";
 export type EffectiveTypeTableEntry = ObjectTypeInfo | typeof NO_EFFECTIVE_TYPE;
 
 export class EffectiveTypeTable {
-  private readonly table: Record<number, EffectiveTypeTableEntry> = {};
+  private readonly table: Record<number, EffectiveTypeTableEntry[]> = {};
 
   add(address: number, t: EffectiveTypeTableEntry): void {
     for (let i = 0; i < (t === NO_EFFECTIVE_TYPE ? 1 : t.size); i++)
       this.checkNotInTable(address + i);
 
-    this.table[address] = t;
-    this.addChildren(address, t);
+    this.addSubobjects(address, t);
   }
 
-  private addChildren(address: number, t: EffectiveTypeTableEntry): void {
+  private addSubobjects(address: number, t: EffectiveTypeTableEntry): void {
+    // Union alternatives may begin at the same address.
+    (this.table[address] ??= []).push(t);
     if (t === NO_EFFECTIVE_TYPE || isScalarType(t)) {
       return;
     }
 
     if (isArray(t)) {
-      for (let i = 1; i < t.length; i++)
-        this.add(address + i * t.elementType.size, t.elementType);
-      // index 0 shares this address with the array itself, so its own
-      // sub-elements (if it's itself an aggregate) still need entries
-      this.addChildren(address, t.elementType);
+      for (let i = 0; i < t.length; i++)
+        this.addSubobjects(address + i * t.elementType.size, t.elementType);
       return;
     }
 
     if (isStructure(t)) {
-      t.members
-        .slice(1)
-        .forEach((m) => this.add(address + m.relativeAddress, m.type));
-      this.addChildren(address, t.members[0].type);
+      t.members.forEach((m) =>
+        this.addSubobjects(
+          address + m.relativeAddress,
+          t.const ? constQualified(m.type) : m.type,
+        ),
+      );
       return;
     }
 
@@ -48,6 +49,10 @@ export class EffectiveTypeTable {
   }
 
   get(address: number): EffectiveTypeTableEntry {
+    return this.getTypes(address)[0];
+  }
+
+  getTypes(address: number): readonly EffectiveTypeTableEntry[] {
     this.checkInTable(address);
     return this.table[address];
   }
@@ -56,7 +61,7 @@ export class EffectiveTypeTable {
     let s: number;
     if (size === null) {
       this.checkInTable(address);
-      const t = this.table[address];
+      const t = this.get(address);
       if (t === NO_EFFECTIVE_TYPE)
         throw new Error("invalid call to remove effective types");
       s = t.size;
@@ -78,7 +83,10 @@ export class EffectiveTypeTable {
   }
 
   getTable() {
-    return cloneDeep(this.table);
+    const primaryTypes: Record<number, EffectiveTypeTableEntry> = {};
+    for (const [address, types] of Object.entries(this.table))
+      primaryTypes[Number(address)] = types[0];
+    return cloneDeep(primaryTypes);
   }
 
   checkInTable(address: number): void {

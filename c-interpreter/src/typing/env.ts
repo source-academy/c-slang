@@ -1,4 +1,4 @@
-import { EnumSpecifier, Identifier } from "../ast/types";
+import { EnumSpecifier, Identifier, StructSpecifier } from "../ast/types";
 import { BUILTIN_FUNCTIONS } from "../builtins";
 import {
   AggregateType,
@@ -20,6 +20,10 @@ export class TypeEnv {
   private env: Record<Identifier, [TypeInfo, boolean, boolean]>[];
   private enumerators: Record<Identifier, bigint>[];
   private processedEnums: WeakSet<EnumSpecifier>;
+  private readonly structures = new WeakMap<
+    StructSpecifier,
+    { type: Structure; checked: boolean }
+  >();
   public readonly aggTypes: AggregateType[];
   // depth counters, not booleans - a boolean would incorrectly clear on
   // exiting an inner loop/switch while still lexically inside an outer one
@@ -106,6 +110,29 @@ export class TypeEnv {
   }
 
   // see (6.2.3) Name spaces of identifiers
+  findTagTypeInfo(
+    tag: Identifier,
+    currentScopeOnly = false,
+  ): TypeInfo | undefined {
+    const id = TAG_PREFIX + tag;
+    const last = this.env.length - 1;
+    for (let i = last; i >= (currentScopeOnly ? last : 0); i--)
+      if (id in this.env[i]) return this.env[i][id][0];
+    return undefined;
+  }
+
+  getStructureSpecifier(s: StructSpecifier) {
+    return this.structures.get(s);
+  }
+
+  setStructureSpecifier(
+    s: StructSpecifier,
+    type: Structure,
+    checked: boolean,
+  ): void {
+    this.structures.set(s, { type, checked });
+  }
+
   getTagTypeInfo(tag: Identifier): Structure {
     const id = TAG_PREFIX + tag;
     for (let i = this.env.length - 1; i >= 0; i--) {

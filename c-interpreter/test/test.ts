@@ -5,6 +5,7 @@ import { assert } from "chai";
 import { describe, it } from "mocha";
 import "../src/types";
 import "./const";
+import "./union";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";
@@ -83,7 +84,7 @@ describe("incomplete array rejection reasons", () => {
     ],
     [
       "int main() { return sizeof(int []); }",
-      /sizeof operator requires object type/,
+      /sizeof operator requires complete object type/,
     ],
     [
       "int main() { int a[] = 7; return 0; }",

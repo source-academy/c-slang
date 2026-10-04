@@ -178,7 +178,8 @@ export class Memory {
           address + i * t.elementType.size,
           t.elementType,
         );
-    } else if (isStructure(t)) {
+    } else if (isStructure(t) && !t.isUnion) {
+      // Const union members can overlap writable alternatives.
       for (const m of t.members)
         this.protectConstObject(address + m.relativeAddress, m.type);
     }
@@ -206,19 +207,19 @@ export class Memory {
   }
 
   private checkStrictAliasing(address: number, t: ObjectTypeInfo): boolean {
-    let et: EffectiveTypeTableEntry;
+    let types: readonly EffectiveTypeTableEntry[];
     try {
-      et = this.effectiveTypeTable.get(address);
+      types = this.effectiveTypeTable.getTypes(address);
     } catch (e) {
       throw new Error("no object allocated at " + decimalAddressToHex(address));
     }
 
     if (this.skipStrictAliasingCheck) return true;
-    if (et === NO_EFFECTIVE_TYPE) return true;
+    if (types.includes(NO_EFFECTIVE_TYPE)) return true;
     if (isChar(t) || isUnsignedChar(t) || isSignedChar(t)) return true;
 
-    const ot = et;
-    for (;;) {
+    for (const et of types) {
+      if (et === NO_EFFECTIVE_TYPE) continue;
       if (unqualified(t).isCompatible(unqualified(et))) return true;
       if (
         isSignedIntegerType(t) &&
@@ -230,14 +231,11 @@ export class Memory {
         getSignedVersion(t).isCompatible(unqualified(et))
       )
         return true;
-
-      if (isArray(et)) et = et.elementType;
-      else if (isStructure(et)) et = et.members[0].type;
-      else break;
     }
 
-    let err = getTypeName(ot);
-    if (ot !== et) err += " or " + getTypeName(et);
+    const err = types
+      .map((t) => (t === NO_EFFECTIVE_TYPE ? t : getTypeName(t)))
+      .join(" or ");
     throw new Error(
       "undefined behaviour: strict aliasing violated, effective type " +
         err +

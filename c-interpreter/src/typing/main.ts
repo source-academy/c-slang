@@ -358,6 +358,8 @@ const typeInitDeclarator = (
       );
     }
     if (!isObjectTypeInfo(typeInfo)) throw "cannot declare non object type";
+    if (isStructure(typeInfo) && typeInfo.members.length === 0)
+      throw "cannot declare an object of incomplete struct or union type";
 
     let initializer: TypedInitializer | null = null;
     if (t.initializer) {
@@ -475,6 +477,7 @@ const typeInitializerList = (
 ): TypedInitializerList =>
   typeCheck(t, () => {
     let i = 0;
+    const isUnion = isStructure(tt) && tt.isUnion;
     const value = t.value.map(({ designation, initializer }) => {
       let curr: ObjectTypeInfo = tt;
       const typedDesignators: TypedDesignator[] = [];
@@ -504,12 +507,12 @@ const typeInitializerList = (
           first = false;
         }
       } else {
-        if (i >= (isArray(tt) ? tt.length : tt.members.length))
+        if (i >= (isArray(tt) ? tt.length : isUnion ? 1 : tt.members.length))
           throw "excess initializers in initializer list";
         curr = isArray(tt) ? tt.elementType : tt.members[i].type;
       }
 
-      i++;
+      i = isUnion ? 1 : i + 1;
       return {
         designation: typedDesignators,
         initializer: typeInitializer(initializer, env, curr),
@@ -1148,12 +1151,16 @@ const typeUnaryExpressionSizeof = (
       const typeSpecifiers = t.value.specifierQualifierList;
       const declarator = t.value.abstractDeclarator;
       const { type } = constructType(typeSpecifiers, declarator, env);
-      if (!isObjectTypeInfo(type)) throw "sizeof operator requires object type";
+      if (!isObjectTypeInfo(type) || (isStructure(type) && !type.members.length))
+        throw "sizeof operator requires complete object type";
       value = type.size;
     } else {
       const tt = typeUnaryExpression(t.value, env);
-      if (!isObjectTypeInfo(tt.typeInfo))
-        throw "sizeof operator requires object type";
+      if (
+        !isObjectTypeInfo(tt.typeInfo) ||
+        (isStructure(tt.typeInfo) && !tt.typeInfo.members.length)
+      )
+        throw "sizeof operator requires complete object type";
       value = tt.typeInfo.size;
     }
     return { ...t, value, typeInfo: unsignedInt(), lvalue: false };

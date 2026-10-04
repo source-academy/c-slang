@@ -1,4 +1,54 @@
 ---
+union-layout:
+  file: "union-layout.c"
+  cases:
+    - out: "1"
+      desc: "overlapping members, alignment padding, array stride, and ordinary struct layout"
+union-storage:
+  file: "union-storage.c"
+  cases:
+    - out: "1"
+      desc: "scalar and byte-array views share storage without tracking an active member"
+union-nested:
+  file: "union-nested.c"
+  cases:
+    - out: "1"
+      desc: "non-first aggregate members remain addressable at every nested offset"
+union-initializers:
+  file: "union-initializers.c"
+  cases:
+    - out: "1"
+      desc: "first and designated members, strings, nested fields, and later overrides"
+union-copy-functions:
+  file: "union-copy-functions.c"
+  cases:
+    - out: "1"
+      desc: "union values copy through initialization, assignment, parameters, and returns"
+union-const:
+  file: "union-const.c"
+  cases:
+    - out: "1"
+      desc: "const union reads and mutable alternatives overlapping const members"
+union-tags:
+  file: "union-tags.c"
+  cases:
+    - out: "1"
+      desc: "forward completion, tag reuse, typedefs, and block scope tag definitions"
+union-lifetime:
+  file: "union-lifetime.c"
+  cases:
+    - out: "1"
+      desc: "partial initialization and const protection survive loop and call reuse"
+union-heap:
+  file: "union-heap.c"
+  cases:
+    - out: "1"
+      desc: "whole union stores establish all overlapping member types on allocated memory"
+union-struct-regression:
+  file: "union-struct-regression.c"
+  cases:
+    - out: "1"
+      desc: "struct initialization, zero filling, and designated overrides stay correct"
 const-basic:
   file: "const-basic.c"
   cases:
