@@ -1,4 +1,65 @@
 ---
+floating-casts-to-integer:
+  file: "floating-casts-to-integer.c"
+  cases:
+    - out: "1"
+      desc: "truncate positive and negative fractions toward zero across integer types"
+floating-casts-to-floating:
+  file: "floating-casts-to-floating.c"
+  cases:
+    - out: "1"
+      desc: "integer casts, float/double rounding, and direct 64-bit integer-to-float conversion"
+floating-conversion-limits:
+  file: "floating-conversion-limits.c"
+  cases:
+    - out: "1"
+      desc: "signed minima, largest representable values, and range checking after truncation"
+floating-conversion-bool:
+  file: "floating-conversion-bool.c"
+  cases:
+    - out: "1"
+      desc: "bool conversion of fractions, both zeros, NaN, and infinity through explicit and implicit paths"
+floating-initialization:
+  file: "floating-initialization.c"
+  cases:
+    - out: "1"
+      desc: "global/local/const/scalar-brace initialization and static floating zero initialization"
+floating-assignment:
+  file: "floating-assignment.c"
+  cases:
+    - out: "1"
+      desc: "narrowing/widening stores, assignment result values, chains, indirection, and self-assignment"
+floating-function-conversions:
+  file: "floating-function-conversions.c"
+  cases:
+    - out: "1"
+      desc: "parameter and return conversions across integer, float, and double types"
+floating-conditional-conversions:
+  file: "floating-conditional-conversions.c"
+  cases:
+    - out: "1"
+      desc: "both conditional branches convert to the common type; unselected branches stay unevaluated"
+floating-conversion-specials:
+  file: "floating-conversion-specials.c"
+  cases:
+    - out: "1"
+      stdout: "Infinity\n-Infinity\nInfinity\n-Infinity\n"
+      desc: "IEEE narrowing overflow, signed zero, NaNs, subnormals, and casts to void"
+floating-conversion-storage:
+  file: "floating-conversion-storage.c"
+  cases:
+    - out: "1"
+      desc: "converted stores in arrays, structs, unions, and heap objects preserve memory checks"
+integer-minimum-regression:
+  file: "integer-minimum-regression.c"
+  cases:
+    - out: "1"
+      desc: "two's-complement signed minima stay representable through initialization and integer conversions"
+floating-cast-out-of-range:
+  file: "floating-cast-out-of-range.c"
+  cases:
+    - fail: true
+      desc: "converting an out-of-range floating value to int is diagnosed"
 floating-addition:
   file: "floating-addition.c"
   cases:

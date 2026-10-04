@@ -2,22 +2,22 @@
 // See: 5.2.4.2
 // =====================================
 export const CHAR_BIT = BigInt(8);
-export const SCHAR_MIN = -((BigInt(1) << BigInt(7)) - BigInt(1));
+export const SCHAR_MIN = -(BigInt(1) << BigInt(7));
 export const SCHAR_MAX = (BigInt(1) << BigInt(7)) - BigInt(1);
 export const UCHAR_MAX = (BigInt(1) << CHAR_BIT) - BigInt(1);
 export const CHAR_MIN = SCHAR_MIN; // 6.2.5.15
 export const CHAR_MAX = SCHAR_MAX;
 export const MB_LEN_MAX = 1;
-export const SHRT_MIN = -((BigInt(1) << BigInt(15)) - BigInt(1));
+export const SHRT_MIN = -(BigInt(1) << BigInt(15));
 export const SHRT_MAX = (BigInt(1) << BigInt(15)) - BigInt(1);
 export const USHRT_MAX = (BigInt(1) << BigInt(16)) - BigInt(1);
-export const INT_MIN = -((BigInt(1) << BigInt(31)) - BigInt(1));
+export const INT_MIN = -(BigInt(1) << BigInt(31));
 export const INT_MAX = (BigInt(1) << BigInt(31)) - BigInt(1);
 export const UINT_MAX = (BigInt(1) << BigInt(32)) - BigInt(1);
-export const LONG_MIN = -((BigInt(1) << BigInt(31)) - BigInt(1));
+export const LONG_MIN = -(BigInt(1) << BigInt(31));
 export const LONG_MAX = (BigInt(1) << BigInt(31)) - BigInt(1);
 export const ULONG_MAX = (BigInt(1) << BigInt(32)) - BigInt(1);
-export const LLONG_MIN = -((BigInt(1) << BigInt(63)) - BigInt(1));
+export const LLONG_MIN = -(BigInt(1) << BigInt(63));
 export const LLONG_MAX = (BigInt(1) << BigInt(63)) - BigInt(1);
 export const ULLONG_MAX = (BigInt(1) << BigInt(64)) - BigInt(1);
 

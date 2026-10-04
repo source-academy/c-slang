@@ -160,6 +160,7 @@ import {
   isFunction,
   isIncompleteTypeInfo,
   isIntegerType,
+  isFloatingType,
   isObjectTypeInfo,
   isPointer,
   isScalarType,
@@ -1114,15 +1115,20 @@ const typeCastExpressionNode = (
     const declarator = t.targetType.abstractDeclarator;
     const { type: targetType } = constructType(typeSpecifiers, declarator, env);
     const expr = typeCastExpression(t.expr, env);
+    const sourceType = applyImplicitConversions(expr).typeInfo;
     if (
       !(
         isVoid(targetType) ||
-        (isScalarType(targetType) &&
-          isScalarType(applyImplicitConversions(expr).typeInfo))
+        (isScalarType(targetType) && isScalarType(sourceType))
       )
     ) {
       throw "only cast to void or scalar type cast to scalar type allowed";
     }
+    if (
+      (isPointer(sourceType) && isFloatingType(targetType)) ||
+      (isFloatingType(sourceType) && isPointer(targetType))
+    )
+      throw "cannot cast between pointer and floating types";
     return {
       ...t,
       targetType,

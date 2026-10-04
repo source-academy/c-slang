@@ -15,8 +15,20 @@ import {
   USHRT_SIZE,
 } from "../constants";
 import { checkValidByte, mod } from "../utils";
-import { getNumericalLimitFromSpecifiers } from "./specifiers";
-import { FloatingType, IntegerType, Pointer, Type } from "./types";
+import {
+  getNumericalLimitFromSpecifiers,
+  typeInfoToSpecifier,
+} from "./specifiers";
+import {
+  ArithmeticType,
+  FloatingType,
+  IntegerType,
+  Pointer,
+  Type,
+  isBool,
+  isFloatingType,
+  isSigned,
+} from "./types";
 
 const checkInputInRange = (i: bigint, s: string): void => {
   const [min, max] = getNumericalLimitFromSpecifiers(s);
@@ -168,4 +180,37 @@ export const bytesToFloat = (
   return type === Type.Float
     ? view.getFloat32(0, e === "little")
     : view.getFloat64(0, e === "little");
+};
+
+export const convertArithmeticBytes = (
+  bytes: number[],
+  sourceType: ArithmeticType,
+  targetType: ArithmeticType,
+  e: Endianness = "little",
+): number[] => {
+  if (isFloatingType(sourceType)) {
+    const value = bytesToFloat(bytes, sourceType.type, e);
+    if (isFloatingType(targetType))
+      return FLOAT_TO_BYTES[targetType.type](value, e);
+    if (isBool(targetType))
+      return BIGINT_TO_BYTES[Type._Bool](BigInt(value === 0 ? 0 : 1), e);
+    if (!Number.isFinite(value))
+      throw new Error(
+        "undefined behaviour: cannot convert non-finite " +
+          value +
+          " to " +
+          targetType.type,
+      );
+    const integer = BigInt(Math.trunc(value));
+    // Floating-to-unsigned conversions must be checked before the encoder wraps.
+    checkInputInRange(integer, typeInfoToSpecifier(targetType));
+    return BIGINT_TO_BYTES[targetType.type](integer, e);
+  }
+  const value = bytesToBigint(bytes, isSigned(sourceType), e);
+  if (isFloatingType(targetType))
+    return FLOAT_TO_BYTES[targetType.type](
+      targetType.type === Type.Float ? bigintToFloat(value) : Number(value),
+      e,
+    );
+  return BIGINT_TO_BYTES[targetType.type](value, e);
 };

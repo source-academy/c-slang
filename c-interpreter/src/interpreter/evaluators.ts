@@ -126,6 +126,7 @@ import {
   bytesToBigint,
   bytesToFloat,
   bigintToFloat,
+  convertArithmeticBytes,
 } from "../typing/representation";
 import { isTemporaryObject } from "./stash";
 import {
@@ -874,22 +875,25 @@ export const instructionEvaluator: {
       )
     ) {
       if (isScalarType(typeInfo) && isScalarType(o.typeInfo)) {
-        if (isFloatingType(typeInfo) || isFloatingType(o.typeInfo))
-          throw new Error("floating-point assignment not implemented");
-        const n = bytesToBigint(
-          o.bytes,
-          isSigned(o.typeInfo),
-          rt.config.endianness,
-        );
-        rt.memory.setScalar(
-          address, n, typeInfo, rt.config.endianness, false, false, initializing,
+        let bytes: number[];
+        if (isArithmeticType(typeInfo) && isArithmeticType(o.typeInfo)) {
+          bytes = convertArithmeticBytes(
+            o.bytes, o.typeInfo, typeInfo, rt.config.endianness,
+          );
+        } else {
+          if (isFloatingType(typeInfo) || isFloatingType(o.typeInfo))
+            throw new Error("unexpected types for assign");
+          const n = bytesToBigint(
+            o.bytes, isSigned(o.typeInfo), rt.config.endianness,
+          );
+          bytes = BIGINT_TO_BYTES[typeInfo.type](n, rt.config.endianness);
+        }
+        rt.memory.setObjectBytes(
+          address, bytes, typeInfo, false, false, initializing,
         );
         rt.initTable.add(address, typeInfo);
         rt.stash.pushWithoutConversions(
-          new TemporaryObject(
-            typeInfo,
-            BIGINT_TO_BYTES[typeInfo.type](n, rt.config.endianness),
-          ),
+          new TemporaryObject(typeInfo, bytes),
         );
         return;
       }
@@ -1117,14 +1121,9 @@ export const instructionEvaluator: {
     const o = rt.stash.pop();
     if (!(isTemporaryObject(o) && isArithmeticType(o.typeInfo)))
       throw "expected object of arithmetic type for conversion";
-    if (isFloatingType(typeInfo) || isFloatingType(o.typeInfo))
-      throw new Error("floating-point arithmetic conversions not implemented");
-    const n = bytesToBigint(
-      o.bytes,
-      isSigned(o.typeInfo),
-      rt.config.endianness,
+    const res = convertArithmeticBytes(
+      o.bytes, o.typeInfo, typeInfo, rt.config.endianness,
     );
-    const res = BIGINT_TO_BYTES[typeInfo.type](n, rt.config.endianness);
     const t = new TemporaryObject(typeInfo, res);
     rt.stash.pushWithoutConversions(t);
   },
@@ -1137,8 +1136,15 @@ export const instructionEvaluator: {
       rt.stash.pushWithoutConversions(o);
       return;
     }
+    if (isArithmeticType(targetType) && isArithmeticType(o.typeInfo)) {
+      const bytes = convertArithmeticBytes(
+        o.bytes, o.typeInfo, targetType, rt.config.endianness,
+      );
+      rt.stash.pushWithoutConversions(new TemporaryObject(targetType, bytes));
+      return;
+    }
     if (isFloatingType(targetType) || isFloatingType(o.typeInfo))
-      throw new Error("floating-point casts not implemented");
+      throw new Error("cannot cast between pointer and floating types");
     const val = bytesToBigint(
       o.bytes,
       isSigned(o.typeInfo),
