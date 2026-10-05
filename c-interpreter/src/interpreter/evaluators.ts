@@ -378,11 +378,11 @@ export const ASTNodeEvaluator: {
       else rt.agenda.pushAsLvalue(expr);
     } else {
       rt.agenda.push(op);
-      // x++/x-- need their operand's address explicitly, the same way
-      // prefix ++/-- do, rather than reading its value and reaching
-      // back through the address that read happens to carry along -
-      // see PostfixIncrement/PostfixDecrement below.
-      if (op.type === "PostfixIncrement" || op.type === "PostfixDecrement")
+      // Updates and member access on an lvalue start from its address.
+      if (
+        op.type === "PostfixIncrement" || op.type === "PostfixDecrement" ||
+        (op.type === "StructMember" && expr.lvalue)
+      )
         rt.agenda.pushAsLvalue(expr);
       else rt.agenda.push(expr);
     }
@@ -447,9 +447,7 @@ export const ASTNodeEvaluator: {
     evaluateAsLvalue: boolean,
   ) => {
     const o = rt.stash.pop();
-    if (!evaluateAsLvalue) {
-      if (!(isTemporaryObject(o) && isStructure(o.typeInfo)))
-        throw new Error("expected struct");
+    if (!evaluateAsLvalue && isTemporaryObject(o) && isStructure(o.typeInfo)) {
       const m = getMember(o.typeInfo, identifier);
       const relAddr = m[1];
       if (isArray(typeInfo) && o.address === null)
@@ -481,6 +479,17 @@ export const ASTNodeEvaluator: {
     );
     const m = getMember(o.typeInfo.referencedType, identifier);
     const relAddr = m[1];
+    if (!evaluateAsLvalue) {
+      const address = Number(addr) + relAddr;
+      rt.stash.push(
+        rt,
+        new TemporaryObject(
+          typeInfo, rt.memory.getObjectBytes(address, typeInfo), address,
+        ),
+        address,
+      );
+      return;
+    }
     rt.stash.pushWithoutConversions(
       new TemporaryObject(
         pointer(typeInfo),

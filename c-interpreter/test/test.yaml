@@ -1,4 +1,28 @@
 ---
+member-address-matrix:
+  file: "member-address-matrix.c"
+  cases:
+    - out: "0"
+      stdout: "0.6800000071525574\n"
+      desc: "read and update one initialized element of a struct's float matrix"
+member-address-nested:
+  file: "member-address-nested.c"
+  cases:
+    - out: "1"
+      stdout: "5.5\n"
+      desc: "nested struct/union lvalues use the correct member addresses and offsets"
+member-address-side-effects:
+  file: "member-address-side-effects.c"
+  cases:
+    - out: "1"
+      stdout: "2.5\n3.25\n"
+      desc: "evaluate subscript and dereference bases once for member reads and writes"
+member-temporary-values:
+  file: "member-temporary-values.c"
+  cases:
+    - out: "1"
+      stdout: "1.25\n3.75\n3.75\n3.75\n"
+      desc: "members of returned, assigned, conditional, and comma struct values retain temporary semantics"
 const-aggregate-array-reads:
   file: "const-aggregate-array-reads.c"
   cases:
