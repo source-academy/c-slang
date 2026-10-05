@@ -998,6 +998,7 @@ export interface StructMemberOp extends BaseNode {
 export interface TypedStructMemberOp extends BaseNode {
   type: "StructMember";
   value: Identifier;
+  typeInfo: ObjectTypeInfo;
 }
 
 export interface PostfixIncrementOp extends BaseNode {

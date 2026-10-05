@@ -1365,7 +1365,7 @@ const typePostfixExpressionNode = (
         if (!isStructure(expr.typeInfo))
           throw "dot operator on non struct type";
         const typeInfo = getMemberTypeInfo(expr.typeInfo, o.value);
-        op = { ...o };
+        op = { ...o, typeInfo };
         exprType = { typeInfo, lvalue: expr.lvalue };
         break;
       }

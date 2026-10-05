@@ -1,4 +1,40 @@
 ---
+const-aggregate-array-reads:
+  file: "const-aggregate-array-reads.c"
+  cases:
+    - out: "1"
+      stdout: "4.5\n7.5\n8\n11.25\n3.75\n"
+      desc: "member evaluation preserves const array elements through dot, arrow, and nested aggregates"
+floating-display-scalars:
+  file: "floating-display-scalars.c"
+  cases:
+    - out: "1"
+      stdout: "1.5\n2.5\n0.10000000149011612\n0.1\n9.125\n1e+30\n1e-30\n1.401298464324817e-45\n5e-324\n"
+      desc: "print stored floating precision, exponents, subnormals, const values, and long double"
+floating-display-specials:
+  file: "floating-display-specials.c"
+  cases:
+    - out: "1"
+      stdout: "0\n-0\n0\n-0\nInfinity\n-Infinity\nNaN\nInfinity\n-Infinity\nNaN\n-0\n"
+      desc: "print signed zeros and exceptional results for both floating precisions"
+floating-display-aggregates:
+  file: "floating-display-aggregates.c"
+  cases:
+    - out: "1"
+      stdout: "Pair{1.5, 2.5}\nSample{'A', Pair{-0, 2.5}, [1.1, 2.2], [[1.25, -0], [3.5, 4.75]]}\nAlias{6.25, 6.25}\n{0.10000000149011612, -0}\n"
+      desc: "recursive floating formatting in padded structs, const aggregates, arrays, and unions"
+floating-aggregate-interop:
+  file: "floating-aggregate-interop.c"
+  cases:
+    - out: "1"
+      stdout: "Pair{4, 9}\n8.5\n"
+      desc: "floating aggregate copies, parameters, returns, array stride, and interior union members"
+floating-pointer-interop:
+  file: "floating-pointer-interop.c"
+  cases:
+    - out: "1"
+      stdout: "1.25\n3\n6.25\nNULL\n"
+      desc: "float/double pointer arithmetic, const reads, void-pointer round trips, and heap storage"
 floating-unary:
   file: "floating-unary.c"
   cases:

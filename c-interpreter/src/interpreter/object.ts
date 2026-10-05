@@ -149,8 +149,10 @@ export const stringify = (
 ): string => {
   if (bytes.length !== t.size)
     throw new Error("number of bytes do not match type given");
-  if (isFloatingType(t))
-    return bytesToFloat(bytes, t.type, endianness).toString();
+  if (isFloatingType(t)) {
+    const value = bytesToFloat(bytes, t.type, endianness);
+    return Object.is(value, -0) ? "-0" : value.toString();
+  }
   if (isScalarType(t)) {
     const n = bytesToBigint(bytes, isSigned(t), endianness);
     if (isChar(t)) return "'" + encodeURI(String.fromCharCode(Number(n))) + "'";

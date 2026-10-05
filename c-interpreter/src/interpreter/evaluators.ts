@@ -443,7 +443,7 @@ export const ASTNodeEvaluator: {
   },
   StructMember: (
     rt: Runtime,
-    { value: identifier }: TypedStructMemberOp,
+    { value: identifier, typeInfo }: TypedStructMemberOp,
     evaluateAsLvalue: boolean,
   ) => {
     const o = rt.stash.pop();
@@ -452,7 +452,6 @@ export const ASTNodeEvaluator: {
         throw new Error("expected struct");
       const m = getMember(o.typeInfo, identifier);
       const relAddr = m[1];
-      const typeInfo = m[2];
       if (isArray(typeInfo) && o.address === null)
         throw new Error("cannot take address of temporary object");
       rt.stash.push(
@@ -482,7 +481,6 @@ export const ASTNodeEvaluator: {
     );
     const m = getMember(o.typeInfo.referencedType, identifier);
     const relAddr = m[1];
-    const typeInfo = m[2];
     rt.stash.pushWithoutConversions(
       new TemporaryObject(
         pointer(typeInfo),
