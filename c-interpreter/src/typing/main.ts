@@ -1252,7 +1252,8 @@ const typeUnaryExpressionNode = (
         break;
       }
       case "~": {
-        if (!isIntegerType(t0)) throw "operand of ~ must be of integeral type";
+        if (isFloatingType(t0)) throw "~ does not support floating-point operands";
+        if (!isIntegerType(t0)) throw "operand of ~ must be of integer type";
         exprType = { typeInfo: applyIntegerPromotions(t0), lvalue: false };
         break;
       }

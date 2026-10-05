@@ -10,16 +10,26 @@ const run = (source: string): void => {
 };
 
 describe("floating unary and update rejection reasons", () => {
-  for (const expression of ["~1.0f", "~2.0"])
+  for (const expression of ["~1.0f", "~2.0", "~3.0L", "~(1 + 2.0f)"])
     it(`rejects ${expression}`, () => {
       assert.throws(
         () =>
           cviz.typeCheck(
             cviz.parseProgram(`int main() { ${expression}; return 0; }`),
           ),
-        /operand of ~ must be of integeral type/,
+        /~ does not support floating-point operands/,
       );
     });
+
+  it("keeps the integer requirement diagnostic for pointer operands of ~", () => {
+    assert.throws(
+      () =>
+        cviz.typeCheck(
+          cviz.parseProgram("int main() { int x = 1; ~&x; return 0; }"),
+        ),
+      /operand of ~ must be of integer type/,
+    );
+  });
 
   for (const op of ["%=", "<<=", ">>=", "&=", "^=", "|="])
     for (const declaration of [
