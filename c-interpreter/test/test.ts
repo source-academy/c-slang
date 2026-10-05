@@ -10,6 +10,7 @@ import "./floating-representation";
 import "./floating-literals";
 import "./floating-arithmetic";
 import "./floating-conversions";
+import "./floating-updates";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";

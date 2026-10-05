@@ -304,17 +304,15 @@ export const ASTNodeEvaluator: {
   UnaryExpressionIncr: (
     rt: Runtime,
     { value }: TypedUnaryExpressionIncr,
-    evaluateAsLvalue: boolean,
   ) => {
-    rt.agenda.push(incrDecrInstruction("+", evaluateAsLvalue, false));
+    rt.agenda.push(incrDecrInstruction("+", false));
     rt.agenda.pushAsLvalue(value);
   },
   UnaryExpressionDecr: (
     rt: Runtime,
     { value }: TypedUnaryExpressionDecr,
-    evaluateAsLvalue: boolean,
   ) => {
-    rt.agenda.push(incrDecrInstruction("-", evaluateAsLvalue, false));
+    rt.agenda.push(incrDecrInstruction("-", false));
     rt.agenda.pushAsLvalue(value);
   },
   UnaryExpressionSizeof: (
@@ -496,10 +494,10 @@ export const ASTNodeEvaluator: {
     );
   },
   PostfixIncrement: (rt: Runtime) => {
-    rt.agenda.push(incrDecrInstruction("+", false, true));
+    rt.agenda.push(incrDecrInstruction("+", true));
   },
   PostfixDecrement: (rt: Runtime) => {
-    rt.agenda.push(incrDecrInstruction("-", false, true));
+    rt.agenda.push(incrDecrInstruction("-", true));
   },
   PrimaryExprIdentifier: (
     rt: Runtime,
@@ -680,6 +678,20 @@ export const instructionEvaluator: {
       case "+":
       case "-":
       case "~": {
+        if (isTemporaryObject(v) && isFloatingType(v.typeInfo) && op !== "~") {
+          const value = bytesToFloat(
+            v.bytes, v.typeInfo.type, rt.config.endianness,
+          );
+          rt.stash.pushWithoutConversions(
+            new TemporaryObject(
+              unqualified(v.typeInfo),
+              FLOAT_TO_BYTES[v.typeInfo.type](
+                op === "-" ? -value : value, rt.config.endianness,
+              ),
+            ),
+          );
+          return;
+        }
         if (!(isTemporaryObject(v) && isIntegerType(v.typeInfo)))
           throw new Error("operand of unary +/-/~ should be an integer value");
         let n = bytesToBigint(
@@ -702,18 +714,11 @@ export const instructionEvaluator: {
       case "!": {
         if (!(isTemporaryObject(v) && isScalarType(v.typeInfo)))
           throw new Error("operand of ! should be of scalar type");
-        if (isFloatingType(v.typeInfo))
-          throw new Error("floating-point logical operations not implemented");
-        let n = bytesToBigint(
-          v.bytes,
-          isSigned(v.typeInfo),
-          rt.config.endianness,
-        );
-        n = n === BigInt(0) ? BigInt(1) : BigInt(0);
+        const truthy = scalarIsNonzero(v.bytes, v.typeInfo, rt.config.endianness);
         rt.stash.pushWithoutConversions(
           new TemporaryObject(
-            v.typeInfo,
-            BIGINT_TO_BYTES[v.typeInfo.type](n, rt.config.endianness),
+            int(),
+            BIGINT_TO_BYTES[Type.Int](BigInt(truthy ? 0 : 1), rt.config.endianness),
           ),
         );
         return;
@@ -765,8 +770,7 @@ export const instructionEvaluator: {
     const lo = rt.stash.pop();
     if (!(isTemporaryObject(lo) && isScalarType(lo.typeInfo)))
       throw new Error("expected scalar type for &&, ||");
-    const l = bytesToBigint(lo.bytes, isSigned(lo.typeInfo), rt.config.endianness);
-    const leftTruthy = l !== BigInt(0);
+    const leftTruthy = scalarIsNonzero(lo.bytes, lo.typeInfo, rt.config.endianness);
     const bytes = BIGINT_TO_BYTES[Type.Int](
       leftTruthy ? BigInt(1) : BigInt(0),
       rt.config.endianness,
@@ -783,7 +787,7 @@ export const instructionEvaluator: {
   },
   [InstructionType.INCR_DECR]: (
     rt: Runtime,
-    { op, evaluateAsLvalue, pushOldValue }: IncrDecrInstruction,
+    { op, pushOldValue }: IncrDecrInstruction,
   ) => {
     const ptr = rt.stash.pop();
     if (
@@ -805,7 +809,7 @@ export const instructionEvaluator: {
     );
     const { oldValue, newValue } = combineAndStore(address, t, op, one, rt);
     rt.stash.pushWithoutConversions(
-      pushOldValue ? oldValue : evaluateAsLvalue ? ptr : newValue,
+      pushOldValue ? oldValue : newValue,
     );
   },
   [InstructionType.COMPOUND_ASSIGN]: (
@@ -1051,12 +1055,7 @@ export const instructionEvaluator: {
     const o = rt.stash.pop();
     if (!(isTemporaryObject(o) && isScalarType(o.typeInfo)))
       throw new Error("condition should be of scalar type");
-    const n = bytesToBigint(
-      o.bytes,
-      isSigned(o.typeInfo),
-      rt.config.endianness,
-    );
-    if (n === BigInt(0)) {
+    if (!scalarIsNonzero(o.bytes, o.typeInfo, rt.config.endianness)) {
       if (exprIfFalse !== null) rt.agenda.push(exprIfFalse);
     } else {
       rt.agenda.push(exprIfTrue);
@@ -1066,12 +1065,7 @@ export const instructionEvaluator: {
     const o = rt.stash.pop();
     if (!(isTemporaryObject(o) && isScalarType(o.typeInfo)))
       throw new Error("condition should be of scalar type");
-    const n = bytesToBigint(
-      o.bytes,
-      isSigned(o.typeInfo),
-      rt.config.endianness,
-    );
-    if (n !== BigInt(0)) {
+    if (scalarIsNonzero(o.bytes, o.typeInfo, rt.config.endianness)) {
       rt.agenda.push(whileInstruction(cond, body));
       rt.agenda.push(cond);
       rt.agenda.push(continueMarkInstruction());
@@ -1085,12 +1079,7 @@ export const instructionEvaluator: {
     const o = rt.stash.pop();
     if (!(isTemporaryObject(o) && isScalarType(o.typeInfo)))
       throw new Error("condition should be of scalar type");
-    const n = bytesToBigint(
-      o.bytes,
-      isSigned(o.typeInfo),
-      rt.config.endianness,
-    );
-    if (n !== BigInt(0)) {
+    if (scalarIsNonzero(o.bytes, o.typeInfo, rt.config.endianness)) {
       rt.agenda.push(forInstruction(cond, body, afterIter));
       rt.agenda.push(cond);
       if (afterIter) {
@@ -1242,6 +1231,15 @@ export const instructionEvaluator: {
     });
   },
 };
+
+const scalarIsNonzero = (
+  bytes: number[],
+  type: ScalarType,
+  endianness: Endianness,
+): boolean =>
+  isFloatingType(type)
+    ? bytesToFloat(bytes, type.type, endianness) !== 0
+    : bytesToBigint(bytes, isSigned(type), endianness) !== BigInt(0);
 
 const COMPOUND_ASSIGN_OP: Record<Exclude<AssignmentOperator, "=">, BinaryOperator> = {
   "*=": "*",
@@ -1637,15 +1635,15 @@ const applyBinaryOp = (
       let isTruthy: boolean | undefined = undefined;
 
       if (isScalarType(t0) && isScalarType(t1)) {
-        const l = bytesToBigint(lo.bytes, isSigned(t0), rt.config.endianness);
-        const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
+        const l = scalarIsNonzero(lo.bytes, t0, rt.config.endianness);
+        const r = scalarIsNonzero(ro.bytes, t1, rt.config.endianness);
         switch (op) {
           case "&&": {
-            isTruthy = (l !== BigInt(0)) && (r !== BigInt(0));
+            isTruthy = l && r;
             break;
           }
           case "||": {
-            isTruthy = (l !== BigInt(0)) || (r !== BigInt(0));
+            isTruthy = l || r;
             break;
           }
         }
@@ -1674,20 +1672,24 @@ const combineAndStore = (
   rhs: TemporaryObject,
   rt: Runtime,
 ): { oldValue: TemporaryObject; newValue: TemporaryObject } => {
-  if (isFloatingType(t))
-    throw new Error("floating-point updates not implemented");
   const oldValue = new TemporaryObject(t, rt.memory.getObjectBytes(address, t));
   const combined = applyBinaryOp(op, oldValue, rhs, rt);
-  if (!(isIntegerType(combined.typeInfo) || isPointer(combined.typeInfo)))
+  let bytes: number[];
+  if (isArithmeticType(t) && isArithmeticType(combined.typeInfo)) {
+    bytes = convertArithmeticBytes(
+      combined.bytes, combined.typeInfo, t, rt.config.endianness,
+    );
+  } else if (isPointer(t) && isPointer(combined.typeInfo)) {
+    const n = bytesToBigint(
+      combined.bytes, isSigned(combined.typeInfo), rt.config.endianness,
+    );
+    bytes = BIGINT_TO_BYTES[t.type](n, rt.config.endianness);
+  } else {
     throw new Error("expected scalar result for ++/--/compound assignment");
-  const n = bytesToBigint(
-    combined.bytes,
-    isSigned(combined.typeInfo),
-    rt.config.endianness,
-  );
-  rt.memory.setScalar(address, n, t, rt.config.endianness);
+  }
+  rt.memory.setObjectBytes(address, bytes, t);
   rt.initTable.add(address, t);
-  const newValue = new TemporaryObject(t, BIGINT_TO_BYTES[t.type](n, rt.config.endianness));
+  const newValue = new TemporaryObject(t, bytes);
   return { oldValue, newValue };
 };
 

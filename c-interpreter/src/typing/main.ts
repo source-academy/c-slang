@@ -1188,7 +1188,7 @@ const typeUnaryExpressionIncr = (
       )
     )
       throw "prefix increment must be on a modifiable lvalue of arithmetic or pointer type";
-    return { ...t, value, typeInfo: value.typeInfo, lvalue: true };
+    return { ...t, value, typeInfo: value.typeInfo, lvalue: false };
   });
 
 const typeUnaryExpressionDecr = (
@@ -1204,7 +1204,7 @@ const typeUnaryExpressionDecr = (
       )
     )
       throw "prefix decrement must be on a modifiable lvalue of arithmetic or pointer type";
-    return { ...t, value, typeInfo: value.typeInfo, lvalue: true };
+    return { ...t, value, typeInfo: value.typeInfo, lvalue: false };
   });
 
 const typeUnaryExpressionNode = (

@@ -179,22 +179,16 @@ export const logicalInstruction = (
 export interface IncrDecrInstruction extends BaseInstruction {
   type: InstructionType.INCR_DECR;
   op: "+" | "-";
-  // prefix (++x): push the new value, or the address itself if the
-  // surrounding context wants ++x as an lvalue. postfix (x++): push
-  // the value from before the operation instead, regardless of
-  // evaluateAsLvalue (postfix is never itself an lvalue).
-  evaluateAsLvalue: boolean;
+  // Postfix yields the old value; prefix yields the new value. Neither is an lvalue.
   pushOldValue: boolean;
 }
 
 export const incrDecrInstruction = (
   op: "+" | "-",
-  evaluateAsLvalue: boolean,
   pushOldValue: boolean,
 ): IncrDecrInstruction => ({
   type: InstructionType.INCR_DECR,
   op,
-  evaluateAsLvalue,
   pushOldValue,
 });
 

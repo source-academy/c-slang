@@ -1,4 +1,75 @@
 ---
+floating-unary:
+  file: "floating-unary.c"
+  cases:
+    - out: "1"
+      stdout: "-1.25\n-Infinity\n"
+      desc: "unary signs preserve floating types and handle subnormal and exceptional values"
+floating-unary-zero:
+  file: "floating-unary-zero.c"
+  cases:
+    - out: "1"
+      desc: "inspect signed-zero bytes, unary plus preservation, and double negation"
+floating-updates-float:
+  file: "floating-updates-float.c"
+  cases:
+    - out: "1"
+      desc: "float prefix/postfix increment/decrement results, stores, and unevaluated sizeof"
+floating-updates-double:
+  file: "floating-updates-double.c"
+  cases:
+    - out: "1"
+      desc: "double prefix/postfix increment/decrement results, stores, and unevaluated sizeof"
+floating-update-rounding:
+  file: "floating-update-rounding.c"
+  cases:
+    - out: "1"
+      desc: "float32 rounding, signed zero in the old value, infinity, and NaN updates"
+floating-update-side-effects:
+  file: "floating-update-side-effects.c"
+  cases:
+    - out: "1"
+      desc: "evaluate subscript and function-call update destinations exactly once"
+floating-compound-double:
+  file: "floating-compound-double.c"
+  cases:
+    - out: "1"
+      desc: "all four floating compound operators and IEEE division/NaN results"
+floating-compound-float:
+  file: "floating-compound-float.c"
+  cases:
+    - out: "1"
+      desc: "float compound operations convert operands and round back to float storage"
+floating-compound-integer:
+  file: "floating-compound-integer.c"
+  cases:
+    - out: "1"
+      desc: "mixed compound operations narrow back to signed, unsigned, and bool destinations"
+floating-logical:
+  file: "floating-logical.c"
+  cases:
+    - out: "1"
+      desc: "logical results are int; both zeros are false and fractions/NaN/infinity are true"
+floating-short-circuit:
+  file: "floating-short-circuit.c"
+  cases:
+    - out: "1"
+      desc: "floating short circuit skips side effects and integer division by zero"
+floating-conditions:
+  file: "floating-conditions.c"
+  cases:
+    - out: "1"
+      desc: "if and conditional expressions use numeric floating truth values"
+floating-loop-conditions:
+  file: "floating-loop-conditions.c"
+  cases:
+    - out: "1"
+      desc: "while/do/for conditions handle signed zero, fractions, and NaN"
+scalar-logical-update-regression:
+  file: "scalar-logical-update-regression.c"
+  cases:
+    - out: "1"
+      desc: "logical negation produces int for narrow integers and pointers; integer/pointer updates remain correct"
 floating-casts-to-integer:
   file: "floating-casts-to-integer.c"
   cases:
