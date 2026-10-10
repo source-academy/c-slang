@@ -3,6 +3,23 @@ import { PreprocessorError } from "./errors";
 import { PositionMap, SourcePosition } from "./position";
 import { MacroDefinition, MacroTable, validateReplacementList } from "./macroTable";
 import { expand, withFreshHideSets } from "./expand";
+import { lex } from "./lex";
+
+export interface PreprocessorOptions {
+  /**
+   * Resolves a quoted #include's name to that file's own source text, or `null` if
+   * it can't be found. Defaults to always returning `null` - there is no multi-file
+   * concept anywhere else in this interpreter yet (see B7); this hook exists so B7
+   * only ever needs to supply a real resolver, not touch this file again.
+   */
+  resolveLocalInclude?: (name: string) => string | null;
+}
+
+export interface IncludedFile {
+  name: string;
+  tokens: PPToken[];
+  map: PositionMap;
+}
 
 // (6.10p2) a preprocessing directive is a line whose first token is '#'. Nothing
 // before phase 4 tokenizes whitespace, so "first token on a line" already means
@@ -91,18 +108,60 @@ const parseUndef = (rest: readonly PPToken[], pos: SourcePosition): string => {
   return rest[0].text;
 };
 
+// (6.10.2) #include <name> is always a silent no-op here (scope decision 2 - this
+// interpreter's builtins already need no header at all). #include "name" is
+// genuinely recognized, but resolving it to real content is routed through an
+// injectable hook rather than built here - there is no multi-file concept
+// anywhere else in this runtime yet (B7). A successfully-resolved include shares
+// the *same* macro table (so #defines cross the include boundary both ways, the
+// same as real textual inclusion) and recurses through this same pipeline, which
+// is what lets a nested #include inside the included content just work.
+const handleInclude = (
+  rest: readonly PPToken[],
+  pos: SourcePosition,
+  table: MacroTable,
+  opts: PreprocessorOptions,
+  includedFiles: IncludedFile[],
+): PPToken[] => {
+  const headerTok = rest[0];
+  if (headerTok === undefined || headerTok.kind !== PPTokenKind.HeaderName)
+    throw new PreprocessorError(
+      pos,
+      "#include expects <header-name> or \"header-name\" directly, not a macro-expanded name (not yet supported)",
+    );
+
+  const isAngleForm = headerTok.text.startsWith("<");
+  if (isAngleForm) return [];
+
+  const name = headerTok.text.slice(1, -1);
+  const resolve = opts.resolveLocalInclude ?? (() => null);
+  const content = resolve(name);
+  if (content === null)
+    throw new PreprocessorError(
+      pos,
+      "local #include \"" + name + "\" needs multi-file support, not yet available (see B7)",
+    );
+
+  const { tokens: includedTokens, map: includedMap } = lex(content, name);
+  const expanded = preprocessTokens(includedTokens, table, includedMap, opts, includedFiles);
+  includedFiles.push({ name, tokens: includedTokens, map: includedMap });
+  return expanded;
+};
+
 /**
- * Recognizes and applies one directive line. Only #define/#undef are handled
- * here (A7.2's own scope); any other directive name throws a clear "not yet
- * implemented" error rather than being silently mishandled - A7.3/A7.4 extend
- * this same dispatch with #include/#if and friends.
+ * Recognizes and applies one directive line. #define/#undef/#include are
+ * handled here; any other directive name throws a clear "not yet implemented"
+ * error rather than being silently mishandled - A7.4 extends this same dispatch
+ * with #if and friends.
  */
 export const processDirective = (
   line: readonly PPToken[],
   table: MacroTable,
   map: PositionMap,
-): void => {
-  if (line.length === 1) return; // (6.10p7) a lone '#' on its own line has no effect
+  opts: PreprocessorOptions,
+  includedFiles: IncludedFile[],
+): PPToken[] => {
+  if (line.length === 1) return []; // (6.10p7) a lone '#' on its own line has no effect
   const directiveNameTok = line[1];
   const pos = posOf(directiveNameTok, map);
   if (directiveNameTok.kind !== PPTokenKind.Identifier)
@@ -110,14 +169,14 @@ export const processDirective = (
 
   const rest = line.slice(2);
   switch (directiveNameTok.text) {
-    case "define": {
+    case "define":
       table.define(parseDefine(rest, pos), pos);
-      return;
-    }
-    case "undef": {
+      return [];
+    case "undef":
       table.undef(parseUndef(rest, pos));
-      return;
-    }
+      return [];
+    case "include":
+      return handleInclude(rest, pos, table, opts, includedFiles);
     default:
       throw new PreprocessorError(
         pos,
@@ -128,22 +187,24 @@ export const processDirective = (
 
 /**
  * Walks the whole token stream once, left to right: a directive line updates
- * `table` and contributes nothing to the output; everything else is gathered into
- * one contiguous run (up to the next directive line, or end of input) and handed
- * to `expand()` together, since a function-like macro's arguments can legally
- * span several physical lines.
+ * `table` (and, for #include, may contribute its already-expanded tokens);
+ * everything else is gathered into one contiguous run (up to the next directive
+ * line, or end of input) and handed to `expand()` together, since a
+ * function-like macro's arguments can legally span several physical lines.
  */
 export const preprocessTokens = (
   tokens: readonly PPToken[],
   table: MacroTable,
   map: PositionMap,
+  opts: PreprocessorOptions = {},
+  includedFiles: IncludedFile[] = [],
 ): PPToken[] => {
   const lines = groupIntoLines(tokens);
   const output: PPToken[] = [];
   let i = 0;
   while (i < lines.length) {
     if (isDirectiveLine(lines[i])) {
-      processDirective(lines[i], table, map);
+      output.push(...processDirective(lines[i], table, map, opts, includedFiles));
       i++;
       continue;
     }
