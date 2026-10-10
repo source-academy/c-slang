@@ -13,6 +13,7 @@ import "./floating-conversions";
 import "./floating-updates";
 import "./floating-display";
 import "./member-access";
+import "./preprocessor-lexer";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";
