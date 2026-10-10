@@ -762,6 +762,24 @@ string-array-init-too-long:
       out: "1"
       desc: "A3 follow-up: char arr[1] = \"hi\"; must be rejected at type-check time - the array is too small even to hold the characters, let alone the terminator"
       fail: true
+string-literal-concat-two:
+  file: "string-literal-concat-two.c"
+  cases:
+    - in: "42"
+      out: "314"
+      desc: "A7.0 (6.4.5p5/5.1.1.2 phase 6): two adjacent string literals concatenate into one - \"foo\" \"bar\" reads back as \"foobar\" (checking both ends plus the exact seam character)"
+string-literal-concat-three:
+  file: "string-literal-concat-three.c"
+  cases:
+    - in: "42"
+      out: "98"
+      desc: "A7.0: three adjacent string literals concatenate in order - \"a\" \"b\" \"c\" reads back as \"abc\", not reordered or missing the middle piece"
+string-literal-concat-across-comment:
+  file: "string-literal-concat-across-comment.c"
+  cases:
+    - in: "42"
+      out: "98"
+      desc: "A7.0: adjacency is a token-level property, not just whitespace-level - a /* comment */ between two string literals doesn't block concatenation"
 string-array-init-mutable:
   file: "string-array-init-mutable.c"
   cases:

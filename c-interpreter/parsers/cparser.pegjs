@@ -453,12 +453,17 @@ HexadecimalEscapeSequence
 // ==========
 
 // (6.4.5) string-literal
+// (5.1.1.2 phase 6 / 6.4.5p5) adjacent string-literal tokens concatenate into one
 StringLiteral
-  = a:EncodingPrefix? '"' b:SCharSequence? '"' _
+  = a:StringLiteralToken+
     {
-      if (a) throwNotImplemented("encoding prefixes for string literal");
-      return b || [];
+      if (a.some((t) => t.prefix)) throwNotImplemented("encoding prefixes for string literal");
+      return a.reduce((acc, t) => acc.concat(t.chars), []);
     }
+
+StringLiteralToken
+  = a:EncodingPrefix? '"' b:SCharSequence? '"' _
+    { return { prefix: a, chars: b || [] }; }
 
 // (6.4.5) encoding-prefix
 EncodingPrefix
