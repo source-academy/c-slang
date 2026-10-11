@@ -2,6 +2,7 @@ export * from "./position";
 export * from "./errors";
 export * from "./ppLexer";
 export * from "./macroTable";
+export * from "./conditionalExpr";
 export * from "./directives";
 export * from "./lex";
 export { spliceLines } from "./lineSplice";

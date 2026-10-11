@@ -16,6 +16,7 @@ import "./member-access";
 import "./preprocessor-lexer";
 import "./preprocessor-macros";
 import "./preprocessor-include";
+import "./preprocessor-conditionals";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";
