@@ -3,6 +3,7 @@ import { PreprocessorError } from "./errors";
 import { SourcePosition } from "./position";
 import { MacroTable } from "./macroTable";
 import { expand, withFreshHideSets } from "./expand";
+import { ExpansionContext } from "./context";
 
 // BigInt literal syntax (0n) needs an ES2020+ target; this codebase targets ES6, so
 // bigints are built with the BigInt() function everywhere else too (see constants.ts).
@@ -224,10 +225,11 @@ export const evaluateControllingExpression = (
   tokens: readonly PPToken[],
   pos: SourcePosition,
   table: MacroTable,
+  ctx: ExpansionContext,
 ): bigint => {
   if (tokens.length === 0) throw new PreprocessorError(pos, "#if with no expression");
   const afterDefined = stripDefined(tokens, table, pos);
-  const expanded = expand(withFreshHideSets(afterDefined), table).map((h) => h.token);
+  const expanded = expand(withFreshHideSets(afterDefined), table, ctx).map((h) => h.token);
   const resolved = expanded.map((t) =>
     t.kind === PPTokenKind.Identifier ? makeNumberToken("0", t) : t,
   );

@@ -2,6 +2,7 @@ export * from "./position";
 export * from "./errors";
 export * from "./ppLexer";
 export * from "./macroTable";
+export * from "./context";
 export * from "./conditionalExpr";
 export * from "./directives";
 export * from "./lex";
@@ -24,7 +25,7 @@ export const preprocessSource = (
   table: MacroTable = new MacroTable(),
   opts: PreprocessorOptions = {},
 ): { tokens: PPToken[]; table: MacroTable; includedFiles: IncludedFile[] } => {
-  const { tokens, map } = lex(source);
+  const { tokens, map } = lex(source, opts.fileName ?? null);
   const includedFiles: IncludedFile[] = [];
   const result = preprocessTokens(tokens, table, map, opts, includedFiles);
   return { tokens: result, table, includedFiles };

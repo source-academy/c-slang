@@ -2,6 +2,7 @@ import { PPToken, PPTokenKind, tokenize } from "./ppLexer";
 import { MacroDefinition, MacroTable } from "./macroTable";
 import { PreprocessorError } from "./errors";
 import { PositionMap, SourcePosition } from "./position";
+import { ExpansionContext } from "./context";
 
 /**
  * Dave Prosser's macro-expansion algorithm, implemented directly rather than
@@ -100,6 +101,63 @@ const glue = (left: readonly HSToken[], right: HSToken, pos: SourcePosition): HS
   return [...left.slice(0, lastIdx), pasted];
 };
 
+const makeToken = (kind: PPTokenKind, text: string, at: PPToken): PPToken => ({
+  kind,
+  text,
+  start: at.start,
+  end: at.end,
+  line: at.line,
+  hasLeadingWhitespace: at.hasLeadingWhitespace,
+});
+
+const quoteString = (s: string): string => '"' + s.replace(/[\\"]/g, "\\$&") + '"';
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const pad2 = (n: number): string => (n < 10 ? "0" : "") + n;
+
+// (6.10.8.1) __DATE__/__TIME__ format: "Mmm dd yyyy" (day space-padded, not zero-padded)
+// and "hh:mm:ss" - both using the single timestamp this whole preprocessing run shares
+// (`ExpansionContext.now`), not a fresh one per use.
+const formatDate = (d: Date): string => {
+  const day = d.getDate();
+  return MONTHS[d.getMonth()] + " " + (day < 10 ? " " : "") + day + " " + d.getFullYear();
+};
+const formatTime = (d: Date): string => pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
+
+// (6.10.8.1) predefined macros - intercepted by name before ever consulting the macro
+// table, so a program accidentally #define-ing one of these (itself undefined behavior
+// per 6.10.8.1p2) can't actually change what they expand to. __LINE__/__FILE__ resolve
+// against the *token's own* position, which is what makes them track the real current
+// line (and any #line override) rather than a value fixed once at #define time.
+const PREDEFINED_MACROS: Record<string, (at: PPToken, ctx: ExpansionContext) => PPToken> = {
+  __LINE__: (at, ctx) => makeToken(PPTokenKind.PPNumber, String(ctx.map.resolve(at.start).line), at),
+  __FILE__: (at, ctx) =>
+    makeToken(PPTokenKind.StringLiteral, quoteString(ctx.map.resolve(at.start).file ?? ""), at),
+  __DATE__: (at, ctx) => makeToken(PPTokenKind.StringLiteral, quoteString(formatDate(ctx.now)), at),
+  __TIME__: (at, ctx) => makeToken(PPTokenKind.StringLiteral, quoteString(formatTime(ctx.now)), at),
+  __STDC__: (at) => makeToken(PPTokenKind.PPNumber, "1", at),
+  __STDC_VERSION__: (at) => makeToken(PPTokenKind.PPNumber, "201710L", at),
+};
+
+// (6.10.9) the _Pragma(string-literal) operator - recognized anywhere in the token
+// stream (not just at the start of a line, unlike #pragma) and, like every #pragma
+// this interpreter sees, treated as an unconditional no-op: it contributes nothing to
+// the output at all. Only the shape is validated; the destringized content is never
+// actually interpreted, since no pragma has distinct semantics here yet.
+const validatePragmaOperand = (rest: readonly HSToken[]): void => {
+  const arg = rest[2];
+  if (arg === undefined || arg.token.kind !== PPTokenKind.StringLiteral)
+    throw new PreprocessorError(
+      { line: rest[0].token.line, column: 1, file: null },
+      "the _Pragma operator requires a single string literal argument",
+    );
+  if (rest[3] === undefined || rest[3].token.text !== ")")
+    throw new PreprocessorError(
+      { line: rest[0].token.line, column: 1, file: null },
+      "missing ')' after _Pragma(...)'s argument",
+    );
+};
+
 const paramIndex = (
   name: string,
   parameters: readonly string[],
@@ -120,6 +178,7 @@ const subst = (
   AP: readonly HSToken[][],
   HS: ReadonlySet<string>,
   table: MacroTable,
+  ctx: ExpansionContext,
 ): HSToken[] => {
   let OS: HSToken[] = [];
   let i = 0;
@@ -168,7 +227,7 @@ const subst = (
     }
 
     if (curParamIdx !== -1) {
-      OS = OS.concat(expand(arg(curParamIdx), table));
+      OS = OS.concat(expand(arg(curParamIdx), table, ctx));
       i += 1;
       continue;
     }
@@ -268,7 +327,7 @@ const joinVariadicTail = (
  * compositional (one macro's expansion opening a call to another "for free") and
  * what the blue-paint/hide-set check (`t.hideSet.has(name)`) needs to see.
  */
-export const expand = (input: readonly HSToken[], table: MacroTable): HSToken[] => {
+export const expand = (input: readonly HSToken[], table: MacroTable, ctx: ExpansionContext): HSToken[] => {
   const output: HSToken[] = [];
   let rest: HSToken[] = input.slice();
 
@@ -288,6 +347,19 @@ export const expand = (input: readonly HSToken[], table: MacroTable): HSToken[] 
       continue;
     }
 
+    const predefined = PREDEFINED_MACROS[name];
+    if (predefined !== undefined) {
+      output.push({ token: predefined(t.token, ctx), hideSet: t.hideSet });
+      rest = rest.slice(1);
+      continue;
+    }
+
+    if (name === "_Pragma" && rest[1]?.token.kind === PPTokenKind.Punctuator && rest[1].token.text === "(") {
+      validatePragmaOperand(rest);
+      rest = rest.slice(4); // _Pragma(...) always contributes zero output tokens
+      continue;
+    }
+
     const macro = table.get(name);
     if (macro === undefined) {
       output.push(t);
@@ -297,7 +369,7 @@ export const expand = (input: readonly HSToken[], table: MacroTable): HSToken[] 
 
     if (!macro.isFunctionLike) {
       const resultHS = union(t.hideSet, new Set([name]));
-      const substituted = subst(withFreshHideSets(macro.replacement), macro, [], resultHS, table);
+      const substituted = subst(withFreshHideSets(macro.replacement), macro, [], resultHS, table, ctx);
       rest = substituted.concat(rest.slice(1));
       continue;
     }
@@ -326,7 +398,7 @@ export const expand = (input: readonly HSToken[], table: MacroTable): HSToken[] 
 
     const args = joinVariadicTail(rawArgs, namedCount, macro.isVariadic, t.token);
     const resultHS = union(intersect(t.hideSet, closeParenHideSet), new Set([name]));
-    const substituted = subst(withFreshHideSets(macro.replacement), macro, args, resultHS, table);
+    const substituted = subst(withFreshHideSets(macro.replacement), macro, args, resultHS, table, ctx);
     rest = substituted.concat(rest.slice(afterIdx));
   }
 

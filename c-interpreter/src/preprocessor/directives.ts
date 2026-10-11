@@ -4,6 +4,7 @@ import { PositionMap, SourcePosition } from "./position";
 import { MacroDefinition, MacroTable, validateReplacementList } from "./macroTable";
 import { expand, withFreshHideSets } from "./expand";
 import { evaluateControllingExpression } from "./conditionalExpr";
+import { ExpansionContext } from "./context";
 import { lex } from "./lex";
 
 const ZERO = BigInt(0); // see conditionalExpr.ts - no 0n literals under this ES6 target
@@ -16,6 +17,10 @@ export interface PreprocessorOptions {
    * only ever needs to supply a real resolver, not touch this file again.
    */
   resolveLocalInclude?: (name: string) => string | null;
+  /** What __FILE__ (and any diagnostic) reports for the top-level source, until a
+   * #line directive overrides it. Defaults to null - there's no real filename concept
+   * for the top-level program otherwise, unlike an #include'd file's own name. */
+  fileName?: string;
 }
 
 export interface IncludedFile {
@@ -111,6 +116,40 @@ const parseUndef = (rest: readonly PPToken[], pos: SourcePosition): string => {
   return rest[0].text;
 };
 
+// (6.10.5) #error's message is arbitrary pp-tokens, not necessarily a single string
+// literal - reconstructed with the same whitespace-presence collapsing stringize()
+// already uses elsewhere, just for a readable diagnostic, not a new token.
+const directiveMessage = (rest: readonly PPToken[]): string => {
+  let s = "";
+  rest.forEach((t, i) => {
+    if (i > 0 && t.hasLeadingWhitespace) s += " ";
+    s += t.text;
+  });
+  return s;
+};
+
+// (6.10.4) #line digit-sequence ["filename"] - the number must be a plain decimal
+// digit sequence (not hex/octal, unlike an ordinary pp-number); the optional filename,
+// if given, must be a string literal.
+const parseLine = (
+  rest: readonly PPToken[],
+  pos: SourcePosition,
+): { lineNumber: number; file: string | null } => {
+  const numTok = rest[0];
+  if (numTok === undefined || numTok.kind !== PPTokenKind.PPNumber || !/^[0-9]+$/.test(numTok.text))
+    throw new PreprocessorError(pos, "#line requires a decimal line number");
+  const lineNumber = parseInt(numTok.text, 10);
+  if (lineNumber === 0) throw new PreprocessorError(pos, "#line's line number cannot be 0");
+  let file: string | null = null;
+  if (rest.length > 1) {
+    const fileTok = rest[1];
+    if (fileTok.kind !== PPTokenKind.StringLiteral)
+      throw new PreprocessorError(pos, "#line's optional filename must be a string literal");
+    file = fileTok.text.slice(1, -1);
+  }
+  return { lineNumber, file };
+};
+
 // (6.10.2) #include <name> is always a silent no-op here (scope decision 2 - this
 // interpreter's builtins already need no header at all). #include "name" is
 // genuinely recognized, but resolving it to real content is routed through an
@@ -125,6 +164,7 @@ const handleInclude = (
   table: MacroTable,
   opts: PreprocessorOptions,
   includedFiles: IncludedFile[],
+  now: Date,
 ): PPToken[] => {
   const headerTok = rest[0];
   if (headerTok === undefined || headerTok.kind !== PPTokenKind.HeaderName)
@@ -146,7 +186,7 @@ const handleInclude = (
     );
 
   const { tokens: includedTokens, map: includedMap } = lex(content, name);
-  const expanded = preprocessTokens(includedTokens, table, includedMap, opts, includedFiles);
+  const expanded = preprocessTokens(includedTokens, table, includedMap, opts, includedFiles, now);
   includedFiles.push({ name, tokens: includedTokens, map: includedMap });
   return expanded;
 };
@@ -184,14 +224,14 @@ const parseIfdefName = (rest: readonly PPToken[], pos: SourcePosition, directive
 export const processDirective = (
   line: readonly PPToken[],
   table: MacroTable,
-  map: PositionMap,
+  ctx: ExpansionContext,
   opts: PreprocessorOptions,
   includedFiles: IncludedFile[],
   condStack: CondFrame[],
 ): PPToken[] => {
   if (line.length === 1) return []; // (6.10p7) a lone '#' on its own line has no effect
   const directiveNameTok = line[1];
-  const pos = posOf(directiveNameTok, map);
+  const pos = posOf(directiveNameTok, ctx.map);
   const name = directiveNameTok.kind === PPTokenKind.Identifier ? directiveNameTok.text : null;
   const rest = line.slice(2);
   const skipping = isSkipping(condStack);
@@ -202,7 +242,7 @@ export const processDirective = (
     if (parentActive) {
       active =
         name === "if"
-          ? evaluateControllingExpression(rest, pos, table) !== ZERO
+          ? evaluateControllingExpression(rest, pos, table, ctx) !== ZERO
           : table.isDefined(parseIfdefName(rest, pos, name)) === (name === "ifdef");
     }
     condStack.push({ active, anyTaken: active, sawElse: false, openedBy: name, pos });
@@ -225,7 +265,7 @@ export const processDirective = (
       top.active = true;
       top.anyTaken = true;
     } else {
-      top.active = evaluateControllingExpression(rest, pos, table) !== ZERO;
+      top.active = evaluateControllingExpression(rest, pos, table, ctx) !== ZERO;
       if (top.active) top.anyTaken = true;
     }
     return [];
@@ -248,7 +288,16 @@ export const processDirective = (
       table.undef(parseUndef(rest, pos));
       return [];
     case "include":
-      return handleInclude(rest, pos, table, opts, includedFiles);
+      return handleInclude(rest, pos, table, opts, includedFiles, ctx.now);
+    case "error":
+      throw new PreprocessorError(pos, "#error" + (rest.length > 0 ? " " + directiveMessage(rest) : ""));
+    case "pragma":
+      return []; // (6.10.9p2) every #pragma this interpreter doesn't understand is a no-op
+    case "line": {
+      const { lineNumber, file } = parseLine(rest, pos);
+      ctx.map.addLineDirective(directiveNameTok.start, lineNumber, file);
+      return [];
+    }
     default:
       throw new PreprocessorError(pos, "preprocessing directive #" + name + " is not yet implemented");
   }
@@ -272,14 +321,16 @@ export const preprocessTokens = (
   map: PositionMap,
   opts: PreprocessorOptions = {},
   includedFiles: IncludedFile[] = [],
+  now: Date = new Date(),
 ): PPToken[] => {
+  const ctx: ExpansionContext = { map, now };
   const lines = groupIntoLines(tokens);
   const output: PPToken[] = [];
   const condStack: CondFrame[] = [];
   let i = 0;
   while (i < lines.length) {
     if (isDirectiveLine(lines[i])) {
-      output.push(...processDirective(lines[i], table, map, opts, includedFiles, condStack));
+      output.push(...processDirective(lines[i], table, ctx, opts, includedFiles, condStack));
       i++;
       continue;
     }
@@ -291,7 +342,7 @@ export const preprocessTokens = (
     }
     if (!skipping) {
       const runTokens = runLines.flat();
-      const expanded = expand(withFreshHideSets(runTokens), table);
+      const expanded = expand(withFreshHideSets(runTokens), table, ctx);
       output.push(...expanded.map((h) => h.token));
     }
   }

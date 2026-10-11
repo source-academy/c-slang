@@ -1,6 +1,7 @@
 import { PPToken, PPTokenKind } from "./ppLexer";
 import { PreprocessorError } from "./errors";
 import { SourcePosition } from "./position";
+import { PREDEFINED_MACRO_NAMES } from "./context";
 
 export interface MacroDefinition {
   name: string;
@@ -68,7 +69,7 @@ export class MacroTable {
   private readonly macros = new Map<string, MacroDefinition>();
 
   isDefined(name: string): boolean {
-    return this.macros.has(name);
+    return this.macros.has(name) || PREDEFINED_MACRO_NAMES.has(name);
   }
 
   get(name: string): MacroDefinition | undefined {
