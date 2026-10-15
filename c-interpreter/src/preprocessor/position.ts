@@ -10,6 +10,16 @@ export interface SourcePosition {
   file: string | null;
 }
 
+/** Inverse of resolve()'s own line/column computation: the offset in `text` that a
+ * given (1-based) line/column pair refers to. Needed because pegjs-util only reports
+ * a parse error's position as line/column, never a raw offset - this gets back to an
+ * offset so it can be fed through PositionMap.resolve() like everything else here is. */
+export const offsetOfLineColumn = (text: string, line: number, column: number): number => {
+  const lineStarts = buildLineStarts(text);
+  const lineIdx = Math.max(0, Math.min(line - 1, lineStarts.length - 1));
+  return Math.min(lineStarts[lineIdx] + Math.max(0, column - 1), text.length);
+};
+
 const buildLineStarts = (text: string): number[] => {
   const starts = [0];
   for (let i = 0; i < text.length; i++) {
@@ -58,6 +68,12 @@ export class PositionMap {
     private readonly originalText: string,
     private readonly logicalToOriginal: readonly number[],
     private readonly file: string | null = null,
+    // Second mode (A7.6): wraps `outer.inner` with one more layer of indirection, for
+    // resolving positions in a *further* reassembled text (e.g. preprocess()'s own
+    // output) whose offsets each point at a logical offset `outer.inner` already
+    // understands - delegates everything (including #line directives) to `outer.inner`,
+    // rather than duplicating its original-text/line-starts machinery redundantly.
+    private readonly outer?: { toLogical: readonly number[]; inner: PositionMap },
   ) {
     this.originalLineStarts = buildLineStarts(originalText);
   }
@@ -89,6 +105,10 @@ export class PositionMap {
   }
 
   resolve(logicalOffset: number): SourcePosition {
+    if (this.outer !== undefined) {
+      const outerClamped = Math.max(0, Math.min(logicalOffset, this.outer.toLogical.length - 1));
+      return this.outer.inner.resolve(this.outer.toLogical[outerClamped]);
+    }
     const clamped = Math.max(
       0,
       Math.min(logicalOffset, this.logicalToOriginal.length - 1),
