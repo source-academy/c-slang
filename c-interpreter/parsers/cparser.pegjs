@@ -718,8 +718,7 @@ UnaryExpression
     }
   / ALIGNOF LPAR a:TypeName RPAR
     {
-      throwNotImplemented("alignof");
-      return makeNode("UnaryExpressionAlignof", a);
+      return makeNode("UnaryExpressionAlignof", { value: a });
     }
 
 // (6.5.3) unary-operator
@@ -865,8 +864,7 @@ Expression
 
 // (6.6) constant-expression
 ConstantExpression
-  = ConditionalExpression
-    { throwNotImplemented("constant expressions"); }
+  = a:ConditionalExpression { return a; }
 
 // ==========
 // A.2.2 Declarations
@@ -889,7 +887,7 @@ Declaration
       });
     }
   / a:StaticAssertDeclaration
-    { throwNotImplemented("StaticAssertDeclaration"); }
+    { return a; }
   / &{ restoreState(saved); return false; } .
   ) { return result; }
 
@@ -1015,8 +1013,7 @@ StructDeclaration
         declaratorList: b || []
       });
     }
-  / StaticAssertDeclaration
-    { throwNotImplemented("static assert declaration"); }
+  / a:StaticAssertDeclaration { return a; }
 
 // (6.7.2.1) specifier-qualifier-list
 // Note the change from the standard to handle the TypedefName case
@@ -1276,16 +1273,16 @@ DesignatorList
 
 // (6.7.9) designator
 Designator
-  = LBRC a:IntegerConstant RBRC
+  = LBRC a:ConstantExpression RBRC
     { return { type: "arrayDesignator", idx: a }; }
-  / LBRC ConstantExpression RBRC
   / DOT a:Identifier
     { return { type: "structDesignator", identifier: a }; }
 
 // (6.7.10) static_assert-declaration
 StaticAssertDeclaration
-  = STATICASSERT LPAR ConstantExpression
-    COMMA StringLiteral RPAR SEMI
+  = STATICASSERT LPAR a:ConstantExpression
+    COMMA b:StringLiteral RPAR SEMI
+    { return makeNode("StaticAssertDeclaration", { condition: a, message: b.join("") }); }
 
 // ==========
 // A.2.3 Statements

@@ -21,6 +21,7 @@ import "./preprocessor-predefined";
 import "./preprocessor-integration";
 import "./sizeof-resolution";
 import "./integer-conversions";
+import "./constant-expressions";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";

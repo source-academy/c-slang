@@ -5,6 +5,7 @@ import {
   isEnumSpecifier,
   isStorageClassSpecifier,
   isStructSpecifier,
+  isStaticAssertDeclaration,
 } from "../ast/types";
 import {
   CHAR_MAX,
@@ -53,6 +54,7 @@ import {
   voidType,
 } from "./types";
 import { constructType } from "./utils";
+import { checkStaticAssertion } from "./main";
 
 export const TYPE_SPECIFIER_TO_TYPE_INFO: Record<string, ArithmeticType | Void> = {
   void: voidType(),
@@ -244,6 +246,10 @@ export const constructStructFromSpecifier = (
   const members = [];
 
   for (const d of s.declarationList) {
+    if (isStaticAssertDeclaration(d)) {
+      if (!inForwardDeclarationScan && env) checkStaticAssertion(d, env);
+      continue;
+    }
     for (const id of d.declaratorList) {
       const storageClassSpecifiers = d.specifiers.filter(
         isStorageClassSpecifier,

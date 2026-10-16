@@ -1140,3 +1140,53 @@ integer-conversion-controls:
   cases:
     - out: "1"
       desc: "A9.1: in-range, unsigned, bool, conditional conversions and representable arithmetic remain unchanged"
+constant-designator-arithmetic:
+  file: "constant-designator-arithmetic.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: designator arithmetic"
+constant-designator-conversions:
+  file: "constant-designator-conversions.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: designator conversions"
+constant-designator-enum:
+  file: "constant-designator-enum.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: designator enum"
+constant-designator-inferred:
+  file: "constant-designator-inferred.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: designator inferred"
+constant-designator-nested:
+  file: "constant-designator-nested.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: designator nested"
+constant-static-alignof:
+  file: "constant-static-alignof.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: static alignof"
+constant-static-arithmetic:
+  file: "constant-static-arithmetic.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: static arithmetic"
+constant-static-casts:
+  file: "constant-static-casts.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: static casts"
+constant-static-scopes:
+  file: "constant-static-scopes.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: static scopes"
+constant-static-sizeof:
+  file: "constant-static-sizeof.c"
+  cases:
+    - out: "1"
+      desc: "A9.2: static sizeof"

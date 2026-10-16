@@ -7,6 +7,7 @@ import {
   isTypeSpecifier,
   isTypeQualifier,
   isTypedIntegerConstant,
+  isStaticAssertDeclaration,
 } from "./../ast/types";
 import {
   Declarator,
@@ -263,7 +264,7 @@ export const fillInForwardDeclarations = (
   t: TranslationUnit,
   env: TypeEnv,
 ): void => {
-  t.value.map((i) =>
+  t.value.filter((i) => !isStaticAssertDeclaration(i)).map((i) =>
     i.specifiers.map((j) => {
       if (!(isTypeSpecifier(j) && isStructSpecifier(j))) return;
       try {

@@ -28,6 +28,7 @@ export type ASTNode =
   | TranslationUnit
   | FunctionDefinition
   | Declaration
+  | StaticAssertDeclaration
   | InitDeclarator
   | CompoundStatement
   | JumpStatementReturn
@@ -48,6 +49,7 @@ export type ASTNode =
   | UnaryExpressionIncr
   | UnaryExpressionDecr
   | UnaryExpressionSizeof
+  | UnaryExpressionAlignof
   | UnaryExpressionNode
   | PostfixExpressionNode
   | ArraySubscriptingOp
@@ -114,7 +116,10 @@ export interface TypedTranslationUnit extends BaseNode {
   value: TypedExternalDeclaration[];
 }
 
-export type ExternalDeclaration = FunctionDefinition | Declaration;
+export type ExternalDeclaration =
+  | FunctionDefinition
+  | Declaration
+  | StaticAssertDeclaration;
 
 export type TypedExternalDeclaration =
   | TypedFunctionDefinition
@@ -146,6 +151,16 @@ export interface Declaration extends BaseNode {
 
 export const isDeclaration = (i: BaseNode): i is Declaration =>
   i.type === "Declaration";
+
+export interface StaticAssertDeclaration extends BaseNode {
+  type: "StaticAssertDeclaration";
+  condition: ConditionalExpression;
+  message: string;
+}
+
+export const isStaticAssertDeclaration = (
+  i: BaseNode,
+): i is StaticAssertDeclaration => i.type === "StaticAssertDeclaration";
 
 export interface TypedDeclaration extends BaseNode {
   type: "Declaration";
@@ -203,7 +218,7 @@ export interface StructSpecifier extends BaseNode {
   type: "StructSpecifier";
   isUnion: boolean;
   identifier: Identifier | null;
-  declarationList: Declaration[];
+  declarationList: (Declaration | StaticAssertDeclaration)[];
 }
 
 export const isStructSpecifier = (i: TypeSpecifier): i is StructSpecifier =>
@@ -277,7 +292,7 @@ export type TypedDesignator = TypedArrayDesignator | TypedStructDesignator;
 
 export interface ArrayDesignator {
   type: "arrayDesignator";
-  idx: IntegerConstant;
+  idx: ConditionalExpression | TypedIntegerConstant;
 }
 
 export const isArrayDesignator = (i: Designator): i is ArrayDesignator =>
@@ -386,7 +401,7 @@ export const isTypedCompoundStatement = (
   i: TypedStatement,
 ): i is TypedCompoundStatement => i.type === "CompoundStatement";
 
-export type BlockItem = Statement | Declaration;
+export type BlockItem = Statement | Declaration | StaticAssertDeclaration;
 
 export type TypedBlockItem =
   | TypedStatement
@@ -518,7 +533,7 @@ export const isTypedIterationStatementDoWhile = (
 
 export interface IterationStatementFor extends BaseNode {
   type: "IterationStatementFor";
-  init: Expression | Declaration | null;
+  init: Expression | Declaration | StaticAssertDeclaration | null;
   controlExpr: Expression | null;
   afterIterExpr: Expression | null;
   body: Statement;
@@ -833,7 +848,8 @@ export type UnaryExpression =
   | UnaryExpressionIncr
   | UnaryExpressionDecr
   | UnaryExpressionNode
-  | UnaryExpressionSizeof;
+  | UnaryExpressionSizeof
+  | UnaryExpressionAlignof;
 
 export type TypedUnaryExpression =
   | TypedPostfixExpression
@@ -872,6 +888,15 @@ export interface UnaryExpressionSizeof extends BaseNode {
   type: "UnaryExpressionSizeof";
   value: UnaryExpression | TypeName;
 }
+
+export interface UnaryExpressionAlignof extends BaseNode {
+  type: "UnaryExpressionAlignof";
+  value: TypeName;
+}
+
+export const isUnaryExpressionAlignof = (
+  i: BaseNode,
+): i is UnaryExpressionAlignof => i.type === "UnaryExpressionAlignof";
 
 export const isTypeName = (i: UnaryExpression | TypeName): i is TypeName =>
   has(i, "specifierQualifierList");

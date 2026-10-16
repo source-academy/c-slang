@@ -1,5 +1,10 @@
 import {
   BaseNode,
+  ArrayDesignator,
+  StaticAssertDeclaration,
+  UnaryExpressionAlignof,
+  isStaticAssertDeclaration,
+  isUnaryExpressionAlignof,
   CastExpressionNode,
   InitializerList,
   IterationStatement,
@@ -191,6 +196,7 @@ import {
 } from "./utils";
 import { getErrorMessage } from "../utils";
 import { TypeCheckingError } from "./errors";
+import { evaluateIntegerConstantExpression } from "./constant-expressions";
 
 function typeCheck<T>(t: BaseNode, f: () => T): T {
   try {
@@ -198,6 +204,8 @@ function typeCheck<T>(t: BaseNode, f: () => T): T {
   } catch (err) {
     console.error(err);
     if (err instanceof TypeCheckingError) throw err;
+    if (err instanceof Error && err.message.startsWith("undefined behaviour:"))
+      throw err;
     throw new TypeCheckingError(t, getErrorMessage(err));
   }
 }
@@ -232,6 +240,30 @@ export const typeTranslationUnit = (t: TranslationUnit): TypedTranslationUnit =>
     }
     return res;
   });
+
+export const foldIntegerConstantExpression = (
+  t: ConditionalExpression,
+  env: TypeEnv,
+): TypedIntegerConstant =>
+  evaluateIntegerConstantExpression(typeExpression(t, env));
+
+export const checkStaticAssertion = (
+  t: StaticAssertDeclaration,
+  env: TypeEnv,
+): void => {
+  if (foldIntegerConstantExpression(t.condition, env).value === BigInt(0))
+    throw new TypeCheckingError(t, "static assertion failed: " + t.message);
+};
+
+const typeArrayDesignatorIndex = (
+  t: ArrayDesignator,
+  env: TypeEnv,
+): TypedIntegerConstant => {
+  // Inferred bounds and initializer checking share the same folded literal.
+  if (t.idx.type !== "IntegerConstant")
+    t.idx = foldIntegerConstantExpression(t.idx, env);
+  return t.idx;
+};
 
 const typeExternalDeclaration = (
   t: ExternalDeclaration,
@@ -285,10 +317,17 @@ const typeFunctionDefinition = (
   });
 
 const typeDeclaration = (
-  t: Declaration,
+  t: Declaration | StaticAssertDeclaration,
   env: TypeEnv,
 ): TypedDeclaration | TypedefDeclaration =>
   typeCheck(t, () => {
+    if (isStaticAssertDeclaration(t)) {
+      checkStaticAssertion(t, env);
+      return {
+        type: "Declaration", start: t.start, end: t.end, src: t.src,
+        declaratorList: [],
+      };
+    }
     const storageClassSpecifiers = t.specifiers.filter(isStorageClassSpecifier);
     const typeSpecifiers = t.specifiers.filter(isTypeSpecifier);
     // this is evaluated for side effects (declaring struct tags)
@@ -354,19 +393,20 @@ const typeInitDeclarator = (
     }
     if (isVoid(typeInfo)) throw "cannot declare a variable of type void";
 
+    // Designators also see the declared name, with inferred arrays still incomplete.
+    env.addIdentifierTypeInfo(identifier, declaredType);
+
     if (isArray(typeInfo) && typeInfo.length === null) {
       if (!t.initializer) throw "array size missing: initializer required";
       typeInfo = array(
         typeInfo.elementType,
-        inferArrayLength(t.initializer, typeInfo.elementType),
+        inferArrayLength(t.initializer, typeInfo.elementType, env),
       );
     }
     if (!isObjectTypeInfo(typeInfo)) throw "cannot declare non object type";
     if (isStructure(typeInfo) && typeInfo.members.length === 0)
       throw "cannot declare an object of incomplete struct or union type";
 
-    // The name is in scope here; an inferred array completes after its initializer.
-    env.addIdentifierTypeInfo(identifier, declaredType);
     let initializer: TypedInitializer | null = null;
     if (t.initializer) {
       // TODO: if we are in file scope, need check that initializer is a constant expression
@@ -402,6 +442,7 @@ const getStringInitializer = (t: Initializer): PrimaryExprString | null => {
 const inferArrayLength = (
   t: Initializer,
   elementType: ObjectTypeInfo,
+  env: TypeEnv,
 ): number => {
   const string = getStringInitializer(t);
   if (string && isCharacterType(elementType)) return string.value.length + 1;
@@ -415,7 +456,10 @@ const inferArrayLength = (
       const first = designation[0];
       if (!isArrayDesignator(first))
         throw "struct designator when current object is not struct";
-      nextIndex = Number(first.idx.value);
+      const idx = typeArrayDesignatorIndex(first, env);
+      nextIndex = Number(idx.value);
+      if (idx.value < BigInt(0) || !Number.isSafeInteger(nextIndex + 1))
+        throw "index for array designator out of bounds";
     }
     length = Math.max(length, ++nextIndex);
   }
@@ -499,7 +543,7 @@ const typeInitializerList = (
           if (isArrayDesignator(d)) {
             if (!isArray(curr))
               throw "array designator when current object is not array";
-            const idx = typeIntegerConstant(d.idx);
+            const idx = typeArrayDesignatorIndex(d, env);
             const idxVal = Number(idx.value);
             if (!(0 <= idxVal && idxVal < curr.length))
               throw "index for array designator out of bounds";
@@ -544,7 +588,8 @@ const typeCompoundStatement = (
 
 const typeBlockItem = (t: BlockItem, env: TypeEnv): TypedBlockItem =>
   typeCheck(t, () => {
-    if (isDeclaration(t)) return typeDeclaration(t, env);
+    if (isDeclaration(t) || isStaticAssertDeclaration(t))
+      return typeDeclaration(t, env);
     return typeStatement(t, env);
   });
 
@@ -671,7 +716,7 @@ const typeIterationStatementFor = (
 
     let init;
     if (t.init === null) init = null;
-    else if (isDeclaration(t.init)) {
+    else if (isDeclaration(t.init) || isStaticAssertDeclaration(t.init)) {
       init = typeDeclaration(t.init, env);
       if (isTypedefDeclaration(init))
         throw "typedef in declaration part of for statement";
@@ -1154,7 +1199,31 @@ const typeUnaryExpression = (
     if (isUnaryExpressionDecr(t)) return typeUnaryExpressionDecr(t, env);
     if (isUnaryExpressionNode(t)) return typeUnaryExpressionNode(t, env);
     if (isUnaryExpressionSizeof(t)) return typeUnaryExpressionSizeof(t, env);
+    if (isUnaryExpressionAlignof(t)) return typeUnaryExpressionAlignof(t, env);
     return typePostfixExpression(t, env);
+  });
+
+const typeUnaryExpressionAlignof = (
+  t: UnaryExpressionAlignof,
+  env: TypeEnv,
+): TypedPrimaryExprConstant =>
+  typeCheck(t, () => {
+    const { type } = constructType(
+      t.value.specifierQualifierList, t.value.abstractDeclarator, env,
+    );
+    if (!isObjectTypeInfo(type) || (isStructure(type) && !type.members.length))
+      throw "_Alignof operator requires complete object type";
+    const typeInfo = unsignedInt();
+    return {
+      ...t,
+      type: "PrimaryExprConstant",
+      typeInfo,
+      lvalue: false,
+      value: {
+        ...t, type: "IntegerConstant", value: BigInt(type.alignment),
+        typeInfo, lvalue: false,
+      },
+    };
   });
 
 const typeUnaryExpressionSizeof = (
