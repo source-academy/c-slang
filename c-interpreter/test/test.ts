@@ -22,6 +22,7 @@ import "./preprocessor-integration";
 import "./sizeof-resolution";
 import "./integer-conversions";
 import "./constant-expressions";
+import "./constant-enum-case";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";

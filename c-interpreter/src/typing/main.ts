@@ -182,6 +182,8 @@ import {
   Structure,
   unsignedInt,
   Type,
+  IntegerType,
+  isSigned,
 } from "./types";
 import {
   checkSimpleAssignmentConstraint,
@@ -197,6 +199,7 @@ import {
 import { getErrorMessage } from "../utils";
 import { TypeCheckingError } from "./errors";
 import { evaluateIntegerConstantExpression } from "./constant-expressions";
+import { TRUNCATE_TO_TYPE, bytesToBigint } from "./representation";
 
 function typeCheck<T>(t: BaseNode, f: () => T): T {
   try {
@@ -763,19 +766,27 @@ const typeSelectionStatement = (
 const typeSwitchBodyItem = (
   t: BlockItem,
   env: TypeEnv,
+  controlType: IntegerType,
   seenValues: Set<bigint>,
   defaultState: { count: number },
 ): TypedBlockItem => {
   if (isLabeledStatementCase(t)) {
-    if (seenValues.has(t.value)) throw "duplicate case value " + t.value;
-    seenValues.add(t.value);
+    const folded = foldIntegerConstantExpression(t.value, env);
+    // C17 6.8.4.2: compare cases after conversion to the promoted control type.
+    const value = bytesToBigint(
+      TRUNCATE_TO_TYPE[controlType.type](folded.value, "little"),
+      isSigned(controlType), "little",
+    );
+    if (seenValues.has(value)) throw "duplicate case value " + value;
+    seenValues.add(value);
     const body = typeSwitchBodyItem(
       t.body,
       env,
+      controlType,
       seenValues,
       defaultState,
     ) as TypedStatement;
-    return { ...t, body };
+    return { ...t, value, body };
   }
   if (isLabeledStatementDefault(t)) {
     defaultState.count++;
@@ -784,6 +795,7 @@ const typeSwitchBodyItem = (
     const body = typeSwitchBodyItem(
       t.body,
       env,
+      controlType,
       seenValues,
       defaultState,
     ) as TypedStatement;
@@ -810,8 +822,9 @@ const typeSelectionStatementSwitch = (
     env.enterSwitchBody();
     const seenValues = new Set<bigint>();
     const defaultState = { count: 0 };
+    const controlType = applyIntegerPromotions(controlExpr.typeInfo);
     const value = t.body.value.map((item) =>
-      typeSwitchBodyItem(item, env, seenValues, defaultState),
+      typeSwitchBodyItem(item, env, controlType, seenValues, defaultState),
     );
     env.exitSwitchBody();
     env.exitBlock();

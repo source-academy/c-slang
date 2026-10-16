@@ -1190,3 +1190,43 @@ constant-static-sizeof:
   cases:
     - out: "1"
       desc: "A9.2: static sizeof"
+constant-case-arithmetic:
+  file: "constant-case-arithmetic.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: case arithmetic"
+constant-case-conversions:
+  file: "constant-case-conversions.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: case conversions"
+constant-case-fallthrough:
+  file: "constant-case-fallthrough.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: case fallthrough"
+constant-case-sizeof:
+  file: "constant-case-sizeof.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: case sizeof"
+constant-enum-arithmetic:
+  file: "constant-enum-arithmetic.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: enum arithmetic"
+constant-enum-casts:
+  file: "constant-enum-casts.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: enum casts"
+constant-enum-scope:
+  file: "constant-enum-scope.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: enum scope"
+constant-enum-sizeof:
+  file: "constant-enum-sizeof.c"
+  cases:
+    - out: "1"
+      desc: "A9.2 follow-up: enum sizeof"

@@ -227,7 +227,10 @@ export const isStructSpecifier = (i: TypeSpecifier): i is StructSpecifier =>
 export interface EnumSpecifier extends BaseNode {
   type: "EnumSpecifier";
   identifier: Identifier | null;
-  enumeratorList: { name: Identifier; value: bigint | null }[] | null;
+  enumeratorList: {
+    name: Identifier;
+    value: ConditionalExpression | bigint | null;
+  }[] | null;
 }
 
 export const isEnumSpecifier = (i: TypeSpecifier): i is EnumSpecifier =>
@@ -628,7 +631,7 @@ export const isTypedLabeledStatement = (
 
 export interface LabeledStatementCase extends BaseNode {
   type: "LabeledStatementCase";
-  value: bigint;
+  value: ConditionalExpression;
   body: Statement;
 }
 

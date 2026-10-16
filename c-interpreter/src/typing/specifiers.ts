@@ -54,7 +54,7 @@ import {
   voidType,
 } from "./types";
 import { constructType } from "./utils";
-import { checkStaticAssertion } from "./main";
+import { checkStaticAssertion, foldIntegerConstantExpression } from "./main";
 
 export const TYPE_SPECIFIER_TO_TYPE_INFO: Record<string, ArithmeticType | Void> = {
   void: voidType(),
@@ -208,6 +208,8 @@ export const constructEnumFromSpecifier = (
 
   let value = BigInt(-1);
   for (const enumerator of s.enumeratorList) {
+    if (enumerator.value !== null && typeof enumerator.value !== "bigint")
+      enumerator.value = foldIntegerConstantExpression(enumerator.value, env).value;
     value = enumerator.value ?? value + BigInt(1);
     if (value < INT_MIN || value > INT_MAX)
       throw "enumerator " + enumerator.name + " out of int range";

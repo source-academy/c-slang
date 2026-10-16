@@ -1059,8 +1059,7 @@ EnumeratorList
 
 // (6.7.2.2) enumerator
 Enumerator
-  = a:EnumerationConstant b:(EQ sign:MINUS? value:IntegerConstant _
-      { return (sign ? -1n : 1n) * value.value; })?
+  = a:EnumerationConstant b:(EQ value:ConstantExpression { return value; })?
     {
       bindName(a.value, "ordinary");
       return { name: a.value, value: b };
@@ -1298,18 +1297,15 @@ Statement
   / JumpStatement
 
 // (6.8.1) labeled-statement
-// case/default's constant is a bare (optionally negated) integer literal,
-// not a full constant-expression - ConstantExpression itself is entirely
-// unimplemented (see below), and this mirrors the same narrowing already
-// used for array declarator sizes a few hundred lines up
+// Case values are folded during type checking, before runtime dispatch.
 LabeledStatement
   = Identifier COLON Statement
     { throwNotImplemented("goto"); }
-  / CASE a:MINUS? b:IntegerConstant COLON c:Statement
+  / CASE a:ConstantExpression COLON b:Statement
     {
       return makeNode("LabeledStatementCase", {
-        value: a ? -b.value : b.value,
-        body: c
+        value: a,
+        body: b
       });
     }
   / DEFAULT COLON a:Statement
