@@ -681,14 +681,14 @@ bitwise-shift-unsigned-overflow:
   cases:
     - in: "42"
       out: "1"
-      desc: "A2 (roadmap): << on an unsigned int that shifts bits out past the type's width is well-defined modular reduction, not UB - distinct from bitwise-shift-narrow-type.c, which covers the signed (UB) case"
+      desc: "A2 (roadmap): << on an unsigned int with a valid shift count uses modular reduction when bits leave the type's width"
 bitwise-shift-narrow-type:
   file: "bitwise-shift-narrow-type.c"
   cases:
     - in: "42"
       out: "1"
       fail: true
-      desc: "A2 (roadmap): << keeps the type-checker's (unpromoted) result type - c << 10 on a char computes 1024 then narrows back to char width, which correctly throws as UB (signed overflow), same as any other signed narrowing conversion in this interpreter"
+      desc: "Known shift-promotion gap (recorded during A9.1): c << 10 incorrectly retains char type and rejects the valid promoted int result; unchanged by the conversion-only fix"
 bitwise-not:
   file: "bitwise-not.c"
   cases:
@@ -700,7 +700,7 @@ bitwise-not-unsigned:
   cases:
     - in: "42"
       out: "1"
-      desc: "A2 (roadmap): unary ~ on unsigned int 0 sets every bit (~0u == UINT_MAX exactly); checked via an unsigned == unsigned comparison, not by returning UINT_MAX itself, since main's hardcoded int return type would need a separate (and separately out-of-scope) unsigned-to-signed narrowing conversion"
+      desc: "A2 (roadmap): unary ~ on unsigned int 0 sets every bit (~0u == UINT_MAX exactly); returning it from main is covered separately by integer-conversion-return.c (A9.1)"
 unary-minus-promotion:
   file: "unary-minus-promotion.c"
   cases:
@@ -1105,3 +1105,38 @@ missing-return-non-void:
       out: "1"
       fail: true
       desc: "a non-void, non-main function falling off the end without returning a value is still rejected"
+integer-conversion-assignment:
+  file: "integer-conversion-assignment.c"
+  cases:
+    - out: "1"
+      desc: "A9.1: initialization and assignment truncate positive and negative integers to signed targets"
+integer-conversion-cast:
+  file: "integer-conversion-cast.c"
+  cases:
+    - out: "1"
+      desc: "A9.1: explicit casts truncate to every signed integer width, including negative sources and signed minima"
+integer-conversion-compound:
+  file: "integer-conversion-compound.c"
+  cases:
+    - out: "1"
+      desc: "A9.1: compound assignment truncates the stored value and expression result after arithmetic"
+integer-conversion-updates:
+  file: "integer-conversion-updates.c"
+  cases:
+    - out: "1"
+      desc: "A9.1: narrow signed increment/decrement truncate on store-back and retain prefix/postfix results"
+integer-conversion-call:
+  file: "integer-conversion-call.c"
+  cases:
+    - out: "1"
+      desc: "A9.1: argument and return conversions truncate for every signed integer type"
+integer-conversion-return:
+  file: "integer-conversion-return.c"
+  cases:
+    - out: "-1"
+      desc: "A9.1: returning ~0u from main converts to int without an undefined-behaviour error"
+integer-conversion-controls:
+  file: "integer-conversion-controls.c"
+  cases:
+    - out: "1"
+      desc: "A9.1: in-range, unsigned, bool, conditional conversions and representable arithmetic remain unchanged"

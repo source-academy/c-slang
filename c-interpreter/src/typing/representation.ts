@@ -133,6 +133,26 @@ export const BIGINT_TO_BYTES: Record<
   },
 };
 
+// C17 6.3.1.3p3: signed integer conversions choose two's-complement truncation via unchecked bigintToBytes().
+// Arithmetic results still use the checked BIGINT_TO_BYTES encoders.
+export const TRUNCATE_TO_TYPE: Record<
+  IntegerType["type"],
+  (i: bigint, e: Endianness) => number[]
+> = {
+  [Type._Bool]: BIGINT_TO_BYTES[Type._Bool],
+  [Type.Char]: (i, e = "little") => bigintToBytes(i, CHAR_SIZE, e),
+  [Type.SignedChar]: (i, e = "little") => bigintToBytes(i, SCHAR_SIZE, e),
+  [Type.UnsignedChar]: BIGINT_TO_BYTES[Type.UnsignedChar],
+  [Type.ShortInt]: (i, e = "little") => bigintToBytes(i, SHRT_SIZE, e),
+  [Type.UnsignedShortInt]: BIGINT_TO_BYTES[Type.UnsignedShortInt],
+  [Type.Int]: (i, e = "little") => bigintToBytes(i, INT_SIZE, e),
+  [Type.UnsignedInt]: BIGINT_TO_BYTES[Type.UnsignedInt],
+  [Type.LongInt]: (i, e = "little") => bigintToBytes(i, LONG_SIZE, e),
+  [Type.UnsignedLongInt]: BIGINT_TO_BYTES[Type.UnsignedLongInt],
+  [Type.LongLongInt]: (i, e = "little") => bigintToBytes(i, LLONG_SIZE, e),
+  [Type.UnsignedLongLongInt]: BIGINT_TO_BYTES[Type.UnsignedLongLongInt],
+};
+
 // Round integers directly to float32 to avoid double rounding through Number.
 export const bigintToFloat = (value: bigint): number => {
   const magnitude = value < BigInt(0) ? -value : value;
@@ -212,5 +232,5 @@ export const convertArithmeticBytes = (
       targetType.type === Type.Float ? bigintToFloat(value) : Number(value),
       e,
     );
-  return BIGINT_TO_BYTES[targetType.type](value, e);
+  return TRUNCATE_TO_TYPE[targetType.type](value, e);
 };
