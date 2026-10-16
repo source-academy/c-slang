@@ -365,12 +365,20 @@ const typeInitDeclarator = (
     if (isStructure(typeInfo) && typeInfo.members.length === 0)
       throw "cannot declare an object of incomplete struct or union type";
 
+    // The name is in scope here; an inferred array completes after its initializer.
+    env.addIdentifierTypeInfo(identifier, declaredType);
     let initializer: TypedInitializer | null = null;
     if (t.initializer) {
       // TODO: if we are in file scope, need check that initializer is a constant expression
       // see (6.6) Constant expressions and (6.7.8) Initialization
       initializer = typeInitializer(t.initializer, env, typeInfo);
     }
+    if (
+      isArray(declaredType) &&
+      declaredType.length === null &&
+      isArray(typeInfo)
+    )
+      env.completeArrayType(identifier, typeInfo);
 
     const res = {
       ...t,
@@ -378,7 +386,6 @@ const typeInitDeclarator = (
       typeInfo,
       initializer,
     };
-    env.addIdentifierTypeInfo(identifier, typeInfo);
     return res;
   });
 

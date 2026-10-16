@@ -1,4 +1,114 @@
 ---
+sizeof-identifiers:
+  file: "sizeof-identifiers.c"
+  cases:
+    - out: "1"
+      desc: "scalar and pointer identifiers"
+sizeof-subscripts:
+  file: "sizeof-subscripts.c"
+  cases:
+    - out: "1"
+      desc: "array identifiers and subscript expressions"
+sizeof-calls-enumerators:
+  file: "sizeof-calls-enumerators.c"
+  cases:
+    - out: "1"
+      desc: "function calls and enumerators"
+sizeof-unevaluated:
+  file: "sizeof-unevaluated.c"
+  cases:
+    - out: "1"
+      desc: "unevaluated operands and array parameters"
+sizeof-types-casts:
+  file: "sizeof-types-casts.c"
+  cases:
+    - out: "1"
+      desc: "type names and casts"
+sizeof-typedef-declarator-order:
+  file: "sizeof-typedef-declarator-order.c"
+  cases:
+    - out: "1"
+      desc: "typedef visible in the next declarator"
+sizeof-separate-namespaces:
+  file: "sizeof-separate-namespaces.c"
+  cases:
+    - out: "1"
+      desc: "tags and members do not hide typedefs"
+sizeof-prototype-scope:
+  file: "sizeof-prototype-scope.c"
+  cases:
+    - out: "1"
+      desc: "prototype parameter scope does not escape"
+sizeof-nested-prototype-scope:
+  file: "sizeof-nested-prototype-scope.c"
+  cases:
+    - out: "1"
+      desc: "nested prototype scope does not hide a later parameter type"
+sizeof-local-shadow:
+  file: "sizeof-local-shadow.c"
+  cases:
+    - out: "1"
+      desc: "local variable hides typedef"
+sizeof-parameter-shadow:
+  file: "sizeof-parameter-shadow.c"
+  cases:
+    - out: "1"
+      desc: "parameter hides typedef"
+sizeof-enumerator-shadow:
+  file: "sizeof-enumerator-shadow.c"
+  cases:
+    - out: "1"
+      desc: "enumerator hides typedef"
+sizeof-for-scope:
+  file: "sizeof-for-scope.c"
+  cases:
+    - out: "1"
+      desc: "for scope restores typedef"
+sizeof-block-scope:
+  file: "sizeof-block-scope.c"
+  cases:
+    - out: "1"
+      desc: "block scope restores typedef"
+sizeof-restore-typedef:
+  file: "sizeof-restore-typedef.c"
+  cases:
+    - out: "1"
+      desc: "leaving an ordinary binding restores typedef declarations"
+sizeof-own-initializers:
+  file: "sizeof-own-initializers.c"
+  cases:
+    - out: "1"
+      desc: "own initializer and consecutive declarators"
+sizeof-initializer-shadow:
+  file: "sizeof-initializer-shadow.c"
+  cases:
+    - out: "1"
+      desc: "own initializer hides outer typedef"
+sizeof-inferred-arrays:
+  file: "sizeof-inferred-arrays.c"
+  cases:
+    - out: "1"
+      desc: "inferred arrays complete after initialization"
+sizeof-declaration-rollback:
+  file: "sizeof-declaration-rollback.c"
+  cases:
+    - out: "1"
+      desc: "speculative function definition restores declaration state"
+sizeof-assignment-rollback:
+  file: "sizeof-assignment-rollback.c"
+  cases:
+    - out: "1"
+      desc: "speculative assignment restores enum bindings"
+sizeof-cast-rollback:
+  file: "sizeof-cast-rollback.c"
+  cases:
+    - out: "1"
+      desc: "speculative compound literal restores enum bindings before a cast"
+sizeof-fresh-identifier:
+  file: "sizeof-fresh-identifier.c"
+  cases:
+    - out: "1"
+      desc: "a fresh parse resolves an ordinary identifier named Lost"
 member-address-matrix:
   file: "member-address-matrix.c"
   cases:

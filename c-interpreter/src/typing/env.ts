@@ -2,10 +2,12 @@ import { EnumSpecifier, Identifier, StructSpecifier } from "../ast/types";
 import { BUILTIN_FUNCTIONS } from "../builtins";
 import {
   AggregateType,
+  Array,
   FunctionType,
   Structure,
   TypeInfo,
   isAggregateType,
+  isArray,
   isFunction,
   isInt,
   isStructure,
@@ -188,6 +190,19 @@ export class TypeEnv {
     if (id in currBlock) throw "redeclaration of tag " + tag;
     if (isAggregateType(t)) this.aggTypes.push(t);
     currBlock[id] = [t, false, true];
+  }
+
+  completeArrayType(id: Identifier, type: Array): void {
+    const binding = this.env[this.env.length - 1][id];
+    if (
+      !binding ||
+      binding[1] ||
+      !isArray(binding[0]) ||
+      binding[0].length !== null
+    )
+      throw "cannot complete array type of " + id;
+    binding[0] = type;
+    this.aggTypes.push(type);
   }
 
   // handles both prototypes (isDefinition: false) and definitions (true);

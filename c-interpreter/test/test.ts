@@ -19,6 +19,7 @@ import "./preprocessor-include";
 import "./preprocessor-conditionals";
 import "./preprocessor-predefined";
 import "./preprocessor-integration";
+import "./sizeof-resolution";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";

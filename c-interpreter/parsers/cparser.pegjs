@@ -36,32 +36,54 @@
     error("not implemented" + (details ? ": " + details : ""));
   }
 
-  const typedefNames = [[]];
+  let scopes = [new Map()];
+  let declarationKinds = [];
+  const parameterScopes = new WeakMap();
 
-  function enterBlock() {
-    typedefNames.push([]);
+  function enterBlock(bindings = new Map()) {
+    scopes.push(new Map(bindings));
   }
 
   function exitBlock() {
-    typedefNames.pop();
+    return scopes.pop();
   }
 
-  function addTypedefName(name) {
-    typedefNames[typedefNames.length - 1].push(name);
+  function bindName(name, kind) {
+    scopes[scopes.length - 1].set(name, kind);
+  }
+
+  function bindDeclarator(parts, kind) {
+    const identifier = parts.find(part => part.partType === "identifier");
+    if (identifier) bindName(identifier.name, kind);
   }
 
   function isTypedefName(name) {
-    for (let i = typedefNames.length - 1; i >= 0; i--) {
-      for (const j of typedefNames[i]) {
-        if (name === j) return true;
-      }
+    for (let i = scopes.length - 1; i >= 0; i--) {
+      if (scopes[i].has(name)) return scopes[i].get(name) === "typedef";
     }
     return false;
+  }
+
+  // PEG rewinds input, but semantic actions need their own rollback.
+  function saveState() {
+    return {
+      scopes: scopes.map(scope => new Map(scope)),
+      kinds: declarationKinds.slice()
+    };
+  }
+
+  function restoreState(saved) {
+    scopes = saved.scopes;
+    declarationKinds = saved.kinds;
   }
 }
 
 start
   = TranslationUnit 
+
+// Rollback alternatives include an unreachable dot for PEG's progress analysis.
+ParseState
+  = "" { return saveState(); }
 
 // ==========
 // A.1.1 Lexical elements
@@ -241,11 +263,11 @@ HexQuad
 // ==========
 
 // (6.4.4) constant
+// Enumerator references use PrimaryExpression's identifier lookup.
 Constant
   = a:(
         FloatingConstant
       / IntegerConstant
-      / EnumerationConstant
       / CharacterConstant
     )
     _
@@ -599,7 +621,7 @@ PNDPND  = a:("##" / "%:%:")        _ { return a; }
 
 // (6.5.1) primary-expression
 PrimaryExpression
-  = a:Identifier
+  = a:Identifier &{ return !isTypedefName(a); }
     { return makeNode('PrimaryExprIdentifier', a); }
   / a:Constant
     { return makeNode('PrimaryExprConstant', a); }
@@ -632,16 +654,7 @@ GenericAssociation
 PostfixExpression
   = a:(
         PrimaryExpression
-      / LPAR a:TypeName RPAR
-        LCUR b:InitializerList COMMA? RCUR
-        {
-          throwNotImplemented("compound literals");
-          // 6.5.2.5 Compound Literals
-          return makeNode("CompoundLiteral", {
-            type: a,
-            initList: b
-          });
-        }
+      / CompoundLiteral
     )
     b:(
         LBRC x:Expression RBRC
@@ -664,6 +677,13 @@ PostfixExpression
         ops: b
       });
     }
+
+CompoundLiteral
+  = saved:ParseState result:(
+      LPAR a:TypeName RPAR LCUR b:InitializerList COMMA? RCUR
+      { throwNotImplemented("compound literals"); }
+      / &{ restoreState(saved); return false; } .
+    ) { return result; }
 
 // (6.5.2) argument-expression-list
 ArgumentExpressionList
@@ -725,8 +745,6 @@ CastExpression
 // (6.5.5) multiplicative-expression
 MultiplicativeExpression
   = a:CastExpression
-    // parsing of ambiguous "A * B"
-    &{ return !(a.type === "PrimaryExprIdentifier" && isTypedefName(a.value)); }
     b:((STAR / DIV / MOD) CastExpression)*
     { return makeBinaryExpNode(a, b); }
 
@@ -802,7 +820,12 @@ ConditionalExpression
 
 // (6.5.16) assignment-expression
 AssignmentExpression
-  = a:UnaryExpression b:AssignmentOperator c:AssignmentExpression
+  = AssignmentOperation
+  / ConditionalExpression
+
+AssignmentOperation
+  = saved:ParseState result:(
+    a:UnaryExpression b:AssignmentOperator c:AssignmentExpression
     {
       return makeNode("AssignmentExpression", {
         left: a,
@@ -810,7 +833,8 @@ AssignmentExpression
         right: c
       });
     }
-  / ConditionalExpression
+    / &{ restoreState(saved); return false; } .
+  ) { return result; }
 
 // (6.5.16) assignment-operator
 AssignmentOperator
@@ -850,13 +874,15 @@ ConstantExpression
 
 // (6.7) declaration
 Declaration
-  = a:DeclarationSpecifiers b:InitDeclaratorList? SEMI
+  = saved:ParseState result:(
+    a:DeclarationSpecifiers
+    &{
+      declarationKinds.push(a.includes("typedef") ? "typedef" : "ordinary");
+      return true;
+    }
+    b:InitDeclaratorList? SEMI
     {
-      if (a.includes("typedef")) {
-        b.forEach(i => i.declarator.forEach(j => {
-          if (j.partType === "identifier") addTypedefName(j.name);
-        }))
-      }
+      declarationKinds.pop();
       return makeNode("Declaration", {
         specifiers: a,
         declaratorList: b || []
@@ -864,6 +890,8 @@ Declaration
     }
   / a:StaticAssertDeclaration
     { throwNotImplemented("StaticAssertDeclaration"); }
+  / &{ restoreState(saved); return false; } .
+  ) { return result; }
 
 // (6.7) declaration-specifiers
 // Note the change from the standard to handle the TypedefName case
@@ -902,6 +930,7 @@ InitDeclaratorList
 // (6.7) init-declarator
 InitDeclarator
   = a:Declarator
+    &{ bindDeclarator(a, declarationKinds[declarationKinds.length - 1]); return true; }
     b:(
       EQ c:Initializer
       { return c; }
@@ -1035,7 +1064,10 @@ EnumeratorList
 Enumerator
   = a:EnumerationConstant b:(EQ sign:MINUS? value:IntegerConstant _
       { return (sign ? -1n : 1n) * value.value; })?
-    { return { name: a.value, value: b }; }
+    {
+      bindName(a.value, "ordinary");
+      return { name: a.value, value: b };
+    }
 
 // (6.7.2.4) atomic-type-specifier
 AtomicTypeSpecifier
@@ -1099,19 +1131,24 @@ DirectDeclarator
         {
           throwNotImplemented("variable length array type of unspecified size");
         }
-      / LPAR c:ParameterTypeList RPAR
-        {
-          return { partType: "function", argTypes: c };
-        }
-      / LPAR c:IdentifierList? RPAR
-        {
-          if (c) throwNotImplemented("K & R C Style Function Declarations");
-          return { partType: "function", argTypes: [] };
-        }
+      / FunctionParameters
     )*
     {
       return a.concat(b);
     }
+
+FunctionParameters
+  = saved:ParseState result:(
+      LPAR &{ enterBlock(); return true; } c:ParameterTypeList? RPAR
+      {
+        const argTypes = c || [];
+        parameterScopes.set(argTypes, exitBlock());
+        return { partType: "function", argTypes };
+      }
+      / &{ restoreState(saved); return false; } .
+    ) { return result; }
+  / LPAR IdentifierList RPAR
+    { throwNotImplemented("K & R C Style Function Declarations"); }
 
 // (6.7.6) pointer
 Pointer
@@ -1146,6 +1183,7 @@ ParameterDeclaration
   = a:DeclarationSpecifiers
     b:(Declarator / AbstractDeclarator)?
     {
+      bindDeclarator(b || [], "ordinary");
       return {
         specifiers: a,
         declarator: b || []
@@ -1199,8 +1237,7 @@ DirectAbstractDeclarator
         { throwNotImplemented("ISO/IEC 9899:TC3 6.7.5.3.7"); }
       / LBRC STAR RBRC
         { throwNotImplemented("variable length array type of unspecified size"); }
-      / LPAR c:ParameterTypeList? RPAR
-        { return { partType: "function", argTypes: c || [] }; }
+      / FunctionParameters
     )+
     {
       if (!a) return b;
@@ -1209,7 +1246,7 @@ DirectAbstractDeclarator
 
 // (6.7.8) typedef-name
 TypedefName
-  = Identifier
+  = a:Identifier &{ return isTypedefName(a); } { return a; }
 
 // (6.7.9) initializer
 Initializer
@@ -1283,11 +1320,18 @@ LabeledStatement
 
 // (6.8.2) compound-statement
 CompoundStatement
-  = LCUR &{ enterBlock(); return true; } a:BlockItemList? RCUR
+  = saved:ParseState result:(
+    &{ enterBlock(); return true; } a:CompoundStatementBody
     { 
       exitBlock();
-      return makeNode("CompoundStatement", a || []);
+      return a;
     }
+    / &{ restoreState(saved); return false; } .
+  ) { return result; }
+
+CompoundStatementBody
+  = LCUR a:BlockItemList? RCUR
+    { return makeNode("CompoundStatement", a || []); }
 
 // (6.8.2) block-item-list
 BlockItemList
@@ -1345,9 +1389,14 @@ IterationStatement
         body: a
       });
     }
-  / FOR LPAR a:Expression? SEMI b:Expression?
+  / ForStatement
+
+ForStatement
+  = saved:ParseState result:(
+    FOR LPAR &{ enterBlock(); return true; } a:ForInitializer b:Expression?
     SEMI c:Expression? RPAR d:Statement
     {
+      exitBlock();
       return makeNode("IterationStatementFor", {
         init: a,
         controlExpr: b,
@@ -1355,16 +1404,12 @@ IterationStatement
         body: d
       });
     }
-  / FOR LPAR a:Declaration b:Expression?
-    SEMI c:Expression? RPAR d:Statement
-    {
-      return makeNode("IterationStatementFor", {
-        init: a,
-        controlExpr: b,
-        afterIterExpr: c,
-        body: d
-      });
-    }
+    / &{ restoreState(saved); return false; } .
+  ) { return result; }
+
+ForInitializer
+  = Declaration
+  / a:Expression? SEMI { return a; }
 
 // (6.8.6) jump-statement
 JumpStatement
@@ -1393,18 +1438,28 @@ ExternalDeclaration
 
 // (6.9.1) function-definition
 FunctionDefinition
-  = a:DeclarationSpecifiers
+  = saved:ParseState result:(
+    a:DeclarationSpecifiers
     b:Declarator
+    &{
+      bindDeclarator(b, "ordinary");
+      const functionPart = b.find(part => part.partType === "function");
+      enterBlock(functionPart && parameterScopes.get(functionPart.argTypes));
+      return true;
+    }
     c:DeclarationList?
-    d:CompoundStatement
+    d:CompoundStatementBody
     {
       if (c) throwNotImplemented("K & R C Style Function Declarations");
+      exitBlock();
       return makeNode("FunctionDefinition", {
         specifiers: a,
         declarator: b,
         body: d
       });
     }
+    / &{ restoreState(saved); return false; } .
+  ) { return result; }
 
 // (6.9.1) declaration-list
 DeclarationList
