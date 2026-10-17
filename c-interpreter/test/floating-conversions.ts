@@ -1,6 +1,7 @@
 import { assert } from "chai";
 import { describe, it } from "mocha";
 import cviz from "../src/index";
+import { WriteSegmentationFault } from "../src/memory/errors";
 import { BIGINT_TO_BYTES, bytesToBigint } from "../src/typing/representation";
 import * as types from "../src/typing/types";
 
@@ -85,6 +86,7 @@ describe("floating conversion rejection reasons", () => {
         run(
           "int main() { const float x = 1.5; float *p = (float *)&x; *p = 2; return 0; }",
         ),
+      WriteSegmentationFault,
       /segmentation fault \(tried to write to/,
     );
   });

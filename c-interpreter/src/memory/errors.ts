@@ -3,7 +3,7 @@ import { decimalAddressToHex } from "../utils";
 export class MemoryError extends Error {
   constructor(msg: string) {
     super(msg);
-    Object.setPrototypeOf(this, MemoryError.prototype);
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
