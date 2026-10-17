@@ -1230,3 +1230,18 @@ constant-enum-sizeof:
   cases:
     - out: "1"
       desc: "A9.2 follow-up: enum sizeof"
+predefined-date-time:
+  file: "predefined-date-time.c"
+  cases:
+    - out: "0"
+      desc: "date/time macros expand consistently and concatenate without directives"
+predefined-location:
+  file: "predefined-location.c"
+  cases:
+    - out: "0"
+      desc: "line/file macros expand without directives and preserve original line numbers"
+predefined-standard:
+  file: "predefined-standard.c"
+  cases:
+    - out: "0"
+      desc: "standard macros expand without directives and preserve the version's long type"

@@ -19,6 +19,7 @@ import "./preprocessor-include";
 import "./preprocessor-conditionals";
 import "./preprocessor-predefined";
 import "./preprocessor-integration";
+import "./predefined-rendering";
 import "./sizeof-resolution";
 import "./integer-conversions";
 import "./constant-expressions";

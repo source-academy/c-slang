@@ -64,7 +64,13 @@ const needsSeparator = (prev: PPToken, cur: PPToken): boolean =>
 // AST carrying *exact* original-source offsets whenever nothing actually needed
 // preprocessing - not just a plausible reconstruction of them.
 const isUnchanged = (tokens: readonly PPToken[], rawTokens: readonly PPToken[]): boolean =>
-  tokens.length === rawTokens.length && tokens.every((t, i) => t.start === rawTokens[i].start);
+  tokens.length === rawTokens.length &&
+  tokens.every((t, i) =>
+    // Predefined macro replacements retain their original source offsets.
+    t.start === rawTokens[i].start &&
+    t.kind === rawTokens[i].kind &&
+    t.text === rawTokens[i].text,
+  );
 
 /**
  * Turns a finished token stream back into readable text a student could be shown
