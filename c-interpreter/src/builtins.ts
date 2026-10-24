@@ -1,4 +1,5 @@
 import { Identifier } from "./ast/types";
+import { STRING_FUNCTIONS } from "./builtins/string";
 import { NO_EFFECTIVE_TYPE } from "./interpreter/effectiveTypeTable";
 import { TemporaryObject, stringify } from "./interpreter/object";
 import { Runtime } from "./interpreter/runtime";
@@ -25,6 +26,7 @@ export interface BuiltinFunction {
 }
 
 export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
+  ...STRING_FUNCTIONS,
   malloc: {
     visibility: "ambient",
     type: functionType(pointer(voidType()), [

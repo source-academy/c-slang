@@ -1273,3 +1273,39 @@ b1-string-effective-types:
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}
+
+b1-string-strlen-basics:
+  file: b1-string-strlen-basics.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strlen-boundaries:
+  file: b1-string-strlen-boundaries.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strlen-storage:
+  file: b1-string-strlen-storage.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strcmp-order:
+  file: b1-string-strcmp-order.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strcmp-prefix:
+  file: b1-string-strcmp-prefix.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strcmp-bytes:
+  file: b1-string-strcmp-bytes.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
