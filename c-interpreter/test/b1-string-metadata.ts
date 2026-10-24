@@ -5,9 +5,8 @@ import cviz from "../src/index";
 import { Endianness } from "../src/config";
 import { bytesToBigint } from "../src/typing/representation";
 import { NO_EFFECTIVE_TYPE } from "../src/interpreter/effectiveTypeTable";
-import { Type, pointer, voidType } from "../src/typing/types";
-import { RuntimeView } from "../src/interpreter/runtime";
-import { Runtime } from "../src/interpreter/runtime";
+import { Type, isStructure, pointer, voidType } from "../src/typing/types";
+import { Runtime, RuntimeView } from "../src/interpreter/runtime";
 
 const pointerValue = (rt: Runtime, name: string): number => Number(bytesToBigint(
   rt.memory.getBytes(rt.symbolTable.getAddress(name), pointer(voidType()).size), false, rt.config.endianness,
@@ -43,6 +42,38 @@ describe("b1-string storage metadata", () => {
       const base = pointerValue(rt, "unknown");
       assert.deepEqual(rt.initTable.getMask(base, 8), [false, true, false, false, false, false, false, false]);
       assert.deepEqual(rt.initTable.getMask(pointerValue(rt, "filled"), 8), [false, false, true, true, true, false, false, false]);
+      assert.deepEqual(rt.initTable.getMask(pointerValue(rt, "copied"), 8), [true, true, false, true, false, false, true, true]);
+      assert.deepEqual(rt.initTable.getMask(pointerValue(rt, "stringCopy"), 8), [true, true, true, false, false, false, false, false]);
+    });
+    it(`copies member flags without initializing padding (${endianness})`, () => {
+      const rt = runFixture("initialization", endianness);
+      const base = rt.symbolTable.getAddress("padded");
+      const type = rt.effectiveTypeTable.get(base);
+      if (type === NO_EFFECTIVE_TYPE || !isStructure(type)) throw new Error("expected declared struct");
+      const expected = Array<boolean>(type.size).fill(false);
+      for (const member of type.members)
+        expected.fill(true, member.relativeAddress, member.relativeAddress + member.type.size);
+      assert.include(expected, false, "fixture must exercise padding");
+      assert.deepEqual(rt.initTable.getMask(base, type.size), expected);
+      assert.deepEqual(rt.initTable.getMask(pointerValue(rt, "paddingCopy"), type.size), expected);
+    });
+    it(`leaves source bytes and masks unchanged during copies (${endianness})`, () => {
+      const rt = cviz.run(readFileSync("test/b1-string-initialization.c", "utf8"), { endianness });
+      let observed = false;
+      while (rt.exitCode === undefined) {
+        const scope = rt.symbolTable.getBlockScopes().find(s => "source" in s);
+        const range = scope && rt.memory.storage.find(BigInt(scope.source), BigInt(1));
+        const before = range && rt.initTable.getMask(range.base, range.size);
+        const bytes = range && rt.memory.getBytes(range.base, range.size);
+        rt.next();
+        // Once the member stores finish, later copy calls only read this object.
+        if (range && before?.[0] && before[range.size - 1] && rt.memory.storage.find(BigInt(range.base), BigInt(1))) {
+          assert.deepEqual(rt.initTable.getMask(range.base, range.size), before);
+          assert.deepEqual(rt.memory.getBytes(range.base, range.size), bytes);
+          observed = true;
+        }
+      }
+      assert.isTrue(observed);
     });
     it(`retires automatic ranges across returns and loop exits (${endianness})`, () => {
       const rt = runFixture("storage", endianness);
@@ -62,6 +93,16 @@ describe("b1-string storage metadata", () => {
       const snapshot = rt.memory.storage.getRanges();
       snapshot[0].size = 0;
       assert.isAbove(rt.memory.storage.getRanges()[0].size, 0);
+      assert.deepEqual(rt.effectiveTypeTable.getTypes(pointerValue(rt, "partial")), [NO_EFFECTIVE_TYPE]);
+      const atPartialByte = rt.effectiveTypeTable.get(pointerValue(rt, "partial") + 1);
+      assert.notEqual(atPartialByte, NO_EFFECTIVE_TYPE);
+      if (atPartialByte !== NO_EFFECTIVE_TYPE) assert.equal(atPartialByte.type, Type.UnsignedChar);
+      const unionTypes = rt.effectiveTypeTable.getTypes(pointerValue(rt, "copiedUnion"));
+      assert.includeMembers(unionTypes.filter(t => t !== NO_EFFECTIVE_TYPE).map(t => t.type),
+        [Type.Structure, Type.Int, Type.Float, Type.Array, Type.UnsignedChar]);
+      const declared = rt.effectiveTypeTable.get(rt.symbolTable.getAddress("declared"));
+      if (declared === NO_EFFECTIVE_TYPE) throw new Error("declared type lost");
+      assert.equal(declared.type, Type.Int);
     });
   }
 });

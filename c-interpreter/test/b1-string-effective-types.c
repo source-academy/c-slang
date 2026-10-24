@@ -1,6 +1,14 @@
 #include <string.h>
+#include <stdlib.h>
+struct S { char c; int n; char row[3]; };
+union U { int n; float f; unsigned char bytes[16]; };
 void *typed;
 void *cleared;
+void *copiedScalar;
+void *copiedStruct;
+void *copiedUnion;
+void *partial;
+int declared;
 int main(void) {
   typed = malloc(sizeof(double));
   *(int *)typed = 27;
@@ -15,5 +23,37 @@ int main(void) {
   *(int *)cleared = 42;
   memset((char *)cleared + 1, 7, 1);
   if (((unsigned char *)cleared)[1] != 7) return 4;
+  const int source = 27;
+  float other = 2.5f;
+  copiedScalar = malloc(sizeof(double));
+  memcpy(copiedScalar, &source, sizeof source);
+  if (*(int *)copiedScalar != 27) return 5;
+  *(int *)copiedScalar = 28;
+  memcpy(copiedScalar, &other, sizeof other);
+  if (*(float *)copiedScalar != 2.5f) return 6;
+  *(int *)copiedScalar = 29;
+  if (*(int *)copiedScalar != 29) return 7;
+  const struct S s = {'s', 42, {'a', 'b', 0}};
+  copiedStruct = malloc(sizeof s);
+  memcpy(copiedStruct, &s, sizeof s);
+  struct S *sp = copiedStruct;
+  if (sp->n != 42 || sp->c != 's' || sp->row[1] != 'b') return 8;
+  sp->n = 43;
+  struct S whole = *sp;
+  if (whole.n != 43) return 9;
+  union U u;
+  u.f = 1.5f;
+  copiedUnion = malloc(sizeof u);
+  memcpy(copiedUnion, &u, sizeof u);
+  if (((union U *)copiedUnion)->f != 1.5f) return 10;
+  unsigned char representation[32];
+  memcpy(representation, &source, sizeof source);
+  memcpy(&declared, representation, sizeof declared);
+  if (declared != 27) return 11;
+  partial = malloc(sizeof(int));
+  *(int *)partial = 42;
+  unsigned char byte = 9;
+  memcpy((unsigned char *)partial + 1, &byte, 1);
+  if (((unsigned char *)partial)[1] != 9) return 12;
   return 0;
 }

@@ -12,6 +12,19 @@ const returnValue = (rt: Runtime, type: IntegerType | Pointer, value: bigint): v
 const constCharPointer = () => pointer(constQualified(char()));
 
 export const STRING_FUNCTIONS: Record<string, BuiltinFunction> = {
+  memcpy: {
+    visibility: "declarationRequired",
+    type: functionType(pointer(voidType()), [
+      { identifier: "dest", type: pointer(voidType()) },
+      { identifier: "src", type: pointer(constQualified(voidType())) },
+      { identifier: "count", type: sizeType() },
+    ]),
+    body: (rt, args) => {
+      const dest = argumentInteger(rt, args[0]);
+      copyRepresentation(rt, "memcpy", dest, argumentInteger(rt, args[1]), argumentInteger(rt, args[2]));
+      returnValue(rt, pointer(voidType()), dest);
+    },
+  },
   strcpy: {
     visibility: "declarationRequired",
     type: functionType(pointer(char()), [

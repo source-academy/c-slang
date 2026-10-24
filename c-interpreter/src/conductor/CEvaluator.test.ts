@@ -8,6 +8,7 @@
  * CommonJS/ESM story.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import CEvaluator from "./CEvaluator";
 
 interface LogEntry {
@@ -58,14 +59,14 @@ function makeMockConductor() {
 async function evaluate(source: string) {
   const conductor = makeMockConductor();
   const ev = new CEvaluator(conductor as any);
-  await ev.evaluateChunk(source);
+  const result = await ev.evaluateChunk(source);
+  assert.ok(!conductor.log.some(e => e.type === "result"), "the runner sends the returned result");
+  if (result !== undefined) conductor.log.push({ type: "result", r: result });
   return conductor.log;
 }
 
 async function testValidProgram() {
-  // print() is one of c-interpreter's built-in functions (BUILTIN_FUNCTIONS in builtins.ts) -- it's
-  // already in scope without a prototype, and c-interpreter doesn't support function forward
-  // declarations at all (typing/main.ts explicitly rejects them), so this must not declare one.
+  // The legacy print builtin is available without a header.
   const log = await evaluate(`
     int main() { print(42); return 7; }
   `);
@@ -98,12 +99,20 @@ async function testTypeError() {
   assert.equal(error!.line, 1);
 }
 
-async function testNotImplemented() {
-  const log = await evaluate("int main() { int x = 1; x += 2; return 0; }");
+async function testRuntimeError() {
+  const log = await evaluate('#include <string.h>\nint main() { char a[4] = "abc"; memcpy(a, a, 1); return 0; }');
   const error = log.find((e) => e.type === "error");
   assert.ok(error, "expected an error message");
   assert.equal(error!.errorType, "__evaluator_runtime");
-  assert.match(error!.message as string, /compound assignment/);
+  assert.match(error!.message as string, /memcpy: overlapping ranges/);
+}
+
+async function testStringLibrary() {
+  for (const name of ["manual-prototypes", "memcpy-objects", "initialization", "effective-types"]) {
+    const log = await evaluate(readFileSync(`test/b1-string-${name}.c`, "utf8"));
+    assert.ok(!log.some(e => e.type === "error"), name);
+    assert.equal(log.find(e => e.type === "result")?.r, 0, name);
+  }
 }
 
 async function testStatusUpdatesBracketEvaluation() {
@@ -119,7 +128,8 @@ async function main() {
     ["valid program produces output and result", testValidProgram],
     ["syntax error carries structured line/column", testSyntaxError],
     ["type error carries structured line/column", testTypeError],
-    ["unimplemented feature reports its name, not a generic message", testNotImplemented],
+    ["library memory errors retain their function and reason", testRuntimeError],
+    ["string library fixtures run through Conductor", testStringLibrary],
     ["status is toggled around evaluation", testStatusUpdatesBracketEvaluation],
   ];
 

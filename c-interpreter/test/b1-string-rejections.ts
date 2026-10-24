@@ -3,10 +3,11 @@ import { describe, it } from "mocha";
 import cviz from "../src/index";
 import { preprocessSource } from "../src/preprocessor";
 import { Endianness } from "../src/config";
+import { RepresentationType } from "../src/interpreter/effectiveTypeTable";
 
 const reject = (source: string, name: string, reason: string, endianness: Endianness, watch = false) => {
   const rt = cviz.run("#include <string.h>\n" + source, { endianness });
-  let before: { address: number; bytes: number[]; mask: boolean[] } | undefined;
+  let before: { address: number; bytes: number[]; mask: boolean[]; types: RepresentationType[] } | undefined;
   assert.throws(() => {
     for (let steps = 0; steps < 20000 && rt.exitCode === undefined; steps++) {
       if (watch) {
@@ -15,6 +16,7 @@ const reject = (source: string, name: string, reason: string, endianness: Endian
         if (range) before = {
           address, bytes: rt.memory.getBytes(address, range.size),
           mask: rt.initTable.getMask(address, range.size),
+          types: rt.effectiveTypeTable.snapshot(address, range.size),
         };
       }
       rt.next();
@@ -22,9 +24,10 @@ const reject = (source: string, name: string, reason: string, endianness: Endian
   }, new RegExp((name ? name + ": .*" : "") + reason));
   if (watch) {
     assert.exists(before);
-    const { address, bytes, mask } = before!;
+    const { address, bytes, mask, types } = before!;
     assert.deepEqual(rt.memory.getBytes(address, bytes.length), bytes);
     assert.deepEqual(rt.initTable.getMask(address, bytes.length), mask);
+    assert.deepEqual(rt.effectiveTypeTable.snapshot(address, bytes.length), types);
   }
 };
 
@@ -88,7 +91,41 @@ rejectionGroup("strcpy", "invalid storage", [
   ['char dest[4] = "abc"; int main() { char src[2] = {\'a\', \'b\'}; strcpy(dest, src); return 0; }', "missing terminator"],
 ], true);
 
+rejectionGroup("memcpy", "overlap", [
+  ['char dest[8] = "abcdefg"; int main() { memcpy(dest + 1, dest, 3); return 0; }', "overlapping ranges"],
+  ['char dest[8] = "abcdefg"; int main() { memcpy(dest, dest + 1, 3); return 0; }', "overlapping ranges"],
+  ['char dest[8] = "abcdefg"; int main() { memcpy(dest, dest, 1); return 0; }', "overlapping ranges"],
+  ['char dest[8] = "abcdefg"; int main() { memcpy(dest + 3, dest, 4); return 0; }', "overlapping ranges"],
+], true);
+rejectionGroup("memcpy", "invalid storage", [
+  ['char dest[4] = "abc"; int main() { memcpy(NULL, dest, 1); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { memcpy(dest, NULL, 1); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { memcpy(NULL, dest, 0); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { memcpy(dest, NULL, 0); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { char *p = malloc(4); free(p); memcpy(dest, p, 2); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { char *p = malloc(4); free(p); memcpy(p, dest, 2); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { memcpy("abc", dest, 2); return 0; }', "protected destination"],
+  ['const char dest[4] = "abc"; int main() { memcpy((void *)dest, "xyz", 2); return 0; }', "protected destination"],
+  ['char dest[4] = "abc"; int main() { memcpy(dest + 1, "abcd", 4); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { memcpy(dest, "x", 3); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { memcpy(dest, "abcd", -1); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; char *old; void f() { char local[4]; old = local; } int main() { f(); memcpy(dest, old, 1); return 0; }', "invalid storage"],
+], true);
+
 describe("b1-string headers and declarations", () => {
+  it("does not infer an integer type from a character representation buffer", () => {
+    const source = `#include <string.h>
+      int main() {
+        int value = 42;
+        unsigned char bytes[16];
+        memcpy(bytes, &value, sizeof value);
+        void *p = malloc(sizeof value);
+        memcpy(p, bytes, sizeof value);
+        return *(int *)p;
+      }`;
+    const rt = cviz.run(source);
+    assert.throws(() => { while (rt.exitCode === undefined) rt.next(); }, /strict aliasing/);
+  });
   for (const endianness of ["little", "big"] as const) {
     it(`converts every argument before writing (${endianness})`, () => {
       reject('char dest[4] = "abc"; int main() { memset(dest, 1e100, 2); return 0; }',
@@ -104,6 +141,7 @@ describe("b1-string headers and declarations", () => {
     ['#include <string.h>\nint main() { return strlen(); }', /number of arguments/],
     ['#include <string.h>\nint main() { const char dest[2] = "a"; strcpy(dest, "b"); return 0; }', /mismatch in argument type/],
     ['#include <string.h>\nint main() { const int dest = 1; memset(&dest, 0, 1); return 0; }', /mismatch in argument type/],
+    ['#include <string.h>\nint main() { const int dest = 1; int src = 2; memcpy(&dest, &src, sizeof src); return 0; }', /mismatch in argument type/],
   ] as const) {
     it(source, () => assert.throws(() => cviz.run(source), reason));
   }

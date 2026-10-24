@@ -13,6 +13,7 @@ size_t strlen(const char *s);
 int strcmp(const char *left, const char *right);
 char *strcpy(char *dest, const char *src);
 void *memset(void *dest, int value, size_t count);
+void *memcpy(void *dest, const void *src, size_t count);
 #endif
 `,
 };

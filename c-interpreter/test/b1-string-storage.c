@@ -1,3 +1,4 @@
+#include <stdlib.h>
 struct Bytes { char before; char text[4]; int value; };
 int inspect(int parameter) {
   unsigned char *bytes = (unsigned char *)&parameter;

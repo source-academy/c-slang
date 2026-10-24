@@ -1345,3 +1345,33 @@ b1-string-strcpy-storage:
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}
+
+b1-string-memcpy-bytes:
+  file: b1-string-memcpy-bytes.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-memcpy-ranges:
+  file: b1-string-memcpy-ranges.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-memcpy-objects:
+  file: b1-string-memcpy-objects.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-manual-prototypes:
+  file: b1-string-manual-prototypes.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-demo:
+  file: b1-string-demo.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}

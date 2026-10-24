@@ -19,6 +19,7 @@ import {
   unqualified,
   containsConst,
   isCharacterType,
+  array,
 } from "../typing/types";
 import { decimalAddressToHex } from "../utils";
 import {
@@ -56,6 +57,10 @@ const checkMemoryConfig = (config: MemoryConfig) => {
       throw new RangeError("invalid memory config, regions overlap");
   }
 };
+
+// C17 array qualification is carried by the element type.
+const unqualifiedAccessType = (type: ObjectTypeInfo): ObjectTypeInfo =>
+  isArray(type) ? array(unqualifiedAccessType(type.elementType), type.length) : unqualified(type);
 
 export class Memory {
   public readonly storage = new StorageRanges();
@@ -248,7 +253,7 @@ export class Memory {
 
     for (const et of types) {
       if (et === NO_EFFECTIVE_TYPE) continue;
-      if (unqualified(t).isCompatible(unqualified(et))) return true;
+      if (unqualifiedAccessType(t).isCompatible(unqualifiedAccessType(et))) return true;
       if (
         isSignedIntegerType(t) &&
         getUnsignedVersion(t).isCompatible(unqualified(et))
