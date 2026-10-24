@@ -6,6 +6,7 @@ import { expand, withFreshHideSets } from "./expand";
 import { evaluateControllingExpression } from "./conditionalExpr";
 import { ExpansionContext } from "./context";
 import { lex } from "./lex";
+import { SYSTEM_HEADERS } from "./systemHeaders";
 
 const ZERO = BigInt(0); // see conditionalExpr.ts - no 0n literals under this ES6 target
 
@@ -150,14 +151,7 @@ const parseLine = (
   return { lineNumber, file };
 };
 
-// (6.10.2) #include <name> is always a silent no-op here (scope decision 2 - this
-// interpreter's builtins already need no header at all). #include "name" is
-// genuinely recognized, but resolving it to real content is routed through an
-// injectable hook rather than built here - there is no multi-file concept
-// anywhere else in this runtime yet (B7). A successfully-resolved include shares
-// the *same* macro table (so #defines cross the include boundary both ways, the
-// same as real textual inclusion) and recurses through this same pipeline, which
-// is what lets a nested #include inside the included content just work.
+// Includes share macro state. Unsupported system headers remain silent no-ops.
 const handleInclude = (
   rest: readonly PPToken[],
   pos: SourcePosition,
@@ -174,11 +168,12 @@ const handleInclude = (
     );
 
   const isAngleForm = headerTok.text.startsWith("<");
-  if (isAngleForm) return [];
-
   const name = headerTok.text.slice(1, -1);
   const resolve = opts.resolveLocalInclude ?? (() => null);
-  const content = resolve(name);
+  const local = isAngleForm ? null : resolve(name);
+  const embedded = local === null && Object.prototype.hasOwnProperty.call(SYSTEM_HEADERS, name);
+  const content = local ?? (embedded ? SYSTEM_HEADERS[name] : null);
+  if (isAngleForm && content === null) return [];
   if (content === null)
     throw new PreprocessorError(
       pos,
@@ -188,7 +183,11 @@ const handleInclude = (
   const { tokens: includedTokens, map: includedMap } = lex(content, name);
   const expanded = preprocessTokens(includedTokens, table, includedMap, opts, includedFiles, now);
   includedFiles.push({ name, tokens: includedTokens, map: includedMap });
-  return expanded;
+  if (embedded) table.rebaseTokens(includedTokens, headerTok);
+  // The outer position map expects offsets in the including source.
+  return embedded ? expanded.map(t => ({
+    ...t, start: headerTok.start, end: headerTok.end, line: headerTok.line,
+  })) : expanded;
 };
 
 // (6.10.1) one open #if/#ifdef/#ifndef group. `active` is whether *this* frame's

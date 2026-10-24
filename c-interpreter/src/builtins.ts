@@ -20,11 +20,13 @@ import {
 
 export interface BuiltinFunction {
   type: FunctionType;
+  visibility: "ambient" | "declarationRequired";
   body: (rt: Runtime, args: StashItem[]) => void;
 }
 
 export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
   malloc: {
+    visibility: "ambient",
     type: functionType(pointer(voidType()), [
       { identifier: "size", type: int() },
     ]),
@@ -51,6 +53,7 @@ export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
     },
   },
   free: {
+    visibility: "ambient",
     type: functionType(voidType(), [
       { identifier: "ptr", type: pointer(voidType()) },
     ]),
@@ -75,6 +78,7 @@ export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
     },
   },
   print: {
+    visibility: "ambient",
     type: functionType(voidType(), [{ identifier: "obj", type: _any() }]),
     body: (rt: Runtime, args: StashItem[]) => {
       if (args.length !== 1) throw "expected 1 arg for print";

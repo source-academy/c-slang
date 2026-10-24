@@ -1245,3 +1245,13 @@ predefined-standard:
   cases:
     - out: "0"
       desc: "standard macros expand without directives and preserve the version's long type"
+b1-string-headers:
+  file: b1-string-headers.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+b1-string-conversions:
+  file: b1-string-conversions.c
+  cases:
+    - {out: "0", stdout: "3.5\n", endianness: little}
+    - {out: "0", stdout: "3.5\n", endianness: big}

@@ -374,6 +374,9 @@ export const unsignedInt = (): UnsignedInt => ({
 export const isUnsignedInt = (t: TypeInfo): t is UnsignedInt =>
   t.type === Type.UnsignedInt;
 
+// The current data model uses unsigned int for size_t and sizeof.
+export const sizeType = (): UnsignedInt => unsignedInt();
+
 export interface LongInt extends ObjectTypeInfo {
   type: Type.LongInt;
   size: typeof LONG_SIZE;

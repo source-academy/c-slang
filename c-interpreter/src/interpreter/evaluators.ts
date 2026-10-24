@@ -19,7 +19,7 @@ import {
   longInt,
   pointer,
   shortInt,
-  unsignedInt,
+  sizeType,
   unqualified,
   constQualified,
 } from "./../typing/types";
@@ -119,6 +119,7 @@ import {
 } from "./instructions";
 import { Type, isFunction } from "../typing/types";
 import { Runtime } from "./runtime";
+import { convertForAssignment } from "./conversions";
 import { FunctionDesignator, RuntimeObject, TemporaryObject } from "./object";
 import {
   BIGINT_TO_BYTES,
@@ -321,8 +322,8 @@ export const ASTNodeEvaluator: {
   ) => {
     rt.stash.pushWithoutConversions(
       new TemporaryObject(
-        unsignedInt(),
-        BIGINT_TO_BYTES[Type.UnsignedInt](BigInt(value), rt.config.endianness),
+        sizeType(),
+        BIGINT_TO_BYTES[sizeType().type](BigInt(value), rt.config.endianness),
       ),
     );
   },
@@ -886,19 +887,7 @@ export const instructionEvaluator: {
       )
     ) {
       if (isScalarType(typeInfo) && isScalarType(o.typeInfo)) {
-        let bytes: number[];
-        if (isArithmeticType(typeInfo) && isArithmeticType(o.typeInfo)) {
-          bytes = convertArithmeticBytes(
-            o.bytes, o.typeInfo, typeInfo, rt.config.endianness,
-          );
-        } else {
-          if (isFloatingType(typeInfo) || isFloatingType(o.typeInfo))
-            throw new Error("unexpected types for assign");
-          const n = bytesToBigint(
-            o.bytes, isSigned(o.typeInfo), rt.config.endianness,
-          );
-          bytes = BIGINT_TO_BYTES[typeInfo.type](n, rt.config.endianness);
-        }
+        const { bytes } = convertForAssignment(o, typeInfo, rt.config.endianness);
         rt.memory.setObjectBytes(
           address, bytes, typeInfo, false, false, initializing,
         );
@@ -996,7 +985,11 @@ export const instructionEvaluator: {
 
     if (fnIdx < 0) {
       const builtinFn = rt.getBuiltinFunction(-Number(fnIdx) - 1);
-      builtinFn.body(rt, args);
+      const converted = args.map((arg, index) => {
+        if (!isTemporaryObject(arg)) throw new Error("expected native argument value");
+        return convertForAssignment(arg, builtinFn.type.parameterTypes[index].type, rt.config.endianness);
+      });
+      builtinFn.body(rt, converted);
       return;
     }
 

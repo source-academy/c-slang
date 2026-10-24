@@ -40,7 +40,7 @@ export class TypeEnv {
     this._loopDepth = 0;
     this._switchDepth = 0;
     for (const [identifier, f] of Object.entries(BUILTIN_FUNCTIONS)) {
-      this.addIdentifierTypeInfo(identifier, f.type);
+      if (f.visibility === "ambient") this.addIdentifierTypeInfo(identifier, f.type);
     }
   }
 
@@ -214,6 +214,12 @@ export class TypeEnv {
     t: FunctionType,
     isDefinition: boolean,
   ): void {
+    const native = Object.prototype.hasOwnProperty.call(BUILTIN_FUNCTIONS, id)
+      ? BUILTIN_FUNCTIONS[id] : undefined;
+    if (native) {
+      if (!native.type.isCompatible(t)) throw "conflicting types for '" + id + "'";
+      if (isDefinition) throw "redefinition of native function '" + id + "'";
+    }
     const currBlock = this.env[this.env.length - 1];
     if (id in currBlock) {
       const [existing, isTypedef, isDefined] = currBlock[id];
@@ -224,7 +230,7 @@ export class TypeEnv {
       currBlock[id] = [existing, false, isDefined || isDefinition];
       return;
     }
-    currBlock[id] = [t, false, isDefinition];
+    currBlock[id] = [t, false, isDefinition || native !== undefined];
   }
 
   // called once, at the end of a translation unit, to catch prototypes

@@ -181,6 +181,7 @@ import {
   unqualified,
   Structure,
   unsignedInt,
+  sizeType,
   Type,
   IntegerType,
   isSigned,
@@ -1261,7 +1262,7 @@ const typeUnaryExpressionSizeof = (
         throw "sizeof operator requires complete object type";
       value = tt.typeInfo.size;
     }
-    return { ...t, value, typeInfo: unsignedInt(), lvalue: false };
+    return { ...t, value, typeInfo: sizeType(), lvalue: false };
   });
 
 const typeUnaryExpressionIncr = (

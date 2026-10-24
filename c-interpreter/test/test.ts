@@ -25,6 +25,8 @@ import "./integer-conversions";
 import "./constant-expressions";
 import "./constant-enum-case";
 import "./memory-errors";
+import "./b1-string-rejections";
+import { Endianness } from "../src/config";
 
 const TEST_FOLDER_PATH = "./test/";
 // const TEST_OUTPUT_PATH = TEST_FOLDER_PATH + "out/";
@@ -35,6 +37,7 @@ interface TestCase {
   stdout?: string;
   desc?: string;
   fail?: boolean;
+  endianness?: Endianness;
 }
 
 interface TestSuite {
@@ -56,8 +59,8 @@ const tests = load(
   readFileSync(TEST_FOLDER_PATH + "test.yaml", "utf-8"),
 ) as TestList;
 
-const execute = (source: string): { exitCode: number; stdout: string } => {
-  const rt = cviz.run(source)
+const execute = (source: string, endianness: Endianness = "little"): { exitCode: number; stdout: string } => {
+  const rt = cviz.run(source, { endianness })
   while (rt.exitCode === undefined) rt.next();
   return { exitCode: rt.exitCode, stdout: rt.stdout };
 }
@@ -79,9 +82,9 @@ for (const [testName, testSuite] of Object.entries(tests)) {
 
       it(caseName, () => {
         if (toFail) {
-          assert.throws(() => run(source), Error)
+          assert.throws(() => execute(source, testCase.endianness), Error)
         } else {
-          const result = execute(source);
+          const result = execute(source, testCase.endianness);
           // writeFileSync(
           //   TEST_OUTPUT_PATH + testName + i + ".json",
           //   JSON.stringify(out),

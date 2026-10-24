@@ -90,4 +90,12 @@ export class MacroTable {
   undef(name: string): void {
     this.macros.delete(name);
   }
+
+  rebaseTokens(tokens: readonly PPToken[], at: PPToken): void {
+    const origins = new Set(tokens);
+    for (const macro of this.macros.values()) {
+      macro.replacement = macro.replacement.map(t => origins.has(t)
+        ? { ...t, start: at.start, end: at.end, line: at.line } : t);
+    }
+  }
 }
