@@ -22,6 +22,7 @@ import {
   EffectiveTypeTableEntry,
 } from "./effectiveTypeTable";
 import { InitializedTable } from "./initializedTable";
+import { StorageRange } from "../memory/storageRanges";
 
 export type TextAndDataEntry = FunctionDesignator | RuntimeObject;
 
@@ -211,7 +212,27 @@ export class Runtime {
     this.memory.setRepeatedByte(this._dataPtr, t.size, 0);
     const address = this._dataPtr;
     this._dataPtr += t.size;
+    this.initTable.add(address, t);
     return address;
+  }
+
+  public registerObject(address: number, type: ObjectTypeInfo, kind: StorageRange["kind"]): void {
+    this.memory.storage.register({ base: address, size: type.size, kind, declaredType: type });
+    if (kind === "automatic") this.initTable.remove(address, type.size);
+    this.effectiveTypeTable.add(address, type);
+    this.memory.protectConstObject(address, type);
+  }
+
+  public retireStorage(address: number): void {
+    const range = this.memory.storage.remove(address);
+    if (!range) throw new Error("no live storage to retire");
+    this.initTable.remove(address, range.size);
+    this.memory.clearReadonly(address, range.size);
+    this.effectiveTypeTable.remove(address, range.size);
+  }
+
+  public exitScope(): void {
+    Object.values(this.symbolTable.exitBlock()).forEach(address => this.retireStorage(address));
   }
 
   public allocateText(t: ObjectTypeInfo): number {

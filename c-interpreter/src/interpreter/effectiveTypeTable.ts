@@ -5,12 +5,18 @@ import {
   isArray,
   isScalarType,
   isStructure,
+  unqualified,
 } from "../typing/types";
 import { decimalAddressToHex } from "../utils";
 
 export const NO_EFFECTIVE_TYPE = "NO_EFFECTIVE_TYPE";
 
 export type EffectiveTypeTableEntry = ObjectTypeInfo | typeof NO_EFFECTIVE_TYPE;
+
+export interface RepresentationType {
+  offset: number;
+  type: ObjectTypeInfo;
+}
 
 export class EffectiveTypeTable {
   private readonly table: Record<number, EffectiveTypeTableEntry[]> = {};
@@ -80,6 +86,56 @@ export class EffectiveTypeTable {
     }
     this.remove(address, t.size);
     this.add(address, t);
+  }
+
+  snapshot(address: number, size: number): RepresentationType[] {
+    const result: RepresentationType[] = [];
+    for (const [key, types] of Object.entries(this.table)) {
+      const start = Number(key);
+      for (const type of types) {
+        if (type !== NO_EFFECTIVE_TYPE && start >= address && start + type.size <= address + size)
+          result.push({ offset: start - address, type: unqualified(type) });
+      }
+    }
+    return result;
+  }
+
+  // Only for storage without a declared type; ownership lives in StorageRanges.
+  replaceInferred(
+    base: number, extent: number, address: number, size: number,
+    replacements: readonly RepresentationType[] = [],
+  ): void {
+    if (size === 0) return;
+    for (const [key, types] of Object.entries(this.table)) {
+      const start = Number(key);
+      if (start < base || start >= base + extent) continue;
+      const retained = types.filter(t => t !== NO_EFFECTIVE_TYPE &&
+        (start + t.size <= address || start >= address + size));
+      if (retained.length) this.table[start] = retained;
+      else delete this.table[start];
+    }
+    for (const { offset, type } of replacements)
+      (this.table[address + offset] ??= []).push(type);
+
+    const covered = new Set<number>();
+    for (const [key, types] of Object.entries(this.table)) {
+      const start = Number(key);
+      if (start < base || start >= base + extent) continue;
+      for (const type of types) {
+        if (type === NO_EFFECTIVE_TYPE) continue;
+        for (let i = start; i < start + type.size; i++) covered.add(i);
+      }
+    }
+    for (let i = base; i < base + extent; i++)
+      if (!covered.has(i)) this.table[i] = [NO_EFFECTIVE_TYPE];
+  }
+
+  establishInferred(base: number, extent: number, address: number, t: ObjectTypeInfo): void {
+    if (this.table[address]?.some(type => type !== NO_EFFECTIVE_TYPE &&
+      unqualified(type).isCompatible(unqualified(t)))) return;
+    const description = new EffectiveTypeTable();
+    description.add(0, t);
+    this.replaceInferred(base, extent, address, t.size, description.snapshot(0, t.size));
   }
 
   getTable() {

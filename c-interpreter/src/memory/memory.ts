@@ -11,16 +11,14 @@ import {
   Pointer,
   getSignedVersion,
   getUnsignedVersion,
-  isChar,
-  isSignedChar,
   isSignedIntegerType,
-  isUnsignedChar,
   isUnsignedIntegerType,
   isArray,
   isStructure,
   getTypeName,
   unqualified,
   containsConst,
+  isCharacterType,
 } from "../typing/types";
 import { decimalAddressToHex } from "../utils";
 import {
@@ -29,6 +27,7 @@ import {
   WriteSegmentationFault,
 } from "./errors";
 import { MemoryRegion } from "./memoryRegion";
+import { StorageRange, StorageRanges } from "./storageRanges";
 
 export interface Segments extends Record<string, MemoryRegion> {
   stack: MemoryRegion;
@@ -59,6 +58,7 @@ const checkMemoryConfig = (config: MemoryConfig) => {
 };
 
 export class Memory {
+  public readonly storage = new StorageRanges();
   private readonly segments: Segments;
   private readonly readonlyAddresses: Set<number>;
   private readonly executableAddresses: Set<number>;
@@ -157,8 +157,20 @@ export class Memory {
       throw new Error("object size and bytes provided don't match");
 
     this.getMemoryRegion(address);
-    this.checkValidObjectAccess(address, t);
-    if (this.effectiveTypeTable.get(address) === NO_EFFECTIVE_TYPE) {
+    const allocation = this.storage.find(BigInt(address), BigInt(t.size));
+    if (!allocation && this.storage.find(BigInt(address), BigInt(1)))
+      throw new Error("object write: invalid storage range");
+    if (allocation?.kind === "allocated") {
+      if (address % t.alignment) throw new Error("misaligned access");
+      if (!initializing) this.checkWritable(address, t.size);
+      if (isCharacterType(t))
+        this.effectiveTypeTable.replaceInferred(allocation.base, allocation.size, address, t.size);
+      else
+        this.effectiveTypeTable.establishInferred(allocation.base, allocation.size, address, t);
+    } else {
+      this.checkValidObjectAccess(address, t);
+    }
+    if (!allocation && this.effectiveTypeTable.get(address) === NO_EFFECTIVE_TYPE) {
       try {
         this.effectiveTypeTable.change(address, t);
       } catch (e) {
@@ -167,6 +179,18 @@ export class Memory {
     }
 
     this.setBytes(address, bytes, readonly, executable, initializing);
+  }
+
+  public requireStorage(address: bigint, size: bigint, operation: string): StorageRange {
+    if (address === BigInt(0)) throw new Error(operation + ": null pointer");
+    const range = this.storage.find(address, size);
+    if (!range) throw new Error(operation + ": invalid storage range");
+    return range;
+  }
+
+  public checkWritable(address: number, size: number): void {
+    for (let i = address; i < address + size; i++)
+      if (this.readonlyAddresses.has(i)) throw new WriteSegmentationFault(i);
   }
 
   public protectConstObject(address: number, t: ObjectTypeInfo): void {
@@ -208,6 +232,10 @@ export class Memory {
   }
 
   private checkStrictAliasing(address: number, t: ObjectTypeInfo): boolean {
+    if (isCharacterType(t)) {
+      this.requireStorage(BigInt(address), BigInt(t.size), "character access");
+      return true;
+    }
     let types: readonly EffectiveTypeTableEntry[];
     try {
       types = this.effectiveTypeTable.getTypes(address);
@@ -217,7 +245,6 @@ export class Memory {
 
     if (this.skipStrictAliasingCheck) return true;
     if (types.includes(NO_EFFECTIVE_TYPE)) return true;
-    if (isChar(t) || isUnsignedChar(t) || isSignedChar(t)) return true;
 
     for (const et of types) {
       if (et === NO_EFFECTIVE_TYPE) continue;
@@ -247,6 +274,8 @@ export class Memory {
 
   private checkValidObjectAccess(address: number, t: ObjectTypeInfo): boolean {
     if (address % t.alignment) throw new Error("misaligned access");
+    if (this.storage.find(BigInt(address), BigInt(1)))
+      this.requireStorage(BigInt(address), BigInt(t.size), "object access");
     return this.checkStrictAliasing(address, t);
   }
 }

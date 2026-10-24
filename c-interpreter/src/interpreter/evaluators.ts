@@ -140,7 +140,6 @@ import { Endianness } from "../config";
 import { RuntimeStack } from "./stack";
 import { SHRT_SIZE } from "../constants";
 import { checkSimpleAssignmentConstraint, getMember } from "../typing/utils";
-import { NO_EFFECTIVE_TYPE } from "./effectiveTypeTable";
 import { AgendaItem } from "./agenda";
 
 export const ASTNodeEvaluator: {
@@ -209,8 +208,7 @@ export const ASTNodeEvaluator: {
     }
 
     rt.symbolTable.addAddress(identifier, address);
-    rt.effectiveTypeTable.add(address, typeInfo);
-    rt.memory.protectConstObject(address, typeInfo);
+    rt.registerObject(address, typeInfo, rt.symbolTable.inFileScope ? "static" : "automatic");
     if (initializer) evaluateInitializer(initializer, address, typeInfo, rt);
   },
   InitializerList: () => {
@@ -567,7 +565,7 @@ export const ASTNodeEvaluator: {
     let address = rt.getStringLiteralAddress(node);
     if (address === undefined) {
       address = rt.allocateAndZeroData(typeInfo);
-      rt.effectiveTypeTable.add(address, typeInfo);
+      rt.registerObject(address, typeInfo, "literal");
       const bytes = [
         ...value.flatMap((c) =>
           BIGINT_TO_BYTES[Type.Char](
@@ -931,15 +929,7 @@ export const instructionEvaluator: {
         ),
       );
     }
-    const block = rt.symbolTable.exitBlock();
-    Object.values(block).forEach((addr) => {
-      const t = rt.effectiveTypeTable.get(addr);
-      if (t !== NO_EFFECTIVE_TYPE) {
-        rt.initTable.remove(addr, t.size);
-        rt.memory.clearReadonly(addr, t.size);
-      }
-      rt.effectiveTypeTable.remove(addr);
-    });
+    rt.exitScope();
     rt.stack.pop();
     rt.functionCalls.pop();
   },
@@ -1015,8 +1005,7 @@ export const instructionEvaluator: {
 
       const address = rt.stack.rbp + frame[identifier].address;
       rt.symbolTable.addAddress(identifier, address);
-      rt.effectiveTypeTable.add(address, typeInfo);
-      rt.memory.protectConstObject(address, typeInfo);
+      rt.registerObject(address, typeInfo, "automatic");
 
       rt.agenda.push(popInstruction());
       rt.agenda.push(assignInstruction(true));
@@ -1036,15 +1025,7 @@ export const instructionEvaluator: {
   },
   [InstructionType.RETURN]: (rt: Runtime) => {
     jumpTill(rt, isMarkInstruction)
-    const block = rt.symbolTable.exitBlock();
-    Object.values(block).forEach((addr) => {
-      const t = rt.effectiveTypeTable.get(addr);
-      if (t !== NO_EFFECTIVE_TYPE) {
-        rt.initTable.remove(addr, t.size);
-        rt.memory.clearReadonly(addr, t.size);
-      }
-      rt.effectiveTypeTable.remove(addr);
-    });
+    rt.exitScope();
     rt.stack.pop();
     rt.functionCalls.pop();
   },
@@ -1220,15 +1201,7 @@ export const instructionEvaluator: {
     }
   },
   [InstructionType.EXIT_BLOCK]: (rt: Runtime) => {
-    const block = rt.symbolTable.exitBlock();
-    Object.values(block).forEach((addr) => {
-      const t = rt.effectiveTypeTable.get(addr);
-      if (t !== NO_EFFECTIVE_TYPE) {
-        rt.initTable.remove(addr, t.size);
-        rt.memory.clearReadonly(addr, t.size);
-      }
-      rt.effectiveTypeTable.remove(addr);
-    });
+    rt.exitScope();
   },
 };
 

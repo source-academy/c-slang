@@ -1255,3 +1255,21 @@ b1-string-conversions:
   cases:
     - {out: "0", stdout: "3.5\n", endianness: little}
     - {out: "0", stdout: "3.5\n", endianness: big}
+
+b1-string-storage:
+  file: b1-string-storage.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-initialization:
+  file: b1-string-initialization.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-effective-types:
+  file: b1-string-effective-types.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}

@@ -40,10 +40,13 @@ export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
       );
 
       const res = n <= 0 ? 0 : rt.heap.allocate(n);
-      if (res)
+      if (res) {
+        rt.memory.storage.register({ base: res, size: n, kind: "allocated" });
+        rt.initTable.remove(res, n);
         for (let i = 0; i < n; i++) {
           rt.effectiveTypeTable.add(res + i, NO_EFFECTIVE_TYPE);
         }
+      }
 
       const t = new TemporaryObject(
         pointer(voidType()),
@@ -72,9 +75,8 @@ export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
         bytesToBigint(o.bytes, isSigned(o.typeInfo), rt.config.endianness),
       );
 
-      const blockSize = rt.heap.getBlockSize(n);
       rt.heap.free(n);
-      rt.effectiveTypeTable.remove(n, blockSize);
+      rt.retireStorage(n);
     },
   },
   print: {

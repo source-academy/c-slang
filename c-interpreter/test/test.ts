@@ -26,6 +26,7 @@ import "./constant-expressions";
 import "./constant-enum-case";
 import "./memory-errors";
 import "./b1-string-rejections";
+import "./b1-string-metadata";
 import { Endianness } from "../src/config";
 
 const TEST_FOLDER_PATH = "./test/";
