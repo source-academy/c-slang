@@ -1309,3 +1309,39 @@ b1-string-strcmp-bytes:
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}
+
+b1-string-memset-values:
+  file: b1-string-memset-values.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-memset-ranges:
+  file: b1-string-memset-ranges.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-memset-objects:
+  file: b1-string-memset-objects.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strcpy-basics:
+  file: b1-string-strcpy-basics.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strcpy-boundaries:
+  file: b1-string-strcpy-boundaries.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b1-string-strcpy-storage:
+  file: b1-string-strcpy-storage.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}

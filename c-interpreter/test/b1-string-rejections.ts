@@ -19,7 +19,7 @@ const reject = (source: string, name: string, reason: string, endianness: Endian
       }
       rt.next();
     }
-  }, new RegExp(name + ": .*" + reason));
+  }, new RegExp((name ? name + ": .*" : "") + reason));
   if (watch) {
     assert.exists(before);
     const { address, bytes, mask } = before!;
@@ -59,12 +59,51 @@ rejectionGroup("strcmp", "missing terminators", [
   ['int main() { char a[2] = {\'a\', \'b\'}; strcmp("abc", a); return 0; }', "missing terminator"],
 ]);
 
+rejectionGroup("memset", "invalid destinations", [
+  ['char dest[4] = "abc"; int main() { memset(NULL, 0, 1); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { memset(NULL, 0, 0); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { char *p = malloc(4); free(p); memset(p, 0, 1); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { memset("abc", 0, 2); return 0; }', "protected destination"],
+  ['const char dest[4] = "abc"; int main() { memset((void *)dest, 0, 1); return 0; }', "protected destination"],
+  ['struct S { char c; const int n; }; struct S dest = {\'x\', 2}; int main() { memset(&dest, 0, sizeof dest); return 0; }', "protected destination"],
+], true);
+rejectionGroup("memset", "invalid counts", [
+  ['char dest[4] = "abc"; int main() { memset(dest + 1, 0, 4); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { memset(dest, 0, -1); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { memset(dest + 4, 0, 1); return 0; }', "invalid storage"],
+], true);
+rejectionGroup("strcpy", "overlap", [
+  ['char dest[8] = "abc"; int main() { strcpy(dest + 1, dest); return 0; }', "overlapping ranges"],
+  ['char dest[8] = "abc"; int main() { strcpy(dest, dest + 1); return 0; }', "overlapping ranges"],
+  ['char dest[8] = "abc"; int main() { strcpy(dest, dest); return 0; }', "overlapping ranges"],
+], true);
+rejectionGroup("strcpy", "invalid storage", [
+  ['char dest[2] = "a"; int main() { strcpy(dest, "abc"); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { strcpy(NULL, "a"); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { strcpy(dest, NULL); return 0; }', "null pointer"],
+  ['char dest[4] = "abc"; int main() { char *p = malloc(4); free(p); strcpy(dest, p); return 0; }', "invalid storage"],
+  ['char dest[4] = "abc"; int main() { char *p = malloc(4); free(p); strcpy(p, dest); return 0; }', "invalid storage"],
+  ['const char dest[4] = "abc"; int main() { strcpy((char *)dest, "x"); return 0; }', "protected destination"],
+  ['char dest[4] = "abc"; int main() { strcpy("abc", dest); return 0; }', "protected destination"],
+  ['char dest[4] = "abc"; int main() { char src[2] = {\'a\', \'b\'}; strcpy(dest, src); return 0; }', "missing terminator"],
+], true);
+
 describe("b1-string headers and declarations", () => {
+  for (const endianness of ["little", "big"] as const) {
+    it(`converts every argument before writing (${endianness})`, () => {
+      reject('char dest[4] = "abc"; int main() { memset(dest, 1e100, 2); return 0; }',
+        "", "out of range for type", endianness, true);
+      reject('char dest[4] = "abc"; int main() { memset(dest, 1, 1e100); return 0; }',
+        "", "out of range for type", endianness, true);
+    });
+  }
   for (const [source, reason] of [
     ['int main() { return strlen("hi"); }', /identifier strlen not declared/],
     ['int strlen(const char *s); int main() { return 0; }', /conflicting types.*strlen/],
     ['unsigned int strlen(const char *s) { return 0; } int main() { return 0; }', /redefinition of native function.*strlen/],
     ['#include <string.h>\nint main() { return strlen(); }', /number of arguments/],
+    ['#include <string.h>\nint main() { const char dest[2] = "a"; strcpy(dest, "b"); return 0; }', /mismatch in argument type/],
+    ['#include <string.h>\nint main() { const int dest = 1; memset(&dest, 0, 1); return 0; }', /mismatch in argument type/],
   ] as const) {
     it(source, () => assert.throws(() => cviz.run(source), reason));
   }

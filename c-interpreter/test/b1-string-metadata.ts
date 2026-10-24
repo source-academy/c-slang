@@ -7,6 +7,11 @@ import { bytesToBigint } from "../src/typing/representation";
 import { NO_EFFECTIVE_TYPE } from "../src/interpreter/effectiveTypeTable";
 import { Type, pointer, voidType } from "../src/typing/types";
 import { RuntimeView } from "../src/interpreter/runtime";
+import { Runtime } from "../src/interpreter/runtime";
+
+const pointerValue = (rt: Runtime, name: string): number => Number(bytesToBigint(
+  rt.memory.getBytes(rt.symbolTable.getAddress(name), pointer(voidType()).size), false, rt.config.endianness,
+));
 
 export const runFixture = (name: string, endianness: Endianness = "little") => {
   const rt = cviz.run(readFileSync(`test/b1-string-${name}.c`, "utf8"), { endianness });
@@ -35,9 +40,9 @@ describe("b1-string storage metadata", () => {
     });
     it(`clears stale heap initialization flags on reuse (${endianness})`, () => {
       const rt = runFixture("initialization", endianness);
-      const pointerBytes = rt.memory.getBytes(rt.symbolTable.getAddress("unknown"), pointer(voidType()).size);
-      const base = Number(bytesToBigint(pointerBytes, false, endianness));
+      const base = pointerValue(rt, "unknown");
       assert.deepEqual(rt.initTable.getMask(base, 8), [false, true, false, false, false, false, false, false]);
+      assert.deepEqual(rt.initTable.getMask(pointerValue(rt, "filled"), 8), [false, false, true, true, true, false, false, false]);
     });
     it(`retires automatic ranges across returns and loop exits (${endianness})`, () => {
       const rt = runFixture("storage", endianness);
@@ -51,6 +56,9 @@ describe("b1-string storage metadata", () => {
       assert.notEqual(type, NO_EFFECTIVE_TYPE);
       if (type !== NO_EFFECTIVE_TYPE) assert.equal(type.type, Type.Float);
       assert.equal(rt.effectiveTypeTable.get(allocation.base + 4), NO_EFFECTIVE_TYPE);
+      const cleared = pointerValue(rt, "cleared");
+      assert.deepEqual(rt.effectiveTypeTable.getTypes(cleared), [NO_EFFECTIVE_TYPE]);
+      assert.isTrue(rt.memory.storage.find(BigInt(cleared), BigInt(4))?.kind === "allocated");
       const snapshot = rt.memory.storage.getRanges();
       snapshot[0].size = 0;
       assert.isAbove(rt.memory.storage.getRanges()[0].size, 0);
