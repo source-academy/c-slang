@@ -27,6 +27,7 @@
     "build": "grunt build",
     "build:conductor": "rollup -c rollup.conductor.config.mjs",
     "format": "npx prettier . --write",
+    "pretest": "grunt peg",
     "test": "TS_NODE_PROJECT='./tsconfig.test.json' mocha --require ts-node/register test/test.ts",
     "test:conductor": "esbuild src/conductor/CEvaluator.test.ts --bundle --platform=node --format=esm --outfile=.conductor-test-bundle.mjs && node .conductor-test-bundle.mjs"
   },
