@@ -26,33 +26,56 @@ export interface RetiredRange extends StorageRange {
 const RETIRED_LOG_CAPACITY = 64;
 
 export class StorageRanges {
-  private readonly ranges = new Map<number, StorageRange>();
+  // Sorted by base. Live ranges never overlap, so their ends are sorted too,
+  // and every lookup is a binary search rather than a scan of every object.
+  private readonly ranges: StorageRange[] = [];
   private readonly retired: RetiredRange[] = [];
 
-  register(range: StorageRange): void {
-    for (const existing of this.ranges.values()) {
-      if (range.base < existing.base + existing.size && existing.base < range.base + range.size)
-        throw new Error("overlapping live storage");
+  // Number of leading ranges for which `before` holds.
+  private countWhile(before: (range: StorageRange) => boolean): number {
+    let lo = 0;
+    let hi = this.ranges.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (before(this.ranges[mid])) lo = mid + 1;
+      else hi = mid;
     }
-    this.ranges.set(range.base, range);
+    return lo;
+  }
+
+  private lastStartingAtOrBefore(address: number): number {
+    return this.countWhile(range => range.base <= address) - 1;
+  }
+
+  register(range: StorageRange): void {
+    const i = this.countWhile(existing => existing.base <= range.base);
+    const overlaps = (existing: StorageRange | undefined) =>
+      existing !== undefined &&
+      range.base < existing.base + existing.size &&
+      existing.base < range.base + range.size;
+    if (overlaps(this.ranges[i - 1]) || overlaps(this.ranges[i]))
+      throw new Error("overlapping live storage");
+    this.ranges.splice(i, 0, range);
   }
 
   remove(base: number, reason: RetiredReason): StorageRange | undefined {
-    const range = this.ranges.get(base);
-    this.ranges.delete(base);
-    if (range) {
-      this.retired.push({ ...range, retiredReason: reason });
-      if (this.retired.length > RETIRED_LOG_CAPACITY) this.retired.shift();
-    }
+    const i = this.lastStartingAtOrBefore(base);
+    const range: StorageRange | undefined = this.ranges[i];
+    if (range?.base !== base) return undefined;
+    this.ranges.splice(i, 1);
+    this.retired.push({ ...range, retiredReason: reason });
+    if (this.retired.length > RETIRED_LOG_CAPACITY) this.retired.shift();
     return range;
   }
 
+  // For a zero-length lookup at the boundary between two adjacent objects,
+  // the one starting there wins over the one ending there.
   find(address: bigint, count: bigint): StorageRange | undefined {
     if (address <= BigInt(0) || count < BigInt(0)) return undefined;
-    for (const range of this.ranges.values()) {
-      const base = BigInt(range.base);
-      const end = base + BigInt(range.size);
-      if (address >= base && address <= end && address + count <= end)
+    const i = this.lastStartingAtOrBefore(Number(address));
+    for (const range of [this.ranges[i], this.ranges[i - 1]] as (StorageRange | undefined)[]) {
+      if (range === undefined) continue;
+      if (address >= BigInt(range.base) && address + count <= BigInt(range.base + range.size))
         return range;
     }
     return undefined;
@@ -62,12 +85,7 @@ export class StorageRanges {
   // wording. Only considers ranges that actually end at or before the address -
   // a range strictly containing it is a different (non-fault) situation.
   findPreceding(address: number): StorageRange | undefined {
-    let best: StorageRange | undefined;
-    for (const range of this.ranges.values()) {
-      if (range.base + range.size > address) continue;
-      if (!best || range.base + range.size > best.base + best.size) best = range;
-    }
-    return best;
+    return this.ranges[this.countWhile(range => range.base + range.size <= address) - 1];
   }
 
   findRetired(address: number): RetiredRange | undefined {
@@ -79,10 +97,12 @@ export class StorageRanges {
   }
 
   findByBase(base: number): StorageRange | undefined {
-    return this.ranges.get(base);
+    const range: StorageRange | undefined = this.ranges[this.lastStartingAtOrBefore(base)];
+    return range?.base === base ? range : undefined;
   }
 
+  // In address order.
   getRanges(): StorageRange[] {
-    return cloneDeep([...this.ranges.values()]);
+    return cloneDeep(this.ranges);
   }
 }

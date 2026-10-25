@@ -30,6 +30,7 @@ import "./b1-string-metadata";
 import "./b3-stack-overflow";
 import "./b3-fault-messages";
 import "./b3-pointer-provenance";
+import "./storage-ranges-lookup";
 import { Endianness } from "../src/config";
 
 const TEST_FOLDER_PATH = "./test/";
