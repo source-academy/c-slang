@@ -4,19 +4,29 @@ import { Identifier } from "../ast/types";
 export class SymbolTable {
   private blockScopes: Record<Identifier, number>[] = [];
   private fileScope: Record<Identifier, number> = {};
+  // Where each active call's scopes begin; lookup stops there (C17 6.2.1).
+  private functionStarts: number[] = [];
 
   enterBlock(): void {
     this.blockScopes.push({});
   }
 
+  enterFunction(): void {
+    this.functionStarts.push(this.blockScopes.length);
+    this.enterBlock();
+  }
+
   exitBlock(): Record<Identifier, number> {
     const res = this.blockScopes.pop();
     if (res === undefined) throw new RangeError("no block to exit");
+    if (this.functionStarts[this.functionStarts.length - 1] === this.blockScopes.length)
+      this.functionStarts.pop();
     return res;
   }
 
   getAddress(id: Identifier): number {
-    for (let i = this.blockScopes.length - 1; i >= 0; i--) {
+    const start = this.functionStarts[this.functionStarts.length - 1] ?? 0;
+    for (let i = this.blockScopes.length - 1; i >= start; i--) {
       if (id in this.blockScopes[i]) {
         return this.blockScopes[i][id];
       }

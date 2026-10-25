@@ -1381,3 +1381,31 @@ b3-safe-recursion-and-arithmetic:
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}
+
+scope-function-boundary-shadowed-global:
+  file: scope-function-boundary-shadowed-global.c
+  desc: a callee sees file-scope names, never its caller's locals (C17 6.2.1)
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+scope-function-boundary-recursion:
+  file: scope-function-boundary-recursion.c
+  desc: before its own local is declared, a recursive call sees the global, not the caller's local
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+scope-function-boundary-nested-blocks:
+  file: scope-function-boundary-nested-blocks.c
+  desc: calls from nested blocks and loops; block shadowing still restores correctly
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+scope-function-boundary-pointer-to-caller:
+  file: scope-function-boundary-pointer-to-caller.c
+  desc: a caller's local is still reachable through a pointer, and same-named parameters work
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}

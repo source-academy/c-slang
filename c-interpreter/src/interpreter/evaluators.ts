@@ -1030,7 +1030,7 @@ export const instructionEvaluator: {
     );
 
     rt.stack.push(frame, rt.getFunctionName(Number(fnIdx)));
-    rt.symbolTable.enterBlock();
+    rt.symbolTable.enterFunction();
 
     for (let i = 0; i < arity; i++) {
       const { identifier, type: typeInfo } = fnType.parameterTypes[i];
