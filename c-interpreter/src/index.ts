@@ -13,6 +13,8 @@ import {
   PositionMap,
   PreprocessorOptions,
 } from "./preprocessor";
+import { findUnsequencedConflicts } from "./analysis/unsequenced";
+import { NoteSpec } from "./interpreter/notes";
 
 /** Parses already-preprocessed `text`, translating a resulting CSyntaxError's
  * line/column back through `map` to the student's own source (A7.6) - pegjs-util
@@ -60,11 +62,19 @@ export default {
   typeCheck(t: TranslationUnit): TypedTranslationUnit {
     return typeTranslationUnit(t);
   },
+  /** B4.6: static notes for a program, without running it. */
+  analyze(source: string): NoteSpec[] {
+    const { text, map } = this.preprocess(source);
+    return findUnsequencedConflicts(typeCheckTranslated(parseText(text, map), map));
+  },
   run(source: string, config: Partial<RuntimeConfig> = {}): Runtime {
     const { text, map } = this.preprocess(source);
     const program = parseText(text, map);
     const typedTranslationUnit = typeCheckTranslated(program, map);
     const c: RuntimeConfig = { ...DEFAULT_CONFIG, ...config };
-    return new Runtime(typedTranslationUnit, c);
+    const rt = new Runtime(typedTranslationUnit, c);
+    // Static notes sit at step 0, before anything has run.
+    findUnsequencedConflicts(typedTranslationUnit).forEach((note) => rt.notes.add(note, 0));
+    return rt;
   },
 };

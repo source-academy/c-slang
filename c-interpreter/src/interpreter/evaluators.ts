@@ -56,6 +56,8 @@ import {
   TypedAssignmentExpressionNode,
   TypedStructMemberOp,
   TypedPointerMemberOp,
+  TypedPostfixIncrementOp,
+  TypedPostfixDecrementOp,
   TypedArraySubscriptingOp,
   isTypedPointerMemberOp,
   isTypedArraySubscriptingOp,
@@ -117,8 +119,11 @@ import {
   unaryOpInstruction,
   whileInstruction,
 } from "./instructions";
-import { Type, isFunction } from "../typing/types";
+import { Type, TypeInfo, isBool, isChar, isFunction, getTypeName } from "../typing/types";
 import { Runtime } from "./runtime";
+import { SourceSpan, spanOf } from "./notes";
+import { OperandPosition } from "./evaluationOrder";
+import { decimalAddressToHex } from "../utils";
 import { convertForAssignment } from "./conversions";
 import { FunctionDesignator, RuntimeObject, TemporaryObject } from "./object";
 import {
@@ -128,6 +133,7 @@ import {
   bytesToFloat,
   bigintToFloat,
   convertArithmeticBytes,
+  signedTruncation,
 } from "../typing/representation";
 import { isTemporaryObject } from "./stash";
 import {
@@ -238,7 +244,7 @@ export const ASTNodeEvaluator: {
     rt.agenda.push(returnInstruction());
     if (expr) {
       if (!unqualified(expr.typeInfo).isCompatible(unqualified(expectedReturnType)))
-        rt.agenda.push(castInstruction(expectedReturnType as ScalarType));
+        rt.agenda.push(castInstruction(expectedReturnType as ScalarType, spanOf(expr)));
       rt.agenda.push(expr);
     }
   },
@@ -261,65 +267,57 @@ export const ASTNodeEvaluator: {
       rt.agenda.push(exprs[i]);
     }
   },
-  CastExpression: (
-    rt: Runtime,
-    { expr, targetType }: TypedCastExpressionNode,
-  ) => {
-    rt.agenda.push(castInstruction(targetType));
+  CastExpression: (rt: Runtime, node: TypedCastExpressionNode) => {
+    const { expr, targetType } = node;
+    rt.agenda.push(castInstruction(targetType, spanOf(node)));
     rt.agenda.push(expr);
   },
-  AssignmentExpression: (
-    rt: Runtime,
-    { op, left, right }: TypedAssignmentExpressionNode,
-  ) => {
+  AssignmentExpression: (rt: Runtime, node: TypedAssignmentExpressionNode) => {
+    const { op, left, right } = node;
     if (!isObjectTypeInfo(left.typeInfo)) throw new Error("invalid LHS type");
     if (op !== "=") {
-      rt.agenda.push(compoundAssignInstruction(COMPOUND_ASSIGN_OP[op]));
+      rt.agenda.push(compoundAssignInstruction(COMPOUND_ASSIGN_OP[op], spanOf(node)));
       rt.agenda.push(right);
       rt.agenda.pushAsLvalue(left);
-      return;
+    } else {
+      rt.agenda.push(assignInstruction(false, spanOf(right)));
+      rt.agenda.push(right);
+      rt.agenda.pushAsLvalue(left);
     }
-    rt.agenda.push(assignInstruction());
-    rt.agenda.push(right);
-    rt.agenda.pushAsLvalue(left);
+    // The operands are unsequenced (6.5.16p3); the store runs after the group.
+    rt.order.open("assignment", op, [left, right], 0);
   },
-  ConditionalExpression: (
-    rt: Runtime,
-    { cond, exprIfTrue, exprIfFalse, typeInfo }: TypedConditionalExpressionNode,
-  ) => {
+  ConditionalExpression: (rt: Runtime, node: TypedConditionalExpressionNode) => {
+    const { cond, exprIfTrue, exprIfFalse, typeInfo } = node;
     if (isArithmeticType(typeInfo)) {
       if (
         !typeInfo.isCompatible(exprIfTrue.typeInfo) ||
         !typeInfo.isCompatible(exprIfFalse.typeInfo)
       )
-        rt.agenda.push(arithmeticConversionInstruction(typeInfo));
+        rt.agenda.push(arithmeticConversionInstruction(typeInfo, spanOf(node)));
     }
     rt.agenda.push(branchInstruction(exprIfTrue, exprIfFalse));
     rt.agenda.push(cond);
   },
-  BinaryExpr: (rt: Runtime, { left, op, right }: TypedBinaryExpressionNode) => {
+  BinaryExpr: (rt: Runtime, node: TypedBinaryExpressionNode) => {
+    const { left, op, right } = node;
     if (op === "&&" || op === "||") {
       rt.agenda.push(logicalInstruction(op, right));
       rt.agenda.push(left);
       return;
     }
-    rt.agenda.push(binaryOpInstruction(op));
+    rt.agenda.push(binaryOpInstruction(op, spanOf(node)));
     rt.agenda.push(right);
     rt.agenda.push(left);
+    rt.order.open("binary", op, [left, right]);
   },
-  UnaryExpressionIncr: (
-    rt: Runtime,
-    { value }: TypedUnaryExpressionIncr,
-  ) => {
-    rt.agenda.push(incrDecrInstruction("+", false));
-    rt.agenda.pushAsLvalue(value);
+  UnaryExpressionIncr: (rt: Runtime, node: TypedUnaryExpressionIncr) => {
+    rt.agenda.push(incrDecrInstruction("+", false, spanOf(node)));
+    rt.agenda.pushAsLvalue(node.value);
   },
-  UnaryExpressionDecr: (
-    rt: Runtime,
-    { value }: TypedUnaryExpressionDecr,
-  ) => {
-    rt.agenda.push(incrDecrInstruction("-", false));
-    rt.agenda.pushAsLvalue(value);
+  UnaryExpressionDecr: (rt: Runtime, node: TypedUnaryExpressionDecr) => {
+    rt.agenda.push(incrDecrInstruction("-", false, spanOf(node)));
+    rt.agenda.pushAsLvalue(node.value);
   },
   UnaryExpressionSizeof: (
     rt: Runtime,
@@ -401,11 +399,14 @@ export const ASTNodeEvaluator: {
     rt.agenda.pushAsLvalue(arraySubscriptInstruction(evaluateAsLvalue));
     rt.agenda.push(expr);
   },
-  FunctionCall: (rt: Runtime, { value: args }: TypedFunctionCallOp) => {
-    rt.agenda.push(callInstruction(args.length));
+  FunctionCall: (rt: Runtime, node: TypedFunctionCallOp) => {
+    const { value: args } = node;
+    rt.agenda.push(callInstruction(args.length, args.map(spanOf)));
     for (let i = args.length - 1; i >= 0; i--) {
       rt.agenda.push(args[i]);
     }
+    if (args.length >= 2)
+      rt.order.open("call", "()", args);
   },
   PointerMember: (
     rt: Runtime,
@@ -514,11 +515,11 @@ export const ASTNodeEvaluator: {
       ),
     );
   },
-  PostfixIncrement: (rt: Runtime) => {
-    rt.agenda.push(incrDecrInstruction("+", true));
+  PostfixIncrement: (rt: Runtime, node: TypedPostfixIncrementOp) => {
+    rt.agenda.push(incrDecrInstruction("+", true, spanOf(node)));
   },
-  PostfixDecrement: (rt: Runtime) => {
-    rt.agenda.push(incrDecrInstruction("-", true));
+  PostfixDecrement: (rt: Runtime, node: TypedPostfixDecrementOp) => {
+    rt.agenda.push(incrDecrInstruction("-", true, spanOf(node)));
   },
   PrimaryExprIdentifier: (
     rt: Runtime,
@@ -791,12 +792,15 @@ export const instructionEvaluator: {
     }
     throw new Error("not implemented");
   },
-  [InstructionType.BINARY_OP]: (rt: Runtime, { op }: BinaryOpInstruction) => {
+  [InstructionType.BINARY_OP]: (
+    rt: Runtime,
+    { op, origin }: BinaryOpInstruction,
+  ) => {
     const ro = rt.stash.pop();
     const lo = rt.stash.pop();
     if (!(isTemporaryObject(ro) && isTemporaryObject(lo)))
       throw new Error("expected objects for binary operation");
-    rt.stash.pushWithoutConversions(applyBinaryOp(op, lo, ro, rt));
+    rt.stash.pushWithoutConversions(applyBinaryOp(op, lo, ro, rt, origin));
   },
   [InstructionType.LOGICAL]: (
     rt: Runtime,
@@ -822,7 +826,7 @@ export const instructionEvaluator: {
   },
   [InstructionType.INCR_DECR]: (
     rt: Runtime,
-    { op, pushOldValue }: IncrDecrInstruction,
+    { op, pushOldValue, origin }: IncrDecrInstruction,
   ) => {
     const ptr = rt.stash.pop();
     if (
@@ -842,14 +846,14 @@ export const instructionEvaluator: {
       int(),
       BIGINT_TO_BYTES[Type.Int](BigInt(1), rt.config.endianness),
     );
-    const { oldValue, newValue } = combineAndStore(address, t, op, one, rt);
+    const { oldValue, newValue } = combineAndStore(address, t, op, one, rt, origin);
     rt.stash.pushWithoutConversions(
       pushOldValue ? oldValue : newValue,
     );
   },
   [InstructionType.COMPOUND_ASSIGN]: (
     rt: Runtime,
-    { op }: CompoundAssignInstruction,
+    { op, origin }: CompoundAssignInstruction,
   ) => {
     const rhs = rt.stash.pop();
     if (!isTemporaryObject(rhs))
@@ -869,7 +873,7 @@ export const instructionEvaluator: {
     const t = ptr.typeInfo.referencedType;
     if (!isScalarType(t))
       throw new Error("expected scalar type for compound assign");
-    const { newValue } = combineAndStore(address, t, op, rhs, rt);
+    const { newValue } = combineAndStore(address, t, op, rhs, rt, origin);
     rt.stash.pushWithoutConversions(newValue);
   },
   [InstructionType.POP]: (rt: Runtime) => {
@@ -880,7 +884,7 @@ export const instructionEvaluator: {
   },
   [InstructionType.ASSIGN]: (
     rt: Runtime,
-    { initializing }: AssignInstruction,
+    { initializing, origin }: AssignInstruction,
   ) => {
     const o = rt.stash.pop();
     if (!isTemporaryObject(o)) throw new Error("expected object for assign");
@@ -914,6 +918,7 @@ export const instructionEvaluator: {
       )
     ) {
       if (isScalarType(typeInfo) && isScalarType(o.typeInfo)) {
+        noteTruncation(rt, o, typeInfo, origin);
         const { bytes } = convertForAssignment(o, typeInfo, rt.config.endianness);
         rt.memory.setObjectBytes(
           address, bytes, typeInfo, false, false, initializing, ptr.provenanceBase ?? undefined,
@@ -978,7 +983,10 @@ export const instructionEvaluator: {
     );
     rt.setExitCode(Number(n));
   },
-  [InstructionType.CALL]: (rt: Runtime, { arity }: CallInstruction) => {
+  [InstructionType.CALL]: (
+    rt: Runtime,
+    { arity, argSpans }: CallInstruction,
+  ) => {
     const args = [];
     for (let i = 0; i < arity; i++) {
       args.push(rt.stash.pop());
@@ -1011,9 +1019,16 @@ export const instructionEvaluator: {
       const builtinFn = rt.getBuiltinFunction(-Number(fnIdx) - 1);
       const converted = args.map((arg, index) => {
         if (!isTemporaryObject(arg)) throw new Error("expected native argument value");
-        return convertForAssignment(arg, builtinFn.type.parameterTypes[index].type, rt.config.endianness);
+        const paramType = builtinFn.type.parameterTypes[index].type;
+        noteTruncation(rt, arg, paramType, argSpans?.[index]);
+        return convertForAssignment(arg, paramType, rt.config.endianness);
       });
-      builtinFn.body(rt, converted);
+      rt.builtinDepth++;
+      try {
+        builtinFn.body(rt, converted);
+      } finally {
+        rt.builtinDepth--;
+      }
       return;
     }
 
@@ -1044,7 +1059,7 @@ export const instructionEvaluator: {
       rt.registerObject(address, typeInfo, "automatic", identifier, fnBody.start);
 
       rt.agenda.push(popInstruction());
-      rt.agenda.push(assignInstruction(true));
+      rt.agenda.push(assignInstruction(true, argSpans?.[i]));
       rt.agenda.push(pushInstruction(args[i]));
       rt.agenda.push(
         pushInstruction(
@@ -1122,18 +1137,22 @@ export const instructionEvaluator: {
   [InstructionType.CONTINUE_MARK]: () => {},
   [InstructionType.ARITHMETIC_CONVERSION]: (
     rt: Runtime,
-    { typeInfo }: ArithmeticConversionInstruction,
+    { typeInfo, origin }: ArithmeticConversionInstruction,
   ) => {
     const o = rt.stash.pop();
     if (!(isTemporaryObject(o) && isArithmeticType(o.typeInfo)))
       throw "expected object of arithmetic type for conversion";
+    noteTruncation(rt, o, typeInfo, origin);
     const res = convertArithmeticBytes(
       o.bytes, o.typeInfo, typeInfo, rt.config.endianness,
     );
     const t = new TemporaryObject(typeInfo, res);
     rt.stash.pushWithoutConversions(t);
   },
-  [InstructionType.CAST]: (rt: Runtime, { targetType }: CastInstruction) => {
+  [InstructionType.CAST]: (
+    rt: Runtime,
+    { targetType, origin }: CastInstruction,
+  ) => {
     const o = rt.stash.pop();
     if (isVoid(targetType)) return;
     if (!(isTemporaryObject(o) && isScalarType(o.typeInfo)))
@@ -1143,6 +1162,7 @@ export const instructionEvaluator: {
       return;
     }
     if (isArithmeticType(targetType) && isArithmeticType(o.typeInfo)) {
+      noteTruncation(rt, o, targetType, origin);
       const bytes = convertArithmeticBytes(
         o.bytes, o.typeInfo, targetType, rt.config.endianness,
       );
@@ -1166,8 +1186,30 @@ export const instructionEvaluator: {
       )
     )
       res = val;
-    if (isIntegerType(o.typeInfo) && isPointer(targetType)) res = val;
-    if (isPointer(o.typeInfo) && isIntegerType(targetType)) res = val;
+    if (isIntegerType(o.typeInfo) && isPointer(targetType)) {
+      res = val;
+      // A null pointer constant converts to a null pointer (6.3.2.3p3);
+      // every other integer-to-pointer mapping is this interpreter's own.
+      if (val !== BigInt(0))
+        rt.note({
+          kind: "implementation-defined",
+          phase: "runtime",
+          clause: "C17 6.3.2.3p5",
+          message: `converting the integer ${val} to ${describeType(targetType)} is implementation-defined (C17 6.3.2.3p5); this interpreter uses it as the address ${decimalAddressToHex(Number(val))}`,
+          ranges: origin ? [origin] : [],
+        });
+    }
+    if (isPointer(o.typeInfo) && isIntegerType(targetType)) {
+      res = val;
+      if (!isBool(targetType))
+        rt.note({
+          kind: "implementation-defined",
+          phase: "runtime",
+          clause: "C17 6.3.2.3p6",
+          message: `converting a pointer to ${getTypeName(targetType)} is implementation-defined (C17 6.3.2.3p6); this interpreter uses the address ${decimalAddressToHex(Number(val))} as the value`,
+          ranges: origin ? [origin] : [],
+        });
+    }
     if (
       isPointer(o.typeInfo) &&
       (isObjectTypeInfo(o.typeInfo.referencedType) ||
@@ -1250,6 +1292,77 @@ const scalarIsNonzero = (
   isFloatingType(type)
     ? bytesToFloat(bytes, type.type, endianness) !== 0
     : bytesToBigint(bytes, isSigned(type), endianness) !== BigInt(0);
+
+const describeType = (t: TypeInfo): string =>
+  getTypeName(t).replace(/\bptr\b/g, "pointer");
+
+// B4.2: C17 6.3.1.3p3 leaves an out-of-range conversion to a signed type to
+// the implementation; say what this one did rather than doing it silently.
+const noteTruncation = (
+  rt: Runtime,
+  source: TemporaryObject,
+  target: ObjectTypeInfo,
+  origin?: SourceSpan,
+): void => {
+  if (!(isIntegerType(source.typeInfo) && isIntegerType(target))) return;
+  const value = bytesToBigint(source.bytes, isSigned(source.typeInfo), rt.config.endianness);
+  const result = signedTruncation(value, target, rt.config.endianness);
+  if (result === null) return;
+  const why = isChar(target)
+    ? "C17 6.3.1.3p3; char is signed here, 6.2.5p15"
+    : "C17 6.3.1.3p3";
+  rt.note({
+    kind: "implementation-defined",
+    phase: "runtime",
+    clause: "C17 6.3.1.3p3",
+    message: `converting ${value} to ${getTypeName(target)} is implementation-defined (${why}); this interpreter keeps the low ${target.size * 8} bits, giving ${result}`,
+    ranges: origin ? [origin] : [],
+  });
+};
+
+// The literal a pointer was derived from (B3.4's tag), and its offset into it.
+const literalOperand = (rt: Runtime, o: TemporaryObject) => {
+  if (o.provenanceBase === null || !isPointer(o.typeInfo)) return null;
+  const range = rt.memory.storage.findByBase(o.provenanceBase);
+  if (!range || range.kind !== "literal") return null;
+  const address = Number(bytesToBigint(o.bytes, isSigned(o.typeInfo), rt.config.endianness));
+  return { range, offset: address - range.base, bytes: rt.memory.getBytes(range.base, range.size) };
+};
+
+const literalText = (bytes: number[]): string =>
+  JSON.stringify(String.fromCharCode(...bytes.slice(0, -1)));
+
+// B4.4: two pointers into distinct literals compare unequal here, but C17
+// 6.4.5p7 lets an implementation make identical literals (or a literal and
+// the tail of a longer one) share storage; note it when that would flip the
+// result.
+const noteLiteralIdentity = (
+  rt: Runtime,
+  lo: TemporaryObject,
+  ro: TemporaryObject,
+  result: boolean | undefined,
+  origin?: SourceSpan,
+): void => {
+  const a = literalOperand(rt, lo);
+  const b = literalOperand(rt, ro);
+  if (!a || !b || a.range.base === b.range.base || result === undefined) return;
+  const [long, short] = a.range.size >= b.range.size ? [a, b] : [b, a];
+  const shift = long.range.size - short.range.size;
+  const tail = long.bytes.slice(shift);
+  if (!tail.every((byte, i) => byte === short.bytes[i])) return;
+  if (long.offset !== shift + short.offset) return;
+  const which =
+    shift === 0
+      ? `the identical string literals ${literalText(a.bytes)} and ${literalText(b.bytes)} share storage`
+      : `the string literal ${literalText(short.bytes)} shares storage with the tail of ${literalText(long.bytes)}`;
+  rt.note({
+    kind: "string-literal-identity",
+    phase: "runtime",
+    clause: "C17 6.4.5p7",
+    message: `C17 leaves it unspecified whether ${which} (6.4.5p7); this interpreter gives each literal its own array, so this comparison is ${result}; a compiler that merges literals (GCC usually does) makes it ${!result}`,
+    ranges: origin ? [origin] : [],
+  });
+};
 
 const COMPOUND_ASSIGN_OP: Record<Exclude<AssignmentOperator, "=">, BinaryOperator> = {
   "*=": "*",
@@ -1338,6 +1451,7 @@ const applyBinaryOp = (
   lo: TemporaryObject,
   ro: TemporaryObject,
   rt: Runtime,
+  origin?: SourceSpan,
 ): TemporaryObject => {
   const t1 = ro.typeInfo;
   const t0 = lo.typeInfo;
@@ -1549,6 +1663,8 @@ const applyBinaryOp = (
             break;
           }
         }
+        if (isPointer(t0) && isPointer(t1))
+          noteLiteralIdentity(rt, lo, ro, isTruthy, origin);
       }
 
       if (isTruthy === undefined) throw new Error("invalid types for ==, !=");
@@ -1640,6 +1756,14 @@ const applyBinaryOp = (
       l = convertValue(l, pt0, rt.config.endianness);
       const r = bytesToBigint(ro.bytes, isSigned(t1), rt.config.endianness);
       const res = op === "<<" ? l << r : l >> r;
+      if (op === ">>" && l < BigInt(0))
+        rt.note({
+          kind: "implementation-defined",
+          phase: "runtime",
+          clause: "C17 6.5.7p5",
+          message: `right-shifting the negative value ${l} is implementation-defined (C17 6.5.7p5); this interpreter copies the sign bit, giving ${res}`,
+          ranges: origin ? [origin] : [],
+        });
       // typeBinaryExpression types the whole shift expression as
       // left.typeInfo (t0, unpromoted), not the promoted type used
       // above to compute the shift - narrow back down to match.
@@ -1687,11 +1811,13 @@ const combineAndStore = (
   op: BinaryOperator,
   rhs: TemporaryObject,
   rt: Runtime,
+  origin?: SourceSpan,
 ): { oldValue: TemporaryObject; newValue: TemporaryObject } => {
   const oldValue = new TemporaryObject(t, rt.memory.getObjectBytes(address, t));
-  const combined = applyBinaryOp(op, oldValue, rhs, rt);
+  const combined = applyBinaryOp(op, oldValue, rhs, rt, origin);
   let bytes: number[];
   if (isArithmeticType(t) && isArithmeticType(combined.typeInfo)) {
+    noteTruncation(rt, combined, t, origin);
     bytes = convertArithmeticBytes(
       combined.bytes, combined.typeInfo, t, rt.config.endianness,
     );
@@ -1725,7 +1851,9 @@ const scheduleInitializerAssignment = (
   rt: Runtime,
 ): void => {
   rt.agenda.push(popInstruction());
-  rt.agenda.push(assignInstruction(true));
+  rt.agenda.push(
+    assignInstruction(true, source instanceof TemporaryObject ? undefined : spanOf(source)),
+  );
   rt.agenda.push(
     source instanceof TemporaryObject ? pushInstruction(source) : source,
   );
@@ -1829,10 +1957,21 @@ const evaluateInitializer = (
     }
   };
   visit(t, address, tt, "");
+  // Each write schedules four agenda items; element w's expression sits
+  // third from the top of chain (writes.length - 1 - w) once reversed.
+  const base = rt.agenda.size();
+  const elements: OperandPosition[] = [];
+  writes.forEach(({ source }, w) => {
+    if (source instanceof TemporaryObject || isTypedInitializerList(source)) return;
+    const chain = writes.length - 1 - w;
+    elements.push({ node: source, slot: base + 4 * chain + 3, end: base + 4 * chain + 2 });
+  });
   // The agenda is a stack; stores must execute in initializer-list order.
   writes.reverse().forEach(({ source, address, type }) =>
     scheduleInitializerAssignment(source, address, type, rt),
   );
+  if (elements.length >= 2)
+    rt.order.open("initializer", "{}", elements.map((e) => e.node), -1, elements);
 };
 
 // finds the top-level index to start executing from: the first case whose

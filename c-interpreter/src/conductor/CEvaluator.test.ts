@@ -130,6 +130,16 @@ async function testFaultMessageNamesTheOverrunObject() {
   assert.match(error!.message as string, /24 byte\(s\) past the end of 'a'/);
 }
 
+// B4.5: an unsequenced conflict the runtime observes is a fatal runtime error,
+// so it is the one B4 diagnostic that reaches a Source Academy host today.
+async function testUnsequencedAccessIsARuntimeError() {
+  const log = await evaluate("int main() { int i = 1; return i++ + i++; }");
+  const error = log.find((e) => e.type === "error");
+  assert.ok(error, "expected an error message");
+  assert.equal(error!.errorType, "__evaluator_runtime");
+  assert.match(error!.message as string, /undefined behaviour: 'i' is modified by both/);
+}
+
 async function testStatusUpdatesBracketEvaluation() {
   const log = await evaluate("int main() { return 0; }");
   const statuses = log.filter((e) => e.type === "status");
@@ -146,6 +156,7 @@ async function main() {
     ["library memory errors retain their function and reason", testRuntimeError],
     ["a memory fault names the overrun object, not a bare address", testFaultMessageNamesTheOverrunObject],
     ["string library fixtures run through Conductor", testStringLibrary],
+    ["an unsequenced conflict is reported as a runtime error", testUnsequencedAccessIsARuntimeError],
     ["status is toggled around evaluation", testStatusUpdatesBracketEvaluation],
   ];
 

@@ -8,6 +8,7 @@ import {
 import { ArithmeticType, ScalarType, Void } from "../typing/types";
 import { AgendaItem, isInstruction } from "./agenda";
 import { StashItem } from "./stash";
+import { SourceSpan } from "./notes";
 
 export enum InstructionType {
   UNARY_OP = "UnaryOp",
@@ -51,13 +52,17 @@ export const unaryOpInstruction = (op: UnaryOperator): UnaryOpInstruction => ({
 export interface BinaryOpInstruction extends BaseInstruction {
   type: InstructionType.BINARY_OP;
   op: BinaryOperator;
+  // Source of the expression, for notes (B4.2). Absent for internal uses.
+  origin?: SourceSpan | undefined;
 }
 
 export const binaryOpInstruction = (
   op: BinaryOperator,
+  origin?: SourceSpan,
 ): BinaryOpInstruction => ({
   type: InstructionType.BINARY_OP,
   op,
+  origin,
 });
 
 export interface PopInstruction extends BaseInstruction {
@@ -82,11 +87,17 @@ export interface AssignInstruction extends BaseInstruction {
   type: InstructionType.ASSIGN;
   // Initialization may write to a newly created const object.
   initializing: boolean;
+  // The expression whose value is converted and stored, for notes (B4.2).
+  origin?: SourceSpan | undefined;
 }
 
-export const assignInstruction = (initializing = false): AssignInstruction => ({
+export const assignInstruction = (
+  initializing = false,
+  origin?: SourceSpan,
+): AssignInstruction => ({
   type: InstructionType.ASSIGN,
   initializing,
+  origin,
 });
 
 export interface MarkInstruction extends BaseInstruction {
@@ -140,11 +151,17 @@ export const exitInstruction = (): ExitInstruction => ({
 export interface CallInstruction extends BaseInstruction {
   type: InstructionType.CALL;
   arity: number;
+  // One span per argument expression, for parameter-conversion notes (B4.2).
+  argSpans?: SourceSpan[] | undefined;
 }
 
-export const callInstruction = (arity: number): CallInstruction => ({
+export const callInstruction = (
+  arity: number,
+  argSpans?: SourceSpan[],
+): CallInstruction => ({
   type: InstructionType.CALL,
   arity,
+  argSpans,
 });
 
 export const isCallInstruction = (i: Instruction): i is CallInstruction =>
@@ -181,27 +198,33 @@ export interface IncrDecrInstruction extends BaseInstruction {
   op: "+" | "-";
   // Postfix yields the old value; prefix yields the new value. Neither is an lvalue.
   pushOldValue: boolean;
+  origin?: SourceSpan | undefined;
 }
 
 export const incrDecrInstruction = (
   op: "+" | "-",
   pushOldValue: boolean,
+  origin?: SourceSpan,
 ): IncrDecrInstruction => ({
   type: InstructionType.INCR_DECR,
   op,
   pushOldValue,
+  origin,
 });
 
 export interface CompoundAssignInstruction extends BaseInstruction {
   type: InstructionType.COMPOUND_ASSIGN;
   op: BinaryOperator;
+  origin?: SourceSpan | undefined;
 }
 
 export const compoundAssignInstruction = (
   op: BinaryOperator,
+  origin?: SourceSpan,
 ): CompoundAssignInstruction => ({
   type: InstructionType.COMPOUND_ASSIGN,
   op,
+  origin,
 });
 
 export interface BranchInstruction extends BaseInstruction {
@@ -222,23 +245,28 @@ export const branchInstruction = (
 export interface ArithmeticConversionInstruction extends BaseInstruction {
   type: InstructionType.ARITHMETIC_CONVERSION;
   typeInfo: ArithmeticType;
+  origin?: SourceSpan | undefined;
 }
 
 export const arithmeticConversionInstruction = (
   typeInfo: ArithmeticType,
+  origin?: SourceSpan,
 ): ArithmeticConversionInstruction => ({
   type: InstructionType.ARITHMETIC_CONVERSION,
   typeInfo,
+  origin,
 });
 
 export interface CastInstruction extends BaseInstruction {
   type: InstructionType.CAST;
   targetType: Void | ScalarType;
+  origin?: SourceSpan | undefined;
 }
 
 export const castInstruction = (
   targetType: Void | ScalarType,
-): CastInstruction => ({ type: InstructionType.CAST, targetType });
+  origin?: SourceSpan,
+): CastInstruction => ({ type: InstructionType.CAST, targetType, origin });
 
 export interface ArraySubscriptInstruction extends BaseInstruction {
   type: InstructionType.ARRAY_SUBSCRIPT;

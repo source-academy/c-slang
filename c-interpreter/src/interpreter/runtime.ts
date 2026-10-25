@@ -24,6 +24,8 @@ import {
 import { InitializedTable } from "./initializedTable";
 import { StorageRange } from "../memory/storageRanges";
 import { PositionInfo } from "../ast/types";
+import { Note, NoteLog, NoteSpec } from "./notes";
+import { EvaluationOrderTracker } from "./evaluationOrder";
 
 export type TextAndDataEntry = FunctionDesignator | RuntimeObject;
 
@@ -51,6 +53,8 @@ export class RuntimeView {
   effectiveTypeTable: Record<number, EffectiveTypeTableEntry>;
   initTable: InitializedTable;
   stdout: string;
+  notes: Note[];
+  stepCount: number;
 
   constructor(rt: Runtime) {
     this.agenda = rt.agenda.getArr();
@@ -62,6 +66,8 @@ export class RuntimeView {
     this.blockScopes = rt.symbolTable.getBlockScopes();
     this.fileScope = rt.symbolTable.getFileScope();
     this.memory = cloneDeep(rt.memory);
+    // A snapshot's reads must not feed the live tracker.
+    this.memory.accessObserver = null;
     this.functions = rt.getFunctions();
     this.functionCalls = rt.functionCalls.getArr();
     this.rbpArr = rt.stack.getRbpArr();
@@ -71,6 +77,8 @@ export class RuntimeView {
     this.effectiveTypeTable = rt.effectiveTypeTable.getTable();
     this.initTable = cloneDeep(rt.initTable);
     this.stdout = rt.stdout;
+    this.notes = rt.notes.getNotes();
+    this.stepCount = rt.stepCount;
   }
 }
 
@@ -86,8 +94,15 @@ export class Runtime {
   public readonly functionCalls: Stack<number>;
   public readonly heap: Heap;
   public readonly initTable: InitializedTable;
+  public readonly notes = new NoteLog();
+  public readonly order: EvaluationOrderTracker;
+  // Builtins run inside one step; counts as call depth while one is running.
+  public builtinDepth = 0;
 
   private functions: [string, TypedCompoundStatement, FunctionType][];
+  // Number of completed next() calls; a note raised during step s first
+  // appears in a view taken after s steps.
+  private _stepCount = 0;
   private builtinFunctions: BuiltinFunction[];
   private _exitCode: number | undefined;
   private _stdout: string;
@@ -125,6 +140,9 @@ export class Runtime {
       config.memory.heap.baseAddress + config.memory.heap.size,
     );
     this.initTable = new InitializedTable();
+    this.order = new EvaluationOrderTracker(this);
+    this.memory.accessObserver = (address, size, write) =>
+      this.order.record(address, size, write);
 
     this.functions = [];
     this.builtinFunctions = [];
@@ -159,6 +177,8 @@ export class Runtime {
 
   public next(): void {
     if (this.agenda.isEmpty()) throw new RangeError("agenda is empty");
+    this._stepCount++;
+    this.order.beforeStep(this.agenda.size());
     const isLvalue = this.agenda.topIsLvalue();
     const next = this.agenda.pop();
     if (isInstruction(next)) {
@@ -168,6 +188,14 @@ export class Runtime {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ASTNodeEvaluator[next.type](this, next as any, isLvalue);
     }
+  }
+
+  public get stepCount(): number {
+    return this._stepCount;
+  }
+
+  public note(spec: NoteSpec): void {
+    this.notes.add(spec, this._stepCount);
   }
 
   public setExitCode(n: number) {
@@ -180,6 +208,7 @@ export class Runtime {
 
   public appendToStdout(s: string) {
     this._stdout += s;
+    this.order.recordOutput();
   }
 
   public get stdout() {

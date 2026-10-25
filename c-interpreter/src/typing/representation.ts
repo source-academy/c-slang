@@ -153,6 +153,20 @@ export const TRUNCATE_TO_TYPE: Record<
   [Type.UnsignedLongLongInt]: BIGINT_TO_BYTES[Type.UnsignedLongLongInt],
 };
 
+// C17 6.3.1.3p3 leaves an out-of-range conversion to a signed type to the
+// implementation. Returns what TRUNCATE_TO_TYPE makes of `value`, or null
+// when it fits or the target is unsigned (well-defined, 6.3.1.3p2).
+export const signedTruncation = (
+  value: bigint,
+  target: IntegerType,
+  e: Endianness = "little",
+): bigint | null => {
+  if (!isSigned(target)) return null;
+  const [min, max] = getNumericalLimitFromSpecifiers(typeInfoToSpecifier(target));
+  if (min <= value && value <= max) return null;
+  return bytesToBigint(TRUNCATE_TO_TYPE[target.type](value, e), true, e);
+};
+
 // Round integers directly to float32 to avoid double rounding through Number.
 export const bigintToFloat = (value: bigint): number => {
   const magnitude = value < BigInt(0) ? -value : value;

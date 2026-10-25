@@ -1409,3 +1409,185 @@ scope-function-boundary-pointer-to-caller:
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}
+
+b4-conversion-signed-char:
+  file: b4-conversion-signed-char.c
+  desc: out-of-range int to signed char truncates (C17 6.3.1.3p3), noted but not fatal
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-plain-char:
+  file: b4-conversion-plain-char.c
+  desc: plain char is signed here (C17 6.2.5p15), so the same truncation applies
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-in-range:
+  file: b4-conversion-in-range.c
+  desc: unsigned, in-range, and floating conversions are well-defined and raise no note
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-store-back:
+  file: b4-conversion-store-back.c
+  desc: ++, -- and compound assignment store-back can truncate too
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-shift:
+  file: b4-conversion-shift.c
+  desc: right shift of a negative value is implementation-defined (C17 6.5.7p5)
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-pointer-casts:
+  file: b4-conversion-pointer-casts.c
+  desc: pointer/integer casts are implementation-defined (C17 6.3.2.3p5-6); null pointer constants are not
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-loop:
+  file: b4-conversion-loop.c
+  desc: a truncation repeated in a loop merges into one counted note
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-conversion-call-boundary:
+  file: b4-conversion-call-boundary.c
+  desc: argument passing and return convert too
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-string-identity-direct:
+  file: b4-string-identity-direct.c
+  desc: identical literals are distinct arrays here (unspecified, C17 6.4.5p7); GCC merges them and returns 1
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-string-identity-variables:
+  file: b4-string-identity-variables.c
+  desc: the same comparison through pointer variables, == and !=
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-string-identity-same-occurrence:
+  file: b4-string-identity-same-occurrence.c
+  desc: one literal occurrence evaluated repeatedly is one array (static storage), so comparisons are fixed
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-string-identity-different:
+  file: b4-string-identity-different.c
+  desc: literals no layout could make equal
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-string-identity-suffix:
+  file: b4-string-identity-suffix.c
+  desc: a literal may share storage with the tail of another ("bc" inside "abc")
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-string-identity-through-call:
+  file: b4-string-identity-through-call.c
+  desc: literal pointers passed as arguments; GCC merges them and returns 1
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-order-operands:
+  file: b4-order-operands.c
+  desc: operand order is unspecified (C17 6.5p3); both calls modify the same object, so a note, not a fault
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-order-arguments:
+  file: b4-order-arguments.c
+  desc: argument order is unspecified (C17 6.5.2.2p10)
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-order-output:
+  file: b4-order-output.c
+  desc: two operands that both print; the printed order depends on the evaluation order
+  cases:
+    - {out: "0", stdout: "1\n2\n", endianness: little}
+    - {out: "0", stdout: "1\n2\n", endianness: big}
+
+b4-order-initializers:
+  file: b4-order-initializers.c
+  desc: initializer-list elements are indeterminately sequenced (C17 6.7.9p23), so even i++, i++ is a note, not UB
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-order-read-vs-write:
+  file: b4-order-read-vs-write.c
+  desc: a read here against a write inside a call, on a scalar, an array element and a struct member
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-order-no-false-positives:
+  file: b4-order-no-false-positives.c
+  desc: different objects, different members, recursion, and reused stack addresses raise nothing
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-static-store-conflicts:
+  file: b4-static-store-conflicts.c
+  desc: operator-store conflicts (i = i++) run; only the static pass flags them
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-static-conditional:
+  file: b4-static-conditional.c
+  desc: a conflict behind && that is not evaluated at runtime
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-static-clean:
+  file: b4-static-clean.c
+  desc: sequenced, indeterminately sequenced, and distinct-object cases raise no static note
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-static-fault-double-increment:
+  file: b4-static-fault-double-increment.c
+  desc: i++ + i++ is also a runtime UnsequencedAccessError
+  cases:
+    - {fail: true, endianness: little}
+    - {fail: true, endianness: big}
+
+b4-static-fault-subscript:
+  file: b4-static-fault-subscript.c
+  desc: a[i] = i++ is also a runtime UnsequencedAccessError
+  cases:
+    - {fail: true, endianness: little}
+    - {fail: true, endianness: big}
+
+b4-static-fault-argument:
+  file: b4-static-fault-argument.c
+  desc: f(i, i++) is also a runtime UnsequencedAccessError
+  cases:
+    - {fail: true, endianness: little}
+    - {fail: true, endianness: big}

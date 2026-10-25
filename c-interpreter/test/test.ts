@@ -32,6 +32,12 @@ import "./b3-fault-messages";
 import "./b3-pointer-provenance";
 import "./storage-ranges-lookup";
 import "./builtin-text-entries";
+import "./b4-notes-channel";
+import "./b4-conversion-notes";
+import "./b4-string-identity";
+import "./b4-order-notes";
+import "./b4-order-rejections";
+import "./b4-static-unsequenced";
 import { Endianness } from "../src/config";
 
 const TEST_FOLDER_PATH = "./test/";

@@ -12,6 +12,9 @@ export interface StorageRange {
   // allocations and literals, which have no declared name.
   name?: string | undefined;
   declaredAt?: PositionInfo | undefined;
+  // Creation order, set by register(): lets B4.5 ignore objects created after
+  // an operand group opened (a callee's locals at reused stack addresses).
+  serial?: number | undefined;
 }
 
 export type RetiredReason = "freed" | "scope-exit";
@@ -30,6 +33,12 @@ export class StorageRanges {
   // and every lookup is a binary search rather than a scan of every object.
   private readonly ranges: StorageRange[] = [];
   private readonly retired: RetiredRange[] = [];
+  private counter = 0;
+
+  // The serial of the most recently registered range.
+  get serial(): number {
+    return this.counter;
+  }
 
   // Number of leading ranges for which `before` holds.
   private countWhile(before: (range: StorageRange) => boolean): number {
@@ -55,6 +64,7 @@ export class StorageRanges {
       existing.base < range.base + range.size;
     if (overlaps(this.ranges[i - 1]) || overlaps(this.ranges[i]))
       throw new Error("overlapping live storage");
+    range.serial = ++this.counter;
     this.ranges.splice(i, 0, range);
   }
 
@@ -71,12 +81,16 @@ export class StorageRanges {
   // For a zero-length lookup at the boundary between two adjacent objects,
   // the one starting there wins over the one ending there.
   find(address: bigint, count: bigint): StorageRange | undefined {
-    if (address <= BigInt(0) || count < BigInt(0)) return undefined;
-    const i = this.lastStartingAtOrBefore(Number(address));
+    return this.findAt(Number(address), Number(count));
+  }
+
+  // Same lookup on plain numbers, for the per-access recording path (B4.5).
+  findAt(address: number, count: number): StorageRange | undefined {
+    if (address <= 0 || count < 0) return undefined;
+    const i = this.lastStartingAtOrBefore(address);
     for (const range of [this.ranges[i], this.ranges[i - 1]] as (StorageRange | undefined)[]) {
       if (range === undefined) continue;
-      if (address >= BigInt(range.base) && address + count <= BigInt(range.base + range.size))
-        return range;
+      if (address >= range.base && address + count <= range.base + range.size) return range;
     }
     return undefined;
   }

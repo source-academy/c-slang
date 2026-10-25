@@ -64,9 +64,13 @@ const checkMemoryConfig = (config: MemoryConfig) => {
 const unqualifiedAccessType = (type: ObjectTypeInfo): ObjectTypeInfo =>
   isArray(type) ? array(unqualifiedAccessType(type.elementType), type.length) : unqualified(type);
 
+export type AccessObserver = (address: number, size: number, write: boolean) => void;
+
 export class Memory {
   public readonly storage = new StorageRanges();
   public readonly pointerProvenance = new PointerProvenanceTable();
+  // B4.5: told about each read/write once it succeeded; null on snapshots.
+  public accessObserver: AccessObserver | null = null;
   private readonly segments: Segments;
   private readonly readonlyAddresses: Set<number>;
   private readonly executableAddresses: Set<number>;
@@ -118,15 +122,21 @@ export class Memory {
     return region.getByte(address - region.baseAddress);
   }
 
+  private readBytes(address: number, size: number, toExecute: boolean): number[] {
+    const res = [];
+    for (let i = 0; i < size; ++i) {
+      res.push(this.getByte(address + i, toExecute));
+    }
+    return res;
+  }
+
   public getBytes(
     address: number,
     size: number,
     toExecute: boolean = false,
   ): number[] {
-    const res = [];
-    for (let i = 0; i < size; ++i) {
-      res.push(this.getByte(address + i, toExecute));
-    }
+    const res = this.readBytes(address, size, toExecute);
+    this.accessObserver?.(address, size, false);
     return res;
   }
 
@@ -138,6 +148,8 @@ export class Memory {
   ): number[] {
     this.getMemoryRegion(address);
     this.checkValidObjectAccess(address, t, expectedOrigin);
+    // Array-to-pointer conversion doesn't read the array (C17 6.3.2.1p3).
+    if (isArray(t)) return this.readBytes(address, t.size, toExecute);
     return this.getBytes(address, t.size, toExecute);
   }
 
@@ -165,6 +177,7 @@ export class Memory {
   ): void {
     for (let i = 0; i < bytes.length; i++)
       this.setByte(address + i, bytes[i], readonly, executable, initializing);
+    this.accessObserver?.(address, bytes.length, true);
   }
 
   public setObjectBytes(
@@ -245,6 +258,7 @@ export class Memory {
 
   public setRepeatedByte(address: number, size: number, byte: number): void {
     for (let i = 0; i < size; i++) this.setByte(address + i, byte);
+    this.accessObserver?.(address, size, true);
   }
 
   public setScalar(

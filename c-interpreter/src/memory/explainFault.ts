@@ -1,5 +1,5 @@
 import { decimalAddressToHex } from "../utils";
-import { getTypeName } from "../typing/types";
+import { ObjectTypeInfo, getTypeName, isArray, isStructure } from "../typing/types";
 import type { Memory } from "./memory";
 import { StorageRange } from "./storageRanges";
 
@@ -44,6 +44,37 @@ export const explainFault = (address: number, memory: Memory): string => {
   }
 
   return decimalAddressToHex(address);
+};
+
+const subobjectPath = (t: ObjectTypeInfo, offset: number, size: number): string => {
+  if (offset === 0 && size === t.size) return "";
+  if (isArray(t) && t.length !== null) {
+    const i = Math.floor(offset / t.elementType.size);
+    return `[${i}]` + subobjectPath(t.elementType, offset - i * t.elementType.size, size);
+  }
+  if (isStructure(t) && !t.isUnion) {
+    const m = t.members.find(
+      (m) => offset >= m.relativeAddress && offset + size <= m.relativeAddress + m.type.size,
+    );
+    if (m) return (m.name ? "." + m.name : "") + subobjectPath(m.type, offset - m.relativeAddress, size);
+  }
+  return ` (bytes ${offset}-${offset + size - 1})`;
+};
+
+// Names the object, or the subobject, occupying [address, address + size):
+// 'count', 'a[2]', 's.y', a heap allocation (bytes 4-7). For B4.5's notes.
+export const describeObjectAt = (address: number, size: number, memory: Memory): string => {
+  const range = memory.storage.find(BigInt(address), BigInt(size));
+  if (!range) return decimalAddressToHex(address);
+  if (range.kind === "literal") return "a string literal";
+  const offset = address - range.base;
+  const path = range.declaredType
+    ? subobjectPath(range.declaredType, offset, size)
+    : offset === 0 && size === range.size
+      ? ""
+      : ` (bytes ${offset}-${offset + size - 1})`;
+  if (range.name) return `'${range.name}${path}'`;
+  return (range.kind === "allocated" ? "a heap allocation" : "an unnamed object") + path;
 };
 
 export const explainProvenanceMismatch = (
