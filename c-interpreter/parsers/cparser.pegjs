@@ -22,14 +22,21 @@
     return { ...node, value };
   }
 
+  // Each level of a left-associative chain spans its own operands;
+  // location()/text() here would describe the whole chain for every level.
   function makeBinaryExpNode(a, b) {
     if (b.length == 0) return a;
     const [op, right] = b.pop();
-    return makeNode("BinaryExpr", {
-      left: makeBinaryExpNode(a, b),
+    const left = makeBinaryExpNode(a, b);
+    return {
+      start: left.start,
+      end: right.end,
+      src: input.substring(left.start.offset, right.end.offset),
+      type: "BinaryExpr",
+      left,
       op,
       right,
-    });
+    };
   }
 
   function throwNotImplemented(details = "") {

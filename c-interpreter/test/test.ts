@@ -38,6 +38,7 @@ import "./b4-string-identity";
 import "./b4-order-notes";
 import "./b4-order-rejections";
 import "./b4-static-unsequenced";
+import "./binary-chain-spans";
 import { Endianness } from "../src/config";
 
 const TEST_FOLDER_PATH = "./test/";

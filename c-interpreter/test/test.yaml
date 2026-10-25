@@ -1591,3 +1591,10 @@ b4-static-fault-argument:
   cases:
     - {fail: true, endianness: little}
     - {fail: true, endianness: big}
+
+binary-chain-spans-shift:
+  file: binary-chain-spans-shift.c
+  desc: a chained right shift of a negative value, for the position-tracking tests
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
