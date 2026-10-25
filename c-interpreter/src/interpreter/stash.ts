@@ -36,13 +36,20 @@ export class Stash {
         throw new Error(
           "address should be not null when calling stash push with array",
         );
+      // B3.4 origination: this is the array-to-pointer decay point used for
+      // ordinary array usage (a[i], a + n, passing a to a function, ...), not
+      // just explicit &a - tag with the array's own StorageRange so later
+      // arithmetic/dereferences through the decayed pointer can be checked.
+      const origin = rt.memory.storage.find(BigInt(addr), BigInt(1));
       res = new TemporaryObject(
         pointer(x.typeInfo.elementType),
         BIGINT_TO_BYTES[Type.Pointer](BigInt(addr), rt.config.endianness),
+        null,
+        origin?.base ?? null,
       );
     } else
       res = x.typeInfo.const
-        ? new TemporaryObject(unqualified(x.typeInfo), x.bytes, x.address)
+        ? new TemporaryObject(unqualified(x.typeInfo), x.bytes, x.address, x.provenanceBase)
         : x;
     this.st.push(res);
   }

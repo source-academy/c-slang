@@ -15,6 +15,7 @@ import {
 } from "../ast/types";
 import { ObjectTypeInfo, ParameterTypeAndIdentifier } from "../typing/types";
 import { Stack, roundUpM } from "../utils";
+import { StackOverflowError } from "../memory/errors";
 
 export type StackFrame = Record<
   Identifier,
@@ -30,29 +31,46 @@ export class RuntimeStack extends Stack<StackFrame> {
   private _rbpStack: Stack<number>;
   private _rspStack: Stack<number>;
   private _memUsage: number;
+  private readonly stackSize: number;
+  private depth: number;
 
-  constructor(stackBaseAddress: number) {
+  constructor(stackBaseAddress: number, stackSize: number) {
     super();
     this._rbp = stackBaseAddress;
     this._rsp = stackBaseAddress;
     this._rbpStack = new Stack();
     this._rspStack = new Stack();
     this._memUsage = 0;
+    this.stackSize = stackSize;
+    this.depth = 0;
   }
 
   getRbpArr(): number[] {
     return this._rbpStack.getArr();
   }
 
-  override push(x: StackFrame): void {
+  // Checked before any state is mutated, so a failed push leaves the stack
+  // exactly as it was (B3.1) - otherwise a function recursing without ever
+  // touching a local variable would grow _rsp forever with no fault.
+  override push(x: StackFrame, label?: string): void {
+    const [size, alignment] = RuntimeStack.getStackFrameSizeAndAlignment(x);
+    const prospectiveRbp = roundUpM(this._rsp + 1, alignment);
+    const prospectiveUsage = this._memUsage + size;
+    if (prospectiveUsage > this.stackSize) {
+      const where = label ? ` (recursing into '${label}')` : "";
+      throw new StackOverflowError(
+        `exceeded the configured ${this.stackSize}-byte stack at depth ${this.depth}${where}`,
+      );
+    }
+
     this._rbpStack.push(this._rbp);
     this._rspStack.push(this._rsp);
     super.push(x);
 
-    const [size, alignment] = RuntimeStack.getStackFrameSizeAndAlignment(x);
-    this._rbp = roundUpM(this._rsp + 1, alignment);
+    this._rbp = prospectiveRbp;
     this._rsp = this._rbp + size - 1;
-    this._memUsage += size;
+    this._memUsage = prospectiveUsage;
+    this.depth++;
   }
 
   override pop(): StackFrame {
@@ -61,6 +79,7 @@ export class RuntimeStack extends Stack<StackFrame> {
     const sf = super.pop();
     const size = RuntimeStack.getStackFrameSizeAndAlignment(sf)[0];
     this._memUsage -= size;
+    this.depth--;
     return sf;
   }
 

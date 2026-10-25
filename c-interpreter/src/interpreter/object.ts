@@ -59,11 +59,18 @@ abstract class CvizObject {
 export class TemporaryObject extends CvizObject {
   private readonly _bytes: number[];
   public readonly address: number | null;
+  // B3.4 (scoped pointer provenance): for a pointer value, the base address of
+  // the StorageRange it was derived from - not the address this value itself
+  // lives at (that's `address`, for an lvalue). Absent whenever the value
+  // isn't a pointer, or is a pointer whose origin isn't tracked yet (e.g. from
+  // malloc, a function call boundary, or a struct copy) - those fail open.
+  public readonly provenanceBase: number | null;
 
   public constructor(
     typeInfo: ObjectTypeInfo,
     bytes: number[],
     address: number | null = null,
+    provenanceBase: number | null = null,
   ) {
     super(typeInfo);
     if (typeInfo.size !== bytes.length) {
@@ -77,6 +84,7 @@ export class TemporaryObject extends CvizObject {
     bytes.forEach(checkValidByte);
     this._bytes = bytes;
     this.address = address;
+    this.provenanceBase = provenanceBase;
   }
 
   public get bytes() {

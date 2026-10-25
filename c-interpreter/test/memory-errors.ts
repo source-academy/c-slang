@@ -3,8 +3,10 @@ import { describe, it } from "mocha";
 import {
   ExecuteSegmentationFault,
   MemoryError,
+  PointerProvenanceFault,
   ReadSegmentationFault,
   SegmentationFault,
+  StackOverflowError,
   WriteSegmentationFault,
 } from "../src/memory/errors";
 
@@ -18,18 +20,23 @@ describe("memory error inheritance", () => {
     ],
     [
       ReadSegmentationFault,
-      () => new ReadSegmentationFault(0x1234),
+      () => new ReadSegmentationFault("0x00001234"),
       "segmentation fault (tried to read 0x00001234)",
     ],
     [
       WriteSegmentationFault,
-      () => new WriteSegmentationFault(0x1234),
+      () => new WriteSegmentationFault("0x00001234"),
       "segmentation fault (tried to write to 0x00001234)",
     ],
     [
       ExecuteSegmentationFault,
-      () => new ExecuteSegmentationFault(0x1234),
+      () => new ExecuteSegmentationFault("0x00001234"),
       "segmentation fault (tried to execute 0x00001234)",
+    ],
+    [
+      StackOverflowError,
+      () => new StackOverflowError("exceeded the configured 500000-byte stack at depth 3"),
+      "segmentation fault (tried to grow the stack (exceeded the configured 500000-byte stack at depth 3))",
     ],
   ] as const) {
     it(`preserves ${ErrorClass.name}'s prototype chain and message`, () => {
@@ -44,6 +51,7 @@ describe("memory error inheritance", () => {
         ReadSegmentationFault,
         WriteSegmentationFault,
         ExecuteSegmentationFault,
+        StackOverflowError,
       ]) {
         if (ErrorClass !== Subtype) assert.notInstanceOf(error, Subtype);
       }
@@ -54,7 +62,7 @@ describe("memory error inheritance", () => {
 
   it("preserves further subclasses without another prototype repair", () => {
     class ProtectedWriteFault extends WriteSegmentationFault {}
-    const error = new ProtectedWriteFault(0x1234);
+    const error = new ProtectedWriteFault("0x00001234");
     assert.instanceOf(error, ProtectedWriteFault);
     assert.instanceOf(error, WriteSegmentationFault);
     assert.instanceOf(error, SegmentationFault);
@@ -63,6 +71,24 @@ describe("memory error inheritance", () => {
     assert.strictEqual(
       Object.getPrototypeOf(error),
       ProtectedWriteFault.prototype,
+    );
+  });
+
+  // PointerProvenanceFault (B3.4) is a MemoryError but deliberately not a
+  // SegmentationFault: the address involved is validly mapped to a live
+  // object, just not the one the pointer's own arithmetic was derived from.
+  it("gives PointerProvenanceFault its own identity, separate from SegmentationFault", () => {
+    const error: Error = new PointerProvenanceFault("pointer arithmetic from 'a' produced an address inside the unrelated 'b'");
+    const message = error.message;
+    const prototype = Object.getPrototypeOf(error);
+    assert.instanceOf(error, PointerProvenanceFault);
+    assert.instanceOf(error, MemoryError);
+    assert.instanceOf(error, Error);
+    assert.notInstanceOf(error, SegmentationFault);
+    assert.strictEqual(prototype, PointerProvenanceFault.prototype);
+    assert.equal(
+      message,
+      "invalid pointer use: pointer arithmetic from 'a' produced an address inside the unrelated 'b'",
     );
   });
 });

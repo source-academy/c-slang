@@ -192,6 +192,7 @@ export const ASTNodeEvaluator: {
       typeInfo,
       initializer,
       qualifiedIdentifier,
+      start,
     }: TypedInitDeclarator,
   ) => {
     let address: number;
@@ -208,7 +209,13 @@ export const ASTNodeEvaluator: {
     }
 
     rt.symbolTable.addAddress(identifier, address);
-    rt.registerObject(address, typeInfo, rt.symbolTable.inFileScope ? "static" : "automatic");
+    rt.registerObject(
+      address,
+      typeInfo,
+      rt.symbolTable.inFileScope ? "static" : "automatic",
+      identifier,
+      start,
+    );
     if (initializer) evaluateInitializer(initializer, address, typeInfo, rt);
   },
   InitializerList: () => {
@@ -422,7 +429,9 @@ export const ASTNodeEvaluator: {
       bytesToBigint(o.bytes, isSigned(o.typeInfo), rt.config.endianness),
     );
     if (!evaluateAsLvalue) {
-      const bytes = rt.memory.getObjectBytes(addr + relAddr, typeInfo);
+      const bytes = rt.memory.getObjectBytes(
+        addr + relAddr, typeInfo, false, o.provenanceBase ?? undefined,
+      );
       rt.stash.push(
         rt,
         new TemporaryObject(typeInfo, bytes, addr + relAddr),
@@ -436,6 +445,8 @@ export const ASTNodeEvaluator: {
             BigInt(addr + relAddr),
             rt.config.endianness,
           ),
+          null,
+          o.provenanceBase,
         ),
       );
     }
@@ -483,7 +494,9 @@ export const ASTNodeEvaluator: {
       rt.stash.push(
         rt,
         new TemporaryObject(
-          typeInfo, rt.memory.getObjectBytes(address, typeInfo), address,
+          typeInfo,
+          rt.memory.getObjectBytes(address, typeInfo, false, o.provenanceBase ?? undefined),
+          address,
         ),
         address,
       );
@@ -496,6 +509,8 @@ export const ASTNodeEvaluator: {
           addr + BigInt(relAddr),
           rt.config.endianness,
         ),
+        null,
+        o.provenanceBase,
       ),
     );
   },
@@ -512,10 +527,17 @@ export const ASTNodeEvaluator: {
   ) => {
     const address = rt.symbolTable.getAddress(identifier);
     if (evaluateAsLvalue) {
+      // B3.4 origination: &x (or array decay) tags the resulting pointer with
+      // the StorageRange x itself lives in, so later arithmetic/dereferences
+      // can be checked against it. Untracked (null) if nothing is registered
+      // there yet - fails open, same as before B3.4.
+      const origin = rt.memory.storage.find(BigInt(address), BigInt(1));
       rt.stash.pushWithoutConversions(
         new TemporaryObject(
           pointer(typeInfo),
           BIGINT_TO_BYTES[Type.Pointer](BigInt(address), rt.config.endianness),
+          null,
+          origin?.base ?? null,
         ),
       );
       return;
@@ -526,7 +548,12 @@ export const ASTNodeEvaluator: {
       t = new FunctionDesignator(typeInfo, address, identifier);
     } else {
       const bytes = rt.memory.getObjectBytes(address, typeInfo);
-      t = new TemporaryObject(typeInfo, bytes, address);
+      // B3.4: re-attach a pointer's origin tag after it round-trips through
+      // memory (e.g. `p = a + 10;` then later reading `p` to evaluate `*p`).
+      const provenanceBase = isPointer(typeInfo)
+        ? rt.memory.pointerProvenance.get(address)
+        : null;
+      t = new TemporaryObject(typeInfo, bytes, address, provenanceBase);
     }
     rt.stash.push(rt, t, address);
   },
@@ -737,9 +764,10 @@ export const instructionEvaluator: {
         );
         const pt = v.typeInfo.referencedType;
         if (isObjectTypeInfo(pt)) {
+          const bytes = rt.memory.getObjectBytes(addr, pt, false, v.provenanceBase ?? undefined);
           return rt.stash.push(
             rt,
-            new TemporaryObject(pt, rt.memory.getObjectBytes(addr, pt), addr),
+            new TemporaryObject(pt, bytes, addr),
             addr,
           );
         }
@@ -887,9 +915,14 @@ export const instructionEvaluator: {
       if (isScalarType(typeInfo) && isScalarType(o.typeInfo)) {
         const { bytes } = convertForAssignment(o, typeInfo, rt.config.endianness);
         rt.memory.setObjectBytes(
-          address, bytes, typeInfo, false, false, initializing,
+          address, bytes, typeInfo, false, false, initializing, ptr.provenanceBase ?? undefined,
         );
         rt.initTable.add(address, typeInfo);
+        // B3.4: persist the stored value's own origin tag (if it has one) so
+        // a later read of this same address can re-attach it - the pointer
+        // round-trip case (e.g. `p = a + 10;` then later `*p`).
+        if (isPointer(typeInfo))
+          rt.memory.pointerProvenance.set(address, o.provenanceBase ?? null);
         rt.stash.pushWithoutConversions(
           new TemporaryObject(typeInfo, bytes),
         );
@@ -996,7 +1029,7 @@ export const instructionEvaluator: {
       fnBody,
     );
 
-    rt.stack.push(frame);
+    rt.stack.push(frame, rt.getFunctionName(Number(fnIdx)));
     rt.symbolTable.enterBlock();
 
     for (let i = 0; i < arity; i++) {
@@ -1005,7 +1038,9 @@ export const instructionEvaluator: {
 
       const address = rt.stack.rbp + frame[identifier].address;
       rt.symbolTable.addAddress(identifier, address);
-      rt.registerObject(address, typeInfo, "automatic");
+      // ParameterTypeAndIdentifier carries no position of its own; the
+      // enclosing function body's position is a reasonable stand-in (B3.2).
+      rt.registerObject(address, typeInfo, "automatic", identifier, fnBody.start);
 
       rt.agenda.push(popInstruction());
       rt.agenda.push(assignInstruction(true));
@@ -1182,13 +1217,12 @@ export const instructionEvaluator: {
     );
     const newAddr = addr + offset * l.typeInfo.referencedType.size;
     if (!evaluateAsLvalue) {
+      const bytes = rt.memory.getObjectBytes(
+        newAddr, l.typeInfo.referencedType, false, l.provenanceBase ?? undefined,
+      );
       rt.stash.push(
         rt,
-        new TemporaryObject(
-          l.typeInfo.referencedType,
-          rt.memory.getObjectBytes(newAddr, l.typeInfo.referencedType),
-          newAddr,
-        ),
+        new TemporaryObject(l.typeInfo.referencedType, bytes, newAddr),
         newAddr,
       );
     } else {
@@ -1196,6 +1230,8 @@ export const instructionEvaluator: {
         new TemporaryObject(
           pointer(l.typeInfo.referencedType),
           BIGINT_TO_BYTES[Type.Pointer](BigInt(newAddr), rt.config.endianness),
+          null,
+          l.provenanceBase,
         ),
       );
     }
@@ -1343,6 +1379,8 @@ const applyBinaryOp = (
             BigInt(pv + iv * t0.referencedType.size),
             rt.config.endianness,
           ),
+          null,
+          lo.provenanceBase,
         );
       }
       if (
@@ -1362,6 +1400,8 @@ const applyBinaryOp = (
             BigInt(pv + iv * t1.referencedType.size),
             rt.config.endianness,
           ),
+          null,
+          ro.provenanceBase,
         );
       }
 
@@ -1399,6 +1439,8 @@ const applyBinaryOp = (
             BigInt(pv - iv * t0.referencedType.size),
             rt.config.endianness,
           ),
+          null,
+          lo.provenanceBase,
         );
       }
       if (

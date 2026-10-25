@@ -78,7 +78,7 @@ export const BUILTIN_FUNCTIONS: Record<Identifier, BuiltinFunction> = {
       );
 
       rt.heap.free(n);
-      rt.retireStorage(n);
+      rt.retireStorage(n, "freed");
     },
   },
   print: {

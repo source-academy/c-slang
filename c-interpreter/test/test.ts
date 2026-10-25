@@ -27,6 +27,9 @@ import "./constant-enum-case";
 import "./memory-errors";
 import "./b1-string-rejections";
 import "./b1-string-metadata";
+import "./b3-stack-overflow";
+import "./b3-fault-messages";
+import "./b3-pointer-provenance";
 import { Endianness } from "../src/config";
 
 const TEST_FOLDER_PATH = "./test/";

@@ -23,6 +23,7 @@ import {
 } from "./effectiveTypeTable";
 import { InitializedTable } from "./initializedTable";
 import { StorageRange } from "../memory/storageRanges";
+import { PositionInfo } from "../ast/types";
 
 export type TextAndDataEntry = FunctionDesignator | RuntimeObject;
 
@@ -114,7 +115,7 @@ export class Runtime {
       this.effectiveTypeTable,
       config.UB.skipStrictAliasingCheck,
     );
-    this.stack = new RuntimeStack(config.memory.stack.baseAddress);
+    this.stack = new RuntimeStack(config.memory.stack.baseAddress, config.memory.stack.size);
     this.functionCalls = new Stack();
     this.heap = new Heap(
       config.memory.heap.baseAddress,
@@ -195,6 +196,14 @@ export class Runtime {
     }
   }
 
+  public getFunctionName(idx: number): string {
+    try {
+      return this.functions[idx][0];
+    } catch (err) {
+      throw "invalid function index " + idx + " provided";
+    }
+  }
+
   public getBuiltinFunction(idx: number): BuiltinFunction {
     try {
       return this.builtinFunctions[idx];
@@ -216,15 +225,28 @@ export class Runtime {
     return address;
   }
 
-  public registerObject(address: number, type: ObjectTypeInfo, kind: StorageRange["kind"]): void {
-    this.memory.storage.register({ base: address, size: type.size, kind, declaredType: type });
+  public registerObject(
+    address: number,
+    type: ObjectTypeInfo,
+    kind: StorageRange["kind"],
+    name?: string,
+    declaredAt?: PositionInfo,
+  ): void {
+    this.memory.storage.register({
+      base: address,
+      size: type.size,
+      kind,
+      declaredType: type,
+      name,
+      declaredAt,
+    });
     if (kind === "automatic") this.initTable.remove(address, type.size);
     this.effectiveTypeTable.add(address, type);
     this.memory.protectConstObject(address, type);
   }
 
-  public retireStorage(address: number): void {
-    const range = this.memory.storage.remove(address);
+  public retireStorage(address: number, reason: "freed" | "scope-exit"): void {
+    const range = this.memory.storage.remove(address, reason);
     if (!range) throw new Error("no live storage to retire");
     this.initTable.remove(address, range.size);
     this.memory.clearReadonly(address, range.size);
@@ -232,7 +254,9 @@ export class Runtime {
   }
 
   public exitScope(): void {
-    Object.values(this.symbolTable.exitBlock()).forEach(address => this.retireStorage(address));
+    Object.values(this.symbolTable.exitBlock()).forEach(
+      address => this.retireStorage(address, "scope-exit"),
+    );
   }
 
   public allocateText(t: ObjectTypeInfo): number {

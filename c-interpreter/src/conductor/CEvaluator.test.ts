@@ -115,6 +115,21 @@ async function testStringLibrary() {
   }
 }
 
+async function testFaultMessageNamesTheOverrunObject() {
+  // Deep recursion would also exercise B3.1, but registering each frame's
+  // locals is a linear scan over every currently-live range (StorageRanges,
+  // B1) - turning default-stack-depth recursion (~100k+ frames) quadratic and
+  // impractically slow for a unit test. This exercises B3.3's message
+  // enrichment instead, which needs no depth at all.
+  const log = await evaluate(
+    "int main() { int a[4] = {1, 2, 3, 4}; a[10] = 1; return 0; }",
+  );
+  const error = log.find((e) => e.type === "error");
+  assert.ok(error, "expected an error message");
+  assert.equal(error!.errorType, "__evaluator_runtime");
+  assert.match(error!.message as string, /24 byte\(s\) past the end of 'a'/);
+}
+
 async function testStatusUpdatesBracketEvaluation() {
   const log = await evaluate("int main() { return 0; }");
   const statuses = log.filter((e) => e.type === "status");
@@ -129,6 +144,7 @@ async function main() {
     ["syntax error carries structured line/column", testSyntaxError],
     ["type error carries structured line/column", testTypeError],
     ["library memory errors retain their function and reason", testRuntimeError],
+    ["a memory fault names the overrun object, not a bare address", testFaultMessageNamesTheOverrunObject],
     ["string library fixtures run through Conductor", testStringLibrary],
     ["status is toggled around evaluation", testStatusUpdatesBracketEvaluation],
   ];

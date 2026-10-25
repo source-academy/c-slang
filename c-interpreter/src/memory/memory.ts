@@ -21,13 +21,15 @@ import {
   isCharacterType,
   array,
 } from "../typing/types";
-import { decimalAddressToHex } from "../utils";
 import {
   ExecuteSegmentationFault,
+  PointerProvenanceFault,
   SegmentationFault,
   WriteSegmentationFault,
 } from "./errors";
+import { explainFault, explainProvenanceMismatch } from "./explainFault";
 import { MemoryRegion } from "./memoryRegion";
+import { PointerProvenanceTable } from "./pointerProvenance";
 import { StorageRange, StorageRanges } from "./storageRanges";
 
 export interface Segments extends Record<string, MemoryRegion> {
@@ -64,6 +66,7 @@ const unqualifiedAccessType = (type: ObjectTypeInfo): ObjectTypeInfo =>
 
 export class Memory {
   public readonly storage = new StorageRanges();
+  public readonly pointerProvenance = new PointerProvenanceTable();
   private readonly segments: Segments;
   private readonly readonlyAddresses: Set<number>;
   private readonly executableAddresses: Set<number>;
@@ -92,13 +95,26 @@ export class Memory {
     for (const region of Object.values(this.segments)) {
       if (region.containsAddress(address)) return region;
     }
-    throw new SegmentationFault("access " + decimalAddressToHex(address));
+    throw new SegmentationFault("access " + explainFault(address, this));
+  }
+
+  // Bounds of whichever segment (stack/heap/data/text) address falls in, for
+  // explainFault's "nearest preceding object" search - without this, that
+  // search could walk clean across segments (e.g. report a stack-local as
+  // "preceding" a heap address just because nothing else is smaller) and mask
+  // a much more specific answer (B3.3).
+  public regionBoundsFor(address: number): { baseAddress: number; topAddress: number } | undefined {
+    for (const region of Object.values(this.segments)) {
+      if (region.containsAddress(address))
+        return { baseAddress: region.baseAddress, topAddress: region.topAddress };
+    }
+    return undefined;
   }
 
   private getByte(address: number, toExecute: boolean = false): number {
     const region = this.getMemoryRegion(address);
     if (toExecute && !this.executableAddresses.has(address))
-      throw new ExecuteSegmentationFault(address);
+      throw new ExecuteSegmentationFault(explainFault(address, this));
     return region.getByte(address - region.baseAddress);
   }
 
@@ -118,9 +134,10 @@ export class Memory {
     address: number,
     t: ObjectTypeInfo,
     toExecute: boolean = false,
+    expectedOrigin?: number,
   ): number[] {
     this.getMemoryRegion(address);
-    this.checkValidObjectAccess(address, t);
+    this.checkValidObjectAccess(address, t, expectedOrigin);
     return this.getBytes(address, t.size, toExecute);
   }
 
@@ -133,7 +150,7 @@ export class Memory {
   ): void {
     const region = this.getMemoryRegion(address);
     if (!initializing && this.readonlyAddresses.has(address))
-      throw new WriteSegmentationFault(address);
+      throw new WriteSegmentationFault(explainFault(address, this));
     region.setByte(address - region.baseAddress, byte);
     if (readonly) this.readonlyAddresses.add(address);
     if (executable) this.executableAddresses.add(address);
@@ -157,6 +174,7 @@ export class Memory {
     readonly: boolean = false,
     executable: boolean = false,
     initializing: boolean = false,
+    expectedOrigin?: number,
   ): void {
     if (bytes.length !== t.size)
       throw new Error("object size and bytes provided don't match");
@@ -173,7 +191,7 @@ export class Memory {
       else
         this.effectiveTypeTable.establishInferred(allocation.base, allocation.size, address, t);
     } else {
-      this.checkValidObjectAccess(address, t);
+      this.checkValidObjectAccess(address, t, expectedOrigin);
     }
     if (!allocation && this.effectiveTypeTable.get(address) === NO_EFFECTIVE_TYPE) {
       try {
@@ -186,6 +204,11 @@ export class Memory {
     this.setBytes(address, bytes, readonly, executable, initializing);
   }
 
+  // Kept as a plain Error, not a MemoryError: library validation helpers
+  // (libraryMemory.ts) match this message with their own `"name: reason"`
+  // convention (see e.g. test/b1-string-rejections.ts), which explainFault's
+  // richer wording would break. checkStrictAliasing below is the one that
+  // needs B3.3's enrichment - it's what a *typed* object access actually hits.
   public requireStorage(address: bigint, size: bigint, operation: string): StorageRange {
     if (address === BigInt(0)) throw new Error(operation + ": null pointer");
     const range = this.storage.find(address, size);
@@ -195,7 +218,8 @@ export class Memory {
 
   public checkWritable(address: number, size: number): void {
     for (let i = address; i < address + size; i++)
-      if (this.readonlyAddresses.has(i)) throw new WriteSegmentationFault(i);
+      if (this.readonlyAddresses.has(i))
+        throw new WriteSegmentationFault(explainFault(i, this));
   }
 
   public protectConstObject(address: number, t: ObjectTypeInfo): void {
@@ -245,7 +269,11 @@ export class Memory {
     try {
       types = this.effectiveTypeTable.getTypes(address);
     } catch (e) {
-      throw new Error("no object allocated at " + decimalAddressToHex(address));
+      // The real site a *typed* out-of-bounds/use-after-free access hits:
+      // requireStorage's own guard in checkValidObjectAccess only fires when
+      // something is already registered at the first byte, so an address with
+      // no live range at all falls through to here instead (B3.3).
+      throw new SegmentationFault("access " + explainFault(address, this));
     }
 
     if (this.skipStrictAliasingCheck) return true;
@@ -277,10 +305,26 @@ export class Memory {
     );
   }
 
-  private checkValidObjectAccess(address: number, t: ObjectTypeInfo): boolean {
+  private checkValidObjectAccess(
+    address: number,
+    t: ObjectTypeInfo,
+    expectedOrigin?: number,
+  ): boolean {
     if (address % t.alignment) throw new Error("misaligned access");
-    if (this.storage.find(BigInt(address), BigInt(1)))
+    const firstByteRange = this.storage.find(BigInt(address), BigInt(1));
+    if (firstByteRange) {
+      // B3.4: the address resolves to a live object, but not necessarily the
+      // one a pointer's own arithmetic claims to be derived from - catches
+      // out-of-bounds arithmetic landing exactly inside a *different* live
+      // object, which plain segment/range membership can't tell apart from a
+      // legitimate access. Only checked when the caller tracked a tag;
+      // otherwise this fails open, same as before B3.4.
+      if (expectedOrigin !== undefined && firstByteRange.base !== expectedOrigin)
+        throw new PointerProvenanceFault(
+          explainProvenanceMismatch(firstByteRange, expectedOrigin, this),
+        );
       this.requireStorage(BigInt(address), BigInt(t.size), "object access");
+    }
     return this.checkStrictAliasing(address, t);
   }
 }

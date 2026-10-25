@@ -1375,3 +1375,9 @@ b1-string-demo:
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}
+
+b3-safe-recursion-and-arithmetic:
+  file: b3-safe-recursion-and-arithmetic.c
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
