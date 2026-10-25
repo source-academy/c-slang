@@ -5,6 +5,7 @@ import cviz from "../src/index";
 import { Endianness } from "../src/config";
 import { Note } from "../src/interpreter/notes";
 import { RuntimeView } from "../src/interpreter/runtime";
+import { isASTNode } from "../src/interpreter/agenda";
 
 const run = (name: string, endianness: Endianness): Note[] => {
   const rt = cviz.run(readFileSync(`test/b4-order-${name}.c`, "utf8"), { endianness });
@@ -68,6 +69,25 @@ describe("B4.5 unspecified evaluation order notes", () => {
       });
     });
   }
+
+  it("dates a note to the step that broke the construct down, where the order was chosen", () => {
+    const rt = cviz.run(readFileSync("test/b4-order-operands.c", "utf8"));
+    let breakdown = -1;
+    while (rt.exitCode === undefined) {
+      const top = rt.agenda.peek();
+      const isTarget = isASTNode(top) && top.type === "BinaryExpr" && top.src.trim() === "next() - next()";
+      rt.next();
+      if (isTarget) {
+        breakdown = rt.stepCount;
+        // The order is applied here, but whether it mattered is not known yet.
+        assert.isEmpty(rt.notes.getNotes());
+      }
+    }
+    assert.isAbove(breakdown, 0);
+    const [note] = rt.notes.getNotes();
+    assert.equal(note.firstStep, breakdown);
+    assert.equal(note.lastStep, breakdown);
+  });
 
   it("a snapshot's memory does not feed the live tracker", () => {
     const rt = cviz.run(readFileSync("test/b4-order-operands.c", "utf8"));

@@ -36,6 +36,8 @@ interface Group {
   depth: number;
   serial: number;
   parent: Target | null;
+  // The step that broke the construct down: where the order was chosen.
+  openedAt: number;
   started: number; // operands whose slot has been reached
   current: number | null; // operand in progress
 }
@@ -112,6 +114,7 @@ export class EvaluationOrderTracker {
       depth: this.depth(),
       serial: this.rt.memory.storage.serial,
       parent: this.target,
+      openedAt: this.rt.stepCount,
       started: 0,
       current: null,
     });
@@ -236,12 +239,16 @@ export class EvaluationOrderTracker {
         : both
           ? `${label(kind, c.i)} ${src(c.i)} and ${label(kind, c.j)} ${src(c.j)} both modified ${object}, so another compiler can give a different result`
           : `${label(kind, w)} ${src(w)} modified ${object} and ${label(kind, r)} ${src(r)} read it, so another compiler can give a different result`;
-    this.rt.note({
-      kind: "unspecified-order",
-      phase: "runtime",
-      clause: "C17 " + CLAUSE[kind],
-      message: `${intro}; ${outcome}.`,
-      ranges: [operands[c.i].span, operands[c.j].span],
-    });
+    // Known only now, but dated to the breakdown step the order was applied at.
+    this.rt.notes.add(
+      {
+        kind: "unspecified-order",
+        phase: "runtime",
+        clause: "C17 " + CLAUSE[kind],
+        message: `${intro}; ${outcome}.`,
+        ranges: [operands[c.i].span, operands[c.j].span],
+      },
+      group.openedAt,
+    );
   }
 }
