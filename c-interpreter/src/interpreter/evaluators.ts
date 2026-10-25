@@ -526,6 +526,7 @@ export const ASTNodeEvaluator: {
     evaluateAsLvalue: boolean,
   ) => {
     const address = rt.symbolTable.getAddress(identifier);
+    if (isFunction(typeInfo)) rt.recordFunctionReference(address);
     if (evaluateAsLvalue) {
       // B3.4 origination: &x (or array decay) tags the resulting pointer with
       // the StorageRange x itself lives in, so later arithmetic/dereferences

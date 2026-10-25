@@ -102,6 +102,9 @@ export class Runtime {
     TypedPrimaryExprString,
     number
   >();
+  // Builtins have text addresses from the start but join textAndData only
+  // when the program first refers to one, like string literals above.
+  private readonly unreferencedBuiltins = new Map<number, FunctionDesignator>();
 
   public constructor(program: TypedTranslationUnit, config: RuntimeConfig) {
     this.agenda = new Agenda(program);
@@ -143,7 +146,15 @@ export class Runtime {
         true,
       );
       this.symbolTable.addAddress(identifier, address);
+      this.unreferencedBuiltins.set(address, new FunctionDesignator(f.type, address, identifier));
     }
+  }
+
+  public recordFunctionReference(address: number): void {
+    const builtin = this.unreferencedBuiltins.get(address);
+    if (!builtin) return;
+    this.unreferencedBuiltins.delete(address);
+    this.textAndData.push(builtin);
   }
 
   public next(): void {
