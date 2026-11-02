@@ -1,6 +1,8 @@
 import BigNumber from "bignumber.js";
 import { calculateNumberOfPagesNeededForBytes } from "~src/common/utils";
 import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
+import {mallocFunction} from "~src/modules/source_stdlib/memory";
+import {NULL_PTR_ADR, SOURCE_C_IDENTIFIER_KEY} from "~src/modules/constants";
 
 // export function extractImportedFunctionCDetails(
 //   wasmModuleImports: Record<string, ImportedFunction>
@@ -99,4 +101,65 @@ export function printSharedGlobalVariables(
   for (const [name, value] of Object.entries(sharedWasmGlobalVariables)) {
     console.log(`${name}: ${value.value}`);
   }
+}
+
+/**
+ * Store a Foreign JS Object in memory by attaching a unique identifier and return it to C Side
+ */
+export function storeObjectInMemoryAndRegistry(
+    memory: WebAssembly.Memory,
+    objectReferenceRegistry: Map<number, Object>,
+    sharedWasmGlobalVariables: SharedWasmGlobalVariables,
+    allocatedBlocks: Map<number, number>,
+    freeList: any[],
+    obj: Object,
+) {
+    if (!obj) {
+        throw Error("Cannot store null object in memory");
+    }
+    // Reserve 1 byte of memory for a unique address as an identifier
+    const objIdentifier = new Uint8Array([
+      0x00,
+    ]);
+    const objSize = objIdentifier.length;
+    const address = mallocFunction(
+        {
+            memory: memory,
+            sharedWasmGlobalVariables: sharedWasmGlobalVariables,
+            bytesRequested: objSize,
+            allocatedBlocks,
+            freeList
+        }
+    )
+
+    const objArr = new Uint8Array(memory.buffer, address, objSize);
+    for (let i = 0; i < objSize; i++) {
+        objArr[i] = objIdentifier[i];
+    }
+
+    (obj as any)[SOURCE_C_IDENTIFIER_KEY] = address;
+    objectReferenceRegistry.set(address, obj);
+
+    return address;
+}
+
+export function getAddressOfRegisteredObj(obj: Object) {
+    return (obj as any)[SOURCE_C_IDENTIFIER_KEY];
+}
+
+/**
+ * Load a foreign object from Object Registry using the unique identifier (address)
+ */
+export function loadObjectFromRegistry(
+    objectReferenceRegistry: Map<number, Object>,
+    address: number,
+): Object {
+    if (address == NULL_PTR_ADR) {
+        throw Error("Null pointer exception");
+    }
+    const result = objectReferenceRegistry.get(address);
+    if (result === undefined) {
+        throw Error("Object not found");
+    }
+    return result;
 }
