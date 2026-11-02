@@ -42,6 +42,14 @@ export default function translateExpression(
     ) {
       return convertConstantToWasmConst(expr);
     } else if (expr.type === "PreStatementExpression") {
+      const translatedStatements = expr.statements.map((statement) =>
+        translateStatement(statement, enclosingLoopDetails),
+      );
+      const translatedExpr = translateExpression(
+        expr.expr,
+        expr.expr.dataType,
+        enclosingLoopDetails,
+      );
       return {
         type: "PreStatementExpression",
         statements: expr.statements.map((statement) =>
