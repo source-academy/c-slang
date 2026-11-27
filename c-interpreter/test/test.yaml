@@ -1510,7 +1510,14 @@ b4-string-identity-through-call:
 
 b4-order-operands:
   file: b4-order-operands.c
-  desc: operand order is unspecified (C17 6.5p3); both calls modify the same object, so a note, not a fault
+  desc: operands are unsequenced (C17 6.5p3) but their calls indeterminately sequenced (6.5.2.2p10); both modify one object, so a note, not a fault
+  cases:
+    - {out: "0", endianness: little}
+    - {out: "0", endianness: big}
+
+b4-order-assignment:
+  file: b4-order-assignment.c
+  desc: the operands of = are unsequenced (C17 6.5.16p3); a write through a call against a read in the other operand is a note, with the left operand first
   cases:
     - {out: "0", endianness: little}
     - {out: "0", endianness: big}

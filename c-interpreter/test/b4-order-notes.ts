@@ -25,11 +25,24 @@ describe("B4.5 unspecified evaluation order notes", () => {
         const notes = run("operands", endianness);
         assert.deepEqual(spans(notes), ["next()|next()"]);
         const [note] = notes;
-        assert.equal(note.clause, "C17 6.5p3");
-        assert.match(note.message, /order of the operands of `-` unspecified/);
+        // Unsequenced operands (6.5p3) are undefined only without a call; the
+        // calls make them indeterminately sequenced, so the order is unspecified.
+        assert.equal(note.clause, "C17 6.5.2.2p10");
+        assert.match(note.message, /operands of `-` unsequenced \(6\.5p3\)/);
+        assert.match(note.message, /unspecified order \(6\.5\.2\.2p10\)/);
         assert.match(note.message, /evaluated the left operand `next\(\)` first/);
         assert.match(note.message, /both modified 'count'/);
         assert.match(note.message, /another compiler can give a different result/);
+      });
+
+      it("cites the same clauses for the operands of an assignment", () => {
+        const notes = run("assignment", endianness);
+        assert.deepEqual(spans(notes), ["arr[k]|bump()"]);
+        const [note] = notes;
+        assert.equal(note.clause, "C17 6.5.2.2p10");
+        assert.match(note.message, /operands of `=` unsequenced \(6\.5\.16p3\)/);
+        assert.match(note.message, /unspecified order \(6\.5\.2\.2p10\)/);
+        assert.match(note.message, /the right operand `bump\(\)` modified 'k' and the left operand `arr\[k\]` read it/);
       });
 
       it("notes two arguments that both modify one object", () => {
@@ -43,6 +56,7 @@ describe("B4.5 unspecified evaluation order notes", () => {
       it("notes two operands that both print", () => {
         const notes = run("output", endianness);
         assert.deepEqual(spans(notes), ["show(1)|show(2)"]);
+        assert.equal(notes[0].clause, "C17 6.5.2.2p10");
         assert.match(notes[0].message, /both printed output, so the printed order depends on this choice/);
       });
 

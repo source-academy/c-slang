@@ -57,12 +57,16 @@ interface Conflict {
   unsequenced: boolean;
 }
 
+// Why the construct's operands are not ordered.
 const CLAUSE: Record<GroupKind, string> = {
   binary: "6.5p3",
   assignment: "6.5.16p3",
   call: "6.5.2.2p10",
   initializer: "6.7.9p23",
 };
+// Unsequenced operands conflict as a note only through a call, which
+// 6.5.2.2p10 makes indeterminately sequenced: an unspecified order.
+const CALL_ORDER = "6.5.2.2p10";
 
 const label = (kind: GroupKind, k: number): string => {
   switch (kind) {
@@ -231,8 +235,9 @@ export class EvaluationOrderTracker {
         intro = `C17 leaves the order of initializer-list elements unspecified (${CLAUSE[kind]}); this interpreter evaluated them in list order`;
         break;
       default:
-        intro = `C17 leaves the order of the operands of \`${op}\` unspecified (${CLAUSE[kind]}); this interpreter evaluated the left operand ${src(0)} first`;
+        intro = `C17 leaves the operands of \`${op}\` unsequenced (${CLAUSE[kind]}); the calls in them run in an unspecified order (${CALL_ORDER}); this interpreter evaluated the left operand ${src(0)} first`;
     }
+    const clause = kind === "call" || kind === "initializer" ? CLAUSE[kind] : CALL_ORDER;
     const outcome =
       c.start < 0
         ? `${label(kind, c.i)} ${src(c.i)} and ${label(kind, c.j)} ${src(c.j)} both printed output, so the printed order depends on this choice`
@@ -244,7 +249,7 @@ export class EvaluationOrderTracker {
       {
         kind: "unspecified-order",
         phase: "runtime",
-        clause: "C17 " + CLAUSE[kind],
+        clause: "C17 " + clause,
         message: `${intro}; ${outcome}.`,
         ranges: [operands[c.i].span, operands[c.j].span],
       },
