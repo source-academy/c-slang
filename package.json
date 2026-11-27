@@ -25,5 +25,8 @@
   "files": [
     "c-viz/dist",
     "ctowasm/dist"
-  ]
+  ],
+  "engines": {
+    "node": ">=24"
+  }
 }
