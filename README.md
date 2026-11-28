@@ -1,6 +1,6 @@
 # c-slang
 
-Needs Node 24 (the version in `.node-version`; see the [Node.js version](https://github.com/source-academy/documentation/blob/main/app/docs/developers/node-version.md) page).
+Needs Node 24 (the version in `.node-version`; see the [Node.js version](https://docs.sourceacademy.org/developer/node-version) page).
 
 C compiler that generates WebAssembly code, written in TypeScript, intended for teaching C programming in a browser-only environment.
 
