@@ -19,3 +19,7 @@ This repository consists of 2 subprojects:
 5. Run `yarn build` to build the project
 
 c-slang can then be published to npm by running `yarn publish`
+
+## Visualizer plugin
+
+A tool that shows a C program's execution in the Source Academy workspace is a plugin, found through the plugin directory, not a part of the frontend. How to write one (the parts, the trace protocol, the host contract, building and releasing) is described in [Writing a visualizer plugin](https://github.com/source-academy/documentation/blob/main/app/docs/developers/writing-a-visualizer-plugin.md).
