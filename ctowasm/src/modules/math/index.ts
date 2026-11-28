@@ -2,6 +2,7 @@ import { ModulesGlobalConfig, SharedWasmGlobalVariables } from "~src/modules";
 import { Module, ModuleFunction } from "~src/modules/types";
 import { StructDataType } from "~src/parser/c-ast/dataTypes";
 import mathModuleFactoryFn from "~src/modules/math/emscripten/math";
+import {MemoryBlock} from "~src/modules/source_stdlib/memory";
 
 // the name that this module is imported into wasm by,
 // as well as the include name to use in C program file.
@@ -15,10 +16,13 @@ export class MathStdLibModule extends Module {
   constructor(
     memory: WebAssembly.Memory,
     functionTable: WebAssembly.Table,
+    allocatedBlocks: Map<number, number>,
+    freeList: MemoryBlock[],
+    objectReferenceRegistry: Map<number, Object>,
     config: ModulesGlobalConfig,
     sharedWasmGlobalVariables: SharedWasmGlobalVariables,
   ) {
-    super(memory, functionTable, config, sharedWasmGlobalVariables);
+    super(memory, functionTable, allocatedBlocks, freeList, objectReferenceRegistry, config, sharedWasmGlobalVariables);
     this.heapAddress = this.sharedWasmGlobalVariables.heapPointer.value;
     this.moduleDeclaredStructs = [];
     this.instantiate = async () => {
